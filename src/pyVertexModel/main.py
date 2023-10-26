@@ -2,7 +2,7 @@
 import numpy as np
 
 from FromMatlab.InitializeVertexModel import InitializeVertexModel
-from FromMatlab.IterateOverTime import IterateOverTime
+from src.pyVertexModel.IterateOverTime import IterateOverTime
 from src.pyVertexModel import Set
 
 Sets = np.array([])

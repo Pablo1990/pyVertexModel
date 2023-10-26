@@ -10,6 +10,7 @@ from src.pyVertexModel.Kg.KgVolume import KgVolume
 
 
 def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
+    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.newton.html
     if Geo.Remodelling:
         dof = Dofs.Remodel
     else:
@@ -32,8 +33,8 @@ def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
         dy[dof] = -np.linalg.solve(K[dof, dof], g[dof])
         alpha = LineSearch(Geo_0, Geo_n, Geo, Dofs, Set, g, dy)
         dy_reshaped = np.reshape(dy * alpha, (3, (Geo.numF + Geo.numY + Geo.nCells)))
-        Geo = UpdateVertices(Geo, Set, dy_reshaped)
-        Geo = UpdateMeasures(Geo)
+        Geo.UpdateVertices(Set, dy_reshaped)
+        Geo.UpdateMeasures()
         g, K, Energy, Geo, Energies = KgGlobal(Geo_0, Geo_n, Geo, Set)
         dyr = np.linalg.norm(dy[dof])
         gr = np.linalg.norm(g[dof])

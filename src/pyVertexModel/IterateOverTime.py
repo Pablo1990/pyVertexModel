@@ -1,10 +1,5 @@
 import numpy as np
 
-from FromMatlab.Kg.KgGlobal import KgGlobal
-from FromMatlab.NewtonRaphson import NewtonRaphson
-from FromMatlab.Utilities.ablateCells import ablateCells
-
-
 def IterateOverTime(Geo=None, Geo_n=None, Geo_0=None, Set=None, Dofs=None, EnergiesPerTimeStep=None, t=None,
                     numStep=None, tr=None, relaxingNu=None, backupVars=None):
     '''
@@ -26,26 +21,14 @@ def IterateOverTime(Geo=None, Geo_n=None, Geo_0=None, Set=None, Dofs=None, Energ
     didNotConverge = False
     Set.currentT = t
 
-    # Debris cells become Ghost nodes when too small or time has passed
-    nonDeadCells = [cell['ID'] for cell in Geo['Cells'] if cell['AliveStatus']]
-    debrisCells = np.where(np.array([Geo['Cells'][i]['AliveStatus'] for i in nonDeadCells]) == 0)[0]
-    nonDebrisCells = np.where(np.array([Geo['Cells'][i]['AliveStatus'] for i in nonDeadCells]) == 1)[0]
     if not relaxingNu:
         Set.iIncr = numStep
-        ## Wounding
-        #Geo = ablateCells(Geo, Set, t)
-        #         for debrisCell = debrisCells
-        #             if t > 0.15*Set.TEndAblation ##|| Geo.Cells(debrisCell).Vol < 0.5*mean([Geo.Cells(nonDebrisCells).Vol])
-        #                 [Geo] = RemoveNode(Geo, debrisCell);
-        #                 [Geo_n] = RemoveNode(Geo_n, debrisCell);
-        #                 [Geo_0] = RemoveNode(Geo_0, debrisCell);
-        #             end
-        #         end
+
         Geo, Dofs = ApplyBoundaryCondition(t, Geo, Dofs, Set)
         # IMPORTANT: Here it updates: Areas, Volumes, etc... Should be
         # up-to-date
-        Geo = UpdateMeasures(Geo)
-        Set = UpdateSet_F(Geo, Set)
+        Geo.UpdateMeasures()
+        Set.UpdateSet_F(Geo)
 
     g, K, __, Geo, Energies = KgGlobal(Geo_0, Geo_n, Geo, Set)
     Geo, g, __, __, Set, gr, dyr, dy = NewtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t)
@@ -54,7 +37,7 @@ def IterateOverTime(Geo=None, Geo_n=None, Geo_0=None, Set=None, Dofs=None, Energ
 
             Geo = BuildXFromY(Geo_n, Geo)
             Set.lastTConverged = t
-            
+
             ## New Step
             t = t + Set.dt
             Set.dt = np.amin(Set.dt + Set.dt * 0.5, Set.dt0)
@@ -91,7 +74,5 @@ def IterateOverTime(Geo=None, Geo_n=None, Geo_0=None, Set=None, Dofs=None, Energ
             else:
                 Geo.log = sprintf('%s Step %i did not converge!! \n', Geo.log, Set.iIncr)
                 didNotConverge = True
-
-    return Geo, Geo_n, Geo_0, Set, Dofs, EnergiesPerTimeStep, t, numStep, tr, relaxingNu, backupVars, didNotConverge
 
     return Geo, Geo_n, Geo_0, Set, Dofs, EnergiesPerTimeStep, t, numStep, tr, relaxingNu, backupVars, didNotConverge
