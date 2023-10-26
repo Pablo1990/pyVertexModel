@@ -1,6 +1,6 @@
 import numpy as np;
 
-class Cells():
+class Cell():
 
     def __int__(self):
         self.ID = -1;

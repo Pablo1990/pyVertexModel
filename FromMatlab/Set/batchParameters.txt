@@ -1,3 +1,0 @@
-Set.noiseContractility = 0.4;
-Set.noiseContractility = 0.6;
-Set.noiseContractility = 0.8;

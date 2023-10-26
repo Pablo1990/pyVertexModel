@@ -51,47 +51,10 @@ def IterateOverTime(Geo=None, Geo_n=None, Geo_0=None, Set=None, Dofs=None, Energ
     Geo, g, __, __, Set, gr, dyr, dy = NewtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t)
     if gr < Set.tol and dyr < Set.tol and np.all(np.isnan(g(Dofs.Free)) == 0) and np.all(np.isnan(dy(Dofs.Free)) == 0):
         if Set.nu / Set.nu0 == 1:
-            Geo.log = sprintf('%s STEP %i has converged ...\n', Geo.log, Set.iIncr)
-            ## REMODELLING
-            if Set.Remodelling and np.abs(t - tr) >= Set.RemodelingFrequency:
-                Geo_0, Geo_n, Geo, Dofs, Set = Remodeling(Geo_0, Geo_n, Geo, Dofs, Set)
-                tr = t
-            EnergiesPerTimeStep[end() + 1] = Energies
+
             Geo = BuildXFromY(Geo_n, Geo)
             Set.lastTConverged = t
-            ##  Analise cells
-            nonDebris_Features = np.array([])
-            for c in nonDebrisCells.reshape(-1):
-                nonDebris_Features[end() + 1] = AnalyseCell(Geo, c)
-            nonDebris_Features_table = struct2table(vertcat(nonDebris_Features[:]))
-            # writetable(nonDebris_Features_table, fullfile(pwd, Set.OutputFolder, strcat('cell_features_', num2str(numStep),'.csv')))
-            debris_Features = np.array([])
-            for c in debrisCells.reshape(-1):
-                debris_Features[end() + 1] = AnalyseCell(Geo, c)
-            if not len(debris_Features) == 0:
-                wound_features = ComputeWoundFeatures(Geo)
-                # writetable(vertcat(debris_Features{:}), fullfile(pwd, Set.OutputFolder, strcat('debris_features_', num2str(numStep),'.csv')))
-            else:
-                wound_features = []
-            ## Test to see if something is wrong:
-            GeoTests(Geo)
-            ## Save
-            PostProcessingVTK(Geo, Geo_0, Set, numStep)
-            save(fullfile(pwd, Set.OutputFolder, strcat('status', num2str(numStep), '.mat')), 'Geo', 'Geo_n', 'Geo_0',
-                 'Set', 'Dofs', 'EnergiesPerTimeStep', 't', 'numStep', 'nonDebris_Features', 'debris_Features',
-                 'wound_features', 'tr', 'relaxingNu', 'backupVars')
-            ##
-            for numCell in np.arange(1, len(Geo.Cells) + 1).reshape(-1):
-                cCell = Geo.Cells(numCell)
-                for nFace in np.arange(1, len(cCell.Faces) + 1).reshape(-1):
-                    face = Geo.Cells(numCell).Faces(nFace)
-                    for nTri in np.arange(1, len(face.Tris) + 1).reshape(-1):
-                        Geo.Cells(numCell).Faces(nFace).Tris(nTri).pastContractilityValue = Geo.Cells(numCell).Faces(
-                            nFace).Tris(nTri).ContractilityValue
-                        Geo.Cells(numCell).Faces(nFace).Tris(nTri).ContractilityValue = []
-                        Geo.Cells[numCell].Faces[nFace].Tris[nTri].EdgeLength_time[
-                            end() + 1, np.arange[1, 2 + 1]] = np.array(
-                            [t, Geo.Cells(numCell).Faces(nFace).Tris(nTri).EdgeLength])
+            
             ## New Step
             t = t + Set.dt
             Set.dt = np.amin(Set.dt + Set.dt * 0.5, Set.dt0)
