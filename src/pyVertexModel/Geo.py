@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.pyVertexModel import Cell
+from src.pyVertexModel import Cell, Face
 
 
 class Geo:
@@ -30,13 +30,13 @@ class Geo:
         for c in ids:
             if resetLengths:
                 for f in range(len(self.Cells[c].Faces)):
-                    self.Cells[c].Faces[f].Area, triAreas = ComputeFaceArea(
+                    self.Cells[c].Faces[f].Area, triAreas = Face.ComputeFaceArea(
                         [face for face in self.Cells[c].Faces[f].Tris.Edge], self.Cells[c].Y,
                         self.Cells[c].Faces[f].Centre)
                     for tri, triArea in zip(self.Cells[c].Faces[f].Tris, triAreas):
                         tri.Area = triArea
 
-                    edgeLengths, lengthsToCentre, aspectRatio = ComputeFaceEdgeLengths(self.Cells[c].Faces[f],
+                    edgeLengths, lengthsToCentre, aspectRatio = Face.ComputeFaceEdgeLengths(self.Cells[c].Faces[f],
                                                                                        self.Cells[c].Y)
                     for tri, edgeLength, lengthToCentre, aspRatio in zip(self.Cells[c].Faces[f].Tris, edgeLengths,
                                                                          lengthsToCentre, aspectRatio):
@@ -49,3 +49,34 @@ class Geo:
 
             self.Cells[c].ComputeCellArea()
             self.Cells[c].ComputeCellVolume()
+
+    import numpy as np
+
+    def BuildXFromY(self, Geo_n, Geo):
+        proportionOfMax = 0
+
+        aliveCells = [cell["ID"] for cell in Geo["Cells"] if cell.get("AliveStatus")]
+        allCellsToUpdate = list(
+            set(range(len(Geo["Cells"])).difference(Geo["BorderCells"]).difference(Geo["BorderGhostNodes"])))
+
+        for c in allCellsToUpdate:
+            if Geo["Cells"][c].get("T"):
+                if c in Geo["XgID"]:
+                    dY = np.zeros((Geo["Cells"][c]["T"].shape[0], 3))
+                    for tet in range(Geo["Cells"][c]["T"].shape[0]):
+                        gTet = Geo["Cells"][c]["T"][tet, :]
+                        gTet_Cells = [cell for cell in gTet if cell in aliveCells]
+                        cm = gTet_Cells[0]
+                        Cell = Geo["Cells"][cm]
+                        Cell_n = Geo_n["Cells"][cm]
+                        hit = np.sum(np.isin(Cell["T"], gTet), axis=1) == 4
+                        dY[tet, :] = Cell["Y"][hit, :] - Cell_n["Y"][hit, :]
+
+                    Geo["Cells"][c]["X"] = Geo["Cells"][c]["X"] + (proportionOfMax) * np.max(dY, axis=0) + (
+                                1 - proportionOfMax) * np.mean(dY, axis=0)
+                else:
+                    dY = Geo["Cells"][c]["Y"] - Geo_n["Cells"][c]["Y"]
+                    Geo["Cells"][c]["X"] = Geo["Cells"][c]["X"] + (proportionOfMax) * np.max(dY, axis=0) + (
+                                1 - proportionOfMax) * np.mean(dY, axis=0)
+
+        return Geo
