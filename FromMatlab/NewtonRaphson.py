@@ -1,8 +1,8 @@
 import numpy as np
 
-from Src.Geo.UpdateVertices import UpdateVertices
-from Src.Kg.KgGlobal import KgGlobal
-from Src.LineSearch import LineSearch
+from FromMatlab.Geo.UpdateVertices import UpdateVertices
+from FromMatlab.Kg.KgGlobal import KgGlobal
+from FromMatlab.LineSearch import LineSearch
 
 
 class UpdateMeasures:

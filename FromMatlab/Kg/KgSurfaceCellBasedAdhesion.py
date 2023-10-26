@@ -1,9 +1,9 @@
 import numpy as np
 from scipy import sparse
 
-from Src.Kg.AssembleK import AssembleK
-from Src.Kg.Assembleg import Assembleg
-from Src.Kg.lib.initializeKg import initializeKg
+from FromMatlab.Kg.AssembleK import AssembleK
+from FromMatlab.Kg.Assembleg import Assembleg
+from FromMatlab.Kg.lib.initializeKg import initializeKg
 
 import numpy as np
 

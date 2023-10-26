@@ -1,8 +1,8 @@
 import numpy as np
 
-from Src.Geo.UpdateVertices import UpdateVertices
-from Src.Kg.KgGlobal import KgGlobal
-from Src.NewtonRaphson import UpdateMeasures
+from FromMatlab.Geo.UpdateVertices import UpdateVertices
+from FromMatlab.Kg.KgGlobal import KgGlobal
+from FromMatlab.NewtonRaphson import UpdateMeasures
 
 
 def LineSearch(Geo_0=None, Geo_n=None, Geo=None, Dofs=None, Set=None, gc=None, dy=None):

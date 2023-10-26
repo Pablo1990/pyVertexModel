@@ -1,11 +1,11 @@
 import numpy as np
 
-from Src.DOFs.GetDOFs import GetDOFs
-from Src.DOFs.GetDOFsSubstrate import GetDOFsSubstrate
-from Src.Geo.InitializeGeometry3DVertex import InitializeGeometry3DVertex
-from Src.Geo.InitializeGeometry_3DVoronoi import InitializeGeometry_3DVoronoi
-from Src.Geo.InitializeGeometry_VertexModel2DTime import InitializeGeometry_VertexModel2DTime
-from Src.PostProcessing.InitiateOutputFolder import InitiateOutputFolder
+from FromMatlab.DOFs.GetDOFs import GetDOFs
+from FromMatlab.DOFs.GetDOFsSubstrate import GetDOFsSubstrate
+from FromMatlab.Geo.InitializeGeometry3DVertex import InitializeGeometry3DVertex
+from FromMatlab.Geo.InitializeGeometry_3DVoronoi import InitializeGeometry_3DVoronoi
+from FromMatlab.Geo.InitializeGeometry_VertexModel2DTime import InitializeGeometry_VertexModel2DTime
+from FromMatlab.PostProcessing.InitiateOutputFolder import InitiateOutputFolder
 
 
 def InitializeVertexModel(Set = None,Geo = None):

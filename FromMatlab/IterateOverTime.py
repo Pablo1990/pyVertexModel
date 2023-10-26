@@ -1,8 +1,8 @@
 import numpy as np
 
-from Src.Kg.KgGlobal import KgGlobal
-from Src.NewtonRaphson import NewtonRaphson
-from Src.Utilities.ablateCells import ablateCells
+from FromMatlab.Kg.KgGlobal import KgGlobal
+from FromMatlab.NewtonRaphson import NewtonRaphson
+from FromMatlab.Utilities.ablateCells import ablateCells
 
 
 def IterateOverTime(Geo=None, Geo_n=None, Geo_0=None, Set=None, Dofs=None, EnergiesPerTimeStep=None, t=None,

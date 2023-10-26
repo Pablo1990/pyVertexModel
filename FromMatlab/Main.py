@@ -1,8 +1,8 @@
 import numpy as np
 
-from Src.InitializeVertexModel import InitializeVertexModel
-from Src.IterateOverTime import IterateOverTime
-from Src.Set import Set
+from FromMatlab.InitializeVertexModel import InitializeVertexModel
+from FromMatlab.IterateOverTime import IterateOverTime
+from src.pyVertexModel import Set
 
 Sets = np.array([])
 Geos = np.array([])
