@@ -73,5 +73,3 @@ def KgGlobal(Geo_0 = None,Geo_n = None,Geo = None,Set = None):
     #     dy_reshaped(Geo.Cells(1).Faces(16).globalIds,:)
 #     dy_reshaped(Geo.Cells(1).globalIds(2),:)
     return g,K,E,Geo,Energies
-    
-    return g,K,E,Geo,Energies

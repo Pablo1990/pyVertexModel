@@ -9,7 +9,7 @@ class UpdateMeasures:
     pass
 
 
-def NewtonRaphson(Geo_0=None, Geo_n=None, Geo=None, Dofs=None, Set=None, K=None, g=None, numStep=None, t=None):
+    def NewtonRaphson(Geo_0=None, Geo_n=None, Geo=None, Dofs=None, Set=None, K=None, g=None, numStep=None, t=None):
     if Geo.Remodelling:
         dof = Dofs.Remodel
     else:
