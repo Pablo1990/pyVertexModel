@@ -4,6 +4,7 @@ import numpy as np
 class DegreesOfFreedom:
     def __int__(self):
         pass
+
     def ApplyBoundaryCondition(self, t, Geo, Dofs, Set):
         if t >= Set["TStartBC"] and t <= Set["TStopBC"]:
             dimP, FixIDs = np.unravel_index(Dofs["FixP"], (3, Geo["numY"] + Geo["numF"] + Geo["nCells"]))
@@ -18,8 +19,6 @@ class DegreesOfFreedom:
             # Dofs["Free"] = np.unique(Dofs["Free"])  # Uncomment if Dofs is a numpy array
 
         return Geo, Dofs
-
-    import numpy as np
 
     def GetDOFs(self, Geo, Set):
         # Define free and constrained vertices
@@ -58,8 +57,6 @@ class DegreesOfFreedom:
 
         return Dofs
 
-    import numpy as np
-
     def UpdateDOFsCompress(self, Geo, Set):
         maxY = Geo["Cells"][0]["Y"][0, 1]
 
@@ -88,8 +85,6 @@ class DegreesOfFreedom:
 
         return Geo, Dofs
 
-    import numpy as np
-
     def UpdateDOFsStretch(self, FixP, Geo, Set):
         for cell in Geo["Cells"]:
             prescYi = np.isin(cell["globalIds"], FixP)
@@ -99,6 +94,6 @@ class DegreesOfFreedom:
                 for face in cell["Faces"]:
                     if FixP[gn] == face["globalIds"]:
                         face["Centre"][1] = face["Centre"][1] + Set["dx"] / (
-                                    (Set["TStopBC"] - Set["TStartBC"]) / Set["dt"])
+                                (Set["TStopBC"] - Set["TStartBC"]) / Set["dt"])
 
         return Geo

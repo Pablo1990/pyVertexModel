@@ -52,7 +52,7 @@ class Geo:
 
     import numpy as np
 
-    def BuildXFromY(self, Geo_n, Geo):
+    def BuildXFromY(Geo, Geo_n):
         proportionOfMax = 0
 
         aliveCells = [cell["ID"] for cell in Geo["Cells"] if cell.get("AliveStatus")]

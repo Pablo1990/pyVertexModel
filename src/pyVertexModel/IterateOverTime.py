@@ -38,7 +38,7 @@ def IterateOverTime(Geo=None, Geo_n=None, Geo_0=None, Set=None, Dofs=None, Energ
     if gr < Set.tol and dyr < Set.tol and np.all(np.isnan(g(Dofs.Free)) == 0) and np.all(np.isnan(dy(Dofs.Free)) == 0):
         if Set.nu / Set.nu0 == 1:
 
-            Geo = BuildXFromY(Geo_n, Geo)
+            Geo.BuildXFromY(Geo_n)
             Set.lastTConverged = t
 
             ## New Step
