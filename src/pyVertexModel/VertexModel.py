@@ -8,15 +8,16 @@ from skimage.measure import regionprops
 from src.pyVertexModel import DegreesOfFreedom, NewtonRaphson
 from src.pyVertexModel.Geo import Geo
 from src.pyVertexModel.Set import Set
-from src.pyVertexModel.main import Dofs
+from scipy.spatial import Delaunay, KDTree
 
 
 class VertexModel:
 
     def __init__(self):
 
-        self.Geo = Geo()
-        self.Dofs = Dofs()
+        self.didNotConverge = False
+        self.Geo()
+        self.Dofs()
         self.Set = Set()
         #self.Set = WoundDefault(self.Set)
         self.InitiateOutputFolder()
@@ -36,7 +37,7 @@ class VertexModel:
 
         # TODO FIXME, this is bad, should be joined somehow
         if self.Set.Substrate == 1:
-            Dofs.GetDOFsSubstrate(self.Geo, self.Set)
+            self.Dofs.GetDOFsSubstrate(self.Geo, self.Set)
         else:
             self.Dofs.GetDOFs(self.Geo, self.Set)
         self.Geo.Remodelling = False
@@ -233,8 +234,8 @@ class VertexModel:
             for f in range(len(Geo.Cells[c].Faces)):
                 Face = Geo.Cells[c].Faces[f]
                 Set.BarrierTri0 = min([tri.Area for tri in Geo.Cells[c].Faces[f].Tris] + [Set.BarrierTri0])
-                lmin_values.append(min(tri['LengthsToCentre']))
-                lmin_values.append(tri['EdgeLength'])
+                lmin_values.append(min(tri.LengthsToCentre))
+                lmin_values.append(tri.EdgeLength)
                 for nTris in range(len(Geo.Cells[c].Faces[f].Tris)):
                     tri = Geo.Cells[c].Faces[f].Tris[nTris]
                     if tri.Location == 'Top':
@@ -263,78 +264,268 @@ class VertexModel:
     def InitializeGeometry_3DVoronoi(self):
         pass
 
-    def InitializeGeometry3DVertex(self):
-        pass
+    def InitializeGeometry_Bubbles(self):
+        # Build nodal mesh
+        self.X = self.BuildTopo(self.Geo.nx, self.Geo.ny, self.Geo.nz, 0)
+        self.Geo.nCells = self.X.shape[0]
 
-    def IterateOverTime(Geo=None, Geo_n=None, Geo_0=None, Set=None, Dofs=None, EnergiesPerTimeStep=None, t=None,
-                        numStep=None, tr=None, relaxingNu=None, backupVars=None):
-        '''
+        # Centre Nodal position at (0,0)
+        self.X[:, 0] = self.X[:, 0] - np.mean(self.X[:, 0])
+        self.X[:, 1] = self.X[:, 1] - np.mean(self.X[:, 1])
+        self.X[:, 2] = self.X[:, 2] - np.mean(self.X[:, 2])
 
-        :param Geo:
-        :param Geo_n:
-        :param Geo_0:
-        :param Set:
-        :param Dofs:
-        :param EnergiesPerTimeStep:
-        :param t:
-        :param numStep:
-        :param tr:
-        :param relaxingNu:
-        :param backupVars:
-        :return:
-        '''
+        # Perform Delaunay
+        self.Geo.XgID, self.X = self.SeedWithBoundingBox(self.X, Set.s)
+        if self.Set.Substrate == 1:
+            Xg = self.X[self.Geo.XgID, :]
+            self.X = np.delete(self.X, self.Geo.XgID, 0)
+            Xg = Xg[Xg[:, 2] > np.mean(self.X[:, 2]), :]
+            self.Geo.XgID = np.arange(self.X.shape[0] + 1, self.X.shape[0] + Xg.shape[0] + 2)
+            self.X = np.concatenate((self.X, Xg, [np.mean(self.X[:, 0]), np.mean(self.X[:, 1]), -50]), axis=0)
 
-        didNotConverge = False
-        Set.currentT = t
+        Twg = Delaunay(self.X)
 
-        if not relaxingNu:
-            Set.iIncr = numStep
+        # Remove tetrahedras formed only by ghost nodes
+        Twg = Twg[~np.all(np.isin(Twg, self.Geo.XgID), axis=1)]
 
-            Geo, Dofs = Dofs.ApplyBoundaryCondition(t, Geo, Dofs, Set)
-            # IMPORTANT: Here it updates: Areas, Volumes, etc... Should be
-            # up-to-date
-            Geo.UpdateMeasures()
-            Set.UpdateSet_F(Geo)
+        # Re-number the surviving tets
+        uniqueTets, indices = np.unique(Twg, return_inverse=True)
+        self.Geo.XgID = np.arange(self.Geo.nCells + 1, len(uniqueTets))
+        self.X = self.X[uniqueTets]
+        Twg = indices.reshape(Twg.shape)
 
-        g, K, __, Geo, Energies = NewtonRaphson.KgGlobal(Geo_0, Geo_n, Geo, Set)
-        Geo, g, __, __, Set, gr, dyr, dy = NewtonRaphson.newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t)
-        if gr < Set.tol and dyr < Set.tol and np.all(np.isnan(g(Dofs.Free)) == 0) and np.all(
-                np.isnan(dy(Dofs.Free)) == 0):
-            if Set.nu / Set.nu0 == 1:
+        Xg = self.X[self.Geo.XgID]
+        self.Geo.XgBottom = self.Geo.XgID[Xg[:, 2] < np.mean(self.X[:, 2])]
+        self.Geo.XgTop = self.Geo.XgID[Xg[:, 2] > np.mean(self.X[:, 2])]
 
-                Geo.BuildXFromY(Geo_n)
-                Set.lastTConverged = t
+        self.Geo.BuildCells(Set, self.X, Twg)
 
-                ## New Step
-                t = t + Set.dt
-                Set.dt = np.amin(Set.dt + Set.dt * 0.5, Set.dt0)
-                Set.MaxIter = Set.MaxIter0
-                numStep = numStep + 1
-                backupVars.Geo_b = Geo
-                backupVars.tr_b = tr
-                backupVars.Dofs = Dofs
-                Geo_n = Geo
-                relaxingNu = False
-            else:
-                Set.nu = np.amax(Set.nu / 2, Set.nu0)
-                relaxingNu = True
-        else:
-            backupVars.Geo_b.log = Geo.log
-            Geo = backupVars.Geo_b
-            tr = backupVars.tr_b
-            Dofs = backupVars.Dofs
-            Geo_n = Geo
-            relaxingNu = False
-            if Set.iter == Set.MaxIter0:
-                Set.MaxIter = Set.MaxIter0 * 1.1
-                Set.nu = 10 * Set.nu0
-            else:
-                if Set.iter >= Set.MaxIter and Set.iter > Set.MaxIter0 and Set.dt / Set.dt0 > 1 / 100:
-                    Set.MaxIter = Set.MaxIter0
-                    Set.nu = Set.nu0
-                    Set.dt = Set.dt / 2
-                    t = Set.lastTConverged + Set.dt
+        # Define upper and lower area threshold for remodelling
+        allFaces = np.concatenate([cell.Faces for cell in Geo.Cells])
+        allTris = np.concatenate([face.Tris for face in allFaces])
+        avgArea = np.mean([tri.Area for tri in allTris])
+        stdArea = np.std([tri.Area for tri in allTris])
+        Set.upperAreaThreshold = avgArea + stdArea
+        Set.lowerAreaThreshold = avgArea - stdArea
+
+        Geo.AssembleNodes = [i for i, cell in enumerate(Geo.Cells) if cell.AliveStatus is not None]
+        Geo.BorderCells = []
+
+        Set.BarrierTri0 = np.inf
+        for cell in Geo.Cells:
+            for face in cell.Faces:
+                Set.BarrierTri0 = min([tri.Area for tri in face.Tris], Set.BarrierTri0)
+        Set.BarrierTri0 /= 10
+
+    def IterateOverTime(self):
+
+        while self.t <= self.Set.tend and not self.didNotConverge:
+            self.Set.currentT = self.t
+
+            if not self.relaxingNu:
+                self.Set.iIncr = self.numStep
+
+                self.Geo = self.Dofs.ApplyBoundaryCondition(self.t, self.Geo, self.Dofs, self.Set)
+                # IMPORTANT: Here it updates: Areas, Volumes, etc... Should be
+                # up-to-date
+                self.Geo.UpdateMeasures()
+                self.Set.UpdateSet_F(self.Geo)
+
+            g, K, __, self.Geo, Energies = NewtonRaphson.KgGlobal(self.Geo_0, self.Geo_n, self.Geo, self.Set)
+            self.Geo, g, __, __, self.Set, gr, dyr, dy = NewtonRaphson.newtonRaphson(self.Geo_0, self.Geo_n, self.Geo, self.Dofs, self.Set, K, g, self.numStep, self.t)
+            if gr < self.Set.tol and dyr < self.Set.tol and np.all(np.isnan(g(self.Dofs.Free)) == 0) and np.all(
+                    np.isnan(dy(self.Dofs.Free)) == 0):
+                if self.Set.nu / self.Set.nu0 == 1:
+
+                    self.Geo.BuildXFromY(self.Geo_n)
+                    self.Set.lastTConverged = self.t
+
+                    ## New Step
+                    self.t = self.t + self.Set.dt
+                    self.Set.dt = np.amin(self.Set.dt + self.Set.dt * 0.5, self.Set.dt0)
+                    self.Set.MaxIter = self.Set.MaxIter0
+                    self.numStep = self.numStep + 1
+                    self.backupVars.Geo_b = self.Geo
+                    self.backupVars.tr_b = self.tr
+                    self.backupVars.Dofs = self.Dofs
+                    self.Geo_n = self.Geo
+                    self.relaxingNu = False
                 else:
-                    didNotConverge = True
+                    self.Set.nu = np.amax(self.Set.nu / 2, self.Set.nu0)
+                    self.relaxingNu = True
+            else:
+                self.backupVars.Geo_b.log = self.Geo.log
+                self.Geo = self.backupVars.Geo_b
+                self.tr = self.backupVars.tr_b
+                self.Dofs = self.backupVars.Dofs
+                self.Geo_n = Geo
+                self.relaxingNu = False
+                if self.Set.iter == self.Set.MaxIter0:
+                    self.Set.MaxIter = self.Set.MaxIter0 * 1.1
+                    self.Set.nu = 10 * self.Set.nu0
+                else:
+                    if self.Set.iter >= self.Set.MaxIter and self.Set.iter > self.Set.MaxIter0 and self.Set.dt / self.Set.dt0 > 1 / 100:
+                        self.Set.MaxIter = self.Set.MaxIter0
+                        self.Set.nu = self.Set.nu0
+                        self.Set.dt = self.Set.dt / 2
+                        self.t = self.Set.lastTConverged + self.Set.dt
+                    else:
+                        self.didNotConverge = True
 
-        return didNotConverge
+        return self.didNotConverge
+
+    def BuildTopo(self, nx, ny, nz, columnarCells):
+        X = np.empty((0, 3))
+        X_Ids = []
+        for numZ in range(nz):
+            x = np.arange(nx)
+            y = np.arange(ny)
+            x, y = np.meshgrid(x, y)
+            x = x.flatten()
+            y = y.flatten()
+            z = np.ones_like(x) * numZ
+            X = np.vstack((X, np.column_stack((x, y, z))))
+
+            if columnarCells:
+                X_Ids.append(np.arange(1, len(x) + 1))
+            else:
+                X_Ids = np.arange(1, X.shape[0] + 1)
+        return X, X_Ids
+
+    def SeedWithBoundingBox(self, X, s):
+        nCells = X.shape[0]
+        r0 = np.mean(X, axis=0)
+        r = 5 * np.max(np.abs(X - r0))
+
+        # Bounding Box 2
+        rr = np.mean(X, axis=0)
+        Xg = np.array([
+            [r, r, r],
+            [-r, r, r],
+            [-r, -r, r],
+            [-r, r, -r],
+            [r, -r, r],
+            [-r, -r, -r],
+            [r, -r, -r],
+            [r, r, -r]
+        ]) + rr
+
+        theta = np.linspace(0, 2 * np.pi, 5)
+        phi = np.linspace(0, np.pi, 5)
+        theta, phi = np.meshgrid(theta, phi)
+        x = r * np.sin(phi) * np.cos(theta)
+        y = r * np.sin(phi) * np.sin(theta)
+        z = r * np.cos(phi)
+        x = x.flatten()
+        y = y.flatten()
+        z = z.flatten()
+        Xg = np.vstack((Xg, np.column_stack((x, y, z))) + r0)
+        _, idx = np.unique(Xg, axis=0, return_index=True)
+        Xg = Xg[np.sort(idx)]
+
+        XgID = np.arange(nCells, nCells + Xg.shape[0])
+        XgIDBB = XgID.copy()
+        X = np.vstack((X, Xg))
+        Tri = Delaunay(X)
+
+        Side = np.array([[0, 1, 2], [0, 1, 3], [1, 2, 3], [0, 2, 3]])
+        Edges = np.array([[0, 1], [1, 2], [2, 0], [0, 3], [1, 3], [2, 3]])
+        Vol = np.zeros(Tri.simplices.shape[0])
+        AreaFaces = np.zeros((Tri.simplices.shape[0], 4))
+        LengthEdges = np.zeros((Tri.simplices.shape[0], 6))
+        Arc = 0
+        Lnc = 0
+
+        for i in range(Tri.simplices.shape[0]):
+            for j in range(4):
+                if np.sum(np.isin(Tri.simplices[i, Side[j]], XgID)) == 0:
+                    p1, p2, p3 = X[Tri.simplices[i, Side[j]]]
+                    AreaFaces[i, j] = self.AreTri(p1, p2, p3)
+                    Arc += 1
+
+            for j in range(6):
+                if np.sum(np.isin(Tri.simplices[i, Edges[j]], XgID)) == 0:
+                    p1, p2 = X[Tri.simplices[i, Edges[j]]]
+                    LengthEdges[i, j] = np.linalg.norm(p1 - p2)
+                    Lnc += 1
+
+        for i in range(Tri.simplices.shape[0]):
+            for j in range(4):
+                if np.sum(np.isin(Tri.simplices[i, Side[j]], XgID)) == 0 and AreaFaces[i, j] > s ** 2:
+                    p1, p2, p3 = X[Tri.simplices[i, Side[j]]]
+                    X, XgID = self.SeedNodeTri(X, XgID, np.array([p1, p2, p3]), s)
+
+            for j in range(6):
+                if np.sum(np.isin(Tri.simplices[i, Edges[j]], XgID)) == 0 and LengthEdges[i, j] > 2 * s:
+                    p1, p2 = X[Tri.simplices[i, Edges[j]]]
+                    X, XgID = self.SeedNodeTet(X, XgID, Tri.simplices[i], s)
+                    break
+
+        for i in range(len(Vol)):
+            if np.sum(np.isin(Tri.simplices[i], XgID)) > 0:
+                X, XgID = self.SeedNodeTet(X, XgID, Tri.simplices[i], s)
+
+        X = np.delete(X, XgIDBB, axis=0)
+        XgID = np.arange(nCells, X.shape[0])
+        return XgID, X
+
+    def AreTri(self, p1, p2, p3):
+        return 0.5 * np.linalg.norm(np.cross(p2 - p1, p3 - p1))
+
+    def SeedNodeTet(self, X, XgID, Twgi, h):
+        XTet = X[Twgi, :]
+        Center = np.mean(XTet, axis=0)
+        nX = np.zeros((4, 3))
+        for i in range(4):
+            vc = Center - XTet[i, :]
+            dis = np.linalg.norm(vc)
+            dir = vc / dis
+            offset = h * dir
+            if dis > np.linalg.norm(offset):
+                nX[i, :] = XTet[i, :] + offset
+            else:
+                nX[i, :] = XTet[i, :] + vc
+
+        mask = np.isin(Twgi, XgID)
+        nX = nX[~mask, :]
+        nX = np.unique(nX, axis=0)
+        nX = self.CheckReplicateedNodes(X, nX, h)
+        nXgID = np.arange(X.shape[0], X.shape[0] + nX.shape[0])
+        X = np.vstack((X, nX))
+        XgID = np.concatenate((XgID, nXgID))
+        return X, XgID
+
+    def CheckReplicateedNodes(self, X, nX, h):
+        ToBeRemoved = np.zeros(nX.shape[0], dtype=bool)
+        for jj in range(nX.shape[0]):
+            m = np.linalg.norm(X - nX[jj], axis=1)
+            m = np.min(m)
+            if m < 1e-2 * h:
+                ToBeRemoved[jj] = True
+        nX = nX[~ToBeRemoved]
+        return nX
+
+    def SeedNodeTri(self, X, XgID, Tri, h):
+        XTri = X[Tri, :]
+        Center = np.mean(XTri, axis=0)
+        nX = np.zeros((3, 3))
+        for i in range(3):
+            vc = Center - XTri[i, :]
+            dis = np.linalg.norm(vc)
+            dir = vc / dis
+            offset = h * dir
+            if dis > np.linalg.norm(offset):
+                nX[i, :] = XTri[i, :] + offset
+            else:
+                nX[i, :] = XTri[i, :] + vc
+
+        mask = np.isin(Tri, XgID)
+        nX = nX[~mask, :]
+        nX = np.unique(nX, axis=0)
+        nX = self.CheckReplicateedNodes(X, nX, h)
+        nXgID = np.arange(X.shape[0], X.shape[0] + nX.shape[0])
+        X = np.vstack((X, nX))
+        XgID = np.concatenate((XgID, nXgID))
+        return X, XgID
+
+
