@@ -2,7 +2,7 @@ import numpy as np;
 
 class Cell():
 
-    def __int__(self):
+    def __init__(self):
         self.ID = -1
         self.X = np.empty(1, 'float')
         self.Tets = np.empty(1, 'int')
@@ -12,6 +12,8 @@ class Cell():
         self.Faces = Faces()
         self.area = -1
         self.volume = -1
+
+
 
     def ComputeCellArea(Cell, locationFilter=None):
         totalArea = 0

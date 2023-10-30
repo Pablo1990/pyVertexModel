@@ -2,7 +2,7 @@ import numpy as np
 
 
 class Face():
-    def __int__(self):
+    def __init__(self):
         pass
 
     def ComputeTriAspectRatio(self, sideLengths):
