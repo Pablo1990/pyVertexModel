@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.pyVertexModel.Kg.Kg import Kg
+from src.pyVertexModel.Kg.kg import Kg
 
 
 class KgTriEnergyBarrier(Kg):

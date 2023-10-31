@@ -1,4 +1,4 @@
-from src.pyVertexModel.VertexModel import VertexModel
+from src.pyVertexModel.vertexModel import VertexModel
 
 vModel = VertexModel()
 vModel.IterateOverTime()

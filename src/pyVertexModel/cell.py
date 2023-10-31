@@ -1,19 +1,18 @@
-import numpy as np;
+import numpy as np
 
-class Cell():
+
+class Cell:
 
     def __init__(self):
         self.ID = -1
         self.X = np.empty(1, 'float')
-        self.Tets = np.empty(1, 'int')
+        self.T = np.empty(1, 'int')
         self.Y = np.empty(1, 'float')
         self.globalIDs = None
-        self.Measurements = Measurements()
-        self.Faces = Faces()
+        self.Faces = []
         self.area = -1
         self.volume = -1
-
-
+        self.AliveStatus = 1
 
     def ComputeCellArea(Cell, locationFilter=None):
         totalArea = 0
@@ -47,6 +46,3 @@ class Cell():
 
         Cell.volume = v
         return v
-
-
-

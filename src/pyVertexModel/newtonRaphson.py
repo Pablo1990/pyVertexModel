@@ -1,12 +1,12 @@
 import numpy as np
 
-from src.pyVertexModel.Kg.KgContractility import KgContractility
-from src.pyVertexModel.Kg.KgSubstrate import KgSubstrate
-from src.pyVertexModel.Kg.KgSurfaceCellBasedAdhesion import Kg, KgSurfaceCellBasedAdhesion
-from src.pyVertexModel.Kg.KgTriAREnergyBarrier import KgTriAREnergyBarrier
-from src.pyVertexModel.Kg.KgTriEnergyBarrier import KgTriEnergyBarrier
-from src.pyVertexModel.Kg.KgViscosity import KgViscosity
-from src.pyVertexModel.Kg.KgVolume import KgVolume
+from src.pyVertexModel.Kg.kgContractility import KgContractility
+from src.pyVertexModel.Kg.kgSubstrate import KgSubstrate
+from src.pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import Kg, KgSurfaceCellBasedAdhesion
+from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
+from src.pyVertexModel.Kg.kgTriEnergyBarrier import KgTriEnergyBarrier
+from src.pyVertexModel.Kg.kgViscosity import KgViscosity
+from src.pyVertexModel.Kg.kgVolume import KgVolume
 
 
 def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):

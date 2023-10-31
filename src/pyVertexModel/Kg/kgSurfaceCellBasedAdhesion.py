@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.sparse import spdiags
 
-from src.pyVertexModel.Kg.Kg import Kg
+from src.pyVertexModel.Kg.kg import Kg
 
 
 class KgSurfaceCellBasedAdhesion(Kg):

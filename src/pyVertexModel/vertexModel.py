@@ -5,9 +5,9 @@ from PIL.Image import Image
 from scipy.spatial.distance import cdist
 from skimage.measure import regionprops
 
-from src.pyVertexModel import DegreesOfFreedom, NewtonRaphson
-from src.pyVertexModel.Geo import Geo
-from src.pyVertexModel.Set import Set
+from src.pyVertexModel import degreesOfFreedom, newtonRaphson
+from src.pyVertexModel.geo import Geo
+from src.pyVertexModel.set import Set
 from scipy.spatial import Delaunay, KDTree
 
 
@@ -15,6 +15,7 @@ class VertexModel:
 
     def __init__(self):
 
+        self.X = None
         self.didNotConverge = False
         self.Geo = Geo()
         self.Set = Set()
@@ -283,10 +284,10 @@ class VertexModel:
             self.X = np.concatenate((self.X, Xg, [np.mean(self.X[:, 0]), np.mean(self.X[:, 1]), -50]), axis=0)
 
         delaunayOBJ = Delaunay(self.X)
-        Twg = delaunayOBJ.simplices + 1
+        Twg = delaunayOBJ.simplices
         # Remove tetrahedras formed only by ghost nodes
         Twg = Twg[~np.all(np.isin(Twg, self.Geo.XgID), axis=1)]
-        # Remove weird IDs (like 0
+        # Remove weird IDs
         max_id = np.max(self.Geo.XgID)
         validIDs = np.array(list(range(max_id))) + 1
         Twg = Twg[np.all(np.isin(Twg, validIDs), axis=1)]
@@ -301,7 +302,7 @@ class VertexModel:
         self.Geo.XgBottom = self.Geo.XgID[Xg[:, 2] < np.mean(self.X[:, 2])]
         self.Geo.XgTop = self.Geo.XgID[Xg[:, 2] > np.mean(self.X[:, 2])]
 
-        self.Geo.BuildCells(Set, self.X, Twg)
+        self.Geo.BuildCells(self.Set, self.X, Twg)
 
         # Define upper and lower area threshold for remodelling
         allFaces = np.concatenate([cell.Faces for cell in Geo.Cells])
@@ -311,14 +312,14 @@ class VertexModel:
         Set.upperAreaThreshold = avgArea + stdArea
         Set.lowerAreaThreshold = avgArea - stdArea
 
-        Geo.AssembleNodes = [i for i, cell in enumerate(Geo.Cells) if cell.AliveStatus is not None]
-        Geo.BorderCells = []
+        self.Geo.AssembleNodes = [i for i, cell in enumerate(self.Geo.Cells) if cell.AliveStatus is not None]
+        self.Geo.BorderCells = []
 
         Set.BarrierTri0 = np.inf
-        for cell in Geo.Cells:
+        for cell in self.Geo.Cells:
             for face in cell.Faces:
-                Set.BarrierTri0 = min([tri.Area for tri in face.Tris], Set.BarrierTri0)
-        Set.BarrierTri0 /= 10
+                self.Set.BarrierTri0 = min([tri.Area for tri in face.Tris], self.Set.BarrierTri0)
+        self.Set.BarrierTri0 /= 10
 
     def IterateOverTime(self):
 
@@ -390,9 +391,9 @@ class VertexModel:
             X = np.vstack((X, np.column_stack((x, y, z))))
 
             if columnarCells:
-                X_Ids.append(np.arange(1, len(x) + 1))
+                X_Ids.append(np.arange(0, len(x)))
             else:
-                X_Ids = np.arange(1, X.shape[0] + 1)
+                X_Ids = np.arange(0, X.shape[0])
         return X, X_Ids
 
     def SeedWithBoundingBox(self, X, s):
