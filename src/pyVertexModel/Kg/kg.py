@@ -10,10 +10,6 @@ import numpy as np
 class Kg:
 
     def __init__(self, Geo):
-        '''
-
-        :param Geo:
-        '''
         dimg = (Geo['numY'] + Geo['numF'] + Geo['nCells']) * 3
         self.g = spdiags(np.zeros(dimg), 0, dimg, 1, format='csc')
         self.K = spdiags(np.zeros(dimg), 0, dimg, dimg, format='csc')

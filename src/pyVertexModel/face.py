@@ -25,7 +25,7 @@ class Face:
                                    Set.InputGeo == 'Bubbles')
 
         self.build_edges(Cell.T, face_ids, self.Centre, self.InterfaceType, Cell.X, Cell.Y,
-                         list(range(1, nCells + 1)))
+                         list(range(nCells)))
         self.Area = self.compute_face_area([tri.Edge for tri in self.Tris], Cell.Y, self.Centre)
         self.Area0 = self.Area
 
@@ -74,7 +74,7 @@ class Face:
 
     def build_face_centre(self, ij, ncells, X, Ys, H, extrapolate_face_centre):
         Centre = np.sum(Ys, axis=0) / len(Ys)
-        if any(node in range(1, ncells + 1) for node in ij) and extrapolate_face_centre:
+        if any(node in range(ncells) for node in ij) and extrapolate_face_centre:
             runit = (Centre - X)
             runit = runit / np.linalg.norm(runit)
             Centre = X + H * runit
@@ -85,13 +85,13 @@ class Face:
     def build_edges(self, T, face_ids, FaceCentre, FaceInterfaceType, X, Ys, nonDeadCells):
         FaceTets = T[face_ids,]
         tet_order = np.zeros(len(FaceTets))
-        tet_order[0] = 1
+        tet_order[0] = 0
         prev_tet = FaceTets[0, :]
 
         if len(FaceTets) > 3:
-            for yi in range(1, len(FaceTets)):
-                i = np.sum(np.all(FaceTets == prev_tet, axis=1), axis=0) == 3
-                i = i & ~np.isin(np.arange(1, len(FaceTets) + 1), tet_order)
+            for yi in range(len(FaceTets)):
+                i = np.sum(FaceTets == prev_tet, axis=1) == 3
+                i = i & ~np.isin(np.arange(len(FaceTets)), tet_order)
                 i = np.where(i)[0]
                 if len(i) == 0:
                     raise Exception('BuildEdges:TetrahedraOrdering', 'Cannot create a face with these tetrahedra')
@@ -102,7 +102,7 @@ class Face:
         else:
             tet_order = np.array([1, 2, 3])
 
-        surf_ids = np.arange(1, len(T) + 1)
+        surf_ids = np.arange(len(T))
         surf_ids = surf_ids[face_ids]
         if len(surf_ids) < 3:
             raise Exception('BuildEdges:TetrahedraMinSize', 'Length of the face is lower than 3')

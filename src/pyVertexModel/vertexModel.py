@@ -280,7 +280,7 @@ class VertexModel:
             Xg = self.X[self.Geo.XgID, :]
             self.X = np.delete(self.X, self.Geo.XgID, 0)
             Xg = Xg[Xg[:, 2] > np.mean(self.X[:, 2]), :]
-            self.Geo.XgID = np.arange(self.X.shape[0] + 1, self.X.shape[0] + Xg.shape[0] + 2)
+            self.Geo.XgID = np.arange(self.X.shape[0], self.X.shape[0] + Xg.shape[0] + 2)
             self.X = np.concatenate((self.X, Xg, [np.mean(self.X[:, 0]), np.mean(self.X[:, 1]), -50]), axis=0)
 
         delaunayOBJ = Delaunay(self.X)
@@ -289,14 +289,14 @@ class VertexModel:
         Twg = Twg[~np.all(np.isin(Twg, self.Geo.XgID), axis=1)]
         # Remove weird IDs
         max_id = np.max(self.Geo.XgID)
-        validIDs = np.array(list(range(max_id))) + 1
+        validIDs = np.array(list(range(max_id)))
         Twg = Twg[np.all(np.isin(Twg, validIDs), axis=1)]
 
         # Re-number the surviving tets
-        uniqueTets, indices = np.unique(Twg, return_inverse=True)
-        self.Geo.XgID = np.arange(self.Geo.nCells + 1, len(uniqueTets))
-        self.X = self.X[uniqueTets]
-        Twg = indices.reshape(Twg.shape)
+        #uniqueTets, indices = np.unique(Twg, return_inverse=True)
+        #self.Geo.XgID = np.arange(self.Geo.nCells, len(uniqueTets))
+        #self.X = self.X[uniqueTets]
+        #Twg = indices.reshape(Twg.shape)
 
         Xg = self.X[self.Geo.XgID]
         self.Geo.XgBottom = self.Geo.XgID[Xg[:, 2] < np.mean(self.X[:, 2])]
@@ -335,8 +335,8 @@ class VertexModel:
                 self.Geo.UpdateMeasures()
                 self.Set.UpdateSet_F(self.Geo)
 
-            g, K, __, self.Geo, Energies = NewtonRaphson.KgGlobal(self.Geo_0, self.Geo_n, self.Geo, self.Set)
-            self.Geo, g, __, __, self.Set, gr, dyr, dy = NewtonRaphson.newtonRaphson(self.Geo_0, self.Geo_n, self.Geo, self.Dofs, self.Set, K, g, self.numStep, self.t)
+            g, K, __, self.Geo, Energies = newtonRaphson.KgGlobal(self.Geo_0, self.Geo_n, self.Geo, self.Set)
+            self.Geo, g, __, __, self.Set, gr, dyr, dy = newtonRaphson.newtonRaphson(self.Geo_0, self.Geo_n, self.Geo, self.Dofs, self.Set, K, g, self.numStep, self.t)
             if gr < self.Set.tol and dyr < self.Set.tol and np.all(np.isnan(g(self.Dofs.Free)) == 0) and np.all(
                     np.isnan(dy(self.Dofs.Free)) == 0):
                 if self.Set.nu / self.Set.nu0 == 1:
@@ -391,9 +391,9 @@ class VertexModel:
             X = np.vstack((X, np.column_stack((x, y, z))))
 
             if columnarCells:
-                X_Ids.append(np.arange(0, len(x)))
+                X_Ids.append(np.arange(len(x)))
             else:
-                X_Ids = np.arange(0, X.shape[0])
+                X_Ids = np.arange(X.shape[0])
         return X, X_Ids
 
     def SeedWithBoundingBox(self, X, s):
@@ -414,7 +414,11 @@ class VertexModel:
         y = y.flatten()
         z = z.flatten()
         Xg = np.column_stack((x, y, z)) + r0
-        _, idx = np.unique(Xg, axis=0, return_index=True)
+
+
+        # Find unique values considering the tolerance
+        tolerance = 1e-6
+        unique_values, idx = np.unique(Xg.round(decimals=int(-np.log10(tolerance))), axis=0, return_index=True)
         Xg = Xg[np.sort(idx)]
 
         XgID = np.arange(nCells, nCells + Xg.shape[0])
