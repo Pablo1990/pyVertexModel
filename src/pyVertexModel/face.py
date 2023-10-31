@@ -87,15 +87,17 @@ class Face:
 
     def build_edges(self, T, face_ids, FaceCentre, FaceInterfaceType, X, Ys, nonDeadCells):
         FaceTets = T[face_ids,]
-        FaceTets = np.array([
-                [1, 94, 101, 2],
-                [52, 2, 1, 106],
-                [2, 46, 52, 1],
-                [1, 30, 94, 2],
-                [1, 46, 30, 2],
-                [101, 4, 1, 2],
-                [106, 2, 1, 4]
-            ])-1
+
+        # TODO: INCORPORATE THIS INTO A TEST
+        # FaceTets = np.array([
+        #         [1, 94, 101, 2],
+        #         [52, 2, 1, 106],
+        #         [2, 46, 52, 1],
+        #         [1, 30, 94, 2],
+        #         [1, 46, 30, 2],
+        #         [101, 4, 1, 2],
+        #         [106, 2, 1, 4]
+        #     ])-1
         tet_order = np.zeros(len(FaceTets))-1
         tet_order[0] = 0
         prev_tet = FaceTets[0, :]
@@ -138,43 +140,43 @@ class Face:
             surf_ids = np.flip(surf_ids)
 
         for currentTri in range(len(surf_ids) - 1):
-            Tris[currentTri].Edge = [surf_ids[currentTri], surf_ids[currentTri + 1]]
-            currentTris_1 = Tets[Tris[currentTri].Edge[0], :]
-            currentTris_2 = Tets[Tris[currentTri].Edge[1], :]
-            Tris[currentTri].SharedByCells = np.intersect1d(
-                np.intersect1d(currentTris_1[np.isin(currentTris_1, nonDeadCells)],
-                               currentTris_2[np.isin(currentTris_2, nonDeadCells)]))
+            self.Tris.append(tris.Tris())
+            self.Tris[currentTri].Edge = [surf_ids[currentTri], surf_ids[currentTri + 1]]
+            currentTris_1 = T[self.Tris[currentTri].Edge[0], :]
+            currentTris_2 = T[self.Tris[currentTri].Edge[1], :]
+            self.Tris[currentTri].SharedByCells = np.intersect1d(currentTris_1[np.isin(currentTris_1, nonDeadCells)],
+                               currentTris_2[np.isin(currentTris_2, nonDeadCells)])
 
-            Tris[currentTri].EdgeLength, Tris[currentTri].LengthsToCentre, Tris[
-                currentTri].AspectRatio = self.ComputeTriLengthMeasurements(Tris, Ys, currentTri, FaceCentre)
-            Tris[currentTri].EdgeLength_time = [0, Tris[currentTri].EdgeLength]
+            self.Tris[currentTri].EdgeLength, self.Tris[currentTri].LengthsToCentre, self.Tris[
+                currentTri].AspectRatio = self.ComputeTriLengthMeasurements(self.Tris, Ys, currentTri, FaceCentre)
+            self.Tris[currentTri].EdgeLength_time = [0, self.Tris[currentTri].EdgeLength]
 
-        Tris[len(surf_ids)].Edge = [surf_ids[-1], surf_ids[0]]
-        currentTris_1 = Tets[Tris[len(surf_ids)].Edge[0], :]
-        currentTris_2 = Tets[Tris[len(surf_ids)].Edge[1], :]
-        Tris[len(surf_ids)].SharedByCells = np.intersect1d(
-            np.intersect1d(currentTris_1[np.isin(currentTris_1, nonDeadCells)],
-                           currentTris_2[np.isin(currentTris_2, nonDeadCells)]))
+        self.Tris.append(tris.Tris())
+        self.Tris[len(surf_ids)-1].Edge = [surf_ids[len(surf_ids)-1], surf_ids[0]]
+        currentTris_1 = T[self.Tris[len(surf_ids)-1].Edge[0], :]
+        currentTris_2 = T[self.Tris[len(surf_ids)-1].Edge[1], :]
+        self.Tris[len(surf_ids)-1].SharedByCells = np.intersect1d(currentTris_1[np.isin(currentTris_1, nonDeadCells)],
+                           currentTris_2[np.isin(currentTris_2, nonDeadCells)])
 
-        Tris[len(surf_ids)].EdgeLength, Tris[len(surf_ids)].LengthsToCentre, Tris[
-            len(surf_ids)].AspectRatio = self.ComputeTriLengthMeasurements(Tris, Ys, len(surf_ids), FaceCentre)
-        Tris[len(surf_ids)].EdgeLength_time = [0, Tris[len(surf_ids)].EdgeLength]
+        self.Tris[len(surf_ids)-1].EdgeLength, self.Tris[len(surf_ids)-1].LengthsToCentre, self.Tris[
+            len(surf_ids)-1].AspectRatio = self.ComputeTriLengthMeasurements(self.Tris, Ys, len(surf_ids)-1, FaceCentre)
+        self.Tris[len(surf_ids)-1].EdgeLength_time = [0, self.Tris[len(surf_ids)-1].EdgeLength]
 
-        _, triAreas = ComputeFaceArea(np.vstack(Tris.Edge), Ys, FaceCentre)
-        for i in range(len(Tris)):
-            Tris[i].Area = triAreas[i]
+        _, triAreas = self.compute_face_area(self.Tris, Ys, FaceCentre)
+        for i in range(len(self.Tris)):
+            self.Tris[i].Area = triAreas[i]
 
-        for tri in Tris:
+        for tri in self.Tris:
             tri.Location = FaceInterfaceType
 
-        for tri in Tris:
+        for tri in self.Tris:
             tri.ContractileG = 0
 
     def compute_face_area(self, Tris, Y, FaceCentre):
         area = 0
         trisArea = [None] * len(Tris)
         for t in range(len(Tris)):
-            Tri = Tris[t]
+            Tri = Tris[t].Edge
             Y3 = FaceCentre
             YTri = np.vstack([Y[Tri, :], Y3])
             T = (1 / 2) * np.linalg.norm(np.cross(YTri[1, :] - YTri[0, :], YTri[0, :] - YTri[2, :]))
