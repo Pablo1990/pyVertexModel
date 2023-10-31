@@ -283,11 +283,13 @@ class VertexModel:
             self.X = np.concatenate((self.X, Xg, [np.mean(self.X[:, 0]), np.mean(self.X[:, 1]), -50]), axis=0)
 
         delaunayOBJ = Delaunay(self.X)
-        Twg = delaunayOBJ.neighbors + 1
+        Twg = delaunayOBJ.simplices + 1
         # Remove tetrahedras formed only by ghost nodes
         Twg = Twg[~np.all(np.isin(Twg, self.Geo.XgID), axis=1)]
-        # Remove weird IDs
-        Twg = Twg[np.all(~np.isin(Twg, 0), axis=1)]
+        # Remove weird IDs (like 0
+        max_id = np.max(self.Geo.XgID)
+        validIDs = np.array(list(range(max_id))) + 1
+        Twg = Twg[np.all(np.isin(Twg, validIDs), axis=1)]
 
         # Re-number the surviving tets
         uniqueTets, indices = np.unique(Twg, return_inverse=True)
