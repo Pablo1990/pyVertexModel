@@ -25,7 +25,7 @@ class Geo:
             newCell = cell.Cell()
             newCell.ID = c
             newCell.X = X[c, :]
-            newCell.T = Twg[np.any(Twg == 0, axis=1), ]
+            newCell.T = Twg[np.any(Twg == c, axis=1), ]
 
             # Initialize status of cells: 1 = 'Alive', 0 = 'Ablated', [] = 'Dead'
             if c < Set.TotalCells:
