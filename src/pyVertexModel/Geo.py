@@ -9,9 +9,9 @@ class Geo:
         self.XgBottom = None
         self.XgTop = None
         self.XgID = None
-        self.nz = None
-        self.ny = None
-        self.nx = None
+        self.nz = 1
+        self.ny = 3
+        self.nx = 3
         self.Cells = []
         self.nCells = 0
 

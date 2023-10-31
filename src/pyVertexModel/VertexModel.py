@@ -16,14 +16,13 @@ class VertexModel:
     def __init__(self):
 
         self.didNotConverge = False
-        self.Geo()
-        self.Dofs()
+        self.Geo = Geo()
         self.Set = Set()
         #self.Set = WoundDefault(self.Set)
         self.InitiateOutputFolder()
 
         if self.Set.InputGeo == 'Bubbles':
-            self.InitializeGeometry3DVertex()
+            self.InitializeGeometry_Bubbles()
         elif self.Set.InputGeo == 'Voronoi':
             self.InitializeGeometry_3DVoronoi()
         elif self.Set.InputGeo == 'VertexModelTime':
@@ -266,7 +265,7 @@ class VertexModel:
 
     def InitializeGeometry_Bubbles(self):
         # Build nodal mesh
-        self.X = self.BuildTopo(self.Geo.nx, self.Geo.ny, self.Geo.nz, 0)
+        self.X, X_IDs = self.BuildTopo(self.Geo.nx, self.Geo.ny, self.Geo.nz, 0)
         self.Geo.nCells = self.X.shape[0]
 
         # Centre Nodal position at (0,0)
@@ -275,7 +274,7 @@ class VertexModel:
         self.X[:, 2] = self.X[:, 2] - np.mean(self.X[:, 2])
 
         # Perform Delaunay
-        self.Geo.XgID, self.X = self.SeedWithBoundingBox(self.X, Set.s)
+        self.Geo.XgID, self.X = self.SeedWithBoundingBox(self.X, self.Set.s)
         if self.Set.Substrate == 1:
             Xg = self.X[self.Geo.XgID, :]
             self.X = np.delete(self.X, self.Geo.XgID, 0)
@@ -283,10 +282,12 @@ class VertexModel:
             self.Geo.XgID = np.arange(self.X.shape[0] + 1, self.X.shape[0] + Xg.shape[0] + 2)
             self.X = np.concatenate((self.X, Xg, [np.mean(self.X[:, 0]), np.mean(self.X[:, 1]), -50]), axis=0)
 
-        Twg = Delaunay(self.X)
-
+        delaunayOBJ = Delaunay(self.X)
+        Twg = delaunayOBJ.neighbors + 1
         # Remove tetrahedras formed only by ghost nodes
         Twg = Twg[~np.all(np.isin(Twg, self.Geo.XgID), axis=1)]
+        # Remove weird IDs
+        Twg = Twg[np.all(~np.isin(Twg, 0), axis=1)]
 
         # Re-number the surviving tets
         uniqueTets, indices = np.unique(Twg, return_inverse=True)
@@ -399,16 +400,6 @@ class VertexModel:
 
         # Bounding Box 2
         rr = np.mean(X, axis=0)
-        Xg = np.array([
-            [r, r, r],
-            [-r, r, r],
-            [-r, -r, r],
-            [-r, r, -r],
-            [r, -r, r],
-            [-r, -r, -r],
-            [r, -r, -r],
-            [r, r, -r]
-        ]) + rr
 
         theta = np.linspace(0, 2 * np.pi, 5)
         phi = np.linspace(0, np.pi, 5)
@@ -419,7 +410,7 @@ class VertexModel:
         x = x.flatten()
         y = y.flatten()
         z = z.flatten()
-        Xg = np.vstack((Xg, np.column_stack((x, y, z))) + r0)
+        Xg = np.column_stack((x, y, z)) + r0
         _, idx = np.unique(Xg, axis=0, return_index=True)
         Xg = Xg[np.sort(idx)]
 

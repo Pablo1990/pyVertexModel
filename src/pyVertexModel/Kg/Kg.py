@@ -4,9 +4,6 @@ from abc import abstractmethod
 from scipy import sparse
 from scipy.sparse import spdiags, coo_matrix
 
-from FromMatlab.Kg.AssembleK import AssembleK
-from FromMatlab.Kg.Assembleg import Assembleg
-
 import numpy as np
 
 

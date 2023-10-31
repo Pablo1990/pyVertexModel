@@ -11,7 +11,7 @@ class Set:
         self.s = 1.5
         self.ObtainX = 0
         ## Type of inputto obtain  the initial topology of the cells
-        self.InputGeo = 'Voronoi'
+        self.InputGeo = 'Bubbles'
         self.CellHeight = 15
         self.TotalCells = 40
         ## ===========================  Add Substrate =========================
