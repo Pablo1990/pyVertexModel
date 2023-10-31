@@ -1,5 +1,7 @@
 import numpy as np
 
+from src.pyVertexModel import tris
+
 
 class Face:
 
@@ -10,6 +12,7 @@ class Face:
         self.Centre = -1
         self.Area = -1
         self.Area0 = -1
+        self.Tris = []
 
     def BuildFace(self, ci, cj, face_ids, nCells, Cell, XgID, Set, XgTop, XgBottom, oldFace=None):
         self.InterfaceType = None
@@ -111,6 +114,8 @@ class Face:
                 raise Exception('BuildEdges:TetrahedraOrdering', 'Cannot create a face with these tetrahedra')
         else:
             tet_order = np.array([0, 1, 2])
+
+        tet_order = np.array(tet_order, dtype=int)
 
         surf_ids = np.arange(len(T))
         surf_ids = surf_ids[face_ids]
