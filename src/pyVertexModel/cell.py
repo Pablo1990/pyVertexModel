@@ -8,7 +8,7 @@ class Cell:
         self.X = np.empty(1, 'float')
         self.T = np.empty(1, 'int')
         self.Y = np.empty(1, 'float')
-        self.globalIDs = None
+        self.globalIDs = np.array([], dtype='int')
         self.Faces = []
         self.Area = -1
         self.Vol = -1

@@ -233,14 +233,17 @@ class Geo:
                 CellJ = self.Cells[cj]
 
                 for num_id, face_ids_i in enumerate(np.sum(np.isin(Cell.T, ij), axis=1) == 2):
-                    if face_ids_i:
-                        g_ids[num_id] = CellJ.globalIds[
-                            np.where(np.all(np.sort(CellJ.T, axis=1) == np.sort(Cell.T[num_id], axis=0), axis=1))]
+                    if not face_ids_i:
+                        continue
+
+                    sorted_cellJ_T = np.sort(CellJ.T, axis=1)
+                    sorted_Cell_T_num_id = np.sort(Cell.T[num_id], axis=0)
+                    g_ids[num_id] = CellJ.globalIds[np.where(np.all(np.isin(sorted_cellJ_T, sorted_Cell_T_num_id), axis=1))]
 
                 for f in range(len(Cell.Faces)):
                     Face = Cell.Faces[f]
 
-                    if np.sum(np.isin(Face.ij, ij), axis=1) == 2:
+                    if np.all(np.isin(Face.ij, ij)):
                         for f2 in range(len(CellJ.Faces)):
                             FaceJ = CellJ.Faces[f2]
 
@@ -250,7 +253,7 @@ class Geo:
             nz = np.sum(g_ids == 0)
             g_ids[g_ids == 0] = np.arange(g_ids_tot, g_ids_tot + nz)
 
-            self.Cells[ci - 1].globalIds = g_ids.tolist()
+            self.Cells[ci - 1].globalIds = g_ids
 
             nz_f = np.sum(g_ids_f == 0)
             g_ids_f[g_ids_f == 0] = np.arange(g_ids_tot_f, g_ids_tot_f + nz_f)
