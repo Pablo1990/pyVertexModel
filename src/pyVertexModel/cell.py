@@ -10,8 +10,8 @@ class Cell:
         self.Y = np.empty(1, 'float')
         self.globalIDs = None
         self.Faces = []
-        self.area = -1
-        self.volume = -1
+        self.Area = -1
+        self.Vol = -1
         self.AliveStatus = 1
 
     def ComputeCellArea(Cell, locationFilter=None):
@@ -23,7 +23,7 @@ class Cell:
             else:
                 totalArea = totalArea + Cell.Faces[f].Area
 
-        Cell.area = totalArea
+        Cell.Area = totalArea
         return totalArea
 
     def ComputeCellVolume(Cell):
@@ -44,5 +44,5 @@ class Cell:
 
                 v += currentV
 
-        Cell.volume = v
+        Cell.Vol = v
         return v

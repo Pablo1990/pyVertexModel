@@ -53,9 +53,9 @@ class Geo:
                                                  Set, self.XgTop, self.XgBottom)
                 self.Cells[c].Faces.append(newFace)
 
-            self.Cells[c].ComputeCellArea(self.Cells[c])
+            self.Cells[c].ComputeCellArea()
             self.Cells[c].Area0 = self.Cells[c].Area
-            self.Cells[c].ComputeCellVolume(self.Cells[c])
+            self.Cells[c].ComputeCellVolume()
             self.Cells[c].Vol0 = self.Cells[c].Vol
             self.Cells[c].ExternalLambda = 1
             self.Cells[c].InternalLambda = 1

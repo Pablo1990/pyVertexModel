@@ -29,7 +29,7 @@ class Face:
 
         self.build_edges(Cell.T, face_ids, self.Centre, self.InterfaceType, Cell.X, Cell.Y,
                          list(range(nCells)))
-        self.Area = self.compute_face_area([tri.Edge for tri in self.Tris], Cell.Y, self.Centre)
+        self.Area, _ = self.compute_face_area(self.Tris, Cell.Y, self.Centre)
         self.Area0 = self.Area
 
     def ComputeTriAspectRatio(self, sideLengths):
@@ -176,7 +176,8 @@ class Face:
         area = 0
         trisArea = [None] * len(Tris)
         for t in range(len(Tris)):
-            Tri = Tris[t].Edge
+            Tri = Tris[t]
+            Tri = Tri.Edge
             Y3 = FaceCentre
             YTri = np.vstack([Y[Tri, :], Y3])
             T = (1 / 2) * np.linalg.norm(np.cross(YTri[1, :] - YTri[0, :], YTri[0, :] - YTri[2, :]))
