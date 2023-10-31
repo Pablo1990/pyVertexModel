@@ -5,6 +5,8 @@ from src.pyVertexModel import cell, face
 
 class Geo:
     def __init__(self):
+        self.numF = None
+        self.numY = None
         self.EdgeLengthAvg_0 = None
         self.XgBottom = None
         self.XgTop = None
@@ -62,13 +64,23 @@ class Geo:
             self.Cells[c].SubstrateLambda = 1
             self.Cells[c].lambdaB_perc = 1
 
-        # Edge lengths 0 as average of all cells by location (Top, bottom or lateral)
+        # Edge lengths 0 as average of all cells by location (Top, bottom, or lateral)
         self.EdgeLengthAvg_0 = []
-        allFaces = np.concatenate(self.Cells.Faces)
-        allFaceTypes = [face.InterfaceType for face in allFaces]
-        for faceType in np.unique(allFaceTypes):
-            currentTris = np.concatenate([face.Tris for face in allFaces if face.InterfaceType == faceType])
-            self.EdgeLengthAvg_0.append(np.mean([tri.EdgeLength for tri in currentTris]))
+        all_faces = [c_cell.Faces for c_cell in self.Cells]
+        all_face_types = [c_face.InterfaceType for faces in all_faces for c_face in faces]
+
+        for face_type in np.unique(all_face_types):
+            current_tris = []
+            for faces in all_faces:
+                for c_face in faces:
+                    if c_face.InterfaceType == face_type:
+                        current_tris.extend(c_face.Tris)
+
+            edge_lengths = []
+            for tri in current_tris:
+                edge_lengths.append(tri.EdgeLength)
+
+            self.EdgeLengthAvg_0.append(np.mean(edge_lengths))
 
         # Differential adhesion values
         for l1, val in Set.lambdaS1CellFactor:
@@ -84,7 +96,7 @@ class Geo:
             self.Cells[ci].SubstrateLambda = val
 
         # Unique Ids for each point (vertex, node or face center) used in K
-        self.BuildGlobalIds()
+        self.build_global_ids()
 
         if Set.Substrate == 1:
             for c in range(self.nCells):
@@ -204,8 +216,61 @@ class Geo:
                     Y[i][2] = Set.SubstrateZ
         return Y
 
-    def BuildGlobalIds(self):
-        pass
+    def build_global_ids(self):
+        non_dead_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus]
+
+        g_ids_tot = 1
+        g_ids_tot_f = 1
+
+        for ci in non_dead_cells:
+            Cell = self.Cells[ci - 1]
+
+            g_ids = np.zeros(len(Cell.Y))
+            g_ids_f = np.zeros(len(Cell.Faces))
+
+            for cj in range(ci):
+                ij = [ci, cj + 1]
+                CellJ = self.Cells[cj]
+
+                for num_id, face_ids_i in enumerate(np.sum(np.isin(Cell.T, ij), axis=1) == 2):
+                    if face_ids_i:
+                        g_ids[num_id] = CellJ.globalIds[
+                            np.where(np.all(np.sort(CellJ.T, axis=1) == np.sort(Cell.T[num_id], axis=0), axis=1))]
+
+                for f in range(len(Cell.Faces)):
+                    Face = Cell.Faces[f]
+
+                    if np.sum(np.isin(Face.ij, ij), axis=1) == 2:
+                        for f2 in range(len(CellJ.Faces)):
+                            FaceJ = CellJ.Faces[f2]
+
+                            if np.sum(np.isin(FaceJ.ij, ij), axis=1) == 2:
+                                g_ids_f[f] = FaceJ.globalIds
+
+            nz = np.sum(g_ids == 0)
+            g_ids[g_ids == 0] = np.arange(g_ids_tot, g_ids_tot + nz)
+
+            self.Cells[ci - 1].globalIds = g_ids.tolist()
+
+            nz_f = np.sum(g_ids_f == 0)
+            g_ids_f[g_ids_f == 0] = np.arange(g_ids_tot_f, g_ids_tot_f + nz_f)
+
+            for f in range(len(Cell.Faces)):
+                self.Cells[ci - 1].Faces[f].globalIds = g_ids_f[f]
+
+            g_ids_tot += nz
+            g_ids_tot_f += nz_f
+
+        self.numY = g_ids_tot - 1
+
+        for c in range(self.nCells):
+            for f in range(len(self.Cells[c].Faces)):
+                self.Cells[c].Faces[f].globalIds += self.numY
+
+        self.numF = g_ids_tot_f - 1
+
+        for c in range(self.nCells):
+            self.Cells[c].cglobalIds = c + self.numY + self.numF
 
     def BuildYFromX(self, Cell, Geo, Set):
         Tets = Cell.T

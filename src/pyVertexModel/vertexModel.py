@@ -416,15 +416,12 @@ class VertexModel:
         # Remove tetrahedras formed only by ghost nodes
         Twg = Twg[~np.all(np.isin(Twg, self.Geo.XgID), axis=1)]
         # Remove weird IDs
-        max_id = np.max(self.Geo.XgID)
-        validIDs = np.array(list(range(max_id)))
-        #Twg = Twg[np.all(np.isin(Twg, validIDs), axis=1)]
 
         # Re-number the surviving tets
         uniqueTets, indices = np.unique(Twg, return_inverse=True)
-        #self.Geo.XgID = np.arange(self.Geo.nCells, len(uniqueTets))
-        #self.X = self.X[uniqueTets]
-        #Twg = indices.reshape(Twg.shape)
+        self.Geo.XgID = np.arange(self.Geo.nCells, len(uniqueTets))
+        self.X = self.X[uniqueTets]
+        Twg = indices.reshape(Twg.shape)
 
         Xg = self.X[self.Geo.XgID]
         self.Geo.XgBottom = self.Geo.XgID[Xg[:, 2] < np.mean(self.X[:, 2])]
