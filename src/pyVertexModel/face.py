@@ -84,23 +84,33 @@ class Face:
 
     def build_edges(self, T, face_ids, FaceCentre, FaceInterfaceType, X, Ys, nonDeadCells):
         FaceTets = T[face_ids,]
-        tet_order = np.zeros(len(FaceTets))
+        FaceTets = np.array([
+                [1, 94, 101, 2],
+                [52, 2, 1, 106],
+                [2, 46, 52, 1],
+                [1, 30, 94, 2],
+                [1, 46, 30, 2],
+                [101, 4, 1, 2],
+                [106, 2, 1, 4]
+            ])-1
+        tet_order = np.zeros(len(FaceTets))-1
         tet_order[0] = 0
         prev_tet = FaceTets[0, :]
 
         if len(FaceTets) > 3:
-            for yi in range(len(FaceTets)):
-                i = np.sum(FaceTets == prev_tet, axis=1) == 3
+            for yi in range(1, len(FaceTets)):
+                i = np.sum(np.isin(FaceTets, prev_tet), axis=1) == 3
                 i = i & ~np.isin(np.arange(len(FaceTets)), tet_order)
                 i = np.where(i)[0]
                 if len(i) == 0:
                     raise Exception('BuildEdges:TetrahedraOrdering', 'Cannot create a face with these tetrahedra')
                 tet_order[yi] = i[0]
                 prev_tet = FaceTets[i[0], :]
-            if np.sum(np.all(FaceTets[0, :] == prev_tet, axis=1), axis=0) != 3:
+
+            if np.sum(np.isin(FaceTets[0, :], prev_tet)) != 3:
                 raise Exception('BuildEdges:TetrahedraOrdering', 'Cannot create a face with these tetrahedra')
         else:
-            tet_order = np.array([1, 2, 3])
+            tet_order = np.array([0, 1, 2])
 
         surf_ids = np.arange(len(T))
         surf_ids = surf_ids[face_ids]
