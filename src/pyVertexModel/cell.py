@@ -12,7 +12,7 @@ class Cell:
         self.Faces = []
         self.Area = -1
         self.Vol = -1
-        self.AliveStatus = 1
+        self.AliveStatus = -1
 
     def ComputeCellArea(Cell, locationFilter=None):
         totalArea = 0

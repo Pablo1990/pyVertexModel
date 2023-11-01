@@ -217,19 +217,19 @@ class Geo:
         return Y
 
     def build_global_ids(self):
-        non_dead_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus]
+        non_dead_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1]
 
-        g_ids_tot = 1
-        g_ids_tot_f = 1
+        g_ids_tot = 0
+        g_ids_tot_f = 0
 
         for ci in non_dead_cells:
-            Cell = self.Cells[ci - 1]
+            Cell = self.Cells[ci]
 
             g_ids = np.zeros(len(Cell.Y))
             g_ids_f = np.zeros(len(Cell.Faces))
 
             for cj in range(ci):
-                ij = [ci, cj + 1]
+                ij = [ci, cj]
                 CellJ = self.Cells[cj]
 
                 for num_id, face_ids_i in enumerate(np.sum(np.isin(Cell.T, ij), axis=1) == 2):
@@ -238,7 +238,8 @@ class Geo:
 
                     sorted_cellJ_T = np.sort(CellJ.T, axis=1)
                     sorted_Cell_T_num_id = np.sort(Cell.T[num_id], axis=0)
-                    g_ids[num_id] = CellJ.globalIds[np.where(np.all(np.isin(sorted_cellJ_T, sorted_Cell_T_num_id), axis=1))]
+                    correctID = np.where(np.all(np.isin(sorted_cellJ_T, sorted_Cell_T_num_id), axis=1))
+                    g_ids[num_id] = CellJ.globalIds[correctID]
 
                 for f in range(len(Cell.Faces)):
                     Face = Cell.Faces[f]
@@ -247,22 +248,22 @@ class Geo:
                         for f2 in range(len(CellJ.Faces)):
                             FaceJ = CellJ.Faces[f2]
 
-                            if np.sum(np.isin(FaceJ.ij, ij), axis=1) == 2:
+                            if np.sum(np.isin(FaceJ.ij, ij)) == 2:
                                 g_ids_f[f] = FaceJ.globalIds
 
-            nz = np.sum(g_ids == 0)
-            g_ids[g_ids == 0] = np.arange(g_ids_tot, g_ids_tot + nz)
+            nz = np.where(g_ids == 0)
+            g_ids[g_ids == 0] = g_ids_tot + nz[0]
 
-            self.Cells[ci - 1].globalIds = g_ids
+            self.Cells[ci].globalIds = g_ids
 
-            nz_f = np.sum(g_ids_f == 0)
-            g_ids_f[g_ids_f == 0] = np.arange(g_ids_tot_f, g_ids_tot_f + nz_f)
+            nz_f = np.where(g_ids_f == 0)
+            g_ids_f[g_ids_f == 0] = g_ids_tot_f + nz_f[0]
 
             for f in range(len(Cell.Faces)):
-                self.Cells[ci - 1].Faces[f].globalIds = g_ids_f[f]
+                self.Cells[ci].Faces[f].globalIds = g_ids_f[f]
 
-            g_ids_tot += nz
-            g_ids_tot_f += nz_f
+            g_ids_tot += len(nz[0])
+            g_ids_tot_f += len(nz_f[0])
 
         self.numY = g_ids_tot - 1
 
