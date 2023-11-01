@@ -122,7 +122,7 @@ class Geo:
                 self.cells[c].Faces[f].Centre += dy_reshaped[self.cells[c].Faces[f].globalIds, :]
 
     def UpdateMeasures(self, ids=None):
-        if self.Cells[self.nCells].Vol == None:
+        if self.Cells[self.nCells - 1].Vol is None:
             print('Wont update measures with this Geo')
 
         if ids is None:
@@ -219,7 +219,7 @@ class Geo:
         return Y
 
     def build_global_ids(self):
-        self.non_dead_cells = np.array([c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1])
+        self.non_dead_cells = np.array([c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1], dtype='int')
 
         g_ids_tot = 0
         g_ids_tot_f = 0

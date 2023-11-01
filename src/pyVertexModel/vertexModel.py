@@ -1,4 +1,5 @@
 import os
+import copy
 
 import numpy as np
 from PIL.Image import Image
@@ -46,14 +47,15 @@ class VertexModel:
 
         self.t = 0
         self.tr = 0
-        self.Geo_0 = self.Geo
-        # Removing info of unused features from Geo
+        self.Geo_0 = copy.deepcopy(self.Geo)
+        # Removing info of unused features from Geo_0
         for cell in self.Geo_0.Cells:
             cell.Vol = None
             cell.Vol0 = None
             cell.Area = None
             cell.Area0 = None
-        self.Geo_n = self.Geo
+
+        self.Geo_n = copy.deepcopy(self.Geo)
         for cell in self.Geo_n.Cells:
             cell.Vol = None
             cell.Vol0 = None
@@ -456,7 +458,7 @@ class VertexModel:
             if not self.relaxingNu:
                 self.Set.iIncr = self.numStep
 
-                self.Geo = self.Dofs.ApplyBoundaryCondition(self.t, self.Geo, self.Dofs, self.Set)
+                self.Geo = self.Dofs.ApplyBoundaryCondition(self.t, self.Geo, self.Set)
                 # IMPORTANT: Here it updates: Areas, Volumes, etc... Should be
                 # up-to-date
                 self.Geo.UpdateMeasures()

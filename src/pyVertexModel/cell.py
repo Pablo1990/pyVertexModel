@@ -4,15 +4,16 @@ import numpy as np
 class Cell:
 
     def __init__(self):
-        self.ID = -1
+        self.ID = None
         self.X = np.empty(1, 'float')
         self.T = np.empty(1, 'int')
         self.Y = np.empty(1, 'float')
         self.globalIDs = np.array([], dtype='int')
         self.Faces = []
-        self.Area = -1
-        self.Vol = -1
-        self.AliveStatus = -1
+        self.Area = None
+        self.Vol = None
+        self.Vol0 = None
+        self.AliveStatus = None
 
     def ComputeCellArea(Cell, locationFilter=None):
         totalArea = 0

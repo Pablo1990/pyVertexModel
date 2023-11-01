@@ -122,7 +122,6 @@ class Set:
                              '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1), '_lS2_',
                              str(self.lambdaS2), '_lS3_', str(self.lambdaS3)]
 
-
     def NoBulk_110(self):
         self.InputGeo = 'VertexModelTime'
         # 40 cells; 3 cells to ablate
@@ -178,7 +177,6 @@ class Set:
         if inputMode == 7:
             self.NoBulk_110()
 
-
-    def UpdateSet_F(self, Geo=None):
+    def UpdateSet_F(self, Geo):
         self.f_Init = 0.75
-        self.f = self.f_Init * np.mean((np.array([Geo.Cells.Vol])) / (np.array([Geo.Cells.Vol0]))) ** 3
+        self.f = self.f_Init * np.mean([cell.Vol/cell.Vol0 for cell in np.array(Geo.Cells)[Geo.non_dead_cells]]) ** 3
