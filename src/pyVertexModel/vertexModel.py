@@ -431,7 +431,7 @@ class VertexModel:
         self.Geo.BuildCells(self.Set, self.X, Twg)
 
         # Define upper and lower area threshold for remodelling
-        allFaces = np.concatenate([cell.Faces for cell in Geo.Cells])
+        allFaces = np.concatenate([cell.Faces for cell in self.Geo.Cells])
         allTris = np.concatenate([face.Tris for face in allFaces])
         avgArea = np.mean([tri.Area for tri in allTris])
         stdArea = np.std([tri.Area for tri in allTris])
@@ -444,7 +444,7 @@ class VertexModel:
         Set.BarrierTri0 = np.inf
         for cell in self.Geo.Cells:
             for face in cell.Faces:
-                self.Set.BarrierTri0 = min([tri.Area for tri in face.Tris], self.Set.BarrierTri0)
+                self.Set.BarrierTri0 = min([min([tri.Area for tri in face.Tris]), self.Set.BarrierTri0])
         self.Set.BarrierTri0 /= 10
 
     def IterateOverTime(self):
