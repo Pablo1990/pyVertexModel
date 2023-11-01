@@ -24,7 +24,7 @@ cpdef np.ndarray assembleK(np.ndarray K, np.ndarray Ke, list nY):
     return K
 
 cpdef np.ndarray cross(np.ndarray y):
-    cdef np.ndarray[np.float_t, ndim=2] yMat = np.zeros((3, 3), dtype=np.float)
+    cdef np.ndarray[np.float_t, ndim=2] yMat = np.zeros((3, 3), dtype=float)
     yMat[0, 1] = -y[2]
     yMat[0, 2] = y[1]
     yMat[1, 0] = y[2]
@@ -49,7 +49,7 @@ cpdef np.ndarray kK(np.ndarray y1_crossed, np.ndarray y2_crossed, np.ndarray y3_
     Returns:
     KK_value (ndarray): Resulting value for KK.
     """
-    cdef np.ndarray[np.float_t, ndim=1] KIJ = np.zeros(3, dtype=np.float)
+    cdef np.ndarray[np.float_t, ndim=1] KIJ = np.zeros(3, dtype=float)
     KIJ[0] = (y2_crossed[0] - y3_crossed[0]) * (y1_crossed[0] - y3_crossed[0]) + (y2_crossed[1] - y3_crossed[1]) * (
                 y1_crossed[1] - y3_crossed[1]) + (y2_crossed[2] - y3_crossed[2]) * (y1_crossed[2] - y3_crossed[2])
     KIJ[1] = (y2_crossed[1] * y1[2] - y2_crossed[2] * y1[1]) - (y3_crossed[1] * y1[2] - y3_crossed[2] * y1[1])
