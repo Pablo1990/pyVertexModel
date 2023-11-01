@@ -16,6 +16,8 @@ class Geo:
         self.nx = 3
         self.Cells = []
         self.nCells = 0
+        self.BorderCells = None
+        self.non_dead_cells = []
 
     def BuildCells(self, Set, X, Twg):
 
@@ -132,8 +134,8 @@ class Geo:
         for c in ids:
             if resetLengths:
                 for f in range(len(self.Cells[c].Faces)):
-                    self.Cells[c].Faces[f].Area, triAreas = self.Cells[c].Faces[f].ComputeFaceArea(
-                        [face for face in self.Cells[c].Faces[f].Tris.Edge], self.Cells[c].Y,
+                    self.Cells[c].Faces[f].Area, triAreas = self.Cells[c].Faces[f].compute_face_area(
+                        self.Cells[c].Faces[f].Tris, self.Cells[c].Y,
                         self.Cells[c].Faces[f].Centre)
                     for tri, triArea in zip(self.Cells[c].Faces[f].Tris, triAreas):
                         tri.Area = triArea
@@ -217,12 +219,12 @@ class Geo:
         return Y
 
     def build_global_ids(self):
-        non_dead_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1]
+        self.non_dead_cells = np.array([c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1])
 
         g_ids_tot = 0
         g_ids_tot_f = 0
 
-        for ci in non_dead_cells:
+        for ci in self.non_dead_cells:
             Cell = self.Cells[ci]
 
             g_ids = np.zeros(len(Cell.Y))

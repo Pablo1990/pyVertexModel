@@ -19,6 +19,7 @@ class VertexModel:
         self.didNotConverge = False
         self.Geo = Geo()
         self.Set = Set()
+        self.Dofs = degreesOfFreedom.DegreesOfFreedom()
         #self.Set = WoundDefault(self.Set)
         self.InitiateOutputFolder()
 
@@ -29,11 +30,12 @@ class VertexModel:
         elif self.Set.InputGeo == 'VertexModelTime':
             self.InitializeGeometry_VertexModel2DTime()
 
-        minZs = min([cell.Y for cell in self.Geo.Cells])
-        if minZs[2] > 0:
-            self.Set.SubstrateZ = minZs[2] * 0.99
+        allYs = np.vstack([cell.Y for cell in self.Geo.Cells if cell.AliveStatus == 1])
+        minZs = min(allYs[:,2])
+        if minZs > 0:
+            self.Set.SubstrateZ = minZs * 0.99
         else:
-            self.Set.SubstrateZ = minZs[2] * 1.01
+            self.Set.SubstrateZ = minZs * 1.01
 
         # TODO FIXME, this is bad, should be joined somehow
         if self.Set.Substrate == 1:
@@ -439,7 +441,6 @@ class VertexModel:
         Set.lowerAreaThreshold = avgArea - stdArea
 
         self.Geo.AssembleNodes = [i for i, cell in enumerate(self.Geo.Cells) if cell.AliveStatus is not None]
-        self.Geo.BorderCells = []
 
         Set.BarrierTri0 = np.inf
         for cell in self.Geo.Cells:

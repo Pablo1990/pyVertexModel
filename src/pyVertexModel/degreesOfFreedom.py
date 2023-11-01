@@ -29,9 +29,13 @@ class DegreesOfFreedom:
         gconstrained = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3)
         gprescribed = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3)
 
-        borderIds = np.concatenate([cell.globalIds for cell in Geo.Cells[Geo.BorderCells]])
+        if Geo.BorderCells is not None:
+            borderIds = np.concatenate([cell.globalIds for cell in Geo.Cells[Geo.BorderCells]])
+        else:
+            borderIds = []
 
-        for cell in Geo.Cells:
+        for ci in Geo.non_dead_cells:
+            cell = Geo.Cells[ci]
             Y = cell.Y
             gIDsY = cell.globalIds
 
@@ -50,7 +54,8 @@ class DegreesOfFreedom:
             for idx in np.where(fixY)[0]:
                 gconstrained[dim * (gIDsY[idx] - 1): dim * gIDsY[idx]] = 1
 
-            gprescribed[dim * (gIDsY[preY] - 1): dim * gIDsY[preY]] = 1
+            if np.any(preY):
+                gprescribed[dim * (gIDsY[preY] - 1): dim * gIDsY[preY]] = 1
 
         self.Free = np.where((gconstrained == 0) & (gprescribed == 0))[0]
         self.Fix = np.concatenate([np.where(gconstrained)[0], np.where(gprescribed)[0]])
