@@ -1,7 +1,7 @@
 import numpy as np
 import time
-from scipy.sparse import spdiags, csc_matrix
 
+from src.pyVertexModel.Kg import kg_functions
 from src.pyVertexModel.Kg.kg import Kg
 
 
@@ -52,17 +52,17 @@ class KgSurfaceCellBasedAdhesion(Kg):
                         if not any(np.isin(nY, Geo.AssemblegIds)):
                             continue
 
-                    gs, Ks, Kss = self.gKSArea(y1, y2, y3)
+                    gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)
                     gs = Lambda * gs
                     start_assembleg = time.time()
-                    ge = self.assembleg(ge, gs, nY)
+                    ge = kg_functions.assembleg(ge, gs, nY)
                     end_assembleg = time.time()
                     print(f"Time assembleg: {end_assembleg - start_assembleg} seconds")
 
                     Ks = fact * Lambda * (Ks + Kss)
 
                     start_assembleg = time.time()
-                    self.assembleK(Ks, nY)
+                    self.K = kg_functions.assembleK(self.K, Ks, nY)
                     end_assembleg = time.time()
                     print(f"Time assembleK: {end_assembleg - start_assembleg} seconds")
 

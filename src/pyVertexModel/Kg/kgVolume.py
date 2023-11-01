@@ -32,8 +32,8 @@ class KgVolume(Kg):
                     if Geo.Remodelling and not any(id in Geo.AssemblegIds for id in nY):
                         continue
                     gs, Ks = self.gKDet(y1, y2, y3)
-                    ge = self.assembleg(ge, gs, nY)
-                    self.assembleK(Ks * fact / 6, nY)
+                    ge = kg_functions.assembleg(ge, gs, nY)
+                    self.K = kg_functions.assembleK(Ks * fact / 6, nY)
 
             self.g = self.g + ge * fact / 6  # Volume contribution of each triangle is det(Y1,Y2,Y3)/6
             geMatrix = lambdaV * (ge * ge.T / 6 / 6 * (Cell.Vol - Cell.Vol0) ** (n - 2) / Cell.Vol0 ** n)

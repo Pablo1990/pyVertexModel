@@ -2,7 +2,7 @@ import numpy as np
 
 from src.pyVertexModel.Kg.kgContractility import KgContractility
 from src.pyVertexModel.Kg.kgSubstrate import KgSubstrate
-from src.pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import Kg, KgSurfaceCellBasedAdhesion
+from src.pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
 from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
 from src.pyVertexModel.Kg.kgTriEnergyBarrier import KgTriEnergyBarrier
 from src.pyVertexModel.Kg.kgViscosity import KgViscosity
