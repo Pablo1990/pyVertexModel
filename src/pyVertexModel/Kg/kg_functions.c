@@ -4,12 +4,12 @@
 {
     "distutils": {
         "depends": [],
-        "name": "CKg",
+        "name": "kg_functions",
         "sources": [
             "kg_functions.pyx"
         ]
     },
-    "module_name": "CKg"
+    "module_name": "kg_functions"
 }
 END: Cython Metadata */
 
@@ -1194,8 +1194,8 @@ static CYTHON_INLINE float __PYX_NAN() {
   #endif
 #endif
 
-#define __PYX_HAVE__CKg
-#define __PYX_HAVE_API__CKg
+#define __PYX_HAVE__kg_functions
+#define __PYX_HAVE_API__kg_functions
 /* Early includes */
 #include <string.h>
 #include <stdio.h>
@@ -2611,21 +2611,21 @@ static CYTHON_INLINE char *__pyx_f_5numpy_7ndarray_4data_data(PyArrayObject *__p
 
 /* Module declarations from "numpy" */
 
-/* Module declarations from "CKg" */
-static PyArrayObject *__pyx_f_3CKg_assembleg(PyArrayObject *, PyArrayObject *, PyObject *, int __pyx_skip_dispatch); /*proto*/
-static PyArrayObject *__pyx_f_3CKg_assembleK(PyArrayObject *, PyArrayObject *, PyObject *, int __pyx_skip_dispatch); /*proto*/
-static PyArrayObject *__pyx_f_3CKg_cross(PyArrayObject *, int __pyx_skip_dispatch); /*proto*/
-static PyArrayObject *__pyx_f_3CKg_kK(PyArrayObject *, PyArrayObject *, PyArrayObject *, PyArrayObject *, PyArrayObject *, PyArrayObject *, int __pyx_skip_dispatch); /*proto*/
-static PyObject *__pyx_f_3CKg_gKSArea(PyArrayObject *, PyArrayObject *, PyArrayObject *, int __pyx_skip_dispatch); /*proto*/
+/* Module declarations from "kg_functions" */
+static PyArrayObject *__pyx_f_12kg_functions_assembleg(PyArrayObject *, PyArrayObject *, PyObject *, int __pyx_skip_dispatch); /*proto*/
+static PyArrayObject *__pyx_f_12kg_functions_assembleK(PyArrayObject *, PyArrayObject *, PyObject *, int __pyx_skip_dispatch); /*proto*/
+static PyArrayObject *__pyx_f_12kg_functions_cross(PyArrayObject *, int __pyx_skip_dispatch); /*proto*/
+static PyArrayObject *__pyx_f_12kg_functions_kK(PyArrayObject *, PyArrayObject *, PyArrayObject *, PyArrayObject *, PyArrayObject *, PyArrayObject *, int __pyx_skip_dispatch); /*proto*/
+static PyObject *__pyx_f_12kg_functions_gKSArea(PyArrayObject *, PyArrayObject *, PyArrayObject *, int __pyx_skip_dispatch); /*proto*/
 /* #### Code section: typeinfo ### */
 static __Pyx_TypeInfo __Pyx_TypeInfo_nn___pyx_t_5numpy_int_t = { "int_t", NULL, sizeof(__pyx_t_5numpy_int_t), { 0 }, 0, __PYX_IS_UNSIGNED(__pyx_t_5numpy_int_t) ? 'U' : 'I', __PYX_IS_UNSIGNED(__pyx_t_5numpy_int_t), 0 };
 static __Pyx_TypeInfo __Pyx_TypeInfo_nn___pyx_t_5numpy_float_t = { "float_t", NULL, sizeof(__pyx_t_5numpy_float_t), { 0 }, 0, 'R', 0, 0 };
 /* #### Code section: before_global_var ### */
-#define __Pyx_MODULE_NAME "CKg"
-extern int __pyx_module_is_main_CKg;
-int __pyx_module_is_main_CKg = 0;
+#define __Pyx_MODULE_NAME "kg_functions"
+extern int __pyx_module_is_main_kg_functions;
+int __pyx_module_is_main_kg_functions = 0;
 
-/* Implementation of "CKg" */
+/* Implementation of "kg_functions" */
 /* #### Code section: global_var ### */
 static PyObject *__pyx_builtin_range;
 static PyObject *__pyx_builtin_ImportError;
@@ -2642,7 +2642,6 @@ static const char __pyx_k_np[] = "np";
 static const char __pyx_k_y1[] = "y1";
 static const char __pyx_k_y2[] = "y2";
 static const char __pyx_k_y3[] = "y3";
-static const char __pyx_k_CKg[] = "CKg";
 static const char __pyx_k__18[] = "?";
 static const char __pyx_k_dot[] = "dot";
 static const char __pyx_k_int[] = "int";
@@ -2673,6 +2672,7 @@ static const char __pyx_k_y3_crossed[] = "y3_crossed";
 static const char __pyx_k_ImportError[] = "ImportError";
 static const char __pyx_k_initializing[] = "_initializing";
 static const char __pyx_k_is_coroutine[] = "_is_coroutine";
+static const char __pyx_k_kg_functions[] = "kg_functions";
 static const char __pyx_k_class_getitem[] = "__class_getitem__";
 static const char __pyx_k_kg_functions_pyx[] = "kg_functions.pyx";
 static const char __pyx_k_asyncio_coroutines[] = "asyncio.coroutines";
@@ -2680,11 +2680,11 @@ static const char __pyx_k_cline_in_traceback[] = "cline_in_traceback";
 static const char __pyx_k_numpy_core_multiarray_failed_to[] = "numpy.core.multiarray failed to import";
 static const char __pyx_k_numpy_core_umath_failed_to_impor[] = "numpy.core.umath failed to import";
 /* #### Code section: decls ### */
-static PyObject *__pyx_pf_3CKg_assembleg(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_g, PyArrayObject *__pyx_v_ge, PyObject *__pyx_v_nY); /* proto */
-static PyObject *__pyx_pf_3CKg_2assembleK(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_K, PyArrayObject *__pyx_v_Ke, PyObject *__pyx_v_nY); /* proto */
-static PyObject *__pyx_pf_3CKg_4cross(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_y); /* proto */
-static PyObject *__pyx_pf_3CKg_6kK(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_y1_crossed, PyArrayObject *__pyx_v_y2_crossed, PyArrayObject *__pyx_v_y3_crossed, PyArrayObject *__pyx_v_y1, PyArrayObject *__pyx_v_y2, PyArrayObject *__pyx_v_y3); /* proto */
-static PyObject *__pyx_pf_3CKg_8gKSArea(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_y1, PyArrayObject *__pyx_v_y2, PyArrayObject *__pyx_v_y3); /* proto */
+static PyObject *__pyx_pf_12kg_functions_assembleg(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_g, PyArrayObject *__pyx_v_ge, PyObject *__pyx_v_nY); /* proto */
+static PyObject *__pyx_pf_12kg_functions_2assembleK(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_K, PyArrayObject *__pyx_v_Ke, PyObject *__pyx_v_nY); /* proto */
+static PyObject *__pyx_pf_12kg_functions_4cross(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_y); /* proto */
+static PyObject *__pyx_pf_12kg_functions_6kK(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_y1_crossed, PyArrayObject *__pyx_v_y2_crossed, PyArrayObject *__pyx_v_y3_crossed, PyArrayObject *__pyx_v_y1, PyArrayObject *__pyx_v_y2, PyArrayObject *__pyx_v_y3); /* proto */
+static PyObject *__pyx_pf_12kg_functions_8gKSArea(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_y1, PyArrayObject *__pyx_v_y2, PyArrayObject *__pyx_v_y3); /* proto */
 /* #### Code section: late_includes ### */
 /* #### Code section: module_state ### */
 typedef struct {
@@ -2748,7 +2748,6 @@ typedef struct {
   PyTypeObject *__pyx_ptype_5numpy_ufunc;
   #if CYTHON_USE_MODULE_STATE
   #endif
-  PyObject *__pyx_n_s_CKg;
   PyObject *__pyx_n_s_ImportError;
   PyObject *__pyx_n_s_K;
   PyObject *__pyx_n_s_Ke;
@@ -2774,6 +2773,7 @@ typedef struct {
   PyObject *__pyx_n_s_int;
   PyObject *__pyx_n_s_is_coroutine;
   PyObject *__pyx_n_s_kK;
+  PyObject *__pyx_n_s_kg_functions;
   PyObject *__pyx_kp_s_kg_functions_pyx;
   PyObject *__pyx_n_s_linalg;
   PyObject *__pyx_n_s_main;
@@ -2876,7 +2876,6 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_ptype_5numpy_flexible);
   Py_CLEAR(clear_module_state->__pyx_ptype_5numpy_character);
   Py_CLEAR(clear_module_state->__pyx_ptype_5numpy_ufunc);
-  Py_CLEAR(clear_module_state->__pyx_n_s_CKg);
   Py_CLEAR(clear_module_state->__pyx_n_s_ImportError);
   Py_CLEAR(clear_module_state->__pyx_n_s_K);
   Py_CLEAR(clear_module_state->__pyx_n_s_Ke);
@@ -2902,6 +2901,7 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_n_s_int);
   Py_CLEAR(clear_module_state->__pyx_n_s_is_coroutine);
   Py_CLEAR(clear_module_state->__pyx_n_s_kK);
+  Py_CLEAR(clear_module_state->__pyx_n_s_kg_functions);
   Py_CLEAR(clear_module_state->__pyx_kp_s_kg_functions_pyx);
   Py_CLEAR(clear_module_state->__pyx_n_s_linalg);
   Py_CLEAR(clear_module_state->__pyx_n_s_main);
@@ -2982,7 +2982,6 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_ptype_5numpy_flexible);
   Py_VISIT(traverse_module_state->__pyx_ptype_5numpy_character);
   Py_VISIT(traverse_module_state->__pyx_ptype_5numpy_ufunc);
-  Py_VISIT(traverse_module_state->__pyx_n_s_CKg);
   Py_VISIT(traverse_module_state->__pyx_n_s_ImportError);
   Py_VISIT(traverse_module_state->__pyx_n_s_K);
   Py_VISIT(traverse_module_state->__pyx_n_s_Ke);
@@ -3008,6 +3007,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_n_s_int);
   Py_VISIT(traverse_module_state->__pyx_n_s_is_coroutine);
   Py_VISIT(traverse_module_state->__pyx_n_s_kK);
+  Py_VISIT(traverse_module_state->__pyx_n_s_kg_functions);
   Py_VISIT(traverse_module_state->__pyx_kp_s_kg_functions_pyx);
   Py_VISIT(traverse_module_state->__pyx_n_s_linalg);
   Py_VISIT(traverse_module_state->__pyx_n_s_main);
@@ -3116,7 +3116,6 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_ptype_5numpy_ufunc __pyx_mstate_global->__pyx_ptype_5numpy_ufunc
 #if CYTHON_USE_MODULE_STATE
 #endif
-#define __pyx_n_s_CKg __pyx_mstate_global->__pyx_n_s_CKg
 #define __pyx_n_s_ImportError __pyx_mstate_global->__pyx_n_s_ImportError
 #define __pyx_n_s_K __pyx_mstate_global->__pyx_n_s_K
 #define __pyx_n_s_Ke __pyx_mstate_global->__pyx_n_s_Ke
@@ -3142,6 +3141,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_n_s_int __pyx_mstate_global->__pyx_n_s_int
 #define __pyx_n_s_is_coroutine __pyx_mstate_global->__pyx_n_s_is_coroutine
 #define __pyx_n_s_kK __pyx_mstate_global->__pyx_n_s_kK
+#define __pyx_n_s_kg_functions __pyx_mstate_global->__pyx_n_s_kg_functions
 #define __pyx_kp_s_kg_functions_pyx __pyx_mstate_global->__pyx_kp_s_kg_functions_pyx
 #define __pyx_n_s_linalg __pyx_mstate_global->__pyx_n_s_linalg
 #define __pyx_n_s_main __pyx_mstate_global->__pyx_n_s_main
@@ -4458,14 +4458,14 @@ static CYTHON_INLINE NPY_DATETIMEUNIT __pyx_f_5numpy_get_datetime64_unit(PyObjec
  *     cdef np.ndarray[np.int_t, ndim=2] idofg = np.zeros([len(nY) * dim, 1], dtype=np.int)
  */
 
-static PyObject *__pyx_pw_3CKg_1assembleg(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_12kg_functions_1assembleg(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-static PyArrayObject *__pyx_f_3CKg_assembleg(PyArrayObject *__pyx_v_g, PyArrayObject *__pyx_v_ge, PyObject *__pyx_v_nY, CYTHON_UNUSED int __pyx_skip_dispatch) {
+static PyArrayObject *__pyx_f_12kg_functions_assembleg(PyArrayObject *__pyx_v_g, PyArrayObject *__pyx_v_ge, PyObject *__pyx_v_nY, CYTHON_UNUSED int __pyx_skip_dispatch) {
   int __pyx_v_dim;
   PyArrayObject *__pyx_v_idofg = 0;
   int __pyx_v_I;
@@ -4729,7 +4729,7 @@ static PyArrayObject *__pyx_f_3CKg_assembleg(PyArrayObject *__pyx_v_g, PyArrayOb
     __Pyx_ErrFetch(&__pyx_type, &__pyx_value, &__pyx_tb);
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_idofg.rcbuffer->pybuffer);
   __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
-  __Pyx_AddTraceback("CKg.assembleg", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("kg_functions.assembleg", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = 0;
   goto __pyx_L2;
   __pyx_L0:;
@@ -4742,15 +4742,15 @@ static PyArrayObject *__pyx_f_3CKg_assembleg(PyArrayObject *__pyx_v_g, PyArrayOb
 }
 
 /* Python wrapper */
-static PyObject *__pyx_pw_3CKg_1assembleg(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_12kg_functions_1assembleg(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-static PyMethodDef __pyx_mdef_3CKg_1assembleg = {"assembleg", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_3CKg_1assembleg, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0};
-static PyObject *__pyx_pw_3CKg_1assembleg(PyObject *__pyx_self, 
+static PyMethodDef __pyx_mdef_12kg_functions_1assembleg = {"assembleg", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_12kg_functions_1assembleg, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0};
+static PyObject *__pyx_pw_12kg_functions_1assembleg(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
@@ -4850,14 +4850,14 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
       __Pyx_Arg_XDECREF_FASTCALL(values[__pyx_temp]);
     }
   }
-  __Pyx_AddTraceback("CKg.assembleg", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("kg_functions.assembleg", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_g), __pyx_ptype_5numpy_ndarray, 1, "g", 0))) __PYX_ERR(0, 4, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_ge), __pyx_ptype_5numpy_ndarray, 1, "ge", 0))) __PYX_ERR(0, 4, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_nY), (&PyList_Type), 1, "nY", 1))) __PYX_ERR(0, 4, __pyx_L1_error)
-  __pyx_r = __pyx_pf_3CKg_assembleg(__pyx_self, __pyx_v_g, __pyx_v_ge, __pyx_v_nY);
+  __pyx_r = __pyx_pf_12kg_functions_assembleg(__pyx_self, __pyx_v_g, __pyx_v_ge, __pyx_v_nY);
 
   /* function exit code */
   goto __pyx_L0;
@@ -4874,7 +4874,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_3CKg_assembleg(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_g, PyArrayObject *__pyx_v_ge, PyObject *__pyx_v_nY) {
+static PyObject *__pyx_pf_12kg_functions_assembleg(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_g, PyArrayObject *__pyx_v_ge, PyObject *__pyx_v_nY) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -4883,7 +4883,7 @@ static PyObject *__pyx_pf_3CKg_assembleg(CYTHON_UNUSED PyObject *__pyx_self, PyA
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("assembleg", 1);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = ((PyObject *)__pyx_f_3CKg_assembleg(__pyx_v_g, __pyx_v_ge, __pyx_v_nY, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 4, __pyx_L1_error)
+  __pyx_t_1 = ((PyObject *)__pyx_f_12kg_functions_assembleg(__pyx_v_g, __pyx_v_ge, __pyx_v_nY, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 4, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -4892,7 +4892,7 @@ static PyObject *__pyx_pf_3CKg_assembleg(CYTHON_UNUSED PyObject *__pyx_self, PyA
   /* function exit code */
   __pyx_L1_error:;
   __Pyx_XDECREF(__pyx_t_1);
-  __Pyx_AddTraceback("CKg.assembleg", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("kg_functions.assembleg", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
   __Pyx_XGIVEREF(__pyx_r);
@@ -4908,14 +4908,14 @@ static PyObject *__pyx_pf_3CKg_assembleg(CYTHON_UNUSED PyObject *__pyx_self, PyA
  *     cdef np.ndarray[np.int_t, ndim=2] idofg = np.zeros([len(nY) * dim, len(nY) * dim], dtype=np.int)
  */
 
-static PyObject *__pyx_pw_3CKg_3assembleK(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_12kg_functions_3assembleK(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-static PyArrayObject *__pyx_f_3CKg_assembleK(PyArrayObject *__pyx_v_K, PyArrayObject *__pyx_v_Ke, PyObject *__pyx_v_nY, CYTHON_UNUSED int __pyx_skip_dispatch) {
+static PyArrayObject *__pyx_f_12kg_functions_assembleK(PyArrayObject *__pyx_v_K, PyArrayObject *__pyx_v_Ke, PyObject *__pyx_v_nY, CYTHON_UNUSED int __pyx_skip_dispatch) {
   PyObject *__pyx_v_dim = NULL;
   PyArrayObject *__pyx_v_idofg = 0;
   int __pyx_v_I;
@@ -5191,7 +5191,7 @@ static PyArrayObject *__pyx_f_3CKg_assembleK(PyArrayObject *__pyx_v_K, PyArrayOb
     __Pyx_ErrFetch(&__pyx_type, &__pyx_value, &__pyx_tb);
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_idofg.rcbuffer->pybuffer);
   __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
-  __Pyx_AddTraceback("CKg.assembleK", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("kg_functions.assembleK", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = 0;
   goto __pyx_L2;
   __pyx_L0:;
@@ -5205,15 +5205,15 @@ static PyArrayObject *__pyx_f_3CKg_assembleK(PyArrayObject *__pyx_v_K, PyArrayOb
 }
 
 /* Python wrapper */
-static PyObject *__pyx_pw_3CKg_3assembleK(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_12kg_functions_3assembleK(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-static PyMethodDef __pyx_mdef_3CKg_3assembleK = {"assembleK", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_3CKg_3assembleK, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0};
-static PyObject *__pyx_pw_3CKg_3assembleK(PyObject *__pyx_self, 
+static PyMethodDef __pyx_mdef_12kg_functions_3assembleK = {"assembleK", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_12kg_functions_3assembleK, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0};
+static PyObject *__pyx_pw_12kg_functions_3assembleK(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
@@ -5313,14 +5313,14 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
       __Pyx_Arg_XDECREF_FASTCALL(values[__pyx_temp]);
     }
   }
-  __Pyx_AddTraceback("CKg.assembleK", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("kg_functions.assembleK", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_K), __pyx_ptype_5numpy_ndarray, 1, "K", 0))) __PYX_ERR(0, 14, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_Ke), __pyx_ptype_5numpy_ndarray, 1, "Ke", 0))) __PYX_ERR(0, 14, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_nY), (&PyList_Type), 1, "nY", 1))) __PYX_ERR(0, 14, __pyx_L1_error)
-  __pyx_r = __pyx_pf_3CKg_2assembleK(__pyx_self, __pyx_v_K, __pyx_v_Ke, __pyx_v_nY);
+  __pyx_r = __pyx_pf_12kg_functions_2assembleK(__pyx_self, __pyx_v_K, __pyx_v_Ke, __pyx_v_nY);
 
   /* function exit code */
   goto __pyx_L0;
@@ -5337,7 +5337,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_3CKg_2assembleK(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_K, PyArrayObject *__pyx_v_Ke, PyObject *__pyx_v_nY) {
+static PyObject *__pyx_pf_12kg_functions_2assembleK(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_K, PyArrayObject *__pyx_v_Ke, PyObject *__pyx_v_nY) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -5346,7 +5346,7 @@ static PyObject *__pyx_pf_3CKg_2assembleK(CYTHON_UNUSED PyObject *__pyx_self, Py
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("assembleK", 1);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = ((PyObject *)__pyx_f_3CKg_assembleK(__pyx_v_K, __pyx_v_Ke, __pyx_v_nY, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 14, __pyx_L1_error)
+  __pyx_t_1 = ((PyObject *)__pyx_f_12kg_functions_assembleK(__pyx_v_K, __pyx_v_Ke, __pyx_v_nY, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 14, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -5355,7 +5355,7 @@ static PyObject *__pyx_pf_3CKg_2assembleK(CYTHON_UNUSED PyObject *__pyx_self, Py
   /* function exit code */
   __pyx_L1_error:;
   __Pyx_XDECREF(__pyx_t_1);
-  __Pyx_AddTraceback("CKg.assembleK", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("kg_functions.assembleK", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
   __Pyx_XGIVEREF(__pyx_r);
@@ -5371,14 +5371,14 @@ static PyObject *__pyx_pf_3CKg_2assembleK(CYTHON_UNUSED PyObject *__pyx_self, Py
  *     yMat[0, 1] = -y[2]
  */
 
-static PyObject *__pyx_pw_3CKg_5cross(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_12kg_functions_5cross(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-static PyArrayObject *__pyx_f_3CKg_cross(PyArrayObject *__pyx_v_y, CYTHON_UNUSED int __pyx_skip_dispatch) {
+static PyArrayObject *__pyx_f_12kg_functions_cross(PyArrayObject *__pyx_v_y, CYTHON_UNUSED int __pyx_skip_dispatch) {
   PyArrayObject *__pyx_v_yMat = 0;
   __Pyx_LocalBuf_ND __pyx_pybuffernd_yMat;
   __Pyx_Buffer __pyx_pybuffer_yMat;
@@ -5650,7 +5650,7 @@ static PyArrayObject *__pyx_f_3CKg_cross(PyArrayObject *__pyx_v_y, CYTHON_UNUSED
     __Pyx_ErrFetch(&__pyx_type, &__pyx_value, &__pyx_tb);
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_yMat.rcbuffer->pybuffer);
   __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
-  __Pyx_AddTraceback("CKg.cross", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("kg_functions.cross", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = 0;
   goto __pyx_L2;
   __pyx_L0:;
@@ -5663,15 +5663,15 @@ static PyArrayObject *__pyx_f_3CKg_cross(PyArrayObject *__pyx_v_y, CYTHON_UNUSED
 }
 
 /* Python wrapper */
-static PyObject *__pyx_pw_3CKg_5cross(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_12kg_functions_5cross(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-static PyMethodDef __pyx_mdef_3CKg_5cross = {"cross", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_3CKg_5cross, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0};
-static PyObject *__pyx_pw_3CKg_5cross(PyObject *__pyx_self, 
+static PyMethodDef __pyx_mdef_12kg_functions_5cross = {"cross", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_12kg_functions_5cross, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0};
+static PyObject *__pyx_pw_12kg_functions_5cross(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
@@ -5741,12 +5741,12 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
       __Pyx_Arg_XDECREF_FASTCALL(values[__pyx_temp]);
     }
   }
-  __Pyx_AddTraceback("CKg.cross", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("kg_functions.cross", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_y), __pyx_ptype_5numpy_ndarray, 1, "y", 0))) __PYX_ERR(0, 26, __pyx_L1_error)
-  __pyx_r = __pyx_pf_3CKg_4cross(__pyx_self, __pyx_v_y);
+  __pyx_r = __pyx_pf_12kg_functions_4cross(__pyx_self, __pyx_v_y);
 
   /* function exit code */
   goto __pyx_L0;
@@ -5763,7 +5763,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_3CKg_4cross(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_y) {
+static PyObject *__pyx_pf_12kg_functions_4cross(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_y) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -5772,7 +5772,7 @@ static PyObject *__pyx_pf_3CKg_4cross(CYTHON_UNUSED PyObject *__pyx_self, PyArra
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("cross", 1);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = ((PyObject *)__pyx_f_3CKg_cross(__pyx_v_y, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 26, __pyx_L1_error)
+  __pyx_t_1 = ((PyObject *)__pyx_f_12kg_functions_cross(__pyx_v_y, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 26, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -5781,7 +5781,7 @@ static PyObject *__pyx_pf_3CKg_4cross(CYTHON_UNUSED PyObject *__pyx_self, PyArra
   /* function exit code */
   __pyx_L1_error:;
   __Pyx_XDECREF(__pyx_t_1);
-  __Pyx_AddTraceback("CKg.cross", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("kg_functions.cross", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
   __Pyx_XGIVEREF(__pyx_r);
@@ -5797,14 +5797,14 @@ static PyObject *__pyx_pf_3CKg_4cross(CYTHON_UNUSED PyObject *__pyx_self, PyArra
  *     """
  */
 
-static PyObject *__pyx_pw_3CKg_7kK(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_12kg_functions_7kK(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-static PyArrayObject *__pyx_f_3CKg_kK(PyArrayObject *__pyx_v_y1_crossed, PyArrayObject *__pyx_v_y2_crossed, PyArrayObject *__pyx_v_y3_crossed, PyArrayObject *__pyx_v_y1, CYTHON_UNUSED PyArrayObject *__pyx_v_y2, CYTHON_UNUSED PyArrayObject *__pyx_v_y3, CYTHON_UNUSED int __pyx_skip_dispatch) {
+static PyArrayObject *__pyx_f_12kg_functions_kK(PyArrayObject *__pyx_v_y1_crossed, PyArrayObject *__pyx_v_y2_crossed, PyArrayObject *__pyx_v_y3_crossed, PyArrayObject *__pyx_v_y1, CYTHON_UNUSED PyArrayObject *__pyx_v_y2, CYTHON_UNUSED PyArrayObject *__pyx_v_y3, CYTHON_UNUSED int __pyx_skip_dispatch) {
   PyArrayObject *__pyx_v_KIJ = 0;
   __Pyx_LocalBuf_ND __pyx_pybuffernd_KIJ;
   __Pyx_Buffer __pyx_pybuffer_KIJ;
@@ -6151,7 +6151,7 @@ static PyArrayObject *__pyx_f_3CKg_kK(PyArrayObject *__pyx_v_y1_crossed, PyArray
     __Pyx_ErrFetch(&__pyx_type, &__pyx_value, &__pyx_tb);
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_KIJ.rcbuffer->pybuffer);
   __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
-  __Pyx_AddTraceback("CKg.kK", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("kg_functions.kK", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = 0;
   goto __pyx_L2;
   __pyx_L0:;
@@ -6164,16 +6164,16 @@ static PyArrayObject *__pyx_f_3CKg_kK(PyArrayObject *__pyx_v_y1_crossed, PyArray
 }
 
 /* Python wrapper */
-static PyObject *__pyx_pw_3CKg_7kK(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_12kg_functions_7kK(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-PyDoc_STRVAR(__pyx_doc_3CKg_6kK, "\n    Helper function to compute a component of Ks.\n\n    Parameters:\n    y1_crossed (array_like): Cross product of y1.\n    y2_crossed (array_like): Cross product of y2.\n    y3_crossed (array_like): Cross product of y3.\n    y1 (array_like): Vector y1.\n    y2 (array_like): Vector y2.\n    y3 (array_like): Vector y3.\n\n    Returns:\n    KK_value (ndarray): Resulting value for KK.\n    ");
-static PyMethodDef __pyx_mdef_3CKg_7kK = {"kK", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_3CKg_7kK, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_3CKg_6kK};
-static PyObject *__pyx_pw_3CKg_7kK(PyObject *__pyx_self, 
+PyDoc_STRVAR(__pyx_doc_12kg_functions_6kK, "\n    Helper function to compute a component of Ks.\n\n    Parameters:\n    y1_crossed (array_like): Cross product of y1.\n    y2_crossed (array_like): Cross product of y2.\n    y3_crossed (array_like): Cross product of y3.\n    y1 (array_like): Vector y1.\n    y2 (array_like): Vector y2.\n    y3 (array_like): Vector y3.\n\n    Returns:\n    KK_value (ndarray): Resulting value for KK.\n    ");
+static PyMethodDef __pyx_mdef_12kg_functions_7kK = {"kK", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_12kg_functions_7kK, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_12kg_functions_6kK};
+static PyObject *__pyx_pw_12kg_functions_7kK(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
@@ -6318,7 +6318,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
       __Pyx_Arg_XDECREF_FASTCALL(values[__pyx_temp]);
     }
   }
-  __Pyx_AddTraceback("CKg.kK", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("kg_functions.kK", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
@@ -6328,7 +6328,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_y1), __pyx_ptype_5numpy_ndarray, 1, "y1", 0))) __PYX_ERR(0, 36, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_y2), __pyx_ptype_5numpy_ndarray, 1, "y2", 0))) __PYX_ERR(0, 37, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_y3), __pyx_ptype_5numpy_ndarray, 1, "y3", 0))) __PYX_ERR(0, 37, __pyx_L1_error)
-  __pyx_r = __pyx_pf_3CKg_6kK(__pyx_self, __pyx_v_y1_crossed, __pyx_v_y2_crossed, __pyx_v_y3_crossed, __pyx_v_y1, __pyx_v_y2, __pyx_v_y3);
+  __pyx_r = __pyx_pf_12kg_functions_6kK(__pyx_self, __pyx_v_y1_crossed, __pyx_v_y2_crossed, __pyx_v_y3_crossed, __pyx_v_y1, __pyx_v_y2, __pyx_v_y3);
 
   /* function exit code */
   goto __pyx_L0;
@@ -6345,7 +6345,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_3CKg_6kK(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_y1_crossed, PyArrayObject *__pyx_v_y2_crossed, PyArrayObject *__pyx_v_y3_crossed, PyArrayObject *__pyx_v_y1, PyArrayObject *__pyx_v_y2, PyArrayObject *__pyx_v_y3) {
+static PyObject *__pyx_pf_12kg_functions_6kK(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_y1_crossed, PyArrayObject *__pyx_v_y2_crossed, PyArrayObject *__pyx_v_y3_crossed, PyArrayObject *__pyx_v_y1, PyArrayObject *__pyx_v_y2, PyArrayObject *__pyx_v_y3) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -6354,7 +6354,7 @@ static PyObject *__pyx_pf_3CKg_6kK(CYTHON_UNUSED PyObject *__pyx_self, PyArrayOb
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("kK", 1);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = ((PyObject *)__pyx_f_3CKg_kK(__pyx_v_y1_crossed, __pyx_v_y2_crossed, __pyx_v_y3_crossed, __pyx_v_y1, __pyx_v_y2, __pyx_v_y3, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 36, __pyx_L1_error)
+  __pyx_t_1 = ((PyObject *)__pyx_f_12kg_functions_kK(__pyx_v_y1_crossed, __pyx_v_y2_crossed, __pyx_v_y3_crossed, __pyx_v_y1, __pyx_v_y2, __pyx_v_y3, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 36, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -6363,7 +6363,7 @@ static PyObject *__pyx_pf_3CKg_6kK(CYTHON_UNUSED PyObject *__pyx_self, PyArrayOb
   /* function exit code */
   __pyx_L1_error:;
   __Pyx_XDECREF(__pyx_t_1);
-  __Pyx_AddTraceback("CKg.kK", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("kg_functions.kK", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
   __Pyx_XGIVEREF(__pyx_r);
@@ -6379,14 +6379,14 @@ static PyObject *__pyx_pf_3CKg_6kK(CYTHON_UNUSED PyObject *__pyx_self, PyArrayOb
  *     cdef np.ndarray y2_crossed = cross(y2)
  */
 
-static PyObject *__pyx_pw_3CKg_9gKSArea(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_12kg_functions_9gKSArea(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-static PyObject *__pyx_f_3CKg_gKSArea(PyArrayObject *__pyx_v_y1, PyArrayObject *__pyx_v_y2, PyArrayObject *__pyx_v_y3, CYTHON_UNUSED int __pyx_skip_dispatch) {
+static PyObject *__pyx_f_12kg_functions_gKSArea(PyArrayObject *__pyx_v_y1, PyArrayObject *__pyx_v_y2, PyArrayObject *__pyx_v_y3, CYTHON_UNUSED int __pyx_skip_dispatch) {
   PyArrayObject *__pyx_v_y1_crossed = 0;
   PyArrayObject *__pyx_v_y2_crossed = 0;
   PyArrayObject *__pyx_v_y3_crossed = 0;
@@ -6424,7 +6424,7 @@ static PyObject *__pyx_f_3CKg_gKSArea(PyArrayObject *__pyx_v_y1, PyArrayObject *
  *     cdef np.ndarray y2_crossed = cross(y2)
  *     cdef np.ndarray y3_crossed = cross(y3)
  */
-  __pyx_t_1 = ((PyObject *)__pyx_f_3CKg_cross(__pyx_v_y1, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 60, __pyx_L1_error)
+  __pyx_t_1 = ((PyObject *)__pyx_f_12kg_functions_cross(__pyx_v_y1, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 60, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_y1_crossed = ((PyArrayObject *)__pyx_t_1);
   __pyx_t_1 = 0;
@@ -6436,7 +6436,7 @@ static PyObject *__pyx_f_3CKg_gKSArea(PyArrayObject *__pyx_v_y1, PyArrayObject *
  *     cdef np.ndarray y3_crossed = cross(y3)
  * 
  */
-  __pyx_t_1 = ((PyObject *)__pyx_f_3CKg_cross(__pyx_v_y2, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 61, __pyx_L1_error)
+  __pyx_t_1 = ((PyObject *)__pyx_f_12kg_functions_cross(__pyx_v_y2, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 61, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_y2_crossed = ((PyArrayObject *)__pyx_t_1);
   __pyx_t_1 = 0;
@@ -6448,7 +6448,7 @@ static PyObject *__pyx_f_3CKg_gKSArea(PyArrayObject *__pyx_v_y1, PyArrayObject *
  * 
  *     cdef double q = np.dot(y2_crossed, y1) - np.dot(y2_crossed, y3) + np.dot(y1_crossed, y3)
  */
-  __pyx_t_1 = ((PyObject *)__pyx_f_3CKg_cross(__pyx_v_y3, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 62, __pyx_L1_error)
+  __pyx_t_1 = ((PyObject *)__pyx_f_12kg_functions_cross(__pyx_v_y3, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 62, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_y3_crossed = ((PyArrayObject *)__pyx_t_1);
   __pyx_t_1 = 0;
@@ -6918,7 +6918,7 @@ static PyObject *__pyx_f_3CKg_gKSArea(PyArrayObject *__pyx_v_y1, PyArrayObject *
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   }
-  __pyx_t_8 = ((PyObject *)__pyx_f_3CKg_kK(__pyx_v_y1_crossed, __pyx_v_y2_crossed, __pyx_v_y3_crossed, __pyx_v_y1, __pyx_v_y2, __pyx_v_y3, 0)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 76, __pyx_L1_error)
+  __pyx_t_8 = ((PyObject *)__pyx_f_12kg_functions_kK(__pyx_v_y1_crossed, __pyx_v_y2_crossed, __pyx_v_y3_crossed, __pyx_v_y1, __pyx_v_y2, __pyx_v_y3, 0)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 76, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
 
   /* "kg_functions.pyx":77
@@ -6928,7 +6928,7 @@ static PyObject *__pyx_f_3CKg_gKSArea(PyArrayObject *__pyx_v_y1, PyArrayObject *
  *         [kK(y2_crossed, y1_crossed, y3_crossed, y2, y1, y3), np.dot(Q2, Q2),
  *          kK(y2_crossed, y3_crossed, y1_crossed, y2, y3, y1)],
  */
-  __pyx_t_9 = ((PyObject *)__pyx_f_3CKg_kK(__pyx_v_y1_crossed, __pyx_v_y3_crossed, __pyx_v_y2_crossed, __pyx_v_y1, __pyx_v_y3, __pyx_v_y2, 0)); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 77, __pyx_L1_error)
+  __pyx_t_9 = ((PyObject *)__pyx_f_12kg_functions_kK(__pyx_v_y1_crossed, __pyx_v_y3_crossed, __pyx_v_y2_crossed, __pyx_v_y1, __pyx_v_y3, __pyx_v_y2, 0)); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 77, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
 
   /* "kg_functions.pyx":76
@@ -6957,7 +6957,7 @@ static PyObject *__pyx_f_3CKg_gKSArea(PyArrayObject *__pyx_v_y1, PyArrayObject *
  *          kK(y2_crossed, y3_crossed, y1_crossed, y2, y3, y1)],
  *         [kK(y3_crossed, y1_crossed, y2_crossed, y3, y1, y2),
  */
-  __pyx_t_9 = ((PyObject *)__pyx_f_3CKg_kK(__pyx_v_y2_crossed, __pyx_v_y1_crossed, __pyx_v_y3_crossed, __pyx_v_y2, __pyx_v_y1, __pyx_v_y3, 0)); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 78, __pyx_L1_error)
+  __pyx_t_9 = ((PyObject *)__pyx_f_12kg_functions_kK(__pyx_v_y2_crossed, __pyx_v_y1_crossed, __pyx_v_y3_crossed, __pyx_v_y2, __pyx_v_y1, __pyx_v_y3, 0)); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 78, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 78, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
@@ -6994,7 +6994,7 @@ static PyObject *__pyx_f_3CKg_gKSArea(PyArrayObject *__pyx_v_y1, PyArrayObject *
  *         [kK(y3_crossed, y1_crossed, y2_crossed, y3, y1, y2),
  *          kK(y3_crossed, y2_crossed, y1_crossed, y3, y2, y1), np.dot(Q3, Q3)]
  */
-  __pyx_t_7 = ((PyObject *)__pyx_f_3CKg_kK(__pyx_v_y2_crossed, __pyx_v_y3_crossed, __pyx_v_y1_crossed, __pyx_v_y2, __pyx_v_y3, __pyx_v_y1, 0)); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 79, __pyx_L1_error)
+  __pyx_t_7 = ((PyObject *)__pyx_f_12kg_functions_kK(__pyx_v_y2_crossed, __pyx_v_y3_crossed, __pyx_v_y1_crossed, __pyx_v_y2, __pyx_v_y3, __pyx_v_y1, 0)); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 79, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
 
   /* "kg_functions.pyx":78
@@ -7023,7 +7023,7 @@ static PyObject *__pyx_f_3CKg_gKSArea(PyArrayObject *__pyx_v_y1, PyArrayObject *
  *          kK(y3_crossed, y2_crossed, y1_crossed, y3, y2, y1), np.dot(Q3, Q3)]
  *     ])
  */
-  __pyx_t_7 = ((PyObject *)__pyx_f_3CKg_kK(__pyx_v_y3_crossed, __pyx_v_y1_crossed, __pyx_v_y2_crossed, __pyx_v_y3, __pyx_v_y1, __pyx_v_y2, 0)); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 80, __pyx_L1_error)
+  __pyx_t_7 = ((PyObject *)__pyx_f_12kg_functions_kK(__pyx_v_y3_crossed, __pyx_v_y1_crossed, __pyx_v_y2_crossed, __pyx_v_y3, __pyx_v_y1, __pyx_v_y2, 0)); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 80, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
 
   /* "kg_functions.pyx":81
@@ -7033,7 +7033,7 @@ static PyObject *__pyx_f_3CKg_gKSArea(PyArrayObject *__pyx_v_y1, PyArrayObject *
  *     ])
  * 
  */
-  __pyx_t_8 = ((PyObject *)__pyx_f_3CKg_kK(__pyx_v_y3_crossed, __pyx_v_y2_crossed, __pyx_v_y1_crossed, __pyx_v_y3, __pyx_v_y2, __pyx_v_y1, 0)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 81, __pyx_L1_error)
+  __pyx_t_8 = ((PyObject *)__pyx_f_12kg_functions_kK(__pyx_v_y3_crossed, __pyx_v_y2_crossed, __pyx_v_y1_crossed, __pyx_v_y3, __pyx_v_y2, __pyx_v_y1, 0)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 81, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_GetModuleGlobalName(__pyx_t_11, __pyx_n_s_np); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 81, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_11);
@@ -7188,7 +7188,7 @@ static PyObject *__pyx_f_3CKg_gKSArea(PyArrayObject *__pyx_v_y1, PyArrayObject *
   __Pyx_XDECREF(__pyx_t_10);
   __Pyx_XDECREF(__pyx_t_11);
   __Pyx_XDECREF(__pyx_t_12);
-  __Pyx_AddTraceback("CKg.gKSArea", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("kg_functions.gKSArea", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = 0;
   __pyx_L0:;
   __Pyx_XDECREF((PyObject *)__pyx_v_y1_crossed);
@@ -7206,15 +7206,15 @@ static PyObject *__pyx_f_3CKg_gKSArea(PyArrayObject *__pyx_v_y1, PyArrayObject *
 }
 
 /* Python wrapper */
-static PyObject *__pyx_pw_3CKg_9gKSArea(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_12kg_functions_9gKSArea(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-static PyMethodDef __pyx_mdef_3CKg_9gKSArea = {"gKSArea", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_3CKg_9gKSArea, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0};
-static PyObject *__pyx_pw_3CKg_9gKSArea(PyObject *__pyx_self, 
+static PyMethodDef __pyx_mdef_12kg_functions_9gKSArea = {"gKSArea", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_12kg_functions_9gKSArea, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0};
+static PyObject *__pyx_pw_12kg_functions_9gKSArea(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
@@ -7314,14 +7314,14 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
       __Pyx_Arg_XDECREF_FASTCALL(values[__pyx_temp]);
     }
   }
-  __Pyx_AddTraceback("CKg.gKSArea", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("kg_functions.gKSArea", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_y1), __pyx_ptype_5numpy_ndarray, 1, "y1", 0))) __PYX_ERR(0, 59, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_y2), __pyx_ptype_5numpy_ndarray, 1, "y2", 0))) __PYX_ERR(0, 59, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_y3), __pyx_ptype_5numpy_ndarray, 1, "y3", 0))) __PYX_ERR(0, 59, __pyx_L1_error)
-  __pyx_r = __pyx_pf_3CKg_8gKSArea(__pyx_self, __pyx_v_y1, __pyx_v_y2, __pyx_v_y3);
+  __pyx_r = __pyx_pf_12kg_functions_8gKSArea(__pyx_self, __pyx_v_y1, __pyx_v_y2, __pyx_v_y3);
 
   /* function exit code */
   goto __pyx_L0;
@@ -7338,7 +7338,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_3CKg_8gKSArea(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_y1, PyArrayObject *__pyx_v_y2, PyArrayObject *__pyx_v_y3) {
+static PyObject *__pyx_pf_12kg_functions_8gKSArea(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_y1, PyArrayObject *__pyx_v_y2, PyArrayObject *__pyx_v_y3) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -7347,7 +7347,7 @@ static PyObject *__pyx_pf_3CKg_8gKSArea(CYTHON_UNUSED PyObject *__pyx_self, PyAr
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("gKSArea", 1);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_f_3CKg_gKSArea(__pyx_v_y1, __pyx_v_y2, __pyx_v_y3, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 59, __pyx_L1_error)
+  __pyx_t_1 = __pyx_f_12kg_functions_gKSArea(__pyx_v_y1, __pyx_v_y2, __pyx_v_y3, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 59, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -7356,7 +7356,7 @@ static PyObject *__pyx_pf_3CKg_8gKSArea(CYTHON_UNUSED PyObject *__pyx_self, PyAr
   /* function exit code */
   __pyx_L1_error:;
   __Pyx_XDECREF(__pyx_t_1);
-  __Pyx_AddTraceback("CKg.gKSArea", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("kg_functions.gKSArea", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
   __Pyx_XGIVEREF(__pyx_r);
@@ -7380,7 +7380,6 @@ static PyMethodDef __pyx_methods[] = {
 
 static int __Pyx_CreateStringTabAndInitStrings(void) {
   __Pyx_StringTabEntry __pyx_string_tab[] = {
-    {&__pyx_n_s_CKg, __pyx_k_CKg, sizeof(__pyx_k_CKg), 0, 0, 1, 1},
     {&__pyx_n_s_ImportError, __pyx_k_ImportError, sizeof(__pyx_k_ImportError), 0, 0, 1, 1},
     {&__pyx_n_s_K, __pyx_k_K, sizeof(__pyx_k_K), 0, 0, 1, 1},
     {&__pyx_n_s_Ke, __pyx_k_Ke, sizeof(__pyx_k_Ke), 0, 0, 1, 1},
@@ -7406,6 +7405,7 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_n_s_int, __pyx_k_int, sizeof(__pyx_k_int), 0, 0, 1, 1},
     {&__pyx_n_s_is_coroutine, __pyx_k_is_coroutine, sizeof(__pyx_k_is_coroutine), 0, 0, 1, 1},
     {&__pyx_n_s_kK, __pyx_k_kK, sizeof(__pyx_k_kK), 0, 0, 1, 1},
+    {&__pyx_n_s_kg_functions, __pyx_k_kg_functions, sizeof(__pyx_k_kg_functions), 0, 0, 1, 1},
     {&__pyx_kp_s_kg_functions_pyx, __pyx_k_kg_functions_pyx, sizeof(__pyx_k_kg_functions_pyx), 0, 0, 1, 0},
     {&__pyx_n_s_linalg, __pyx_k_linalg, sizeof(__pyx_k_linalg), 0, 0, 1, 1},
     {&__pyx_n_s_main, __pyx_k_main, sizeof(__pyx_k_main), 0, 0, 1, 1},
@@ -7717,10 +7717,10 @@ static int __Pyx_modinit_function_import_code(void) {
 #if PY_MAJOR_VERSION >= 3
 #if CYTHON_PEP489_MULTI_PHASE_INIT
 static PyObject* __pyx_pymod_create(PyObject *spec, PyModuleDef *def); /*proto*/
-static int __pyx_pymod_exec_CKg(PyObject* module); /*proto*/
+static int __pyx_pymod_exec_kg_functions(PyObject* module); /*proto*/
 static PyModuleDef_Slot __pyx_moduledef_slots[] = {
   {Py_mod_create, (void*)__pyx_pymod_create},
-  {Py_mod_exec, (void*)__pyx_pymod_exec_CKg},
+  {Py_mod_exec, (void*)__pyx_pymod_exec_kg_functions},
   {0, NULL}
 };
 #endif
@@ -7733,7 +7733,7 @@ namespace {
   #endif
   {
       PyModuleDef_HEAD_INIT,
-      "CKg",
+      "kg_functions",
       0, /* m_doc */
     #if CYTHON_PEP489_MULTI_PHASE_INIT
       0, /* m_size */
@@ -7781,11 +7781,11 @@ namespace {
 
 
 #if PY_MAJOR_VERSION < 3
-__Pyx_PyMODINIT_FUNC initCKg(void) CYTHON_SMALL_CODE; /*proto*/
-__Pyx_PyMODINIT_FUNC initCKg(void)
+__Pyx_PyMODINIT_FUNC initkg_functions(void) CYTHON_SMALL_CODE; /*proto*/
+__Pyx_PyMODINIT_FUNC initkg_functions(void)
 #else
-__Pyx_PyMODINIT_FUNC PyInit_CKg(void) CYTHON_SMALL_CODE; /*proto*/
-__Pyx_PyMODINIT_FUNC PyInit_CKg(void)
+__Pyx_PyMODINIT_FUNC PyInit_kg_functions(void) CYTHON_SMALL_CODE; /*proto*/
+__Pyx_PyMODINIT_FUNC PyInit_kg_functions(void)
 #if CYTHON_PEP489_MULTI_PHASE_INIT
 {
   return PyModuleDef_Init(&__pyx_moduledef);
@@ -7866,7 +7866,7 @@ bad:
 }
 
 
-static CYTHON_SMALL_CODE int __pyx_pymod_exec_CKg(PyObject *__pyx_pyinit_module)
+static CYTHON_SMALL_CODE int __pyx_pymod_exec_kg_functions(PyObject *__pyx_pyinit_module)
 #endif
 #endif
 {
@@ -7883,7 +7883,7 @@ static CYTHON_SMALL_CODE int __pyx_pymod_exec_CKg(PyObject *__pyx_pyinit_module)
   #if CYTHON_PEP489_MULTI_PHASE_INIT
   if (__pyx_m) {
     if (__pyx_m == __pyx_pyinit_module) return 0;
-    PyErr_SetString(PyExc_RuntimeError, "Module 'CKg' has already been imported. Re-initialisation is not supported.");
+    PyErr_SetString(PyExc_RuntimeError, "Module 'kg_functions' has already been imported. Re-initialisation is not supported.");
     return -1;
   }
   #elif PY_MAJOR_VERSION >= 3
@@ -7895,13 +7895,13 @@ static CYTHON_SMALL_CODE int __pyx_pymod_exec_CKg(PyObject *__pyx_pyinit_module)
   Py_INCREF(__pyx_m);
   #else
   #if PY_MAJOR_VERSION < 3
-  __pyx_m = Py_InitModule4("CKg", __pyx_methods, 0, 0, PYTHON_API_VERSION); Py_XINCREF(__pyx_m);
+  __pyx_m = Py_InitModule4("kg_functions", __pyx_methods, 0, 0, PYTHON_API_VERSION); Py_XINCREF(__pyx_m);
   if (unlikely(!__pyx_m)) __PYX_ERR(0, 1, __pyx_L1_error)
   #elif CYTHON_USE_MODULE_STATE
   __pyx_t_1 = PyModule_Create(&__pyx_moduledef); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1, __pyx_L1_error)
   {
     int add_module_result = PyState_AddModule(__pyx_t_1, &__pyx_moduledef);
-    __pyx_t_1 = 0; /* transfer ownership from __pyx_t_1 to CKg pseudovariable */
+    __pyx_t_1 = 0; /* transfer ownership from __pyx_t_1 to kg_functions pseudovariable */
     if (unlikely((add_module_result < 0))) __PYX_ERR(0, 1, __pyx_L1_error)
     pystate_addmodule_run = 1;
   }
@@ -7925,7 +7925,7 @@ if (!__Pyx_RefNanny) {
       Py_FatalError("failed to import 'refnanny' module");
 }
 #endif
-  __Pyx_RefNannySetupContext("__Pyx_PyMODINIT_FUNC PyInit_CKg(void)", 0);
+  __Pyx_RefNannySetupContext("__Pyx_PyMODINIT_FUNC PyInit_kg_functions(void)", 0);
   if (__Pyx_check_binary_version(__PYX_LIMITED_VERSION_HEX, __Pyx_get_runtime_version(), CYTHON_COMPILING_IN_LIMITED_API) < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   #ifdef __Pxy_PyFrame_Initialize_Offsets
   __Pxy_PyFrame_Initialize_Offsets();
@@ -7963,14 +7963,14 @@ if (!__Pyx_RefNanny) {
   #if PY_MAJOR_VERSION < 3 && (__PYX_DEFAULT_STRING_ENCODING_IS_ASCII || __PYX_DEFAULT_STRING_ENCODING_IS_DEFAULT)
   if (__Pyx_init_sys_getdefaultencoding_params() < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   #endif
-  if (__pyx_module_is_main_CKg) {
+  if (__pyx_module_is_main_kg_functions) {
     if (PyObject_SetAttr(__pyx_m, __pyx_n_s_name, __pyx_n_s_main) < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   }
   #if PY_MAJOR_VERSION >= 3
   {
     PyObject *modules = PyImport_GetModuleDict(); if (unlikely(!modules)) __PYX_ERR(0, 1, __pyx_L1_error)
-    if (!PyDict_GetItemString(modules, "CKg")) {
-      if (unlikely((PyDict_SetItemString(modules, "CKg", __pyx_m) < 0))) __PYX_ERR(0, 1, __pyx_L1_error)
+    if (!PyDict_GetItemString(modules, "kg_functions")) {
+      if (unlikely((PyDict_SetItemString(modules, "kg_functions", __pyx_m) < 0))) __PYX_ERR(0, 1, __pyx_L1_error)
     }
   }
   #endif
@@ -8008,7 +8008,7 @@ if (!__Pyx_RefNanny) {
  *     cdef int dim = 3
  *     cdef np.ndarray[np.int_t, ndim=2] idofg = np.zeros([len(nY) * dim, 1], dtype=np.int)
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_3CKg_1assembleg, 0, __pyx_n_s_assembleg, NULL, __pyx_n_s_CKg, __pyx_d, ((PyObject *)__pyx_codeobj__9)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 4, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_12kg_functions_1assembleg, 0, __pyx_n_s_assembleg, NULL, __pyx_n_s_kg_functions, __pyx_d, ((PyObject *)__pyx_codeobj__9)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 4, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_assembleg, __pyx_t_2) < 0) __PYX_ERR(0, 4, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -8020,7 +8020,7 @@ if (!__Pyx_RefNanny) {
  *     dim = 3
  *     cdef np.ndarray[np.int_t, ndim=2] idofg = np.zeros([len(nY) * dim, len(nY) * dim], dtype=np.int)
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_3CKg_3assembleK, 0, __pyx_n_s_assembleK, NULL, __pyx_n_s_CKg, __pyx_d, ((PyObject *)__pyx_codeobj__11)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 14, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_12kg_functions_3assembleK, 0, __pyx_n_s_assembleK, NULL, __pyx_n_s_kg_functions, __pyx_d, ((PyObject *)__pyx_codeobj__11)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 14, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_assembleK, __pyx_t_2) < 0) __PYX_ERR(0, 14, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -8032,7 +8032,7 @@ if (!__Pyx_RefNanny) {
  *     cdef np.ndarray[np.float_t, ndim=2] yMat = np.zeros((3, 3), dtype=np.float)
  *     yMat[0, 1] = -y[2]
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_3CKg_5cross, 0, __pyx_n_s_cross, NULL, __pyx_n_s_CKg, __pyx_d, ((PyObject *)__pyx_codeobj__13)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 26, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_12kg_functions_5cross, 0, __pyx_n_s_cross, NULL, __pyx_n_s_kg_functions, __pyx_d, ((PyObject *)__pyx_codeobj__13)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 26, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_cross, __pyx_t_2) < 0) __PYX_ERR(0, 26, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -8044,7 +8044,7 @@ if (!__Pyx_RefNanny) {
  *                     np.ndarray y2, np.ndarray y3):
  *     """
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_3CKg_7kK, 0, __pyx_n_s_kK, NULL, __pyx_n_s_CKg, __pyx_d, ((PyObject *)__pyx_codeobj__15)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 36, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_12kg_functions_7kK, 0, __pyx_n_s_kK, NULL, __pyx_n_s_kg_functions, __pyx_d, ((PyObject *)__pyx_codeobj__15)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 36, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_kK, __pyx_t_2) < 0) __PYX_ERR(0, 36, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -8056,7 +8056,7 @@ if (!__Pyx_RefNanny) {
  *     cdef np.ndarray y1_crossed = cross(y1)
  *     cdef np.ndarray y2_crossed = cross(y2)
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_3CKg_9gKSArea, 0, __pyx_n_s_gKSArea, NULL, __pyx_n_s_CKg, __pyx_d, ((PyObject *)__pyx_codeobj__17)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 59, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_12kg_functions_9gKSArea, 0, __pyx_n_s_gKSArea, NULL, __pyx_n_s_kg_functions, __pyx_d, ((PyObject *)__pyx_codeobj__17)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 59, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_gKSArea, __pyx_t_2) < 0) __PYX_ERR(0, 59, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -8078,7 +8078,7 @@ if (!__Pyx_RefNanny) {
   __Pyx_XDECREF(__pyx_t_2);
   if (__pyx_m) {
     if (__pyx_d && stringtab_initialized) {
-      __Pyx_AddTraceback("init CKg", __pyx_clineno, __pyx_lineno, __pyx_filename);
+      __Pyx_AddTraceback("init kg_functions", __pyx_clineno, __pyx_lineno, __pyx_filename);
     }
     #if !CYTHON_USE_MODULE_STATE
     Py_CLEAR(__pyx_m);
@@ -8092,7 +8092,7 @@ if (!__Pyx_RefNanny) {
     }
     #endif
   } else if (!PyErr_Occurred()) {
-    PyErr_SetString(PyExc_ImportError, "init CKg");
+    PyErr_SetString(PyExc_ImportError, "init kg_functions");
   }
   __pyx_L0:;
   __Pyx_RefNannyFinishContext();
