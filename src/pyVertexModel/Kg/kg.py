@@ -10,29 +10,15 @@ import numpy as np
 class Kg:
 
     def __init__(self, Geo):
-        dimg = (Geo.numY + Geo.numF + Geo.nCells) * 3
-        self.g = spdiags(np.zeros(dimg), 0, dimg, 1, format='csc')
-        self.K = spdiags(np.zeros(dimg), 0, dimg, dimg, format='csc')
+        self.dimg = (Geo.numY + Geo.numF + Geo.nCells) * 3
+        self.g = np.zeros([self.dimg, 1])
+        self.K = np.zeros([self.dimg, self.dimg])
         self.energy = None
+        self.dim = 3
 
     @abstractmethod
     def compute_work(self, Geo, Set, Geo_n=None):
         pass
-
-    def assembleK_optimised(self, Ke, nY):  # Test
-        dim = 3
-        idofg = np.zeros(len(nY) * dim, dtype=int)
-        jdofg = idofg.copy()
-
-        for I in range(len(nY)):
-            idofg[I * dim: (I + 1) * dim] = np.arange((nY[I] - 1) * dim, nY[I] * dim)
-            jdofg[I * dim: (I + 1) * dim] = np.arange((nY[I] - 1) * dim, nY[I] * dim)  # global dof
-
-        # Create COO sparse matrix for efficient assembly
-        row = np.repeat(idofg, len(jdofg))
-        col = np.tile(jdofg, len(idofg))
-        data = Ke.flatten()
-        self.K = self.K + coo_matrix((data, (row, col)), shape=self.K.shape).tocsc()
 
     def assembleK(self, Ke, nY):
         '''
@@ -41,18 +27,13 @@ class Kg:
         :param nY:
         :return:
         '''
-        dim = 3
-        idofg = np.zeros(len(nY) * dim, dtype=int)
-        jdofg = idofg.copy()
+        idofg = np.zeros([len(nY) * self.dim, len(nY) * self.dim], dtype=int)
 
         for I in range(len(nY)):
-            idofg[I * dim: (I + 1) * dim] = np.arange((nY[I] - 1) * dim, nY[I] * dim)
-            jdofg[I * dim: (I + 1) * dim] = np.arange((nY[I] - 1) * dim, nY[I] * dim)  # global dof
+            idofg[I * self.dim: (I + 1) * self.dim, 0] = np.arange(nY[I] * self.dim, (nY[I]+1) * self.dim)
 
         # Update the matrix K using sparse matrix addition
-        for i in range(len(idofg)):
-            for j in range(len(jdofg)):
-                self.K[idofg[i], jdofg[j]] += Ke[i, j]
+        self.K[idofg, idofg] = self.K[idofg, idofg] + Ke
 
     def assembleg(self, g, ge, nY):
         '''
@@ -62,29 +43,23 @@ class Kg:
         :param nY:
         :return:
         '''
-        dim = 3
-        idofg = np.zeros(len(nY) * dim, dtype=int)
+
+        idofg = np.zeros([len(nY) * self.dim, 1], dtype=int)
 
         for I in range(len(nY)):
-            idofg[I * dim: (I + 1) * dim] = np.arange((nY[I] - 1) * dim, nY[I] * dim)  # global dof
-
-        # Create COO sparse matrix for efficient assembly
-        row = idofg
-        col = np.zeros_like(row)
-        data = ge.flatten()
-        print(row)
-        g = g + coo_matrix((data, (row, col)), shape=g.shape).tocsc()
+            idofg[I * self.dim: (I + 1) * self.dim, 0] = np.arange(nY[I] * self.dim, (nY[I]+1) * self.dim)  # global dof
+        g[idofg, 0] = g[idofg, 0] + ge
 
         return g
 
     def cross(self, y):
         '''
-        Compute the cross product matrix of a 3-dimensional vector.
-        :param y:3-dimensional vector
+        Compute the cross product matrix of a 3-self.dimensional vector.
+        :param y:3-self.dimensional vector
         :return:yMat (ndarray): The cross product matrix of the input vector.
         '''
         # Test different options
-        yMat = np.cross(y, np.identity(y.shape[0]) * -1)
+        #yMat = np.cross(y, np.identity(y.shape[0]) * -1)
         yMat = np.array([[0, -y[2], y[1]],
                          [y[2], 0, -y[0]],
                          [-y[1], y[0], 0]])

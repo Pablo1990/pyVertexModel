@@ -1,4 +1,5 @@
 import numpy as np
+import time
 from scipy.sparse import spdiags, csc_matrix
 
 from src.pyVertexModel.Kg.kg import Kg
@@ -9,7 +10,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
         Energy = {}
 
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
-            print(c)
+            start = time.time()
             if Geo.Remodelling:
                 if not np.isin(c, Geo.AssembleNodes):
                     continue
@@ -17,7 +18,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
             Energy_c = 0
             Cell = Geo.Cells[c]
             Ys = Cell.Y
-            ge = csc_matrix((self.g.shape[0], 1))
+            ge = np.zeros_like(self.g)
             fact0 = 0
 
             for face in Cell.Faces:
@@ -53,13 +54,24 @@ class KgSurfaceCellBasedAdhesion(Kg):
 
                     gs, Ks, Kss = self.gKSArea(y1, y2, y3)
                     gs = Lambda * gs
+                    start_assembleg = time.time()
                     ge = self.assembleg(ge, gs, nY)
+                    end_assembleg = time.time()
+                    print(f"Time assembleg: {end_assembleg - start_assembleg} seconds")
+
                     Ks = fact * Lambda * (Ks + Kss)
+
+                    start_assembleg = time.time()
                     self.assembleK(Ks, nY)
+                    end_assembleg = time.time()
+                    print(f"Time assembleK: {end_assembleg - start_assembleg} seconds")
 
             self.g += ge * fact
             self.K += ge * ge.T / (Cell.Area0 ** 2)
             Energy_c += (1 / 2) * fact0 * fact
             Energy[c] = Energy_c
+
+            end = time.time()
+            print(f"Time: {end - start } seconds")
 
         self.energy = sum(Energy.values())

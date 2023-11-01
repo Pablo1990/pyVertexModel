@@ -454,6 +454,7 @@ class VertexModel:
 
         while self.t <= self.Set.tend and not self.didNotConverge:
             self.Set.currentT = self.t
+            print("Time: " + str(self.t))
 
             if not self.relaxingNu:
                 self.Set.iIncr = self.numStep

@@ -50,10 +50,11 @@ class KgVolume(Kg):
         # Ks=[der_y1y1 det(Y) der_y1y2 det(Y) der_y1y3 det(Y)
         #     der_y2y1 det(Y) der_y2y2 det(Y) der_y2y3 det(Y)
         #     der_y3y1 det(Y) der_y3y2 det(Y) der_y3y3 det(Y)]
-        gs = [np.cross(Y2, Y3),
+        gs = np.block([np.cross(Y2, Y3),
               np.cross(Y3, Y1),
-              np.cross(Y1, Y2)]
-        Ks = np.array([[np.zeros(Y1.shape), -self.cross(Y3), self.cross(Y2)],
+              np.cross(Y1, Y2)])
+
+        Ks = np.block([[np.zeros(Y1.shape), -self.cross(Y3), self.cross(Y2)],
                        [self.cross(Y3), np.zeros(Y1.shape), -self.cross(Y1)],
                        [-self.cross(Y2), self.cross(Y1), np.zeros(Y1.shape)]])
 
