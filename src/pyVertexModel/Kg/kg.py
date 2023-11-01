@@ -10,7 +10,7 @@ import numpy as np
 class Kg:
 
     def __init__(self, Geo):
-        dimg = (Geo['numY'] + Geo['numF'] + Geo['nCells']) * 3
+        dimg = (Geo.numY + Geo.numF + Geo.nCells) * 3
         self.g = spdiags(np.zeros(dimg), 0, dimg, 1, format='csc')
         self.K = spdiags(np.zeros(dimg), 0, dimg, dimg, format='csc')
         self.energy = None
@@ -72,6 +72,7 @@ class Kg:
         row = idofg
         col = np.zeros_like(row)
         data = ge.flatten()
+        print(row)
         g = g + coo_matrix((data, (row, col)), shape=g.shape).tocsc()
 
         return g
@@ -105,7 +106,9 @@ class Kg:
         Returns:
         KK_value (ndarray): Resulting value for KK.
         """
-        return np.cross(y1_crossed, y2_crossed).dot(np.cross(y1, y3))
+        KIJ = (y2_crossed - y3_crossed) @ (y1_crossed - y3_crossed) + \
+              np.cross(y2_crossed, y1) - np.cross(y2_crossed, y3) - np.cross(y3_crossed, y1)
+        return KIJ
 
     def addNoiseToParameter(self, avgParameter, noise, currentTri=None):
         minValue = avgParameter - avgParameter * noise
@@ -138,12 +141,11 @@ class Kg:
 
         Kss = -(2 / np.linalg.norm(q)) * np.outer(gs, gs)
 
-        Ks = fact * np.array([[np.dot(Q1, Q1), self.kK(y1_crossed, y2_crossed, y3_crossed, y1, y2, y3),
-                               self.kK(y1_crossed, y3_crossed, y2_crossed, y1, y3, y2)],
-                              [self.kK(y2_crossed, y1_crossed, y3_crossed, y2, y1, y3), np.dot(Q2, Q2),
-                               self.kK(y2_crossed, y3_crossed, y1_crossed, y2, y3, y1)],
-                              [self.kK(y3_crossed, y1_crossed, y2_crossed, y3, y1, y2),
-                               self.kK(y3_crossed, y2_crossed, y1_crossed, y3, y2, y1), np.dot(Q3, Q3)]])
+        Ks = fact * np.block([
+                [np.dot(Q1, Q1), self.kK(y1_crossed, y2_crossed, y3_crossed, y1, y2, y3), self.kK(y1_crossed, y3_crossed, y2_crossed, y1, y3, y2)],
+                [self.kK(y2_crossed, y1_crossed, y3_crossed, y2, y1, y3), np.dot(Q2, Q2), self.kK(y2_crossed, y3_crossed, y1_crossed, y2, y3, y1)],
+                [self.kK(y3_crossed, y1_crossed, y2_crossed, y3, y1, y2), self.kK(y3_crossed, y2_crossed, y1_crossed, y3, y2, y1), np.dot(Q3, Q3)]
+            ])
 
         gs = gs.reshape(-1, 1)  # Reshape gs to match the orientation in MATLAB
 

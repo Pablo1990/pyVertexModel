@@ -8,7 +8,7 @@ class KgVolume(Kg):
         # The residual g and Jacobian K of Volume Energy
         # Energy W_s= sum_cell lambdaV ((V-V0)/V0)^2
         n = 4  # 2 or 4 for now.
-
+        Energy = {}
         # Loop over Cells
         # Analytical residual g and Jacobian K
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus]:
@@ -39,8 +39,9 @@ class KgVolume(Kg):
             geMatrix = lambdaV * (ge * ge.T / 6 / 6 * (Cell.Vol - Cell.Vol0) ** (n - 2) / Cell.Vol0 ** n)
             self.K = self.K + geMatrix
             Energy_c = Energy_c + lambdaV / n * ((Cell.Vol - Cell.Vol0) / Cell.Vol0) ** n
+            Energy[c] = Energy_c
 
-        self.energy = sum(Energy_c)
+        self.energy = sum(Energy.values())
 
 
     def gKDet(self, Y1, Y2, Y3):

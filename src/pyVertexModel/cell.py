@@ -11,6 +11,7 @@ class Cell:
         self.globalIDs = np.array([], dtype='int')
         self.Faces = []
         self.Area = None
+        self.Area0 = None
         self.Vol = None
         self.Vol0 = None
         self.AliveStatus = None

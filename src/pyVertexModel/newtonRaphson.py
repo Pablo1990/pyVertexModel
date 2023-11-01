@@ -91,26 +91,22 @@ def LineSearch(Geo_0, Geo_n, Geo, Dofs, Set, gc, dy):
 
 def KgGlobal(Geo_0, Geo_n, Geo, Set):
     # Surface Energy
-    kg_SA = KgSurfaceCellBasedAdhesion()
+    kg_SA = KgSurfaceCellBasedAdhesion(Geo)
     kg_SA.compute_work(Geo, Set)
 
     # Volume Energy
-    gv, Kv, EV = KgVolume.compute_work(Geo, Set)
+    kg_Vol = KgVolume(Geo)
+    kg_Vol.compute_work(Geo, Set)
 
     # Viscous Energy
-    gf, Kf, EN = KgViscosity.compute_work(Geo_n, Geo, Set)
+    kg_Viscosity = KgViscosity(Geo)
+    kg_Viscosity.compute_work(Geo_n, Geo, Set)
 
-    g = gv + gf + gs
-    K = Kv + Kf + Ks
-    E = EV + ES + EN
+    g = kg_Vol.g + kg_Viscosity.g + kg_SA.g
+    K = kg_Vol.K + kg_Viscosity.K + kg_SA.g
+    E = kg_Vol.energy + kg_Viscosity.energy + kg_SA.energy
 
-    Energies = {
-        "Surface": ES,
-        "Volume": EV,
-        "Viscosity": EN
-    }
-
-    # # Plane Elasticity
+    # # TODO: Plane Elasticity
     # if Set.InPlaneElasticity:
     #     gt, Kt, EBulk = KgBulk(Geo_0, Geo, Set)
     #     K += Kt
@@ -123,37 +119,37 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set):
 
     # Triangle Energy Barrier
     if Set.EnergyBarrierA:
-        gBA, KBA, EBA = KgTriEnergyBarrier.compute_work(Geo, Set)
-        g += gBA
-        K += KBA
-        E += EBA
-        Energies["TriABarrier"] = EBA
+        kg_Tri = KgTriEnergyBarrier(Geo)
+        kg_Tri.compute_work(Geo, Set)
+        g += kg_Tri.g
+        K += kg_Tri.K
+        E += kg_Tri.energy
 
     # Triangle Energy Barrier Aspect Ratio
     if Set.EnergyBarrierAR:
-        gBAR, KBAR, EBAR = KgTriAREnergyBarrier.compute_work(Geo, Set)
-        g += gBAR
-        K += KBAR
-        E += EBAR
-        Energies["TriARBarrier"] = EBAR
+        kg_TriAR = KgTriAREnergyBarrier(Geo)
+        kg_TriAR.compute_work(Geo, Set)
+        g += kg_TriAR.g
+        K += kg_TriAR.K
+        E += kg_TriAR.energy
 
     # Propulsion Forces
     # TODO
 
     # Contractility
     if Set.Contractility:
-        gC, KC, EC, Geo = KgContractility.compute_work(Geo, Set)
-        g += gC
-        K += KC
-        E += EC
-        Energies["Contractility"] = EC
+        kg_lt = KgContractility(Geo)
+        kg_lt.compute_work(Geo, Set)
+        g += kg_lt.g
+        K += kg_lt.K
+        E += kg_lt.energy
 
     # Substrate
     if Set.Substrate == 2:
-        gSub, KSub, ESub = KgSubstrate.compute_work(Geo, Set)
-        g += gSub
-        K += KSub
-        E += ESub
-        Energies["Substrate"] = ESub
+        kg_subs = KgSubstrate(Geo)
+        kg_subs.compute_work(Geo, Set)
+        g += kg_subs.g
+        K += kg_subs.K
+        E += kg_subs.energy
 
-    return g, K, E, Geo, Energies
+    return g, K, E, Geo
