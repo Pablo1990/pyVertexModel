@@ -52,17 +52,18 @@ class KgSurfaceCellBasedAdhesion(Kg):
                         if not any(np.isin(nY, Geo.AssemblegIds)):
                             continue
 
+                    vector = np.vectorize(np.float_)
                     gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)
                     gs = Lambda * gs
                     start_assembleg = time.time()
-                    ge = kg_functions.assembleg(ge, gs, nY)
+                    ge = kg_functions.assembleg(ge, gs, np.array(nY, dtype='int'))
                     end_assembleg = time.time()
                     print(f"Time assembleg: {end_assembleg - start_assembleg} seconds")
 
                     Ks = fact * Lambda * (Ks + Kss)
 
                     start_assembleg = time.time()
-                    self.K = kg_functions.assembleK(self.K, Ks, nY)
+                    self.K = kg_functions.assembleK(self.K, Ks, np.array(nY))
                     end_assembleg = time.time()
                     print(f"Time assembleK: {end_assembleg - start_assembleg} seconds")
 

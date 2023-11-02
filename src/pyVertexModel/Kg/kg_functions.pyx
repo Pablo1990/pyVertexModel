@@ -1,19 +1,20 @@
 import numpy as np
 cimport numpy as np
 
-cpdef np.ndarray assembleg(np.ndarray g, np.ndarray ge, list nY):
+cpdef np.ndarray assembleg(np.ndarray g, np.ndarray ge, np.ndarray nY):
     cdef int dim = 3
-    cdef np.ndarray[np.int_t, ndim=2] idofg = np.zeros([len(nY) * dim, 1], dtype=np.int)
+    cdef np.ndarray idofg = np.zeros([len(nY) * dim, 1], dtype=int)
     cdef int I
     for I in range(len(nY)):
         idofg[I * dim: (I + 1) * dim, 0] = np.arange(nY[I] * dim, (nY[I] + 1) * dim)  # global dof
+
     g[idofg, 0] = g[idofg, 0] + ge
 
     return g
 
-cpdef np.ndarray assembleK(np.ndarray K, np.ndarray Ke, list nY):
+cpdef np.ndarray assembleK(np.ndarray K, np.ndarray Ke, np.ndarray nY):
     dim = 3
-    cdef np.ndarray[np.int_t, ndim=2] idofg = np.zeros([len(nY) * dim, len(nY) * dim], dtype=np.int)
+    cdef np.ndarray idofg = np.zeros([len(nY) * dim, len(nY) * dim], dtype=int)
     cdef int I
     for I in range(len(nY)):
         idofg[I * dim: (I + 1) * dim, 0] = np.arange(nY[I] * dim, (nY[I] + 1) * dim)
@@ -24,13 +25,14 @@ cpdef np.ndarray assembleK(np.ndarray K, np.ndarray Ke, list nY):
     return K
 
 cpdef np.ndarray cross(np.ndarray y):
-    cdef np.ndarray[np.float_t, ndim=2] yMat = np.zeros((3, 3), dtype=float)
-    yMat[0, 1] = -y[2]
-    yMat[0, 2] = y[1]
-    yMat[1, 0] = y[2]
-    yMat[1, 2] = -y[0]
-    yMat[2, 0] = -y[1]
-    yMat[2, 1] = y[0]
+
+    cdef double y0 = y[0]
+    cdef double y1 = y[1]
+    cdef double y2 = y[2]
+
+    cdef np.ndarray yMat = np.array([[0, -y2, y1],
+                                     [y2, 0, -y0],
+                                     [-y1, y0, 0]], dtype=float)
     return yMat
 
 cpdef np.ndarray kK(np.ndarray y1_crossed, np.ndarray y2_crossed, np.ndarray y3_crossed, np.ndarray y1,
@@ -49,25 +51,27 @@ cpdef np.ndarray kK(np.ndarray y1_crossed, np.ndarray y2_crossed, np.ndarray y3_
     Returns:
     KK_value (ndarray): Resulting value for KK.
     """
-    cdef np.ndarray[np.float_t, ndim=1] KIJ = np.zeros(3, dtype=float)
-    KIJ[0] = (y2_crossed[0] - y3_crossed[0]) * (y1_crossed[0] - y3_crossed[0]) + (y2_crossed[1] - y3_crossed[1]) * (
+    cdef np.ndarray KIJ = np.zeros([3, 3], dtype=float)
+    KIJ[0, ] = (y2_crossed[0] - y3_crossed[0]) * (y1_crossed[0] - y3_crossed[0]) + (y2_crossed[1] - y3_crossed[1]) * (
                 y1_crossed[1] - y3_crossed[1]) + (y2_crossed[2] - y3_crossed[2]) * (y1_crossed[2] - y3_crossed[2])
-    KIJ[1] = (y2_crossed[1] * y1[2] - y2_crossed[2] * y1[1]) - (y3_crossed[1] * y1[2] - y3_crossed[2] * y1[1])
-    KIJ[2] = (y2_crossed[2] * y1[0] - y2_crossed[0] * y1[2]) - (y3_crossed[2] * y1[0] - y3_crossed[0] * y1[2])
+    KIJ[1, ] = (y2_crossed[1] * y1[2] - y2_crossed[2] * y1[1]) - (y3_crossed[1] * y1[2] - y3_crossed[2] * y1[1])
+    KIJ[2, ] = (y2_crossed[2] * y1[0] - y2_crossed[0] * y1[2]) - (y3_crossed[2] * y1[0] - y3_crossed[0] * y1[2])
+    #print(KIJ)
     return KIJ
 
 cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
+    print(y1)
     cdef np.ndarray y1_crossed = cross(y1)
     cdef np.ndarray y2_crossed = cross(y2)
     cdef np.ndarray y3_crossed = cross(y3)
 
-    cdef double q = np.dot(y2_crossed, y1) - np.dot(y2_crossed, y3) + np.dot(y1_crossed, y3)
+    cdef np.ndarray q = y2_crossed @ y1 - y2_crossed @ y3 + y1_crossed @ y3
 
     cdef np.ndarray Q1 = y2_crossed - y3_crossed
     cdef np.ndarray Q2 = y3_crossed - y1_crossed
     cdef np.ndarray Q3 = y1_crossed - y2_crossed
 
-    cdef double fact = 1 / (2 * np.linalg.norm(q))
+    cdef float fact = 1 / (2 * np.linalg.norm(q))
     cdef np.ndarray gs = fact * np.array([np.dot(Q1, q), np.dot(Q2, q), np.dot(Q3, q)])
 
     cdef np.ndarray Kss = -(2 / np.linalg.norm(q)) * np.outer(gs, gs)
