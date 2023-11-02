@@ -86,3 +86,60 @@ cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
     gs = gs.reshape(-1, 1)  # Reshape gs to match the orientation in MATLAB
 
     return gs, Ks, Kss
+
+
+cpdef work_per_cell(K, g, Cell, Geo, Set):
+    cdef double Energy_c = 0
+    cdef np.ndarray Ys = Cell.Y
+    cdef np.ndarray ge = np.zeros(g.shape, dtype=float)
+    cdef double fact0 = 0
+    cdef double fact
+    cdef double Lambda
+    cdef np.ndarray y1, y2, y3, gs, Ks, Kss
+    cdef np.ndarray nY
+    cdef np.ndarray np_nY
+    cdef np.ndarray np_ge
+    cdef np.ndarray np_Ks
+
+    for face in Cell.Faces:
+        if face.InterfaceType == 'Top':
+            Lambda = Set.lambdaS1 * Cell.ExternalLambda
+        elif face.InterfaceType == 'CellCell':
+            Lambda = Set.lambdaS2 * Cell.InternalLambda
+        elif face.InterfaceType == 'Bottom':
+            Lambda = Set.lambdaS3 * Cell.SubstrateLambda
+
+        fact0 += Lambda * face.Area
+
+    fact = fact0 / (Cell.Area0 ** 2)
+
+    for face in Cell.Faces:
+        if face.InterfaceType == 'Top':
+            Lambda = Set.lambdaS1 * Cell.ExternalLambda
+        elif face.InterfaceType == 'CellCell':
+            Lambda = Set.lambdaS2 * Cell.InternalLambda
+        elif face.InterfaceType == 'Bottom':
+            Lambda = Set.lambdaS3 * Cell.SubstrateLambda
+
+        for t in face.Tris:
+            y1 = Ys[t.Edge[0]]
+            y2 = Ys[t.Edge[1]]
+            y3 = face.Centre
+            n3 = face.globalIds
+            nY = np.array([Cell.globalIds[edge] for edge in t.Edge] + [n3])
+
+            if Geo.Remodelling:
+                if not any(np.isin(nY, Geo.AssemblegIds)):
+                    continue
+
+            gs, Ks, Kss = gKSArea(y1, y2, y3)
+            gs = Lambda * gs
+            ge = assembleg(ge, gs, nY)
+            Ks = fact * Lambda * (Ks + Kss)
+            K = assembleK(K, Ks, nY)
+
+    g += ge * fact
+
+    Ks = K + ge.dot(ge.T) / (Cell.Area0 ** 2)
+    Energy_c += (1 / 2) * fact0 * fact
+    return Energy_c
