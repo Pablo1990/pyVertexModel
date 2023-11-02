@@ -8,8 +8,8 @@ class Kg:
 
     def __init__(self, Geo):
         self.dimg = (Geo.numY + Geo.numF + Geo.nCells) * 3
-        self.g = np.zeros([self.dimg, 1])
-        self.K = np.zeros([self.dimg, self.dimg])
+        self.g = np.zeros([self.dimg, 1], dtype=float)
+        self.K = np.zeros([self.dimg, self.dimg], dtype=float)
         self.energy = None
         self.dim = 3
 
