@@ -60,7 +60,6 @@ cpdef np.ndarray kK(np.ndarray y1_crossed, np.ndarray y2_crossed, np.ndarray y3_
     return KIJ
 
 cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
-    print(y1)
     cdef np.ndarray y1_crossed = cross(y1)
     cdef np.ndarray y2_crossed = cross(y2)
     cdef np.ndarray y3_crossed = cross(y3)

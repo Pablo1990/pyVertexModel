@@ -12,8 +12,8 @@ class Geo:
         self.XgTop = None
         self.XgID = None
         self.nz = 1
-        self.ny = 10
-        self.nx = 10
+        self.ny = 15
+        self.nx = 15
         self.Cells = []
         self.nCells = 0
         self.BorderCells = None
