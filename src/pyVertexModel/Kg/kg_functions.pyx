@@ -144,19 +144,19 @@ cpdef np.ndarray compute_finalK_Volume(np.ndarray ge, np.ndarray K, double Vol, 
 @cython.cdivision(True)
 @cython.nonecheck(False)
 @cython.boundscheck(False)
-cpdef gKDet(self, np.ndarray Y1, np.ndarray Y2, np.ndarray Y3):
-    cdef np.ndarray gs = np.zeros(9)
-    cdef np.ndarray Ks = np.zeros((9, 9))
+cpdef gKDet(np.ndarray Y1, np.ndarray Y2, np.ndarray Y3):
+    cdef np.ndarray gs = np.zeros([9, 1], dtype=float)
+    cdef np.ndarray Ks = np.zeros([9, 9], dtype=float)
 
-    gs[:3] = np.cross(Y2, Y3)
-    gs[3:6] = np.cross(Y3, Y1)
-    gs[6:] = np.cross(Y1, Y2)
+    gs[:3, 0] = np.cross(Y2, Y3)
+    gs[3:6, 0] = np.cross(Y3, Y1)
+    gs[6:, 0] = np.cross(Y1, Y2)
 
-    Ks[:3, 3:6] = -self.cross(Y3)
-    Ks[:3, 6:] = self.cross(Y2)
-    Ks[3:6, :3] = self.cross(Y3)
-    Ks[3:6, 6:] = -self.cross(Y1)
-    Ks[6:, :3] = -self.cross(Y2)
-    Ks[6:, 3:6] = self.cross(Y1)
+    Ks[:3, 3:6] = -cross(Y3)
+    Ks[:3, 6:] = cross(Y2)
+    Ks[3:6, :3] = cross(Y3)
+    Ks[3:6, 6:] = -cross(Y1)
+    Ks[6:, :3] = -cross(Y2)
+    Ks[6:, 3:6] = cross(Y1)
 
     return gs, Ks

@@ -1,8 +1,11 @@
+import time
+
 import numpy as np
 from src.pyVertexModel.Kg import kg_functions
 
 from src.pyVertexModel.Kg.kg import Kg
 from scipy.sparse import csc_matrix
+
 
 class KgVolume(Kg):
     def compute_work(self, Geo, Set, Geo_n=None):
@@ -10,6 +13,9 @@ class KgVolume(Kg):
         # Energy W_s= sum_cell lambdaV ((V-V0)/V0)^2
         n = 4  # 2 or 4 for now.
         Energy = {}
+
+        start = time.time()
+
         # Loop over Cells
         # Analytical residual g and Jacobian K
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus]:
@@ -22,7 +28,7 @@ class KgVolume(Kg):
             lambdaV = Set.lambdaV
             fact = lambdaV * (Cell.Vol - Cell.Vol0) ** (n - 1) / Cell.Vol0 ** n
 
-            ge = csc_matrix((self.g.shape[0], 1))
+            ge = np.zeros(self.g.shape, dtype=float)
             for face in Cell.Faces:
                 for tri in face.Tris:
                     y1 = Ys[tri.Edge[0]]
@@ -36,7 +42,7 @@ class KgVolume(Kg):
 
                     gs, Ks = kg_functions.gKDet(y1, y2, y3)
                     ge = kg_functions.assembleg(ge, gs, np.array(nY, dtype='int'))
-                    self.K = kg_functions.assembleK(Ks * fact / 6, np.array(nY, dtype='int'))
+                    self.K = kg_functions.assembleK(self.K, Ks * fact / 6, np.array(nY, dtype='int'))
 
             self.g += ge * fact / 6  # Volume contribution of each triangle is det(Y1,Y2,Y3)/6
             self.K = kg_functions.compute_finalK_Volume(ge, self.K, Cell.Vol, Cell.Vol0, n)
@@ -45,3 +51,5 @@ class KgVolume(Kg):
             Energy[c] = Energy_c
 
         self.energy = sum(Energy.values())
+        end = time.time()
+        print(f"Time at SA: {end - start} seconds")
