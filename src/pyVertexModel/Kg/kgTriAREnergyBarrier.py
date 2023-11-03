@@ -6,7 +6,7 @@ from src.pyVertexModel.Kg.kg import Kg
 
 class KgTriAREnergyBarrier(Kg):
     def compute_work(self, Geo, Set, Geo_n=None):
-        Energy = {}
+        self.energy = 0
 
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus]:
             if Geo.Remodelling and c not in Geo.AssembleNodes:
@@ -73,10 +73,8 @@ class KgTriAREnergyBarrier(Kg):
 
                             Ks = Set.lambdaR * w_t[numY] * matrixK + Set.lambdaR * (np.outer(gs, gs))
 
-                            self.K = kg_functions.assembleK(Ks * 1 / (Set.lmin0 ** 4), nY[numY, :])
+                            self.K = kg_functions.assembleK(self.K, Ks * 1 / (Set.lmin0 ** 4), nY[numY, :])
 
                         Energy_c = Energy_c + Set.lambdaR / 2 * np.sum(w_t ** 2) * 1 / (Set.lmin0 ** 4)
 
-                Energy[c] = Energy_c
-
-        self.energy = np.sum(Energy)
+                self.energy += Energy_c

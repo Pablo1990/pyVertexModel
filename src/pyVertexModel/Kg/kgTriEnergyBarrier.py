@@ -34,7 +34,7 @@ class KgTriEnergyBarrier(Kg):
 
                     gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)
                     self.g = kg_functions.assembleg(self.g, gs * fact, np.array(nY, dtype='int'))
-                    Ks = (gs.dot(gs.T) * fact2) + Ks * fact + Kss * fact
 
+                    Ks = (gs.dot(gs.T) * fact2) + Ks * fact + Kss * fact
                     self.K = kg_functions.assembleK(self.K, Ks, np.array(nY, dtype='int'))
                     self.energy += np.exp(lambdaB * (1 - Set.Beta * Face.Tris[t].Area / Set.BarrierTri0))

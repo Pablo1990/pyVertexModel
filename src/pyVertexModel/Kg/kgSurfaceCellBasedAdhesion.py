@@ -11,7 +11,6 @@ class KgSurfaceCellBasedAdhesion(Kg):
     def compute_work(self, Geo, Set, Geo_n=None):
         Energy = {}
 
-        start = time.time()
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
 
             if Geo.Remodelling:
@@ -23,8 +22,6 @@ class KgSurfaceCellBasedAdhesion(Kg):
             Energy[c] = Energy_c
 
         self.energy = sum(Energy.values())
-        end = time.time()
-        print(f"Time at SA: {end - start} seconds")
 
     def work_per_cell(self, Cell, Geo, Set):
         Energy_c = 0

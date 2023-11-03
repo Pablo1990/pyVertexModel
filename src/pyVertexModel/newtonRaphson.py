@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 
 from src.pyVertexModel.Kg.kgContractility import KgContractility
@@ -91,20 +93,32 @@ def LineSearch(Geo_0, Geo_n, Geo, Dofs, Set, gc, dy):
 
 def KgGlobal(Geo_0, Geo_n, Geo, Set):
     # Surface Energy
+    start = time.time()
     kg_SA = KgSurfaceCellBasedAdhesion(Geo)
     kg_SA.compute_work(Geo, Set)
+    end = time.time()
+    print(f"Time at SA: {end - start} seconds")
 
     # Volume Energy
+    start = time.time()
     kg_Vol = KgVolume(Geo)
     kg_Vol.compute_work(Geo, Set)
+    end = time.time()
+    print(f"Time at Volume: {end - start} seconds")
 
     # Viscous Energy
+    start = time.time()
     kg_Viscosity = KgViscosity(Geo)
     kg_Viscosity.compute_work(Geo, Set, Geo_n)
+    end = time.time()
+    print(f"Time at Viscosity: {end - start} seconds")
 
+    start = time.time()
     g = kg_Vol.g + kg_Viscosity.g + kg_SA.g
     K = kg_Vol.K + kg_Viscosity.K + kg_SA.g
     E = kg_Vol.energy + kg_Viscosity.energy + kg_SA.energy
+    end = time.time()
+    print(f"Time at adding up Ks and gs: {end - start} seconds")
 
     # # TODO: Plane Elasticity
     # if Set.InPlaneElasticity:
@@ -119,30 +133,39 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set):
 
     # Triangle Energy Barrier
     if Set.EnergyBarrierA:
+        start = time.time()
         kg_Tri = KgTriEnergyBarrier(Geo)
         kg_Tri.compute_work(Geo, Set)
         g += kg_Tri.g
         K += kg_Tri.K
         E += kg_Tri.energy
+        end = time.time()
+        print(f"Time at EnergyBarrier: {end - start} seconds")
 
     # Triangle Energy Barrier Aspect Ratio
     if Set.EnergyBarrierAR:
+        start = time.time()
         kg_TriAR = KgTriAREnergyBarrier(Geo)
         kg_TriAR.compute_work(Geo, Set)
         g += kg_TriAR.g
         K += kg_TriAR.K
         E += kg_TriAR.energy
+        end = time.time()
+        print(f"Time at AREnergyBarrier: {end - start} seconds")
 
     # Propulsion Forces
     # TODO
 
     # Contractility
     if Set.Contractility:
+        start = time.time()
         kg_lt = KgContractility(Geo)
         kg_lt.compute_work(Geo, Set)
         g += kg_lt.g
         K += kg_lt.K
         E += kg_lt.energy
+        end = time.time()
+        print(f"Time at LT: {end - start} seconds")
 
     # Substrate
     if Set.Substrate == 2:
@@ -151,5 +174,7 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set):
         g += kg_subs.g
         K += kg_subs.K
         E += kg_subs.energy
+        end = time.time()
+        print(f"Time at Substrate: {end - start} seconds")
 
     return g, K, E, Geo

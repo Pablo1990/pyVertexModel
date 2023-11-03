@@ -12,9 +12,7 @@ class KgVolume(Kg):
         # The residual g and Jacobian K of Volume Energy
         # Energy W_s= sum_cell lambdaV ((V-V0)/V0)^2
         n = 4  # 2 or 4 for now.
-        Energy = {}
-
-        start = time.time()
+        self.energy = 0
 
         # Loop over Cells
         # Analytical residual g and Jacobian K
@@ -47,9 +45,4 @@ class KgVolume(Kg):
             self.g += ge * fact / 6  # Volume contribution of each triangle is det(Y1,Y2,Y3)/6
             self.K = kg_functions.compute_finalK_Volume(ge, self.K, Cell.Vol, Cell.Vol0, n)
 
-            Energy_c = Energy_c + lambdaV / n * ((Cell.Vol - Cell.Vol0) / Cell.Vol0) ** n
-            Energy[c] = Energy_c
-
-        self.energy = sum(Energy.values())
-        end = time.time()
-        print(f"Time at Volume: {end - start} seconds")
+            self.energy += lambdaV / n * ((Cell.Vol - Cell.Vol0) / Cell.Vol0) ** n
