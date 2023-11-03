@@ -1,3 +1,4 @@
+import cython
 import numpy as np
 cimport numpy as np
 
@@ -87,11 +88,14 @@ cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
 
     return gs, Ks, Kss
 
-
+@cython.boundscheck(False)
+@cython.wraparound(False)
 cpdef work_per_cell(K, g, Cell, Geo, Set):
     cdef double Energy_c = 0
     cdef np.ndarray Ys = Cell.Y
     cdef np.ndarray ge = np.zeros(g.shape, dtype=float)
+    cdef double[:] ge_view = ge[:, 0]
+    cdef double[:, :] K_view = K
     cdef double fact0 = 0
     cdef double fact
     cdef double Lambda
@@ -140,6 +144,21 @@ cpdef work_per_cell(K, g, Cell, Geo, Set):
 
     g += ge * fact
 
-    Ks = K + ge.dot(ge.T) / (Cell.Area0 ** 2)
+    K = K_view + ge.dot(ge.T) / (Cell.Area0 ** 2)
     Energy_c += (1 / 2) * fact0 * fact
     return Energy_c
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef np.ndarray compute_outer_product(np.ndarray ge, np.ndarray K, double Area0):
+    cdef Py_ssize_t i, j
+    cdef Py_ssize_t n = ge.shape[0]
+    cdef double[:] ge_view = ge[:, 0]
+    cdef double[:, :] K_view = K
+
+    for i in range(n):
+        for j in range(n):
+            K_view[i, j] += ge_view[i] * ge_view[j] / (Area0 ** 2)
+
+    K = ge_view
+    return K
