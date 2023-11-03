@@ -2,6 +2,10 @@ import cython
 import numpy as np
 cimport numpy as np
 
+@cython.wraparound(False)
+@cython.cdivision(True)
+@cython.nonecheck(False)
+@cython.boundscheck(False)
 cpdef np.ndarray assembleg(np.ndarray g, np.ndarray ge, np.ndarray nY):
     cdef int dim = 3
     cdef np.ndarray idofg = np.zeros([len(nY) * dim, 1], dtype=int)
@@ -13,6 +17,10 @@ cpdef np.ndarray assembleg(np.ndarray g, np.ndarray ge, np.ndarray nY):
 
     return g
 
+@cython.wraparound(False)
+@cython.cdivision(True)
+@cython.nonecheck(False)
+@cython.boundscheck(False)
 cpdef np.ndarray assembleK(np.ndarray K, np.ndarray Ke, np.ndarray nY):
     dim = 3
     cdef np.ndarray idofg = np.zeros([len(nY) * dim, len(nY) * dim], dtype=int)
@@ -25,6 +33,10 @@ cpdef np.ndarray assembleK(np.ndarray K, np.ndarray Ke, np.ndarray nY):
 
     return K
 
+@cython.wraparound(False)
+@cython.cdivision(True)
+@cython.nonecheck(False)
+@cython.boundscheck(False)
 cpdef np.ndarray cross(np.ndarray y):
 
     cdef double y0 = y[0]
@@ -36,6 +48,10 @@ cpdef np.ndarray cross(np.ndarray y):
                                      [-y1, y0, 0]], dtype=float)
     return yMat
 
+@cython.wraparound(False)
+@cython.cdivision(True)
+@cython.nonecheck(False)
+@cython.boundscheck(False)
 cpdef np.ndarray kK(np.ndarray y1_crossed, np.ndarray y2_crossed, np.ndarray y3_crossed, np.ndarray y1,
                     np.ndarray y2, np.ndarray y3):
     """
@@ -59,6 +75,10 @@ cpdef np.ndarray kK(np.ndarray y1_crossed, np.ndarray y2_crossed, np.ndarray y3_
     KIJ[2, ] = (y2_crossed[2] * y1[0] - y2_crossed[0] * y1[2]) - (y3_crossed[2] * y1[0] - y3_crossed[0] * y1[2])
     return KIJ
 
+@cython.wraparound(False)
+@cython.cdivision(True)
+@cython.nonecheck(False)
+@cython.boundscheck(False)
 cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
     cdef np.ndarray y1_crossed = cross(y1)
     cdef np.ndarray y2_crossed = cross(y2)
@@ -88,8 +108,10 @@ cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
 
     return gs, Ks, Kss
 
-@cython.boundscheck(False)
 @cython.wraparound(False)
+@cython.cdivision(True)
+@cython.nonecheck(False)
+@cython.boundscheck(False)
 cpdef work_per_cell(K, g, Cell, Geo, Set):
     cdef double Energy_c = 0
     cdef np.ndarray Ys = Cell.Y
@@ -148,8 +170,10 @@ cpdef work_per_cell(K, g, Cell, Geo, Set):
     Energy_c += (1 / 2) * fact0 * fact
     return Energy_c
 
-@cython.boundscheck(False)
 @cython.wraparound(False)
+@cython.cdivision(True)
+@cython.nonecheck(False)
+@cython.boundscheck(False)
 cpdef np.ndarray compute_outer_product(np.ndarray ge, np.ndarray K, double Area0):
     cdef Py_ssize_t i, j
     cdef Py_ssize_t n = ge.shape[0]
@@ -157,8 +181,9 @@ cpdef np.ndarray compute_outer_product(np.ndarray ge, np.ndarray K, double Area0
     cdef double[:, :] K_view = K
 
     for i in range(n):
-        for j in range(n):
-            K_view[i, j] += ge_view[i] * ge_view[j] / (Area0 ** 2)
+        if ge_view[i] != 0:
+            for j in range(n):
+                if ge_view[j] != 0:
+                    K_view[i, j] += ge_view[i] * ge_view[j] / (Area0 ** 2)
 
-    K = ge_view
-    return K
+    return np.asarray(K_view)

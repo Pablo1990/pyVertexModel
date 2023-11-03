@@ -19,10 +19,10 @@ class KgSurfaceCellBasedAdhesion(Kg):
 
             Cell = Geo.Cells[c]
 
-            #start = time.time()
-            #Energy_c = kg_functions.work_per_cell(self.K, self.g, Cell, Geo, Set)
-            #end = time.time()
-            #print(f"Time per cell: {end - start} seconds")
+            # start = time.time()
+            # Energy_c = kg_functions.work_per_cell(self.K, self.g, Cell, Geo, Set)
+            # end = time.time()
+            # print(f"Time per cell: {end - start} seconds")
 
             start = time.time()
             Energy_c = self.work_per_cell(Cell, Geo, Set)
