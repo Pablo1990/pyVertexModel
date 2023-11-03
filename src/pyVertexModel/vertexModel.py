@@ -489,7 +489,7 @@ class VertexModel:
                 self.Geo.UpdateMeasures()
                 self.Set.UpdateSet_F(self.Geo)
 
-            g, K, __, self.Geo, Energies = newtonRaphson.KgGlobal(self.Geo_0, self.Geo_n, self.Geo, self.Set)
+            g, K, __, self.Geo = newtonRaphson.KgGlobal(self.Geo_0, self.Geo_n, self.Geo, self.Set)
             self.Geo, g, __, __, self.Set, gr, dyr, dy = newtonRaphson.newtonRaphson(self.Geo_0, self.Geo_n, self.Geo, self.Dofs, self.Set, K, g, self.numStep, self.t)
             if gr < self.Set.tol and dyr < self.Set.tol and np.all(np.isnan(g(self.Dofs.Free)) == 0) and np.all(
                     np.isnan(dy(self.Dofs.Free)) == 0):

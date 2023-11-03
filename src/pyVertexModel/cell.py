@@ -15,6 +15,8 @@ class Cell:
         self.Vol = None
         self.Vol0 = None
         self.AliveStatus = None
+        # TODO: Save contractile forces (g) to output
+        self.substrate_g = None
 
     def ComputeCellArea(Cell, locationFilter=None):
         totalArea = 0
