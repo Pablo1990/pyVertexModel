@@ -63,7 +63,7 @@ class Set:
         self.nu_Local_EdgeBased = 0
         self.LocalViscosityOption = 2
         ## =========================== Remodelling ============================
-        self.Remodelling = True
+        self.Remodelling = False
         self.RemodelTol = 0
         self.contributionOldYs = 0
         self.RemodelStiffness = 0.6

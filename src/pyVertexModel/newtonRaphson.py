@@ -14,6 +14,7 @@ from src.pyVertexModel.Kg.kgVolume import KgVolume
 def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.newton.html
     if Geo.Remodelling:
+        # TODO:
         dof = Dofs.Remodel
     else:
         dof = Dofs.Free
@@ -23,7 +24,8 @@ def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
     gr = np.linalg.norm(g[dof])
     gr0 = gr
 
-    Geo.log = f"{Geo.log} Step: {numStep}, Iter: 0 ||gr||= {gr} ||dyr||= {dyr} dt/dt0={Set.dt / Set.dt0:.3g}\n"
+    # TODO: LOG
+    #Geo.log = f"{Geo.log} Step: {numStep}, Iter: 0 ||gr||= {gr} ||dyr||= {dyr} dt/dt0={Set.dt / Set.dt0:.3g}\n"
 
     Energy = 0
     Set.iter = 1
