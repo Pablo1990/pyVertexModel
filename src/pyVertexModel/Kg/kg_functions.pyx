@@ -112,69 +112,7 @@ cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
 @cython.cdivision(True)
 @cython.nonecheck(False)
 @cython.boundscheck(False)
-cpdef work_per_cell(K, g, Cell, Geo, Set):
-    cdef double Energy_c = 0
-    cdef np.ndarray Ys = Cell.Y
-    cdef np.ndarray ge = np.zeros(g.shape, dtype=float)
-    cdef double[:] ge_view = ge[:, 0]
-    cdef double[:, :] K_view = K
-    cdef double fact0 = 0
-    cdef double fact
-    cdef double Lambda
-    cdef np.ndarray y1, y2, y3, gs, Ks, Kss
-    cdef np.ndarray nY
-    cdef np.ndarray np_nY
-    cdef np.ndarray np_ge
-    cdef np.ndarray np_Ks
-
-    for face in Cell.Faces:
-        if face.InterfaceType == 'Top':
-            Lambda = Set.lambdaS1 * Cell.ExternalLambda
-        elif face.InterfaceType == 'CellCell':
-            Lambda = Set.lambdaS2 * Cell.InternalLambda
-        elif face.InterfaceType == 'Bottom':
-            Lambda = Set.lambdaS3 * Cell.SubstrateLambda
-
-        fact0 += Lambda * face.Area
-
-    fact = fact0 / (Cell.Area0 ** 2)
-
-    for face in Cell.Faces:
-        if face.InterfaceType == 'Top':
-            Lambda = Set.lambdaS1 * Cell.ExternalLambda
-        elif face.InterfaceType == 'CellCell':
-            Lambda = Set.lambdaS2 * Cell.InternalLambda
-        elif face.InterfaceType == 'Bottom':
-            Lambda = Set.lambdaS3 * Cell.SubstrateLambda
-
-        for t in face.Tris:
-            y1 = Ys[t.Edge[0]]
-            y2 = Ys[t.Edge[1]]
-            y3 = face.Centre
-            n3 = face.globalIds
-            nY = np.array([Cell.globalIds[edge] for edge in t.Edge] + [n3])
-
-            if Geo.Remodelling:
-                if not any(np.isin(nY, Geo.AssemblegIds)):
-                    continue
-
-            gs, Ks, Kss = gKSArea(y1, y2, y3)
-            gs = Lambda * gs
-            ge = assembleg(ge, gs, nY)
-            Ks = fact * Lambda * (Ks + Kss)
-            K = assembleK(K, Ks, nY)
-
-    g += ge * fact
-
-    K = K_view + ge.dot(ge.T) / (Cell.Area0 ** 2)
-    Energy_c += (1 / 2) * fact0 * fact
-    return Energy_c
-
-@cython.wraparound(False)
-@cython.cdivision(True)
-@cython.nonecheck(False)
-@cython.boundscheck(False)
-cpdef np.ndarray compute_outer_product(np.ndarray ge, np.ndarray K, double Area0):
+cpdef np.ndarray compute_finalK_SurfaceEnergy(np.ndarray ge, np.ndarray K, double Area0):
     cdef Py_ssize_t i, j
     cdef Py_ssize_t n = ge.shape[0]
     cdef double[:] ge_view = ge[:, 0]
@@ -187,3 +125,38 @@ cpdef np.ndarray compute_outer_product(np.ndarray ge, np.ndarray K, double Area0
                     K_view[i, j] += ge_view[i] * ge_view[j] / (Area0 ** 2)
 
     return np.asarray(K_view)
+
+cpdef np.ndarray compute_finalK_Volume(np.ndarray ge, np.ndarray K, double Vol, double Vol0, int n_dim):
+    cdef Py_ssize_t i, j
+    cdef Py_ssize_t n = ge.shape[0]
+    cdef double[:] ge_view = ge[:, 0]
+    cdef double[:, :] K_view = K
+
+    for i in range(n):
+        if ge_view[i] != 0:
+            for j in range(n):
+                if ge_view[j] != 0:
+                    K_view[i, j] += ge_view[i] * ge_view[j] / 6 / 6 * (Vol - Vol0) ** (n - 2) / Vol0 ** n_dim
+
+    return np.asarray(K_view)
+
+@cython.wraparound(False)
+@cython.cdivision(True)
+@cython.nonecheck(False)
+@cython.boundscheck(False)
+cpdef gKDet(self, np.ndarray Y1, np.ndarray Y2, np.ndarray Y3):
+    cdef np.ndarray gs = np.zeros(9)
+    cdef np.ndarray Ks = np.zeros((9, 9))
+
+    gs[:3] = np.cross(Y2, Y3)
+    gs[3:6] = np.cross(Y3, Y1)
+    gs[6:] = np.cross(Y1, Y2)
+
+    Ks[:3, 3:6] = -self.cross(Y3)
+    Ks[:3, 6:] = self.cross(Y2)
+    Ks[3:6, :3] = self.cross(Y3)
+    Ks[3:6, 6:] = -self.cross(Y1)
+    Ks[6:, :3] = -self.cross(Y2)
+    Ks[6:, 3:6] = self.cross(Y1)
+
+    return gs, Ks

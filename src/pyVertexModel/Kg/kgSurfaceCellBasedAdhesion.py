@@ -11,6 +11,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
     def compute_work(self, Geo, Set, Geo_n=None):
         Energy = {}
 
+        start = time.time()
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
 
             if Geo.Remodelling:
@@ -18,20 +19,12 @@ class KgSurfaceCellBasedAdhesion(Kg):
                     continue
 
             Cell = Geo.Cells[c]
-
-            # start = time.time()
-            # Energy_c = kg_functions.work_per_cell(self.K, self.g, Cell, Geo, Set)
-            # end = time.time()
-            # print(f"Time per cell: {end - start} seconds")
-
-            start = time.time()
             Energy_c = self.work_per_cell(Cell, Geo, Set)
-            end = time.time()
-            print(f"Time per cell: {end - start} seconds")
             Energy[c] = Energy_c
 
-
         self.energy = sum(Energy.values())
+        end = time.time()
+        print(f"Time at SA: {end - start} seconds")
 
     def work_per_cell(self, Cell, Geo, Set):
         Energy_c = 0
@@ -71,10 +64,10 @@ class KgSurfaceCellBasedAdhesion(Kg):
                 gs = Lambda * gs
                 ge = kg_functions.assembleg(ge, gs, np.array(nY, dtype='int'))
                 Ks = fact * Lambda * (Ks + Kss)
-                self.K = kg_functions.assembleK(self.K, Ks, np.array(nY))
+                self.K = kg_functions.assembleK(self.K, Ks, np.array(nY, dtype='int'))
         self.g += ge * fact
 
-        self.K = kg_functions.compute_outer_product(ge, self.K, Cell.Area0)
+        self.K = kg_functions.compute_finalK_SurfaceEnergy(ge, self.K, Cell.Area0)
 
         Energy_c += (1 / 2) * fact0 * fact
         return Energy_c
