@@ -52,4 +52,4 @@ class KgVolume(Kg):
 
         self.energy = sum(Energy.values())
         end = time.time()
-        print(f"Time at SA: {end - start} seconds")
+        print(f"Time at Volume: {end - start} seconds")

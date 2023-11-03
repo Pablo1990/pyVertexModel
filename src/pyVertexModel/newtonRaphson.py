@@ -100,7 +100,7 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set):
 
     # Viscous Energy
     kg_Viscosity = KgViscosity(Geo)
-    kg_Viscosity.compute_work(Geo_n, Geo, Set)
+    kg_Viscosity.compute_work(Geo, Set, Geo_n)
 
     g = kg_Vol.g + kg_Viscosity.g + kg_SA.g
     K = kg_Vol.K + kg_Viscosity.K + kg_SA.g
