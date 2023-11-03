@@ -1,12 +1,12 @@
 import numpy as np
+from src.pyVertexModel.Kg import kg_functions
 
 from src.pyVertexModel.Kg.kg import Kg
 
 
 class KgTriEnergyBarrier(Kg):
     def compute_work(self, Geo, Set, Geo_n=None):
-        EnergyB = 0
-
+        self.energy = 0
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus]:
             if Geo.Remodelling and c not in Geo.AssembleNodes:
                 continue
@@ -27,13 +27,14 @@ class KgTriEnergyBarrier(Kg):
                     y2 = Ys[Tris[t].Edge[1], :]
                     y3 = Cell.Faces[f].Centre
                     n3 = Cell.Faces[f].globalIds
-                    nY = np.concatenate([Cell.globalIds[Tris[t].Edge], n3])
+                    nY = [Cell.globalIds[edge] for edge in Tris[t].Edge] + [n3]
 
                     if Geo.Remodelling and not np.any(np.isin(nY, Geo.AssemblegIds)):
                         continue
 
-                    gs, Ks, Kss = self.gKSArea(y1, y2, y3)
-                    g = self.assembleg(g, gs * fact, nY)
-                    Ks = (np.outer(gs, gs) * fact2) + Ks * fact + Kss * fact
-                    self.assembleK(Ks, nY)
-                    EnergyB += np.exp(lambdaB * (1 - Set.Beta * Face.Tris[t].Area / Set.BarrierTri0))
+                    gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)
+                    self.g = kg_functions.assembleg(self.g, gs * fact, np.array(nY, dtype='int'))
+                    Ks = (gs.dot(gs.T) * fact2) + Ks * fact + Kss * fact
+
+                    self.K = kg_functions.assembleK(self.K, Ks, np.array(nY, dtype='int'))
+                    self.energy += np.exp(lambdaB * (1 - Set.Beta * Face.Tris[t].Area / Set.BarrierTri0))
