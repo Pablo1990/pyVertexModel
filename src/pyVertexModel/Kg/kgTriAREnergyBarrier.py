@@ -1,11 +1,12 @@
 import numpy as np
+from src.pyVertexModel.Kg import kg_functions
 
 from src.pyVertexModel.Kg.kg import Kg
 
 
 class KgTriAREnergyBarrier(Kg):
     def compute_work(self, Geo, Set, Geo_n=None):
-        Energy = []
+        Energy = {}
 
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus]:
             if Geo.Remodelling and c not in Geo.AssembleNodes:
@@ -23,7 +24,7 @@ class KgTriAREnergyBarrier(Kg):
 
                     for t in range(len(Tris)):
                         n3 = Cell.Faces[f].globalIds
-                        nY_original = np.concatenate([Cell.globalIds[Tris[t].Edge], n3])
+                        nY_original = [Cell.globalIds[edge] for edge in Tris[t].Edge] + [n3]
 
                         if Geo.Remodelling and not np.any(np.isin(nY_original, Geo.AssemblegIds)):
                             continue
@@ -32,16 +33,16 @@ class KgTriAREnergyBarrier(Kg):
                         y2 = Ys[Tris[t].Edge[1], :]
                         y3 = Cell.Faces[f].Centre
 
-                        ys = np.zeros((3, 3, 3))
-                        nY = np.zeros((3, 3))
+                        ys = np.zeros([3, 3, 3], dtype=float)
+                        nY = np.zeros([3, 3], dtype=int)
 
                         ys[0, :, :] = [y1, y2, y3]
                         ys[1, :, :] = [y2, y3, y1]
                         ys[2, :, :] = [y3, y1, y2]
 
                         nY[0, :] = nY_original
-                        nY[1, :] = nY_original[[1, 2, 0]]
-                        nY[2, :] = nY_original[[2, 0, 1]]
+                        nY[1, :] = [nY_original[1]] + [nY_original[2]] + [nY_original[0]]
+                        nY[2, :] = [nY_original[2]] + [nY_original[0]] + [nY_original[1]]
 
                         w_t = np.zeros(3)
 
@@ -59,12 +60,12 @@ class KgTriAREnergyBarrier(Kg):
 
                             w_t[numY] = np.linalg.norm(v_y1) ** 2 - np.linalg.norm(v_y2) ** 2
 
-                            gs = np.zeros((9, 1))
+                            gs = np.zeros([9, 1], dtype=float)
                             gs[0:3, 0] = Set.lambdaR * w_t[numY] * v_y3_1
                             gs[3:6, 0] = Set.lambdaR * w_t[numY] * v_y3_2
                             gs[6:9, 0] = Set.lambdaR * w_t[numY] * v_y3_3
 
-                            self.g = self.assembleg(self.g, gs * 1 / (Set.lmin0 ** 4), nY[numY, :])
+                            self.g = kg_functions.assembleg(self.g, gs * 1 / (Set.lmin0 ** 4), nY[numY, :])
 
                             matrixK = np.block([[np.zeros((3, 3)), -np.eye(3), np.eye(3)],
                                                 [-np.eye(3), np.eye(3), np.zeros((3, 3))],
@@ -72,7 +73,7 @@ class KgTriAREnergyBarrier(Kg):
 
                             Ks = Set.lambdaR * w_t[numY] * matrixK + Set.lambdaR * (np.outer(gs, gs))
 
-                            self.assembleK(Ks * 1 / (Set.lmin0 ** 4), nY[numY, :])
+                            self.K = kg_functions.assembleK(Ks * 1 / (Set.lmin0 ** 4), nY[numY, :])
 
                         Energy_c = Energy_c + Set.lambdaR / 2 * np.sum(w_t ** 2) * 1 / (Set.lmin0 ** 4)
 

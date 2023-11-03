@@ -444,11 +444,35 @@ class VertexModel:
 
         self.Geo.AssembleNodes = [i for i, cell in enumerate(self.Geo.Cells) if cell.AliveStatus is not None]
 
-        Set.BarrierTri0 = np.inf
-        for cell in self.Geo.Cells:
-            for face in cell.Faces:
-                self.Set.BarrierTri0 = min([min([tri.Area for tri in face.Tris]), self.Set.BarrierTri0])
-        self.Set.BarrierTri0 /= 10
+        self.Set.BarrierTri0 = np.finfo(float).max
+        self.Set.lmin0 = np.finfo(float).max
+        edgeLengths_Top = []
+        edgeLengths_Bottom = []
+        edgeLengths_Lateral = []
+        lmin_values = []
+        for c in range(self.Geo.nCells):
+            for f in range(len(self.Geo.Cells[c].Faces)):
+                Face = self.Geo.Cells[c].Faces[f]
+                self.Set.BarrierTri0 = min([min([tri.Area for tri in Face.Tris]), self.Set.BarrierTri0])
+
+                for nTris in range(len(self.Geo.Cells[c].Faces[f].Tris)):
+                    tri = self.Geo.Cells[c].Faces[f].Tris[nTris]
+                    lmin_values.append(min(tri.LengthsToCentre))
+                    lmin_values.append(tri.EdgeLength)
+                    if tri.Location == 'Top':
+                        edgeLengths_Top.append(tri.ComputeEdgeLength(self.Geo.Cells[c].Y))
+                    elif tri.Location == 'Bottom':
+                        edgeLengths_Bottom.append(tri.ComputeEdgeLength(self.Geo.Cells[c].Y))
+                    else:
+                        edgeLengths_Lateral.append(tri.ComputeEdgeLength(self.Geo.Cells[c].Y))
+
+        self.Set.lmin0 = min(lmin_values)
+
+        self.Geo.AvgEdgeLength_Top = np.mean(edgeLengths_Top)
+        self.Geo.AvgEdgeLength_Bottom = np.mean(edgeLengths_Bottom)
+        self.Geo.AvgEdgeLength_Lateral = np.mean(edgeLengths_Lateral)
+        self.Set.BarrierTri0 = self.Set.BarrierTri0 / 10
+        self.Set.lmin0 = self.Set.lmin0 * 10
 
     def IterateOverTime(self):
 
