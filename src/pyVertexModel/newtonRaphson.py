@@ -41,7 +41,7 @@ def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
         print(f"Time at np.linalg.solve: {end - start} seconds")
 
         alpha = LineSearch(Geo_0, Geo_n, Geo, Dofs, Set, g, dy)
-        dy_reshaped = np.reshape(dy * alpha, (3, (Geo.numF + Geo.numY + Geo.nCells)))
+        dy_reshaped = np.reshape(dy * alpha, (3, (Geo.numF + Geo.numY + Geo.nCells))).T
         Geo.UpdateVertices(dy_reshaped)
         Geo.UpdateMeasures()
         g, K, Energy, Geo = KgGlobal(Geo_0, Geo_n, Geo, Set)
