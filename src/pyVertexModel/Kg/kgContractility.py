@@ -1,7 +1,7 @@
 import numpy as np
+from scipy.sparse import csc_matrix
 
 from src.pyVertexModel.Kg.kg import Kg
-from scipy.sparse import csc_matrix
 
 
 class KgContractility(Kg):
@@ -38,8 +38,6 @@ class KgContractility(Kg):
         self.K = np.pad(self.K, ((0, oldSize - self.K.shape[0]), (0, oldSize - self.K.shape[1])), 'constant')
 
         self.energy = sum(Energy.values())
-
-        import numpy as np
 
     def computeKContractility(self, l_i0, y_1, y_2, C):
         dim = 3
@@ -111,8 +109,6 @@ class KgContractility(Kg):
             contractilityValue = currentTri['ContractilityValue']
 
         return contractilityValue, Geo
-
-    import numpy as np
 
     def getDelayedContractility(self, currentT, purseStringStrength, currentTri, CUTOFF):
         delayMinutes = 6

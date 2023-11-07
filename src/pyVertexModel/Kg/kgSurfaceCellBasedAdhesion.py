@@ -1,10 +1,8 @@
 import numpy as np
-import time
-
-from scipy.sparse import csc_array
 
 from src.pyVertexModel.Kg import kg_functions
 from src.pyVertexModel.Kg.kg import Kg
+from numba import jit
 
 
 class KgSurfaceCellBasedAdhesion(Kg):
@@ -68,3 +66,5 @@ class KgSurfaceCellBasedAdhesion(Kg):
 
         Energy_c += (1 / 2) * fact0 * fact
         return Energy_c
+
+

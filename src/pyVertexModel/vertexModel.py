@@ -1,15 +1,15 @@
-import os
 import copy
+import os
 
 import numpy as np
 from PIL.Image import Image
+from scipy.spatial import Delaunay
 from scipy.spatial.distance import cdist
 from skimage.measure import regionprops
 
 from src.pyVertexModel import degreesOfFreedom, newtonRaphson
 from src.pyVertexModel.geo import Geo
 from src.pyVertexModel.set import Set
-from scipy.spatial import Delaunay, KDTree
 
 
 class VertexModel:

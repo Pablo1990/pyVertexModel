@@ -1,6 +1,11 @@
-import cython
+mport cython
 import numpy as np
 cimport numpy as np
+
+cimport
+numpy as np
+import cython
+import numpy as np
 
 # RUN IT LIKE: python setup.py build_ext --inplace
 
