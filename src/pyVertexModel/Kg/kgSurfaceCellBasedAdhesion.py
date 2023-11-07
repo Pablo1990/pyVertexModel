@@ -70,8 +70,8 @@ class KgSurfaceCellBasedAdhesion(Kg):
 
                 gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)
                 gs = np.concatenate(Lambda * gs)
-
                 ge = kg_functions.assembleg(ge[:], gs[:], np.array(nY, dtype='int'))
+
                 Ks = fact * Lambda * (Ks + Kss)
                 self.K = kg_functions.assembleK(self.K, Ks, np.array(nY, dtype='int'))
         self.g += ge * fact
@@ -116,6 +116,6 @@ class KgSurfaceCellBasedAdhesion(Kg):
                         continue
 
                 gs, _, _ = kg_functions.gKSArea(y1, y2, y3)
-                gs = Lambda * gs
-                ge = kg_functions.assembleg(ge, gs, np.array(nY, dtype='int'))
+                gs = np.concatenate(Lambda * gs)
+                ge = kg_functions.assembleg(ge[:], gs[:], np.array(nY, dtype='int'))
         self.g += ge * fact

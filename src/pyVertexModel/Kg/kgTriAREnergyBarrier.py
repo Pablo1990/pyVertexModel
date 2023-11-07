@@ -131,7 +131,7 @@ class KgTriAREnergyBarrier(Kg):
 
                             w_t[numY] = np.linalg.norm(v_y1) ** 2 - np.linalg.norm(v_y2) ** 2
 
-                            gs = np.zeros([9, 1], dtype=float)
+                            gs = np.zeros(9, dtype=float)
                             gs[0:3] = Set.lambdaR * w_t[numY] * v_y3_1
                             gs[3:6] = Set.lambdaR * w_t[numY] * v_y3_2
                             gs[6:9] = Set.lambdaR * w_t[numY] * v_y3_3

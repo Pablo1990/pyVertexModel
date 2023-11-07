@@ -36,7 +36,7 @@ def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
 
     while (gr > Set.tol or dyr > Set.tol) and Set.iter < Set.MaxIter:
         start = time.time()
-        dy[dof] = kg_functions.mldivide_np(K[np.ix_(dof, dof)], g[dof, 0])
+        dy[dof] = kg_functions.mldivide_np(K[np.ix_(dof, dof)], g[dof])
         end = time.time()
         print(f"Time at np.linalg.solve: {end - start} seconds")
 
@@ -209,7 +209,7 @@ def gGlobal(Geo_0, Geo_n, Geo, Set):
     print(f"Time at Viscosity: {end - start} seconds")
 
     start = time.time()
-    g = kg_Vol.g[:, 0] + kg_Viscosity.g + kg_SA.g[:, 0]
+    g = kg_Vol.g[:] + kg_Viscosity.g + kg_SA.g[:]
     end = time.time()
     print(f"Time at adding up Ks and gs: {end - start} seconds")
 
