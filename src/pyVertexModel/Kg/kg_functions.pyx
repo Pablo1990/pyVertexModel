@@ -27,16 +27,21 @@ cpdef np.ndarray assembleg(double[:] g, double[:] ge, np.ndarray nY):
 @cython.cdivision(True)
 @cython.nonecheck(False)
 @cython.boundscheck(False)
-cpdef np.ndarray assembleK(double[:, :]K, double[:, :] Ke, np.ndarray nY):
+cpdef np.ndarray assembleK(double[:, :] K, double[:, :] Ke, nY: np.ndarray):
+    #TODO: IMPROVE LIKE ASSEMBLE_G
     cdef int dim = 3
-
-    cdef int row, col, I, J
+    cdef np.ndarray idofg = np.zeros([len(nY) * dim, len(nY) * dim], dtype=int)
+    cdef int I
     for I in range(len(nY)):
-        for col in range(nY[I] * dim, (nY[I] + 1) * dim):
-            for J in range(len(nY)):
-                for row in range(nY[J] * dim, (nY[J] + 1) * dim):
-                    if Ke[col, row] != 0:
-                        K[row, col] = K[row, col] + Ke[J, I]
+        idofg[I * dim: (I + 1) * dim, 0] = np.arange(nY[I] * dim, (nY[I] + 1) * dim)
+
+    # Update the matrix K using sparse matrix addition
+    cdef int numI, numJ, numI_idofg, numJ_idofg
+    for numI in range(len(nY)):
+        numI_idofg = idofg[numI]
+        for numJ in range(len(nY)):
+            numJ_idofg = idofg[numJ]
+            K[numI_idofg, numJ_idofg] = K[numI_idofg, numJ_idofg] + Ke[numI, numJ]
 
     return np.array(K)
 
