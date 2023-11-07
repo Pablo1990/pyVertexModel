@@ -8,7 +8,8 @@ from src.pyVertexModel.Kg.kg import Kg
 class KgContractility(Kg):
     def compute_work(self, Geo, Set, Geo_n=None):
         oldSize = self.K.shape[0]
-        self.K = self.K[range(Geo.numY * 3), range(Geo.numY * 3)]
+        # TODO:
+        #self.K = self.K[range(Geo.numY * 3), range(Geo.numY * 3)]
 
         Energy = {}
         for cell in Geo.Cells:
@@ -17,18 +18,20 @@ class KgContractility(Kg):
                 ge = np.zeros(self.g.shape, dtype=float)
                 Energy_c = 0
                 for currentFace in cell.Faces:
-                    l_i0 = Geo.EdgeLengthAvg_0[int(currentFace.InterfaceType)]
+                    l_i0 = Geo.EdgeLengthAvg_0[next(key for key, value in currentFace.InterfaceType_allValues.items()
+                                                    if value == currentFace.InterfaceType)]
                     for currentTri in currentFace.Tris:
                         if len(currentTri.SharedByCells) > 1:
                             C, Geo = self.getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set)
 
-                            y_1 = cell.Y[currentTri.Edge[0] - 1]
-                            y_2 = cell.Y[currentTri.Edge[1] - 1]
+                            y_1 = cell.Y[currentTri.Edge[0]]
+                            y_2 = cell.Y[currentTri.Edge[1]]
 
                             g_current = self.computeGContractility(l_i0, y_1, y_2, C)
                             ge = kg_functions.assembleg(ge, g_current, cell.globalIds[currentTri.Edge])
 
-                            currentFace.Tris.ContractileG = np.linalg.norm(g_current[:3])
+                            # TODO
+                            #currentFace.Tris.ContractileG = np.linalg.norm(g_current[:3])
 
                             K_current = self.computeKContractility(l_i0, y_1, y_2, C)
                             self.assembleK(K_current, cell.globalIds[currentTri.Edge])
@@ -37,28 +40,24 @@ class KgContractility(Kg):
                 self.g += ge
                 Energy[c] = Energy_c
 
-        self.K = np.pad(self.K, ((0, oldSize - self.K.shape[0]), (0, oldSize - self.K.shape[1])), 'constant')
+        # TODO:
+        # self.K = np.pad(self.K, ((0, oldSize - self.K.shape[0]), (0, oldSize - self.K.shape[1])), 'constant')
 
         self.energy = sum(Energy.values())
 
     def compute_work_only_g(self, Geo, Set, Geo_n=None):
-        oldSize = self.K.shape[0]
-        self.K = self.K[:Geo.numY * 3, :Geo.numY * 3]
-
-        Energy = {}
         for cell in Geo.Cells:
-            c = cell.ID
             if cell.AliveStatus:
-                ge = csc_matrix((self.g.shape[0], 1))
+                ge = np.zeros(self.g.shape, dtype=float)
 
                 for currentFace in cell.Faces:
-                    l_i0 = Geo.EdgeLengthAvg_0[int(currentFace.InterfaceType) + 1]
+                    l_i0 = Geo.EdgeLengthAvg_0[next(key for key, value in currentFace.InterfaceType_allValues.items() if value == currentFace.InterfaceType)]
                     for currentTri in currentFace.Tris:
                         if len(currentTri.SharedByCells) > 1:
                             C, Geo = self.getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set)
 
-                            y_1 = cell.Y[currentTri.Edge[0] - 1]
-                            y_2 = cell.Y[currentTri.Edge[1] - 1]
+                            y_1 = cell.Y[currentTri.Edge[0]]
+                            y_2 = cell.Y[currentTri.Edge[1]]
 
                             g_current = self.computeGContractility(l_i0, y_1, y_2, C)
                             ge = kg_functions.assembleg(ge, g_current, cell.globalIds[currentTri.Edge])
@@ -98,7 +97,7 @@ class KgContractility(Kg):
         contractilityValue = None
         CUTOFF = 3
 
-        if not currentTri.ContractilityValue:
+        if currentTri.ContractilityValue is None:
             if Set.DelayedAdditionalContractility == 1:
                 contractilityValue = self.getDelayedContractility(Set.currentT, Set.purseStringStrength,
                                                                   currentTri,
