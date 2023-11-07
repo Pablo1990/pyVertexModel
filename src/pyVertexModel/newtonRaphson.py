@@ -79,7 +79,7 @@ def LineSearch(Geo_0, Geo_n, Geo, Dofs, Set, gc, dy):
     gr = np.linalg.norm(g[dof])
 
     if gr0 < gr:
-        R0 = np.dot(dy[dof, 0], gc[dof])
+        R0 = np.dot(dy[dof], gc[dof])
         R1 = np.dot(dy[dof], g[dof])
 
         R = R0 / R1

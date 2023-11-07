@@ -122,6 +122,21 @@ class Set:
                              '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1), '_lS2_',
                              str(self.lambdaS2), '_lS3_', str(self.lambdaS3)]
 
+    def stretch(self):
+        self.tend = 300
+        self.Nincr = 300
+        self.BC = 1
+        self.dx = 2
+
+        self.lambdaS1 = 1
+        self.lambdaS2 = 0.8
+        self.VPrescribed = 1.5
+        self.VFixd = -1.5
+        self.ApplyBC = True
+
+        self.InputGeo = 'Bubbles'
+        self.VTK = False
+
     def NoBulk_110(self):
         self.InputGeo = 'VertexModelTime'
         # 40 cells; 3 cells to ablate

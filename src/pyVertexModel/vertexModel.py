@@ -20,6 +20,7 @@ class VertexModel:
         self.didNotConverge = False
         self.Geo = Geo()
         self.Set = Set()
+        self.Set.stretch()
         self.Dofs = degreesOfFreedom.DegreesOfFreedom()
         #self.Set = WoundDefault(self.Set)
         self.InitiateOutputFolder()
