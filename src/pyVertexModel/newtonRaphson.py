@@ -34,15 +34,16 @@ def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
     ig = 0
 
     while (gr > Set.tol or dyr > Set.tol) and Set.iter < Set.MaxIter:
-        dy[dof] = -np.linalg.solve(K[dof, dof], g[dof])
+        # or np.linalg.solve
+        dy[dof] = -np.linalg.lstsq(K[np.ix_(dof, dof)], g[dof], rcond=None)[0]
         alpha = LineSearch(Geo_0, Geo_n, Geo, Dofs, Set, g, dy)
         dy_reshaped = np.reshape(dy * alpha, (3, (Geo.numF + Geo.numY + Geo.nCells)))
         Geo.UpdateVertices(Set, dy_reshaped)
         Geo.UpdateMeasures()
-        g, K, Energy, Geo, Energies = KgGlobal(Geo_0, Geo_n, Geo, Set)
+        g, K, Energy, Geo = KgGlobal(Geo_0, Geo_n, Geo, Set)
         dyr = np.linalg.norm(dy[dof])
         gr = np.linalg.norm(g[dof])
-        Geo.log = f"{Geo.log} Step: {numStep}, Iter: {Set.iter}, Time: {t} ||gr||= {gr:.3e} ||dyr||= {dyr:.3e} alpha= {alpha:.3e} nu/nu0={Set.nu / Set.nu0:.3g}\n"
+        #Geo.log = f"{Geo.log} Step: {numStep}, Iter: {Set.iter}, Time: {t} ||gr||= {gr:.3e} ||dyr||= {dyr:.3e} alpha= {alpha:.3e} nu/nu0={Set.nu / Set.nu0:.3g}\n"
 
         Set.iter += 1
         auxgr[ig] = gr
