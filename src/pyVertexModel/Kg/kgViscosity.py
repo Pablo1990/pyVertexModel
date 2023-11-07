@@ -30,4 +30,4 @@ class KgViscosity(Kg):
                     dY[np.array(Face.globalIds, dtype=int), :] = (Face.Centre - Face_n.Centre)
 
             dY[np.array(Cell.cglobalIds, dtype=int), :] = (Cell.X - Cell_n.X)
-        self.g[:, 0] = (Set.nu / Set.dt) * dY.flatten()
+        self.g[:] = (Set.nu / Set.dt) * dY.flatten()

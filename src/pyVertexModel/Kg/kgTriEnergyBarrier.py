@@ -33,7 +33,8 @@ class KgTriEnergyBarrier(Kg):
                         continue
 
                     gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)
-                    self.g = kg_functions.assembleg(self.g, gs * fact, np.array(nY, dtype='int'))
+                    gs_fact = np.concatenate(gs * fact)
+                    self.g = kg_functions.assembleg(self.g[:], gs_fact[:], np.array(nY, dtype='int'))
 
                     Ks = (gs.dot(gs.T) * fact2) + Ks * fact + Kss * fact
                     self.K = kg_functions.assembleK(self.K, Ks, np.array(nY, dtype='int'))
@@ -65,4 +66,5 @@ class KgTriEnergyBarrier(Kg):
                         continue
 
                     gs, _, _ = kg_functions.gKSArea(y1, y2, y3)
-                    self.g = kg_functions.assembleg(self.g, gs * fact, np.array(nY, dtype='int'))
+                    gs_fact = np.concatenate(gs * fact)
+                    self.g = kg_functions.assembleg(self.g[:], gs_fact[:], np.array(nY, dtype='int'))

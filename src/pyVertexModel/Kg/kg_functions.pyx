@@ -18,7 +18,8 @@ cpdef np.ndarray assembleg(double[:] g, double[:] ge, np.ndarray nY):
 
     for I in range(len(nY)):
         for col in range(nY[I] * dim, (nY[I] + 1) * dim):
-            g[col] = g[col] + ge[cont]
+            if ge[cont] != 0:
+                g[col] = g[col] + ge[cont]
             cont = cont + 1
 
     return np.array(g)
@@ -27,23 +28,19 @@ cpdef np.ndarray assembleg(double[:] g, double[:] ge, np.ndarray nY):
 @cython.cdivision(True)
 @cython.nonecheck(False)
 @cython.boundscheck(False)
-cpdef np.ndarray assembleK(double[:, :] K, double[:, :] Ke, nY: np.ndarray):
+cpdef np.ndarray assembleK(np.ndarray K, np.ndarray Ke, nY: np.ndarray):
     #TODO: IMPROVE LIKE ASSEMBLE_G
     cdef int dim = 3
-    cdef np.ndarray idofg = np.zeros([len(nY) * dim, len(nY) * dim], dtype=int)
+    cdef np.ndarray idofg = np.zeros(len(nY) * dim, dtype=int)
     cdef int I
     for I in range(len(nY)):
-        idofg[I * dim: (I + 1) * dim, 0] = np.arange(nY[I] * dim, (nY[I] + 1) * dim)
+        idofg[I * dim: (I + 1) * dim] = np.arange(nY[I] * dim, (nY[I] + 1) * dim)
 
     # Update the matrix K using sparse matrix addition
-    cdef int numI, numJ, numI_idofg, numJ_idofg
-    for numI in range(len(nY)):
-        numI_idofg = idofg[numI]
-        for numJ in range(len(nY)):
-            numJ_idofg = idofg[numJ]
-            K[numI_idofg, numJ_idofg] = K[numI_idofg, numJ_idofg] + Ke[numI, numJ]
+    cdef np.ndarray ids = np.arange(len(nY)*3)
+    K[idofg, idofg] = K[idofg, idofg] + Ke[ids, ids]
 
-    return np.array(K)
+    return K
 
 @cython.wraparound(False)
 @cython.cdivision(True)

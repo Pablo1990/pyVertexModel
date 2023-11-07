@@ -20,7 +20,7 @@ def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
     else:
         dof = Dofs.Free
 
-    dy = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3)
+    dy = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3, dtype=float)
     dyr = np.linalg.norm(dy[dof])
     gr = np.linalg.norm(g[dof])
     gr0 = gr

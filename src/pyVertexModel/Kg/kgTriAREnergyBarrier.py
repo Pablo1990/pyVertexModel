@@ -60,12 +60,13 @@ class KgTriAREnergyBarrier(Kg):
 
                             w_t[numY] = np.linalg.norm(v_y1) ** 2 - np.linalg.norm(v_y2) ** 2
 
-                            gs = np.zeros([9, 1], dtype=float)
-                            gs[0:3, 0] = Set.lambdaR * w_t[numY] * v_y3_1
-                            gs[3:6, 0] = Set.lambdaR * w_t[numY] * v_y3_2
-                            gs[6:9, 0] = Set.lambdaR * w_t[numY] * v_y3_3
+                            gs = np.zeros(9, dtype=float)
+                            gs[0:3] = Set.lambdaR * w_t[numY] * v_y3_1
+                            gs[3:6] = Set.lambdaR * w_t[numY] * v_y3_2
+                            gs[6:9] = Set.lambdaR * w_t[numY] * v_y3_3
 
-                            self.g = kg_functions.assembleg(self.g, gs * 1 / (Set.lmin0 ** 4), nY[numY, :])
+                            gs_fact = gs / (Set.lmin0 ** 4)
+                            self.g = kg_functions.assembleg(self.g[:], gs_fact[:], nY[numY, :])
 
                             matrixK = np.block([[np.zeros((3, 3)), -np.eye(3), np.eye(3)],
                                                 [-np.eye(3), np.eye(3), np.zeros((3, 3))],
@@ -83,7 +84,6 @@ class KgTriAREnergyBarrier(Kg):
             if Geo.Remodelling and c not in Geo.AssembleNodes:
                 continue
 
-            Energy_c = 0
             Cell = Geo.Cells[c]
             Ys = Cell.Y
 
@@ -132,8 +132,8 @@ class KgTriAREnergyBarrier(Kg):
                             w_t[numY] = np.linalg.norm(v_y1) ** 2 - np.linalg.norm(v_y2) ** 2
 
                             gs = np.zeros([9, 1], dtype=float)
-                            gs[0:3, 0] = Set.lambdaR * w_t[numY] * v_y3_1
-                            gs[3:6, 0] = Set.lambdaR * w_t[numY] * v_y3_2
-                            gs[6:9, 0] = Set.lambdaR * w_t[numY] * v_y3_3
+                            gs[0:3] = Set.lambdaR * w_t[numY] * v_y3_1
+                            gs[3:6] = Set.lambdaR * w_t[numY] * v_y3_2
+                            gs[6:9] = Set.lambdaR * w_t[numY] * v_y3_3
 
-                            self.g = kg_functions.assembleg(self.g, gs * 1 / (Set.lmin0 ** 4), nY[numY, :])
+                            self.g = kg_functions.assembleg(self.g[:], gs * 1 / (Set.lmin0 ** 4), nY[numY, :])

@@ -92,8 +92,8 @@ class KgSubstrate(Kg):
         return result
 
     def computeGSubstrate(self, K, Yz, Yz0):
-        result = np.zeros([3, 1], dtype=float)
-        result[2, 0] = K * (Yz - Yz0)
+        result = np.zeros(3, dtype=float)
+        result[2] = K * (Yz - Yz0)
         return result
 
     def computeEnergySubstrate(self, K, Yz, Yz0):

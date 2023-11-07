@@ -28,7 +28,7 @@ class KgContractility(Kg):
                             y_2 = cell.Y[currentTri.Edge[1]]
 
                             g_current = self.computeGContractility(l_i0, y_1, y_2, C)
-                            ge = kg_functions.assembleg(ge, g_current, cell.globalIds[currentTri.Edge])
+                            ge = kg_functions.assembleg(ge[:], g_current[:], cell.globalIds[currentTri.Edge])
 
                             # TODO
                             #currentFace.Tris.ContractileG = np.linalg.norm(g_current[:3])
@@ -69,7 +69,7 @@ class KgContractility(Kg):
 
         l_i = np.linalg.norm(y_1 - y_2)
 
-        kContractility = np.zeros((6, 6))
+        kContractility = np.zeros((6, 6), dtype=float)
         kContractility[0:3, 0:3] = -(C / l_i0) * (1 / l_i ** 3 * np.outer((y_1 - y_2), (y_1 - y_2))) + (
                 (C / l_i0) * np.eye(dim)) / l_i
         kContractility[0:3, 3:6] = -kContractility[0:3, 0:3]
@@ -81,9 +81,9 @@ class KgContractility(Kg):
     def computeGContractility(self, l_i0, y_1, y_2, C):
         l_i = np.linalg.norm(y_1 - y_2)
 
-        gContractility = np.zeros((6, 1))
-        gContractility[0:3, 0] = (C / l_i0) * (y_1 - y_2) / l_i
-        gContractility[3:6, 0] = -gContractility[0:3, 0]
+        gContractility = np.zeros(6, dtype=float)
+        gContractility[0:3] = (C / l_i0) * (y_1 - y_2) / l_i
+        gContractility[3:6] = -gContractility[0:3]
 
         return gContractility
 
