@@ -52,10 +52,11 @@ class DegreesOfFreedom:
             preY = (Y[:, 1] > Set.VPrescribed) | np.isin(gIDsY, borderIds)
 
             for idx in np.where(fixY)[0]:
-                gconstrained[dim * (gIDsY[idx] - 1): dim * gIDsY[idx]] = 1
+                gconstrained[(dim * gIDsY[idx]): (dim * (gIDsY[idx] + 1))] = 1
 
-            if np.any(preY):
-                gprescribed[dim * (gIDsY[preY] - 1): dim * gIDsY[preY]] = 1
+            for idx in np.where(preY)[0]:
+                print(idx)
+                gprescribed[(dim * gIDsY[idx]): (dim * (gIDsY[idx]+1))] = 1
 
         self.Free = np.array(np.where((gconstrained == 0) & (gprescribed == 0))[0], dtype=int)
         self.Fix = np.array(np.concatenate([np.where(gconstrained)[0], np.where(gprescribed)[0]]), dtype=int)

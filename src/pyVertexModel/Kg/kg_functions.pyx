@@ -34,7 +34,7 @@ cpdef np.ndarray assembleK(np.ndarray K, np.ndarray Ke, nY: np.ndarray):
     cdef np.ndarray idofg = np.zeros(len(nY) * dim, dtype=int)
     cdef int I
     for I in range(len(nY)):
-        idofg[I * dim: (I + 1) * dim] = np.arange(nY[I] * dim, (nY[I] + 1) * dim)
+        idofg[(I * dim): ((I + 1) * dim)] = np.arange(nY[I] * dim, (nY[I] + 1) * dim)
 
     # Update the matrix K using sparse matrix addition
     cdef np.ndarray ids = np.arange(len(nY)*3)
