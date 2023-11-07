@@ -28,10 +28,10 @@ class Kg:
         :param nY:
         :return:
         '''
-        idofg = np.zeros([len(nY) * self.dim, len(nY) * self.dim], dtype=int)
+        idofg = np.zeros(len(nY) * self.dim, dtype=int)
 
         for I in range(len(nY)):
-            idofg[I * self.dim: (I + 1) * self.dim, 0] = np.arange(nY[I] * self.dim, (nY[I] + 1) * self.dim)
+            idofg[(I * self.dim): ((I + 1) * self.dim)] = np.arange(nY[I] * self.dim, (nY[I] + 1) * self.dim)
 
         # Update the matrix K using sparse matrix addition
         self.K[idofg, idofg] = self.K[idofg, idofg] + Ke
@@ -48,7 +48,7 @@ class Kg:
         idofg = np.zeros(len(nY) * self.dim, dtype=int)
 
         for I in range(len(nY)):
-            idofg[I * self.dim: (I + 1) * self.dim] = np.arange(nY[I] * self.dim,
+            idofg[(I * self.dim): ((I + 1) * self.dim)] = np.arange(nY[I] * self.dim,
                                                                 (nY[I] + 1) * self.dim)  # global dof
         g[idofg] = g[idofg] + ge
 
