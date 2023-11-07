@@ -17,6 +17,10 @@ class Kg:
     def compute_work(self, Geo, Set, Geo_n=None):
         pass
 
+    @abstractmethod
+    def compute_work_only_g(self, Geo, Set, Geo_n=None):
+        pass
+
     def assembleK(self, Ke, nY):
         '''
 

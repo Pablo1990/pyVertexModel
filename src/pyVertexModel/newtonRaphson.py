@@ -1,6 +1,7 @@
 import time
 
 import numpy as np
+from src.pyVertexModel.Kg import kg_functions
 
 from src.pyVertexModel.Kg.kgContractility import KgContractility
 from src.pyVertexModel.Kg.kgSubstrate import KgSubstrate
@@ -35,10 +36,17 @@ def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
 
     while (gr > Set.tol or dyr > Set.tol) and Set.iter < Set.MaxIter:
         # or np.linalg.solve
-        dy[dof] = -np.linalg.lstsq(K[np.ix_(dof, dof)], g[dof], rcond=None)[0]
+        start = time.time()
+        -np.linalg.solve(K[np.ix_(dof, dof)], g[dof])
+        end = time.time()
+        print(f"Time at np.linalg.solve: {end - start} seconds")
+        # start = time.time()
+        # dy[dof] = kg_functions.mldivide(K[np.ix_(dof, dof)], g[dof])
+        # end = time.time()
+        print(f"Time at kg_functions mldivide: {end - start} seconds")
         alpha = LineSearch(Geo_0, Geo_n, Geo, Dofs, Set, g, dy)
         dy_reshaped = np.reshape(dy * alpha, (3, (Geo.numF + Geo.numY + Geo.nCells)))
-        Geo.UpdateVertices(Set, dy_reshaped)
+        Geo.UpdateVertices(dy_reshaped)
         Geo.UpdateMeasures()
         g, K, Energy, Geo = KgGlobal(Geo_0, Geo_n, Geo, Set)
         dyr = np.linalg.norm(dy[dof])
@@ -66,7 +74,7 @@ def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
 def LineSearch(Geo_0, Geo_n, Geo, Dofs, Set, gc, dy):
     dy_reshaped = np.reshape(dy, (3, (Geo.numF + Geo.numY + Geo.nCells))).T
 
-    Geo.UpdateVertices(Set, dy_reshaped)
+    Geo.UpdateVertices(dy_reshaped)
     Geo.UpdateMeasures()
 
     g = KgGlobal(Geo_0, Geo_n, Geo, Set)
@@ -118,7 +126,7 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set):
 
     start = time.time()
     g = kg_Vol.g + kg_Viscosity.g + kg_SA.g
-    K = kg_Vol.K + kg_Viscosity.K + kg_SA.g
+    K = kg_Vol.K + kg_Viscosity.K + kg_SA.K
     E = kg_Vol.energy + kg_Viscosity.energy + kg_SA.energy
     end = time.time()
     print(f"Time at adding up Ks and gs: {end - start} seconds")
@@ -181,3 +189,81 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set):
         print(f"Time at Substrate: {end - start} seconds")
 
     return g, K, E, Geo
+
+def gGlobal(Geo_0, Geo_n, Geo, Set):
+    # Surface Energy
+    start = time.time()
+    kg_SA = KgSurfaceCellBasedAdhesion(Geo)
+    kg_SA.compute_work_only_g(Geo, Set)
+    end = time.time()
+    print(f"Time at SA: {end - start} seconds")
+
+    # Volume Energy
+    start = time.time()
+    kg_Vol = KgVolume(Geo)
+    kg_Vol.compute_work_only_g(Geo, Set)
+    end = time.time()
+    print(f"Time at Volume: {end - start} seconds")
+
+    # Viscous Energy
+    start = time.time()
+    kg_Viscosity = KgViscosity(Geo)
+    kg_Viscosity.compute_work(Geo, Set, Geo_n)
+    end = time.time()
+    print(f"Time at Viscosity: {end - start} seconds")
+
+    start = time.time()
+    g = kg_Vol.g + kg_Viscosity.g + kg_SA.g
+    end = time.time()
+    print(f"Time at adding up Ks and gs: {end - start} seconds")
+
+    # # TODO: Plane Elasticity
+    # if Set.InPlaneElasticity:
+    #     gt, Kt, EBulk = KgBulk(Geo_0, Geo, Set)
+    #     K += Kt
+    #     g += gt
+    #     E += EBulk
+    #     Energies["Bulk"] = EBulk
+
+    # Bending Energy
+    # TODO
+
+    # Triangle Energy Barrier
+    if Set.EnergyBarrierA:
+        start = time.time()
+        kg_Tri = KgTriEnergyBarrier(Geo)
+        kg_Tri.compute_work_only_g(Geo, Set)
+        g += kg_Tri.g
+        end = time.time()
+        print(f"Time at EnergyBarrier: {end - start} seconds")
+
+    # Triangle Energy Barrier Aspect Ratio
+    if Set.EnergyBarrierAR:
+        start = time.time()
+        kg_TriAR = KgTriAREnergyBarrier(Geo)
+        kg_TriAR.compute_work_only_g(Geo, Set)
+        g += kg_TriAR.g
+        end = time.time()
+        print(f"Time at AREnergyBarrier: {end - start} seconds")
+
+    # Propulsion Forces
+    # TODO
+
+    # Contractility
+    if Set.Contractility:
+        start = time.time()
+        kg_lt = KgContractility(Geo)
+        kg_lt.compute_work_only_g(Geo, Set)
+        g += kg_lt.g
+        end = time.time()
+        print(f"Time at LT: {end - start} seconds")
+
+    # Substrate
+    if Set.Substrate == 2:
+        kg_subs = KgSubstrate(Geo)
+        kg_subs.compute_work_only_g(Geo, Set)
+        g += kg_subs.g
+        end = time.time()
+        print(f"Time at Substrate: {end - start} seconds")
+
+    return g

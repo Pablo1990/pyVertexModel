@@ -57,10 +57,10 @@ class DegreesOfFreedom:
             if np.any(preY):
                 gprescribed[dim * (gIDsY[preY] - 1): dim * gIDsY[preY]] = 1
 
-        self.Free = np.where((gconstrained == 0) & (gprescribed == 0))[0]
-        self.Fix = np.concatenate([np.where(gconstrained)[0], np.where(gprescribed)[0]])
-        self.FixP = np.where(gprescribed)[0]
-        self.FixC = np.where(gconstrained)[0]
+        self.Free = np.array(np.where((gconstrained == 0) & (gprescribed == 0))[0], dtype=int)
+        self.Fix = np.array(np.concatenate([np.where(gconstrained)[0], np.where(gprescribed)[0]]), dtype=int)
+        self.FixP = np.array(np.where(gprescribed)[0], dtype=int)
+        self.FixC = np.array(np.where(gconstrained)[0], dtype=int)
 
     def UpdateDOFsCompress(self, Geo, Set):
         maxY = Geo.Cells[0].Y[0, 1]
