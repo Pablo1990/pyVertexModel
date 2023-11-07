@@ -1,11 +1,6 @@
-mport cython
-import numpy as np
-cimport numpy as np
-
-cimport
-numpy as np
 import cython
 import numpy as np
+cimport numpy as np
 
 # RUN IT LIKE: python setup.py build_ext --inplace
 
@@ -167,3 +162,36 @@ cpdef gKDet(np.ndarray Y1, np.ndarray Y2, np.ndarray Y3):
     Ks[6:, 3:6] = cross(Y1)
 
     return gs, Ks
+
+
+@cython.wraparound(False)
+@cython.cdivision(True)
+@cython.nonecheck(False)
+@cython.boundscheck(False)
+def mldivide(np.ndarray K, np.ndarray g):
+    cdef int n = K.shape[0]
+    cdef np.ndarray[np.double_t, ndim=1] X = np.empty(n, dtype=np.float64)
+    cdef double[:] g_copy = np.copy(g)
+    cdef double[:, :] K_copy = np.copy(K)
+
+    # Gaussian elimination
+    cdef int i, j, k
+    cdef double factor
+
+    for i in range(n):
+        if K_copy[i, i] == 0:
+            raise ValueError("Singular matrix")
+
+        for j in range(i + 1, n):
+            factor = K_copy[j, i] / K_copy[i, i]
+            g_copy[j] -= factor * g_copy[i]
+            for k in range(n):
+                K_copy[j, k] -= factor * K_copy[i, k]
+
+    # Back substitution
+    for i in range(n - 1, -1, -1):
+        X[i] = g_copy[i] / K_copy[i, i]
+        for j in range(i):
+            g_copy[j] -= K_copy[j, i] * X[i]
+
+    return X
