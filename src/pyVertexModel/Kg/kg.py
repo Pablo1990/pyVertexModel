@@ -22,12 +22,6 @@ class Kg:
         pass
 
     def assembleK(self, Ke, nY):
-        '''
-
-        :param Ke:
-        :param nY:
-        :return:
-        '''
         idofg = np.zeros(len(nY) * self.dim, dtype=int)
 
         for I in range(len(nY)):

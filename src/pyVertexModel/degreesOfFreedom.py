@@ -55,7 +55,6 @@ class DegreesOfFreedom:
                 gconstrained[(dim * gIDsY[idx]): (dim * (gIDsY[idx] + 1))] = 1
 
             for idx in np.where(preY)[0]:
-                print(idx)
                 gprescribed[(dim * gIDsY[idx]): (dim * (gIDsY[idx]+1))] = 1
 
         self.Free = np.array(np.where((gconstrained == 0) & (gprescribed == 0))[0], dtype=int)
