@@ -35,15 +35,11 @@ def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
     ig = 0
 
     while (gr > Set.tol or dyr > Set.tol) and Set.iter < Set.MaxIter:
-        # or np.linalg.solve
         start = time.time()
-        -np.linalg.solve(K[np.ix_(dof, dof)], g[dof])
+        dy[dof] = kg_functions.mldivide_np(K[np.ix_(dof, dof)], g[dof, 0])
         end = time.time()
         print(f"Time at np.linalg.solve: {end - start} seconds")
-        # start = time.time()
-        # dy[dof] = kg_functions.mldivide(K[np.ix_(dof, dof)], g[dof])
-        # end = time.time()
-        print(f"Time at kg_functions mldivide: {end - start} seconds")
+
         alpha = LineSearch(Geo_0, Geo_n, Geo, Dofs, Set, g, dy)
         dy_reshaped = np.reshape(dy * alpha, (3, (Geo.numF + Geo.numY + Geo.nCells)))
         Geo.UpdateVertices(dy_reshaped)
@@ -77,22 +73,22 @@ def LineSearch(Geo_0, Geo_n, Geo, Dofs, Set, gc, dy):
     Geo.UpdateVertices(dy_reshaped)
     Geo.UpdateMeasures()
 
-    g = KgGlobal(Geo_0, Geo_n, Geo, Set)
+    g = gGlobal(Geo_0, Geo_n, Geo, Set)
     dof = Dofs.Free
     gr0 = np.linalg.norm(gc[dof])
     gr = np.linalg.norm(g[dof])
 
     if gr0 < gr:
-        R0 = np.dot(dy[dof], gc[dof])
+        R0 = np.dot(dy[dof, 0], gc[dof])
         R1 = np.dot(dy[dof], g[dof])
 
         R = R0 / R1
         alpha1 = (R / 2) + np.sqrt((R / 2) ** 2 - R)
         alpha2 = (R / 2) - np.sqrt((R / 2) ** 2 - R)
 
-        if np.isreal(alpha1) and alpha1 < 2 and alpha1 > 1e-3:
+        if np.isreal(alpha1) and 2 > alpha1 > 1e-3:
             alpha = alpha1
-        elif np.isreal(alpha2) and alpha2 < 2 and alpha2 > 1e-3:
+        elif np.isreal(alpha2) and 2 > alpha2 > 1e-3:
             alpha = alpha2
         else:
             alpha = 0.1
@@ -208,12 +204,12 @@ def gGlobal(Geo_0, Geo_n, Geo, Set):
     # Viscous Energy
     start = time.time()
     kg_Viscosity = KgViscosity(Geo)
-    kg_Viscosity.compute_work(Geo, Set, Geo_n)
+    kg_Viscosity.compute_work_only_g(Geo, Set, Geo_n)
     end = time.time()
     print(f"Time at Viscosity: {end - start} seconds")
 
     start = time.time()
-    g = kg_Vol.g + kg_Viscosity.g + kg_SA.g
+    g = kg_Vol.g[:, 0] + kg_Viscosity.g + kg_SA.g[:, 0]
     end = time.time()
     print(f"Time at adding up Ks and gs: {end - start} seconds")
 

@@ -13,6 +13,9 @@ class Face:
         self.Area = -1
         self.Area0 = -1
         self.Tris = []
+        valueset = [0, 1, 2]
+        catnames = ['Top', 'CellCell', 'Bottom']
+        self.InterfaceType_allValues = dict(zip(valueset, catnames))
 
     def BuildFace(self, ci, cj, face_ids, nCells, Cell, XgID, Set, XgTop, XgBottom, oldFace=None):
         self.InterfaceType = None
@@ -58,19 +61,15 @@ class Face:
         return EdgeLength, LengthsToCentre, AspectRatio
 
     def build_interface_type(self, ij, XgID, XgTop, XgBottom):
-        valueset = [0, 1, 2]
-        catnames = ['Top', 'CellCell', 'Bottom']
-        categorical_values = dict(zip(valueset, catnames))
-
         if any(node in XgID for node in ij):
             if any(node in XgTop for node in ij):
-                ftype = categorical_values[0]  # Top
+                ftype = self.InterfaceType_allValues[0]  # Top
             elif any(node in XgBottom for node in ij):
-                ftype = categorical_values[2]  # Bottom/Substrate
+                ftype = self.InterfaceType_allValues[2]  # Bottom/Substrate
             else:
-                ftype = categorical_values[1]  # Border face
+                ftype = self.InterfaceType_allValues[1]  # Border face
         else:
-            ftype = categorical_values[1]  # Lateral domain/cell-cell contact
+            ftype = self.InterfaceType_allValues[1]  # Lateral domain/cell-cell contact
 
         self.InterfaceType = ftype
         return ftype

@@ -12,8 +12,8 @@ class Geo:
         self.XgTop = None
         self.XgID = None
         self.nz = 1
-        self.ny = 10
-        self.nx = 10
+        self.ny = 5
+        self.nx = 5
         self.Cells = []
         self.nCells = 0
         self.BorderCells = None
@@ -112,14 +112,14 @@ class Geo:
 
         self.UpdateMeasures()
 
-    def updateVertices(self, dy_reshaped):
+    def UpdateVertices(self, dy_reshaped):
         for c in [cell.ID for cell in self.Cells if cell.AliveStatus]:
             dY = dy_reshaped[self.Cells[c].globalIds, :]
             self.Cells[c].Y += dY
             dYc = dy_reshaped[self.Cells[c].cglobalIds, :]
             self.Cells[c].X += dYc
             for f in range(len(self.Cells[c].Faces)):
-                self.cells[c].Faces[f].Centre += dy_reshaped[self.cells[c].Faces[f].globalIds, :]
+                self.Cells[c].Faces[f].Centre += dy_reshaped[self.Cells[c].Faces[f].globalIds, :]
 
     def UpdateMeasures(self, ids=None):
         if self.Cells[self.nCells - 1].Vol is None:
@@ -227,8 +227,8 @@ class Geo:
         for ci in self.non_dead_cells:
             Cell = self.Cells[ci]
 
-            g_ids = np.zeros(len(Cell.Y))
-            g_ids_f = np.zeros(len(Cell.Faces))
+            g_ids = np.zeros(len(Cell.Y), dtype=int)
+            g_ids_f = np.zeros(len(Cell.Faces), dtype=int)
 
             for cj in range(ci):
                 ij = [ci, cj]

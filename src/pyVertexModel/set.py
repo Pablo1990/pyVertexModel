@@ -15,7 +15,7 @@ class Set:
         self.CellHeight = 15
         self.TotalCells = 40
         ## ===========================  Add Substrate =========================
-        self.Substrate = False
+        self.Substrate = True
         self.kSubstrate = 0
         ## ============================ Time ==================================
         self.tend = 61
@@ -162,7 +162,7 @@ class Set:
         self.TEndAblation = self.tend
         self.lambdaSFactor_Debris = np.finfo(float).eps
         ## =========================== Contractility ==========================
-        self.Contractility = 0
+        self.Contractility = True
         self.DelayedAdditionalContractility = 0
         self.purseStringStrength = 10
         self.Contractility_Variability_PurseString = np.multiply(np.array(

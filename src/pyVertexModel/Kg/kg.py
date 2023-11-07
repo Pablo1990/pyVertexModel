@@ -8,7 +8,7 @@ class Kg:
 
     def __init__(self, Geo):
         self.dimg = (Geo.numY + Geo.numF + Geo.nCells) * 3
-        self.g = np.zeros([self.dimg, 1], dtype=float)
+        self.g = np.zeros(self.dimg, dtype=float)
         self.K = np.zeros([self.dimg, self.dimg], dtype=float)
         self.energy = None
         self.dim = 3
@@ -45,12 +45,12 @@ class Kg:
         :return:
         '''
 
-        idofg = np.zeros([len(nY) * self.dim, 1], dtype=int)
+        idofg = np.zeros(len(nY) * self.dim, dtype=int)
 
         for I in range(len(nY)):
-            idofg[I * self.dim: (I + 1) * self.dim, 0] = np.arange(nY[I] * self.dim,
-                                                                   (nY[I] + 1) * self.dim)  # global dof
-        g[idofg, 0] = g[idofg, 0] + ge
+            idofg[I * self.dim: (I + 1) * self.dim] = np.arange(nY[I] * self.dim,
+                                                                (nY[I] + 1) * self.dim)  # global dof
+        g[idofg] = g[idofg] + ge
 
         return g
 
@@ -96,9 +96,9 @@ class Kg:
 
         finalValue = minValue + (maxValue - minValue) * random.random()
 
-        if currentTri is not None:
-            if 'pastContractilityValue' in currentTri and currentTri['pastContractilityValue']:
-                finalValue = (finalValue + currentTri['pastContractilityValue']) / 2
+        # if currentTri is not None:
+        #     if currentTri.pastContractilityValue:
+        #         finalValue = (finalValue + currentTri.pastContractilityValue) / 2
 
         return finalValue
 

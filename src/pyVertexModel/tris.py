@@ -9,6 +9,7 @@ class Tris:
         self.LengthsToCentre = []
         self.AspectRatio = []
         self.EdgeLength_time = []
+        self.ContractilityValue = None
 
     def ComputeEdgeLength(self, Y):
         """

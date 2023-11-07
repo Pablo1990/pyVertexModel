@@ -1,3 +1,5 @@
+# cython: language_level=3
+
 import cython
 import numpy as np
 cimport numpy as np
@@ -8,32 +10,35 @@ cimport numpy as np
 @cython.cdivision(True)
 @cython.nonecheck(False)
 @cython.boundscheck(False)
-cpdef np.ndarray assembleg(np.ndarray g, np.ndarray ge, np.ndarray nY):
+cpdef np.ndarray assembleg(double[:] g, double[:] ge, np.ndarray nY):
     cdef int dim = 3
-    cdef np.ndarray idofg = np.zeros([len(nY) * dim, 1], dtype=int)
     cdef int I
+    cdef int cont = 0
+    cdef int col
+
     for I in range(len(nY)):
-        idofg[I * dim: (I + 1) * dim, 0] = np.arange(nY[I] * dim, (nY[I] + 1) * dim)  # global dof
+        for col in range(nY[I] * dim, (nY[I] + 1) * dim):
+            g[col] = g[col] + ge[cont]
+            cont = cont + 1
 
-    g[idofg, 0] = g[idofg, 0] + ge
-
-    return g
+    return np.array(g)
 
 @cython.wraparound(False)
 @cython.cdivision(True)
 @cython.nonecheck(False)
 @cython.boundscheck(False)
-cpdef np.ndarray assembleK(np.ndarray K, np.ndarray Ke, np.ndarray nY):
-    dim = 3
-    cdef np.ndarray idofg = np.zeros([len(nY) * dim, len(nY) * dim], dtype=int)
-    cdef int I
+cpdef np.ndarray assembleK(double[:, :]K, double[:, :] Ke, np.ndarray nY):
+    cdef int dim = 3
+
+    cdef int row, col, I, J
     for I in range(len(nY)):
-        idofg[I * dim: (I + 1) * dim, 0] = np.arange(nY[I] * dim, (nY[I] + 1) * dim)
+        for col in range(nY[I] * dim, (nY[I] + 1) * dim):
+            for J in range(len(nY)):
+                for row in range(nY[J] * dim, (nY[J] + 1) * dim):
+                    if Ke[col, row] != 0:
+                        K[row, col] = K[row, col] + Ke[J, I]
 
-    # Update the matrix K using sparse matrix addition
-    K[idofg, idofg] = K[idofg, idofg] + Ke
-
-    return K
+    return np.array(K)
 
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -93,7 +98,7 @@ cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
     cdef np.ndarray Q3 = y1_crossed - y2_crossed
 
     cdef float fact = 1 / (2 * np.linalg.norm(q))
-    cdef np.ndarray gs = fact * np.array([np.dot(Q1, q), np.dot(Q2, q), np.dot(Q3, q)])
+    cdef np.ndarray gs = fact * np.concatenate([np.dot(Q1, q), np.dot(Q2, q), np.dot(Q3, q)])
 
     cdef np.ndarray Kss = -(2 / np.linalg.norm(q)) * np.outer(gs, gs)
 
@@ -117,7 +122,7 @@ cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
 cpdef np.ndarray compute_finalK_SurfaceEnergy(np.ndarray ge, np.ndarray K, double Area0):
     cdef Py_ssize_t i, j
     cdef Py_ssize_t n = ge.shape[0]
-    cdef double[:] ge_view = ge[:, 0]
+    cdef double[:] ge_view = ge
     cdef double[:, :] K_view = K
 
     for i in range(n):
@@ -131,7 +136,7 @@ cpdef np.ndarray compute_finalK_SurfaceEnergy(np.ndarray ge, np.ndarray K, doubl
 cpdef np.ndarray compute_finalK_Volume(np.ndarray ge, np.ndarray K, double Vol, double Vol0, int n_dim):
     cdef Py_ssize_t i, j
     cdef Py_ssize_t n = ge.shape[0]
-    cdef double[:] ge_view = ge[:, 0]
+    cdef double[:] ge_view = ge
     cdef double[:, :] K_view = K
 
     for i in range(n):
@@ -147,12 +152,12 @@ cpdef np.ndarray compute_finalK_Volume(np.ndarray ge, np.ndarray K, double Vol, 
 @cython.nonecheck(False)
 @cython.boundscheck(False)
 cpdef gKDet(np.ndarray Y1, np.ndarray Y2, np.ndarray Y3):
-    cdef np.ndarray gs = np.zeros([9, 1], dtype=float)
+    cdef np.ndarray gs = np.zeros(9, dtype=float)
     cdef np.ndarray Ks = np.zeros([9, 9], dtype=float)
 
-    gs[:3, 0] = np.cross(Y2, Y3)
-    gs[3:6, 0] = np.cross(Y3, Y1)
-    gs[6:, 0] = np.cross(Y1, Y2)
+    gs[:3] = np.cross(Y2, Y3)
+    gs[3:6] = np.cross(Y3, Y1)
+    gs[6:] = np.cross(Y1, Y2)
 
     Ks[:3, 3:6] = -cross(Y3)
     Ks[:3, 6:] = cross(Y2)
@@ -168,30 +173,12 @@ cpdef gKDet(np.ndarray Y1, np.ndarray Y2, np.ndarray Y3):
 @cython.cdivision(True)
 @cython.nonecheck(False)
 @cython.boundscheck(False)
-def mldivide(np.ndarray K, np.ndarray g):
-    cdef int n = K.shape[0]
-    cdef np.ndarray[np.double_t, ndim=1] X = np.empty(n, dtype=np.float64)
-    cdef double[:] g_copy = np.copy(g)
-    cdef double[:, :] K_copy = np.copy(K)
+def mldivide_np(np.ndarray A, np.ndarray B):
+    cdef int m = A.shape[0]
+    cdef int n = A.shape[1]
+    cdef int p = B.shape[0]
+    cdef double[:] X = np.empty(n, dtype=np.float64)
 
-    # Gaussian elimination
-    cdef int i, j, k
-    cdef double factor
-
-    for i in range(n):
-        if K_copy[i, i] == 0:
-            raise ValueError("Singular matrix")
-
-        for j in range(i + 1, n):
-            factor = K_copy[j, i] / K_copy[i, i]
-            g_copy[j] -= factor * g_copy[i]
-            for k in range(n):
-                K_copy[j, k] -= factor * K_copy[i, k]
-
-    # Back substitution
-    for i in range(n - 1, -1, -1):
-        X[i] = g_copy[i] / K_copy[i, i]
-        for j in range(i):
-            g_copy[j] -= K_copy[j, i] * X[i]
+    X = np.linalg.solve(A, B)
 
     return X
