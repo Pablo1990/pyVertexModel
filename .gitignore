@@ -162,3 +162,5 @@ cython_debug/
 .DS_Store
 
 *.png
+
+src/pyVertexModel/Kg/kg_functions.c
