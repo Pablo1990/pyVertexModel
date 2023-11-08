@@ -166,3 +166,5 @@ cython_debug/
 src/pyVertexModel/Kg/kg_functions.c
 
 *.html
+
+*.csv
