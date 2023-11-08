@@ -15,7 +15,7 @@ class KgContractility(Kg):
         for cell in Geo.Cells:
             c = cell.ID
             if cell.AliveStatus:
-                ge = np.zeros(self.g.shape, dtype=float)
+                ge = np.zeros(self.g.shape, dtype=np.float16)
                 Energy_c = 0
                 for currentFace in cell.Faces:
                     l_i0 = Geo.EdgeLengthAvg_0[next(key for key, value in currentFace.InterfaceType_allValues.items()
@@ -48,7 +48,7 @@ class KgContractility(Kg):
     def compute_work_only_g(self, Geo, Set, Geo_n=None):
         for cell in Geo.Cells:
             if cell.AliveStatus:
-                ge = np.zeros(self.g.shape, dtype=float)
+                ge = np.zeros(self.g.shape, dtype=np.float16)
 
                 for currentFace in cell.Faces:
                     l_i0 = Geo.EdgeLengthAvg_0[next(key for key, value in currentFace.InterfaceType_allValues.items() if value == currentFace.InterfaceType)]
@@ -69,7 +69,7 @@ class KgContractility(Kg):
 
         l_i = np.linalg.norm(y_1 - y_2)
 
-        kContractility = np.zeros((6, 6), dtype=float)
+        kContractility = np.zeros((6, 6), dtype=np.float16)
         kContractility[0:3, 0:3] = -(C / l_i0) * (1 / l_i ** 3 * np.outer((y_1 - y_2), (y_1 - y_2))) + (
                 (C / l_i0) * np.eye(dim)) / l_i
         kContractility[0:3, 3:6] = -kContractility[0:3, 0:3]
@@ -81,7 +81,7 @@ class KgContractility(Kg):
     def computeGContractility(self, l_i0, y_1, y_2, C):
         l_i = np.linalg.norm(y_1 - y_2)
 
-        gContractility = np.zeros(6, dtype=float)
+        gContractility = np.zeros(6, dtype=np.float16)
         gContractility[0:3] = (C / l_i0) * (y_1 - y_2) / l_i
         gContractility[3:6] = -gContractility[0:3]
 

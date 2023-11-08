@@ -17,7 +17,7 @@ class KgSubstrate(Kg):
                 continue
 
             if currentCell.AliveStatus:
-                ge = np.zeros(self.g.shape, dtype=float)
+                ge = np.zeros(self.g.shape, dtype=np.float16)
                 Energy_c = 0
 
                 for numFace in range(len(currentCell.Faces)):
@@ -62,7 +62,7 @@ class KgSubstrate(Kg):
                 continue
 
             if currentCell.AliveStatus:
-                ge = np.zeros(self.g.shape, dtype=float)
+                ge = np.zeros(self.g.shape, dtype=np.float16)
 
                 for numFace in range(len(currentCell.Faces)):
                     currentFace = Geo.Cells[c].Faces[numFace]
@@ -87,12 +87,12 @@ class KgSubstrate(Kg):
                 self.g = self.g + ge
 
     def computeKSubstrate(self, kSubstrate):
-        result = np.zeros([3, 3], dtype=float)
+        result = np.zeros([3, 3], dtype=np.float16)
         result[2, 2] = kSubstrate
         return result
 
     def computeGSubstrate(self, K, Yz, Yz0):
-        result = np.zeros(3, dtype=float)
+        result = np.zeros(3, dtype=np.float16)
         result[2] = K * (Yz - Yz0)
         return result
 

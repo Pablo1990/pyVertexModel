@@ -173,12 +173,16 @@ class Face:
 
     def compute_face_area(self, Tris, Y, FaceCentre):
         area = 0
-        trisArea = [None] * len(Tris)
+        trisArea = np.zeros(len(Tris), dtype=np.float16)
         for t in range(len(Tris)):
             Tri = Tris[t]
             Tri = Tri.Edge
             Y3 = FaceCentre
             YTri = np.vstack([Y[Tri, :], Y3])
+            # TODO: to add to test
+            # YTri = np.array([[-0.625000000000000, -0.625000000000000, 0.312500000000000],
+            #                  [-0.625000000000000, -0.625000000000000, -0.312500000000000],
+            #                  [-1.06776699779592, -0.528295179733333, 0]])
             T = (1 / 2) * np.linalg.norm(np.cross(YTri[1, :] - YTri[0, :], YTri[0, :] - YTri[2, :]))
             trisArea[t] = T
             area = area + T
