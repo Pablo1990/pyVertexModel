@@ -22,7 +22,7 @@ class KgContractility(Kg):
                 Energy_c = 0
                 for currentFace in cell.Faces:
                     l_i0 = Geo.EdgeLengthAvg_0[next(key for key, value in currentFace.InterfaceType_allValues.items()
-                                                    if value == currentFace.InterfaceType)]
+                                                    if value == currentFace.InterfaceType or key == currentFace.InterfaceType)]
                     for currentTri in currentFace.Tris:
                         if len(currentTri.SharedByCells) > 1:
                             C, Geo = self.getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set)
@@ -56,7 +56,8 @@ class KgContractility(Kg):
                 ge = np.zeros(self.g.shape, dtype=np.float32)
 
                 for currentFace in cell.Faces:
-                    l_i0 = Geo.EdgeLengthAvg_0[next(key for key, value in currentFace.InterfaceType_allValues.items() if value == currentFace.InterfaceType)]
+                    l_i0 = Geo.EdgeLengthAvg_0[next(key for key, value in currentFace.InterfaceType_allValues.items()
+                                                    if value == currentFace.InterfaceType or key == currentFace.InterfaceType)]
                     for currentTri in currentFace.Tris:
                         if len(currentTri.SharedByCells) > 1:
                             C, Geo = self.getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set)
@@ -110,17 +111,17 @@ class KgContractility(Kg):
             else:
                 contractilityValue = self.getIntensityBasedContractility(Set, currentFace)
 
-            if currentFace.InterfaceType == 'Top':
+            if currentFace.InterfaceType == 'Top' or currentFace.InterfaceType == 0:
                 if any([Geo.Cells[cell].AliveStatus == 0 for cell in currentTri.SharedByCells]):
                     contractilityValue = contractilityValue * Set.cLineTension
                 else:
                     contractilityValue = Set.cLineTension
-            elif currentFace.InterfaceType == 'CellCell':
+            elif currentFace.InterfaceType == 'CellCell' or currentFace.InterfaceType == 1:
                 if any([Geo.Cells[cell].AliveStatus == 0 for cell in currentTri.SharedByCells]):
                     contractilityValue = contractilityValue * Set.cLineTension
                 else:
                     contractilityValue = Set.cLineTension / 100
-            elif currentFace.InterfaceType == 'Bottom':
+            elif currentFace.InterfaceType == 'Bottom' or currentFace.InterfaceType == 2:
                 contractilityValue = Set.cLineTension / 100
             else:
                 contractilityValue = Set.cLineTension

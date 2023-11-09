@@ -20,7 +20,7 @@ class Tris:
             self.SharedByCells = mat_file[5][0] - 1
             self.Location = mat_file[6][0][0]
             self.ContractilityG = mat_file[7][0][0]
-            self.ContractilityValue = mat_file[8]
+            self.ContractilityValue = None
             self.EdgeLength_time = mat_file[9][0]
 
     def ComputeEdgeLength(self, Y):
