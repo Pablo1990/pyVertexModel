@@ -5,9 +5,9 @@ class Cell:
 
     def __init__(self):
         self.ID = None
-        self.X = np.empty(1, np.float16)
+        self.X = np.empty(1, np.float32)
         self.T = np.empty(1, 'int')
-        self.Y = np.empty(1, np.float16)
+        self.Y = np.empty(1, np.float32)
         self.globalIDs = np.array([], dtype='int')
         self.Faces = []
         self.Area = None

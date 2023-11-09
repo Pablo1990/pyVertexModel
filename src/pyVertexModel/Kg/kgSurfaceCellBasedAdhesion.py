@@ -36,7 +36,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
         # TODO: TRY JIT AND NUMBA https://numba.readthedocs.io/en/stable/user/jit.html#basic-usage
         Energy_c = 0
         Ys = Cell.Y
-        ge = np.zeros(self.g.shape, dtype=np.float16)
+        ge = np.zeros(self.g.shape, dtype=np.float32)
         fact0 = 0
         for face in Cell.Faces:
             if face.InterfaceType == 'Top':
@@ -83,7 +83,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
     def work_per_cell_only_g(self, Cell, Geo, Set):
         # TODO: TRY JIT AND NUMBA https://numba.readthedocs.io/en/stable/user/jit.html#basic-usage
         Ys = Cell.Y
-        ge = np.zeros(self.g.shape, dtype=np.float16)
+        ge = np.zeros(self.g.shape, dtype=np.float32)
         fact0 = 0
         for face in Cell.Faces:
             if face.InterfaceType == 'Top':

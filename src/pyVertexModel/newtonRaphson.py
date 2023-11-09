@@ -20,13 +20,14 @@ def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
     else:
         dof = Dofs.Free
 
-    dy = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3, dtype=np.float16)
+    dy = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3, dtype=np.float32)
     dyr = np.linalg.norm(dy[dof])
     gr = np.linalg.norm(g[dof])
     gr0 = gr
 
     # TODO: LOG
     #Geo.log = f"{Geo.log} Step: {numStep}, Iter: 0 ||gr||= {gr} ||dyr||= {dyr} dt/dt0={Set.dt / Set.dt0:.3g}\n"
+    print(f"Step: {numStep}, Iter: 0 ||gr||= {gr} ||dyr||= {dyr} dt/dt0={Set.dt / Set.dt0:.3g}\n")
 
     Energy = 0
     Set.iter = 1
@@ -48,6 +49,7 @@ def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
         dyr = np.linalg.norm(dy[dof])
         gr = np.linalg.norm(g[dof])
         #Geo.log = f"{Geo.log} Step: {numStep}, Iter: {Set.iter}, Time: {t} ||gr||= {gr:.3e} ||dyr||= {dyr:.3e} alpha= {alpha:.3e} nu/nu0={Set.nu / Set.nu0:.3g}\n"
+        print(f"Step: {numStep}, Iter: {Set.iter}, Time: {t} ||gr||= {gr:.3e} ||dyr||= {dyr:.3e} alpha= {alpha:.3e} nu/nu0={Set.nu / Set.nu0:.3g}\n")
 
         Set.iter += 1
         auxgr[ig] = gr

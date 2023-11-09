@@ -173,7 +173,7 @@ class Face:
 
     def compute_face_area(self, Tris, Y, FaceCentre):
         area = 0
-        trisArea = np.zeros(len(Tris), dtype=np.float16)
+        trisArea = np.zeros(len(Tris), dtype=np.float32)
         for t in range(len(Tris)):
             Tri = Tris[t]
             Tri = Tri.Edge

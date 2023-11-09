@@ -23,7 +23,7 @@ class KgVolume(Kg):
             lambdaV = Set.lambdaV
             fact = lambdaV * (Cell.Vol - Cell.Vol0) ** (n - 1) / Cell.Vol0 ** n
 
-            ge = np.zeros(self.g.shape, dtype=np.float16)
+            ge = np.zeros(self.g.shape, dtype=np.float32)
             for face in Cell.Faces:
                 for tri in face.Tris:
                     y1 = Ys[tri.Edge[0]]
@@ -59,7 +59,7 @@ class KgVolume(Kg):
             lambdaV = Set.lambdaV
             fact = lambdaV * (Cell.Vol - Cell.Vol0) ** (n - 1) / Cell.Vol0 ** n
 
-            ge = np.zeros(self.g.shape, dtype=np.float16)
+            ge = np.zeros(self.g.shape, dtype=np.float32)
             for face in Cell.Faces:
                 for tri in face.Tris:
                     y1 = Ys[tri.Edge[0]]

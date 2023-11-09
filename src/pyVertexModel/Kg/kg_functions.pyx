@@ -10,7 +10,7 @@ cimport numpy as np
 @cython.cdivision(True)
 @cython.nonecheck(False)
 @cython.boundscheck(False)
-cpdef np.ndarray assembleg(double[:] g, double[:] ge, np.ndarray nY):
+cpdef np.ndarray assembleg(float[:] g, float[:] ge, np.ndarray nY):
     cdef int dim = 3
     cdef int I
     cdef int cont = 0
@@ -48,13 +48,13 @@ cpdef np.ndarray assembleK(np.ndarray K, np.ndarray Ke, nY: np.ndarray):
 @cython.boundscheck(False)
 cpdef np.ndarray cross(np.ndarray y):
 
-    cdef double y0 = y[0]
-    cdef double y1 = y[1]
-    cdef double y2 = y[2]
+    cdef float y0 = y[0]
+    cdef float y1 = y[1]
+    cdef float y2 = y[2]
 
     cdef np.ndarray yMat = np.array([[0, -y2, y1],
                                      [y2, 0, -y0],
-                                     [-y1, y0, 0]], dtype=float)
+                                     [-y1, y0, 0]], dtype=np.float32)
     return yMat
 
 @cython.wraparound(False)
@@ -77,7 +77,7 @@ cpdef np.ndarray kK(np.ndarray y1_crossed, np.ndarray y2_crossed, np.ndarray y3_
     Returns:
     KK_value (ndarray): Resulting value for KK.
     """
-    cdef np.ndarray KIJ = np.zeros([3, 3], dtype=float)
+    cdef np.ndarray KIJ = np.zeros([3, 3], dtype=np.float32)
     KIJ[0, ] = (y2_crossed[0] - y3_crossed[0]) * (y1_crossed[0] - y3_crossed[0]) + (y2_crossed[1] - y3_crossed[1]) * (
                 y1_crossed[1] - y3_crossed[1]) + (y2_crossed[2] - y3_crossed[2]) * (y1_crossed[2] - y3_crossed[2])
     KIJ[1, ] = (y2_crossed[1] * y1[2] - y2_crossed[2] * y1[1]) - (y3_crossed[1] * y1[2] - y3_crossed[2] * y1[1])
@@ -115,17 +115,17 @@ cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
 
     gs = gs.reshape(-1, 1)  # Reshape gs to match the orientation in MATLAB
 
-    return gs, Ks, Kss
+    return np.array(gs, dtype=np.float32), np.array(Ks, dtype=np.float32), Kss
 
 @cython.wraparound(False)
 @cython.cdivision(True)
 @cython.nonecheck(False)
 @cython.boundscheck(False)
-cpdef np.ndarray compute_finalK_SurfaceEnergy(np.ndarray ge, np.ndarray K, double Area0):
+cpdef np.ndarray compute_finalK_SurfaceEnergy(np.ndarray ge, np.ndarray K, float Area0):
     cdef Py_ssize_t i, j
     cdef Py_ssize_t n = ge.shape[0]
-    cdef double[:] ge_view = ge
-    cdef double[:, :] K_view = K
+    cdef float[:] ge_view = ge
+    cdef float[:, :] K_view = K
 
     for i in range(n):
         if ge_view[i] != 0:
@@ -135,11 +135,11 @@ cpdef np.ndarray compute_finalK_SurfaceEnergy(np.ndarray ge, np.ndarray K, doubl
 
     return np.asarray(K_view)
 
-cpdef np.ndarray compute_finalK_Volume(np.ndarray ge, np.ndarray K, double Vol, double Vol0, int n_dim):
+cpdef np.ndarray compute_finalK_Volume(np.ndarray ge, np.ndarray K, float Vol, float Vol0, int n_dim):
     cdef Py_ssize_t i, j
     cdef Py_ssize_t n = ge.shape[0]
-    cdef double[:] ge_view = ge
-    cdef double[:, :] K_view = K
+    cdef float[:] ge_view = ge
+    cdef float[:, :] K_view = K
 
     for i in range(n):
         if ge_view[i] != 0:
@@ -154,8 +154,8 @@ cpdef np.ndarray compute_finalK_Volume(np.ndarray ge, np.ndarray K, double Vol, 
 @cython.nonecheck(False)
 @cython.boundscheck(False)
 cpdef gKDet(np.ndarray Y1, np.ndarray Y2, np.ndarray Y3):
-    cdef np.ndarray gs = np.zeros(9, dtype=float)
-    cdef np.ndarray Ks = np.zeros([9, 9], dtype=float)
+    cdef np.ndarray gs = np.zeros(9, dtype=np.float32)
+    cdef np.ndarray Ks = np.zeros([9, 9], dtype=np.float32)
 
     gs[:3] = np.cross(Y2, Y3)
     gs[3:6] = np.cross(Y3, Y1)
@@ -179,8 +179,8 @@ def mldivide_np(np.ndarray A, np.ndarray B):
     cdef int m = A.shape[0]
     cdef int n = A.shape[1]
     cdef int p = B.shape[0]
-    cdef double[:] X = np.empty(n, dtype=np.float64)
+    cdef float[:] X = np.empty(n, dtype=np.float32)
 
     X = np.linalg.solve(A, B)
 
-    return X
+    return np.array(X, dtype=np.float32)
