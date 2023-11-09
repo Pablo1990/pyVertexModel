@@ -8,7 +8,7 @@ class Cell:
     def __init__(self, mat_file=None):
 
         self.Y = np.empty(1, np.float32)
-        self.globalIDs = np.array([], dtype='int')
+        self.globalIds = np.array([], dtype='int')
         self.Faces = []
         self.Area = None
         self.Area0 = None
@@ -36,7 +36,7 @@ class Cell:
                 self.Vol0 = mat_file[6][0][0]
                 self.Area = mat_file[7][0][0]
                 self.Area0 = mat_file[8][0][0]
-                self.globalIDs = mat_file[9]
+                self.globalIds = mat_file[9]
                 self.c_global_ids = mat_file[10][0][0]
                 self.AliveStatus = mat_file[11][0][0]
 

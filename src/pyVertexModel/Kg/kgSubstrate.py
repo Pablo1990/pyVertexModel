@@ -10,26 +10,23 @@ class KgSubstrate(Kg):
     def compute_work(self, Geo, Set, Geo_n=None):
 
         start = time.time()
-        Energy_T = 0
         kSubstrate = Set.kSubstrate
         self.energy = 0
 
-        for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus]:
+        for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
             currentCell = Geo.Cells[c]
 
-            if Geo.Remodelling and c not in Geo.AssembleNodes:
-                continue
+            # if Geo.Remodelling and c not in Geo.AssembleNodes:
+            #     continue
 
-            if currentCell.AliveStatus:
-                ge = np.zeros(self.g.shape, dtype=np.float32)
-                Energy_c = 0
+            ge = np.zeros(self.g.shape, dtype=np.float32)
+            Energy_c = 0
 
-                for numFace in range(len(currentCell.Faces)):
-                    currentFace = Geo.Cells[c].Faces[numFace]
+            for numFace in range(len(currentCell.Faces)):
+                currentFace = Geo.Cells[c].Faces[numFace]
 
-                    if currentFace.InterfaceType != 'Bottom':
-                        continue
-                    c_tris = np.unique(np.concatenate(np.concatenate([tris.Edge for tris in currentFace.Tris] ), currentFace.globalIds.astype(int)))
+                if currentFace.InterfaceType == 'Bottom' or currentFace.InterfaceType == 3:
+                    c_tris = np.unique(np.concatenate(np.concatenate([tris.Edge for tris in currentFace.Tris]), currentFace.globalIds.astype(int)))
                     for currentVertex in c_tris:
                         z0 = Set.SubstrateZ
 
@@ -54,8 +51,8 @@ class KgSubstrate(Kg):
                         # Calculate energy
                         Energy_c = Energy_c + self.computeEnergySubstrate(kSubstrate, currentVertexYs[2], z0)
 
-                self.g = self.g + ge
-                self.energy += Energy_c
+            self.g = self.g + ge
+            self.energy += Energy_c
         end = time.time()
         self.timeInSeconds = f"Time at Substrate: {end - start} seconds"
     def compute_work_only_g(self, Geo, Set, Geo_n=None):
@@ -73,22 +70,21 @@ class KgSubstrate(Kg):
                 for numFace in range(len(currentCell.Faces)):
                     currentFace = Geo.Cells[c].Faces[numFace]
 
-                    if currentFace.InterfaceType != 'Bottom':
-                        continue
-                    c_tris = np.unique(np.concatenate(np.concatenate([tris.Edge for tris in currentFace.Tris] ), currentFace.globalIds.astype(int)))
-                    for currentVertex in c_tris:
-                        z0 = Set.SubstrateZ
+                    if currentFace.InterfaceType == 'Bottom' or currentFace.InterfaceType == 3:
+                        c_tris = np.unique(np.concatenate(np.concatenate([tris.Edge for tris in currentFace.Tris] ), currentFace.globalIds.astype(int)))
+                        for currentVertex in c_tris:
+                            z0 = Set.SubstrateZ
 
-                        if currentVertex <= len(Geo.Cells[c].globalIds):
-                            currentVertexYs = currentCell.Y[currentVertex, :]
-                            currentGlobalID = np.array([Geo.Cells[c].globalIds[currentVertex]], dtype=int)
-                        else:
-                            currentVertexYs = currentFace.Centre
-                            currentGlobalID = np.array([currentVertex], dtype=int)
+                            if currentVertex <= len(Geo.Cells[c].globalIds):
+                                currentVertexYs = currentCell.Y[currentVertex, :]
+                                currentGlobalID = np.array([Geo.Cells[c].globalIds[currentVertex]], dtype=int)
+                            else:
+                                currentVertexYs = currentFace.Centre
+                                currentGlobalID = np.array([currentVertex], dtype=int)
 
-                        # Calculate residual g
-                        g_current = self.computeGSubstrate(kSubstrate, currentVertexYs[2], z0)
-                        ge = kg_functions.assembleg(ge, g_current, currentGlobalID)
+                            # Calculate residual g
+                            g_current = self.computeGSubstrate(kSubstrate, currentVertexYs[2], z0)
+                            ge = kg_functions.assembleg(ge, g_current, currentGlobalID)
 
                 self.g = self.g + ge
 
