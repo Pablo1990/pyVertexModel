@@ -24,7 +24,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
         self.energy = sum(Energy.values())
 
         end = time.time()
-        self.timeInSeconds = f"Time at SA: {end - start} seconds"
+        self.timeInSeconds = f"Time at SurfaceCell: {end - start} seconds"
 
     def compute_work_only_g(self, Geo, Set, Geo_n=None):
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
