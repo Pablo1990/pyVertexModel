@@ -5,17 +5,30 @@ from src.pyVertexModel import tris
 
 class Face:
 
-    def __init__(self):
-        self.InterfaceType = None
-        self.ij = -1
-        self.globalIds = -1
-        self.Centre = -1
-        self.Area = -1
-        self.Area0 = -1
+    def __init__(self, mat_file=None):
         self.Tris = []
+        if mat_file is None:
+            self.InterfaceType = None
+            self.ij = -1
+            self.globalIds = -1
+            self.Centre = -1
+            self.Area = -1
+            self.Area0 = -1
+        else:
+            self.ij = mat_file[0][0] - 1
+            self.Centre = mat_file[1][0]
+            for c_tri in mat_file[2][0]:
+                self.Tris.append(tris.Tris(c_tri))
+            self.globalIds = mat_file[3][0] - 1
+            self.InterfaceType = mat_file[4][0][0]
+            self.Area = mat_file[5][0][0]
+            self.Area0 = mat_file[6][0][0]
+
+
         valueset = [0, 1, 2]
         catnames = ['Top', 'CellCell', 'Bottom']
         self.InterfaceType_allValues = dict(zip(valueset, catnames))
+
 
     def BuildFace(self, ci, cj, face_ids, nCells, Cell, XgID, Set, XgTop, XgBottom, oldFace=None):
         self.InterfaceType = None

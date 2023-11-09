@@ -4,20 +4,39 @@ from src.pyVertexModel import cell, face
 
 
 class Geo:
-    def __init__(self):
-        self.numF = None
-        self.numY = None
-        self.EdgeLengthAvg_0 = None
-        self.XgBottom = None
-        self.XgTop = None
-        self.XgID = None
-        self.nz = 1
-        self.ny = 3
-        self.nx = 3
+    def __init__(self, matFile=None):
+
         self.Cells = []
-        self.nCells = 0
-        self.BorderCells = None
-        self.non_dead_cells = []
+
+        if matFile is None:
+            self.numF = None
+            self.numY = None
+            self.EdgeLengthAvg_0 = None
+            self.XgBottom = None
+            self.XgTop = None
+            self.XgID = None
+            self.nz = 1
+            self.ny = 3
+            self.nx = 3
+            self.nCells = 0
+            self.BorderCells = None
+            self.non_dead_cells = []
+        else:
+            self.numF = matFile['numF'][0][0][0][0]
+            self.numY = matFile['numY'][0][0][0][0]
+            self.EdgeLengthAvg_0 = matFile['EdgeLengthAvg_0'][0][0][0][1:4]
+            self.XgBottom = matFile['XgBottom'][0][0][0]-1
+            self.XgTop = matFile['XgTop'][0][0][0] - 1
+            self.XgID = matFile['XgID'][0][0][0] - 1
+            self.nz = 1
+            self.ny = 3
+            self.nx = 3
+            self.nCells = matFile['nCells'][0][0][0][0]
+            self.BorderCells = None
+            for c_cell in matFile['Cells'][0][0][0]:
+                self.Cells.append(cell.Cell(c_cell))
+
+
 
     def BuildCells(self, Set, X, Twg):
 
