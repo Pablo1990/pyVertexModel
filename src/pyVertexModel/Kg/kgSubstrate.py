@@ -13,6 +13,8 @@ class KgSubstrate(Kg):
         kSubstrate = Set.kSubstrate
         self.energy = 0
 
+        energy_per_cell = [];
+
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
             currentCell = Geo.Cells[c]
 
@@ -26,7 +28,9 @@ class KgSubstrate(Kg):
                 currentFace = Geo.Cells[c].Faces[numFace]
 
                 if currentFace.InterfaceType == 'Bottom' or currentFace.InterfaceType == 3:
-                    c_tris = np.unique(np.concatenate(np.concatenate([tris.Edge for tris in currentFace.Tris]), currentFace.globalIds.astype(int)))
+                    c_tris = np.concatenate([tris.Edge for tris in currentFace.Tris])
+                    c_tris = np.append(c_tris, currentFace.globalIds.astype(int))
+                    c_tris = np.unique(c_tris)
                     for currentVertex in c_tris:
                         z0 = Set.SubstrateZ
 
@@ -52,6 +56,7 @@ class KgSubstrate(Kg):
                         Energy_c = Energy_c + self.computeEnergySubstrate(kSubstrate, currentVertexYs[2], z0)
 
             self.g = self.g + ge
+            energy_per_cell.append(Energy_c)
             self.energy += Energy_c
         end = time.time()
         self.timeInSeconds = f"Time at Substrate: {end - start} seconds"

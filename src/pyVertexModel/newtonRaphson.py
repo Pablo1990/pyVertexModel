@@ -1,8 +1,8 @@
 import time
 
 import numpy as np
-from src.pyVertexModel.Kg import kg_functions
 
+from src.pyVertexModel.Kg import kg_functions
 from src.pyVertexModel.Kg.kgContractility import KgContractility
 from src.pyVertexModel.Kg.kgSubstrate import KgSubstrate
 from src.pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
@@ -26,7 +26,7 @@ def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
     gr0 = gr
 
     # TODO: LOG
-    #Geo.log = f"{Geo.log} Step: {numStep}, Iter: 0 ||gr||= {gr} ||dyr||= {dyr} dt/dt0={Set.dt / Set.dt0:.3g}\n"
+    # Geo.log = f"{Geo.log} Step: {numStep}, Iter: 0 ||gr||= {gr} ||dyr||= {dyr} dt/dt0={Set.dt / Set.dt0:.3g}\n"
     print(f"Step: {numStep}, Iter: 0 ||gr||= {gr} ||dyr||= {dyr} dt/dt0={Set.dt / Set.dt0:.3g}\n")
 
     Energy = 0
@@ -41,15 +41,22 @@ def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
         end = time.time()
         print(f"Time at np.linalg.solve: {end - start} seconds")
 
+        if np.any(np.isnan(dy)):
+            print("error")
+
         alpha = LineSearch(Geo_0, Geo_n, Geo, Dofs, Set, g, dy)
         dy_reshaped = np.reshape(dy * alpha, (3, (Geo.numF + Geo.numY + Geo.nCells))).T
         Geo.UpdateVertices(dy_reshaped)
         Geo.UpdateMeasures()
         g, K, Energy, Geo = KgGlobal(Geo_0, Geo_n, Geo, Set)
+        if np.any(np.isinf(K)):
+            print("error")
         dyr = np.linalg.norm(dy[dof])
         gr = np.linalg.norm(g[dof])
-        #Geo.log = f"{Geo.log} Step: {numStep}, Iter: {Set.iter}, Time: {t} ||gr||= {gr:.3e} ||dyr||= {dyr:.3e} alpha= {alpha:.3e} nu/nu0={Set.nu / Set.nu0:.3g}\n"
-        print(f"Step: {numStep}, Iter: {Set.iter}, Time: {t} ||gr||= {gr:.3e} ||dyr||= {dyr:.3e} alpha= {alpha:.3e} nu/nu0={Set.nu / Set.nu0:.3g}\n")
+        # Geo.log = f"{Geo.log} Step: {numStep}, Iter: {Set.iter}, Time: {t} ||gr||= {gr:.3e} ||dyr||= {dyr:.3e} alpha=
+        # {alpha:.3e} nu/nu0={Set.nu / Set.nu0:.3g}\n"
+        print(f"Step: {numStep}, Iter: {Set.iter}, Time: {t} ||gr||= {gr:.3e} ||dyr||= {dyr:.3e} alpha= {alpha:.3e}"
+              f" nu/nu0={Set.nu / Set.nu0:.3g}\n")
 
         Set.iter += 1
         auxgr[ig] = gr
@@ -163,7 +170,7 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set):
         K += kg_subs.K
         E += kg_subs.energy
 
-    return g, K, E, Geo
+    return g, K, E
 
 def gGlobal(Geo_0, Geo_n, Geo, Set):
     # Surface Energy

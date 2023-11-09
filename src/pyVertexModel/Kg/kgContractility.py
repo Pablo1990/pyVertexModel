@@ -1,9 +1,8 @@
 import time
 
 import numpy as np
-from scipy.sparse import csc_matrix
-from src.pyVertexModel.Kg import kg_functions
 
+from src.pyVertexModel.Kg import kg_functions
 from src.pyVertexModel.Kg.kg import Kg
 
 

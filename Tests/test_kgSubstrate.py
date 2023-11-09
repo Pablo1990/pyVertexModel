@@ -1,6 +1,5 @@
 from unittest import TestCase
 
-import numpy as np
 import scipy
 
 from src.pyVertexModel.Kg.kgSubstrate import KgSubstrate

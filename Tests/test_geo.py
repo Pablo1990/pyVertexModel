@@ -1,7 +1,5 @@
 from unittest import TestCase
 
-import scipy
-
 
 class TestGeo(TestCase):
     def test_build_cells(self):
