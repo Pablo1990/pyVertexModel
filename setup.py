@@ -3,7 +3,7 @@ from Cython.Build import cythonize
 from setuptools import Extension, setup
 
 ext_options = {"compiler_directives": {"profile": True}, "annotate": True}
-extensions = [Extension("kg_functions", ["src/pyVertexModel/Kg/kg_functions.pyx"])]
+extensions = [Extension("src.pyVertexModel.Kg.kg_functions", ["src/pyVertexModel/Kg/kg_functions.pyx"])]
 
 setup(
     name='pyVertexModel',

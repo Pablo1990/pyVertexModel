@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 
 from src.pyVertexModel.Kg import kg_functions
@@ -6,6 +8,8 @@ from src.pyVertexModel.Kg.kg import Kg
 
 class KgTriAREnergyBarrier(Kg):
     def compute_work(self, Geo, Set, Geo_n=None):
+        start = time.time()
+
         self.energy = 0
 
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus]:
@@ -79,6 +83,9 @@ class KgTriAREnergyBarrier(Kg):
                         Energy_c = Energy_c + Set.lambdaR / 2 * np.sum(w_t ** 2) * 1 / (Set.lmin0 ** 4)
 
                 self.energy += Energy_c
+
+        end = time.time()
+        self.timeInSeconds = f"Time at AREnergyBarrier: {end - start} seconds"
     def compute_work_only_g(self, Geo, Set, Geo_n=None):
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus]:
             if Geo.Remodelling and c not in Geo.AssembleNodes:
@@ -137,3 +144,4 @@ class KgTriAREnergyBarrier(Kg):
                             gs[6:9] = Set.lambdaR * w_t[numY] * v_y3_3
 
                             self.g = kg_functions.assembleg(self.g[:], gs * 1 / (Set.lmin0 ** 4), nY[numY, :])
+

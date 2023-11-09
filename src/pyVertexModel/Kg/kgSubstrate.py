@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 
 from src.pyVertexModel.Kg import kg_functions
@@ -6,6 +8,8 @@ from src.pyVertexModel.Kg.kg import Kg
 
 class KgSubstrate(Kg):
     def compute_work(self, Geo, Set, Geo_n=None):
+
+        start = time.time()
         Energy_T = 0
         kSubstrate = Set.kSubstrate
         self.energy = 0
@@ -52,6 +56,8 @@ class KgSubstrate(Kg):
 
                 self.g = self.g + ge
                 self.energy += Energy_c
+        end = time.time()
+        self.timeInSeconds = f"Time at Substrate: {end - start} seconds"
     def compute_work_only_g(self, Geo, Set, Geo_n=None):
         kSubstrate = Set.kSubstrate
 

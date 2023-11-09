@@ -179,8 +179,6 @@ def mldivide_np(np.ndarray A, np.ndarray B):
     cdef int m = A.shape[0]
     cdef int n = A.shape[1]
     cdef int p = B.shape[0]
-    cdef float[:] X = np.empty(n, dtype=np.float32)
+    cdef float[:] X = np.array(np.linalg.solve(A, B), dtype=np.float32)
 
-    X = np.linalg.solve(A, B)
-
-    return np.array(X, dtype=np.float32)
+    return X

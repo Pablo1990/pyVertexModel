@@ -9,6 +9,7 @@ from src.pyVertexModel.Kg.kg import Kg
 class KgSurfaceCellBasedAdhesion(Kg):
     def compute_work(self, Geo, Set, Geo_n=None):
         Energy = {}
+        start = time.time()
 
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
 
@@ -21,6 +22,9 @@ class KgSurfaceCellBasedAdhesion(Kg):
             Energy[c] = Energy_c
 
         self.energy = sum(Energy.values())
+
+        end = time.time()
+        self.timeInSeconds = f"Time at SA: {end - start} seconds"
 
     def compute_work_only_g(self, Geo, Set, Geo_n=None):
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:

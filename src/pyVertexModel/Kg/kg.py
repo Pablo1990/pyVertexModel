@@ -12,6 +12,7 @@ class Kg:
         self.K = np.zeros([self.dimg, self.dimg], dtype=np.float32)
         self.energy = None
         self.dim = 3
+        self.timeInSeconds = -1
 
     @abstractmethod
     def compute_work(self, Geo, Set, Geo_n=None):

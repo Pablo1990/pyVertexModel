@@ -514,7 +514,8 @@ class VertexModel:
                     self.Set.nu = np.amax(self.Set.nu / 2, self.Set.nu0)
                     self.relaxingNu = True
             else:
-                self.backupVars.Geo_b.log = self.Geo.log
+                # TODO
+                #self.backupVars.Geo_b.log = self.Geo.log
                 self.Geo = self.backupVars.Geo_b
                 self.tr = self.backupVars.tr_b
                 self.Dofs = self.backupVars.Dofs

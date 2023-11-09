@@ -102,18 +102,12 @@ def LineSearch(Geo_0, Geo_n, Geo, Dofs, Set, gc, dy):
 
 def KgGlobal(Geo_0, Geo_n, Geo, Set):
     # Surface Energy
-    start = time.time()
     kg_SA = KgSurfaceCellBasedAdhesion(Geo)
     kg_SA.compute_work(Geo, Set)
-    end = time.time()
-    print(f"Time at SA: {end - start} seconds")
 
     # Volume Energy
-    start = time.time()
     kg_Vol = KgVolume(Geo)
     kg_Vol.compute_work(Geo, Set)
-    end = time.time()
-    print(f"Time at Volume: {end - start} seconds")
 
     # Viscous Energy
     start = time.time()

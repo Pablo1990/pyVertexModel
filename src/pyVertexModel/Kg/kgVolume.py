@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 
 from src.pyVertexModel.Kg import kg_functions
@@ -9,6 +11,9 @@ class KgVolume(Kg):
         # The residual g and Jacobian K of Volume Energy
         # Energy W_s= sum_cell lambdaV ((V-V0)/V0)^2
         n = 4  # 2 or 4 for now.
+
+        start = time.time()
+
         self.energy = 0
 
         # Loop over Cells
@@ -43,6 +48,9 @@ class KgVolume(Kg):
             self.K = kg_functions.compute_finalK_Volume(ge, self.K, Cell.Vol, Cell.Vol0, n)
 
             self.energy += lambdaV / n * ((Cell.Vol - Cell.Vol0) / Cell.Vol0) ** n
+
+        end = time.time()
+        self.timeInSeconds = f"Time at Volume: {end - start} seconds"
 
     def compute_work_only_g(self, Geo, Set, Geo_n=None):
         n = 4  # 2 or 4 for now.

@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 
 from src.pyVertexModel.Kg.kg import Kg
@@ -5,9 +7,12 @@ from src.pyVertexModel.Kg.kg import Kg
 
 class KgViscosity(Kg):
     def compute_work(self, Geo, Set, Geo_n=None):
+        start = time.time()
         self.K = (Set.nu / Set.dt) * np.eye(self.K.shape[0])
         self.calculate_g(Geo, Geo_n, Set)
         self.energy = (1 / 2) * np.dot(self.g.T, self.g) / Set.nu
+        end = time.time()
+        self.timeInSeconds = f"Time at Viscosity: {end - start} seconds"
 
     def compute_work_only_g(self, Geo, Set, Geo_n=None):
         self.calculate_g(Geo, Geo_n, Set)

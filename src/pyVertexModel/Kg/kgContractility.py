@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 from scipy.sparse import csc_matrix
 from src.pyVertexModel.Kg import kg_functions
@@ -7,6 +9,8 @@ from src.pyVertexModel.Kg.kg import Kg
 
 class KgContractility(Kg):
     def compute_work(self, Geo, Set, Geo_n=None):
+
+        start = time.time()
         oldSize = self.K.shape[0]
         # TODO:
         #self.K = self.K[range(Geo.numY * 3), range(Geo.numY * 3)]
@@ -44,6 +48,8 @@ class KgContractility(Kg):
         # self.K = np.pad(self.K, ((0, oldSize - self.K.shape[0]), (0, oldSize - self.K.shape[1])), 'constant')
 
         self.energy = sum(Energy.values())
+        end = time.time()
+        self.timeInSeconds = f"Time at LineTension: {end - start} seconds"
 
     def compute_work_only_g(self, Geo, Set, Geo_n=None):
         for cell in Geo.Cells:
