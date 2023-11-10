@@ -43,22 +43,23 @@ class KgSurfaceCellBasedAdhesion(Kg):
         ge = np.zeros(self.g.shape, dtype=np.float32)
         fact0 = 0
         for face in Cell.Faces:
-            if face.InterfaceType == 'Top':
-                Lambda = Set.lambdaS1 * Cell.ExternalLambda
-            elif face.InterfaceType == 'CellCell':
-                Lambda = Set.lambdaS2 * Cell.InternalLambda
-            elif face.InterfaceType == 'Bottom':
-                Lambda = Set.lambdaS3 * Cell.SubstrateLambda
-
+            if face.InterfaceType == 'Top' or face.InterfaceType == 0:
+                Lambda = Set.lambdaS1
+            elif face.InterfaceType == 'CellCell' or face.InterfaceType == 1:
+                Lambda = Set.lambdaS2
+            elif face.InterfaceType == 'Bottom' or face.InterfaceType == 2:
+                Lambda = Set.lambdaS3
             fact0 += Lambda * face.Area
+
         fact = fact0 / Cell.Area0 ** 2
+
         for face in Cell.Faces:
-            if face.InterfaceType == 'Top':
-                Lambda = Set.lambdaS1 * Cell.ExternalLambda
-            elif face.InterfaceType == 'CellCell':
-                Lambda = Set.lambdaS2 * Cell.InternalLambda
-            elif face.InterfaceType == 'Bottom':
-                Lambda = Set.lambdaS3 * Cell.SubstrateLambda
+            if face.InterfaceType == 'Top' or face.InterfaceType == 0:
+                Lambda = Set.lambdaS1
+            elif face.InterfaceType == 'CellCell' or face.InterfaceType == 1:
+                Lambda = Set.lambdaS2
+            elif face.InterfaceType == 'Bottom' or face.InterfaceType == 2:
+                Lambda = Set.lambdaS3
 
             for t in face.Tris:
                 y1 = Ys[t.Edge[0]]

@@ -7,6 +7,7 @@ class Geo:
     def __init__(self, matFile=None):
 
         self.Cells = []
+        self.Remodelling = False
 
         if matFile is None:
             self.numF = None
