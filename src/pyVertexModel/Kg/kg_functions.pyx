@@ -78,7 +78,14 @@ cpdef np.ndarray kK(np.ndarray y1_crossed, np.ndarray y2_crossed, np.ndarray y3_
     KK_value (ndarray): Resulting value for KK.
     """
     cdef np.ndarray KIJ = np.zeros([3, 3], dtype=np.float32)
-    KIJ = (y2_crossed - y3_crossed) * (y1_crossed - y3_crossed) + cross((y2_crossed * y1.transpose()).transpose()) - cross((y2_crossed * y3.transpose()).transpose()) - cross((y3_crossed * y1.transpose()).transpose())
+    cdef np.ndarray K_y2_y1 = np.dot(y2_crossed, y1)
+    cdef np.ndarray K_y2_y3 = np.dot(y2_crossed, y3)
+    cdef np.ndarray K_y3_y1 = np.dot(y3_crossed, y1)
+    print(y2_crossed - y3_crossed)
+    print(y1_crossed - y3_crossed)
+    print(cross(K_y2_y1))
+    print(K_y2_y1)
+    KIJ = (y2_crossed - y3_crossed) * (y1_crossed - y3_crossed) + cross(K_y2_y1) - cross(K_y2_y3) - cross(K_y3_y1)
     return KIJ
 
 @cython.wraparound(False)
@@ -110,12 +117,6 @@ cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
         [kK(y3_crossed, y1_crossed, y2_crossed, y3, y1, y2),
          kK(y3_crossed, y2_crossed, y1_crossed, y3, y2, y1), np.dot(Q3.transpose(), Q3)]
     ])
-
-    print(y3_crossed)
-    print(y1_crossed)
-    print(y2_crossed)
-    print(kK(y3_crossed, y1_crossed, y2_crossed, y3, y1, y2))
-    print(Ks)
 
     gs = gs.reshape(-1, 1)  # Reshape gs to match the orientation in MATLAB
 
