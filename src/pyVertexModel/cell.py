@@ -17,6 +17,7 @@ class Cell:
         self.AliveStatus = None
         # TODO: Save contractile forces (g) to output
         self.substrate_g = None
+        self.lambdaB_perc = 1
 
         if mat_file is None:
             self.ID = None
@@ -40,27 +41,26 @@ class Cell:
                 self.c_global_ids = mat_file[10][0][0]
                 self.AliveStatus = mat_file[11][0][0]
 
-
-    def ComputeCellArea(Cell, locationFilter=None):
+    def ComputeCellArea(self, locationFilter=None):
         totalArea = 0
-        for f in range(len(Cell.Faces)):
+        for f in range(len(self.Faces)):
             if locationFilter is not None:
-                if Cell.Faces[f].InterfaceType == locationFilter:
-                    totalArea = totalArea + Cell.Faces[f].Area
+                if self.Faces[f].InterfaceType == locationFilter:
+                    totalArea = totalArea + self.Faces[f].Area
             else:
-                totalArea = totalArea + Cell.Faces[f].Area
+                totalArea = totalArea + self.Faces[f].Area
 
-        Cell.Area = totalArea
+        self.Area = totalArea
         return totalArea
 
-    def ComputeCellVolume(Cell):
+    def ComputeCellVolume(self):
         v = 0
-        for f in range(len(Cell.Faces)):
-            face = Cell.Faces[f]
+        for f in range(len(self.Faces)):
+            face = self.Faces[f]
             for t in range(len(face.Tris)):
-                y1 = Cell.Y[face.Tris[t].Edge[0], :] - Cell.X
-                y2 = Cell.Y[face.Tris[t].Edge[1], :] - Cell.X
-                y3 = face.Centre - Cell.X
+                y1 = self.Y[face.Tris[t].Edge[0], :] - self.X
+                y2 = self.Y[face.Tris[t].Edge[1], :] - self.X
+                y3 = face.Centre - self.X
                 Ytri = np.array([y1, y2, y3])
 
                 currentV = np.linalg.det(Ytri) / 6
@@ -71,5 +71,5 @@ class Cell:
 
                 v += currentV
 
-        Cell.Vol = v
+        self.Vol = v
         return v

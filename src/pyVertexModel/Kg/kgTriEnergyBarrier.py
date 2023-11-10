@@ -11,8 +11,8 @@ class KgTriEnergyBarrier(Kg):
         start = time.time()
         self.energy = 0
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus]:
-            if Geo.Remodelling and c not in Geo.AssembleNodes:
-                continue
+            # if Geo.Remodelling and c not in Geo.AssembleNodes:
+            #     continue
 
             Cell = Geo.Cells[c]
             Ys = Cell.Y
@@ -32,8 +32,8 @@ class KgTriEnergyBarrier(Kg):
                     n3 = Cell.Faces[f].globalIds
                     nY = [Cell.globalIds[edge] for edge in Tris[t].Edge] + [n3]
 
-                    if Geo.Remodelling and not np.any(np.isin(nY, Geo.AssemblegIds)):
-                        continue
+                    # if Geo.Remodelling and not np.any(np.isin(nY, Geo.AssemblegIds)):
+                    #     continue
 
                     gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)
                     gs_fact = np.concatenate(gs * fact)
