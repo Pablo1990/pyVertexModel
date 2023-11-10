@@ -20,7 +20,7 @@ class Face:
             for c_tri in mat_file[2][0]:
                 self.Tris.append(tris.Tris(c_tri))
             self.globalIds = mat_file[3][0][0] - 1
-            self.InterfaceType = mat_file[4][0][0]
+            self.InterfaceType = mat_file[4][0][0] - 1
             self.Area = mat_file[5][0][0]
             self.Area0 = mat_file[6][0][0]
 

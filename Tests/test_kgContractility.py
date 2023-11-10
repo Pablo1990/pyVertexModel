@@ -13,6 +13,7 @@ class TestKgContractility(TestCase):
         geo_test = Geo(mat_info['Geo'])
         set_test = Set()
         set_test.stretch()
+        set_test.currentT = 0
         c_kg = KgContractility(geo_test)
         c_kg.compute_work(geo_test, set_test)
         self.assertAlmostEqual(c_kg.energy, 0.011311882052742)

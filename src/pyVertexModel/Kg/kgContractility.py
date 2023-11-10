@@ -15,33 +15,32 @@ class KgContractility(Kg):
         #self.K = self.K[range(Geo.numY * 3), range(Geo.numY * 3)]
 
         Energy = {}
-        for cell in Geo.Cells:
+        for cell in [cell for cell in Geo.Cells if cell.AliveStatus == 1]:
             c = cell.ID
-            if cell.AliveStatus:
-                ge = np.zeros(self.g.shape, dtype=np.float32)
-                Energy_c = 0
-                for currentFace in cell.Faces:
-                    l_i0 = Geo.EdgeLengthAvg_0[next(key for key, value in currentFace.InterfaceType_allValues.items()
-                                                    if value == currentFace.InterfaceType or key == currentFace.InterfaceType)]
-                    for currentTri in currentFace.Tris:
-                        if len(currentTri.SharedByCells) > 1:
-                            C, Geo = self.getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set)
+            ge = np.zeros(self.g.shape, dtype=np.float32)
+            Energy_c = 0
+            for currentFace in cell.Faces:
+                l_i0 = Geo.EdgeLengthAvg_0[next(key for key, value in currentFace.InterfaceType_allValues.items()
+                                                if value == currentFace.InterfaceType or key == currentFace.InterfaceType)]
+                for currentTri in currentFace.Tris:
+                    if len(currentTri.SharedByCells) > 1:
+                        C, Geo = self.getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set)
 
-                            y_1 = cell.Y[currentTri.Edge[0]]
-                            y_2 = cell.Y[currentTri.Edge[1]]
+                        y_1 = cell.Y[currentTri.Edge[0]]
+                        y_2 = cell.Y[currentTri.Edge[1]]
 
-                            g_current = self.computeGContractility(l_i0, y_1, y_2, C)
-                            ge = kg_functions.assembleg(ge[:], g_current[:], cell.globalIds[currentTri.Edge])
+                        g_current = self.computeGContractility(l_i0, y_1, y_2, C)
+                        ge = kg_functions.assembleg(ge[:], g_current[:], cell.globalIds[currentTri.Edge])
 
-                            # TODO
-                            #currentFace.Tris.ContractileG = np.linalg.norm(g_current[:3])
+                        # TODO
+                        #currentFace.Tris.ContractileG = np.linalg.norm(g_current[:3])
 
-                            K_current = self.computeKContractility(l_i0, y_1, y_2, C)
-                            self.K = kg_functions.assembleK(self.K, K_current, cell.globalIds[currentTri.Edge])
+                        K_current = self.computeKContractility(l_i0, y_1, y_2, C)
+                        self.K = kg_functions.assembleK(self.K, K_current, cell.globalIds[currentTri.Edge])
 
-                            Energy_c += self.computeEnergyContractility(l_i0, np.linalg.norm(y_1 - y_2), C)
-                self.g += ge
-                Energy[c] = Energy_c
+                        Energy_c += self.computeEnergyContractility(l_i0, np.linalg.norm(y_1 - y_2), C)
+            self.g += ge
+            Energy[c] = Energy_c
 
         # TODO:
         # self.K = np.pad(self.K, ((0, oldSize - self.K.shape[0]), (0, oldSize - self.K.shape[1])), 'constant')
