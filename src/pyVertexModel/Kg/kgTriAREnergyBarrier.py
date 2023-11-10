@@ -12,9 +12,9 @@ class KgTriAREnergyBarrier(Kg):
 
         self.energy = 0
 
-        for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus]:
-            if Geo.Remodelling and c not in Geo.AssembleNodes:
-                continue
+        for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
+            # if Geo.Remodelling and c not in Geo.AssembleNodes:
+            #     continue
 
             Energy_c = 0
             Cell = Geo.Cells[c]
@@ -23,15 +23,15 @@ class KgTriAREnergyBarrier(Kg):
             for f in range(len(Cell.Faces)):
                 Face = Cell.Faces[f]
 
-                if not Face.InterfaceType == 'CellCell':
+                if Face.InterfaceType != 'CellCell' and Face.InterfaceType != 1:
                     Tris = Cell.Faces[f].Tris
 
                     for t in range(len(Tris)):
                         n3 = Cell.Faces[f].globalIds
                         nY_original = [Cell.globalIds[edge] for edge in Tris[t].Edge] + [n3]
 
-                        if Geo.Remodelling and not np.any(np.isin(nY_original, Geo.AssemblegIds)):
-                            continue
+                        # if Geo.Remodelling and not np.any(np.isin(nY_original, Geo.AssemblegIds)):
+                        #     continue
 
                         y1 = Ys[Tris[t].Edge[0], :]
                         y2 = Ys[Tris[t].Edge[1], :]
@@ -82,7 +82,7 @@ class KgTriAREnergyBarrier(Kg):
 
                         Energy_c = Energy_c + Set.lambdaR / 2 * np.sum(w_t ** 2) * 1 / (Set.lmin0 ** 4)
 
-                self.energy += Energy_c
+            self.energy += Energy_c
 
         end = time.time()
         self.timeInSeconds = f"Time at AREnergyBarrier: {end - start} seconds"

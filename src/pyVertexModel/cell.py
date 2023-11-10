@@ -36,7 +36,7 @@ class Cell:
                 self.Vol0 = mat_file[6][0][0]
                 self.Area = mat_file[7][0][0]
                 self.Area0 = mat_file[8][0][0]
-                self.globalIds = mat_file[9]
+                self.globalIds = np.concatenate(mat_file[9])
                 self.c_global_ids = mat_file[10][0][0]
                 self.AliveStatus = mat_file[11][0][0]
 
