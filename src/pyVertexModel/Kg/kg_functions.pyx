@@ -100,20 +100,20 @@ cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
     cdef np.ndarray Q2 = y3_crossed - y1_crossed
     cdef np.ndarray Q3 = y1_crossed - y2_crossed
 
-    cdef float fact = 1 / (2 * np.linalg.norm(q))
+    cdef float fact = 1 / np.dot(2, np.linalg.norm(q))
 
-    cdef np.ndarray gs = fact * np.concatenate([np.dot(Q1.transpose(), q), np.dot(Q2.transpose(), q), np.dot(Q3.transpose(), q)])
+    cdef np.ndarray gs = np.dot(fact,  np.concatenate([np.dot(Q1.transpose(), q), np.dot(Q2.transpose(), q), np.dot(Q3.transpose(), q)]))
 
-    cdef np.ndarray Kss = -(2 / np.linalg.norm(q)) * np.outer(gs, gs)
+    cdef np.ndarray Kss = np.dot(-(2 / np.linalg.norm(q)), np.outer(gs, gs))
 
-    cdef np.ndarray Ks = fact * np.block([
+    cdef np.ndarray Ks = np.dot(fact, np.block([
         [np.dot(Q1.transpose(), Q1), kK(y1_crossed, y2_crossed, y3_crossed, y1, y2, y3),
          kK(y1_crossed, y3_crossed, y2_crossed, y1, y3, y2)],
         [kK(y2_crossed, y1_crossed, y3_crossed, y2, y1, y3), np.dot(Q2.transpose(), Q2),
          kK(y2_crossed, y3_crossed, y1_crossed, y2, y3, y1)],
         [kK(y3_crossed, y1_crossed, y2_crossed, y3, y1, y2),
          kK(y3_crossed, y2_crossed, y1_crossed, y3, y2, y1), np.dot(Q3.transpose(), Q3)]
-    ])
+    ]))
 
     gs = gs.reshape(-1, 1)  # Reshape gs to match the orientation in MATLAB
 

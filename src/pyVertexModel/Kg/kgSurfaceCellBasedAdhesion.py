@@ -49,7 +49,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
                 Lambda = Set.lambdaS2
             elif face.InterfaceType == 'Bottom' or face.InterfaceType == 2:
                 Lambda = Set.lambdaS3
-            fact0 += Lambda * face.Area
+            fact0 += (Lambda * face.Area)
 
         fact = fact0 / Cell.Area0 ** 2
 
@@ -76,7 +76,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
                 gs = np.concatenate(Lambda * gs)
                 ge = kg_functions.assembleg(ge[:], gs[:], np.array(nY, dtype='int'))
 
-                Ks = fact * Lambda * (Ks + Kss)
+                Ks = np.dot(fact * Lambda, (Ks + Kss))
                 self.K = kg_functions.assembleK(self.K, Ks, np.array(nY, dtype='int'))
         self.g += ge * fact
 

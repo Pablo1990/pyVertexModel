@@ -134,6 +134,8 @@ class Set:
         self.VFixd = -1.5
         self.ApplyBC = True
 
+        self.lambdaS3 = 0.1
+
         self.InputGeo = 'Bubbles'
         self.VTK = False
 
