@@ -34,5 +34,5 @@ class KgViscosity(Kg):
                 if not isinstance(Face.Centre, str) and not isinstance(Face_n.Centre, str):
                     dY[np.array(Face.globalIds, dtype=int), :] = (Face.Centre - Face_n.Centre)
 
-            dY[np.array(Cell.cglobalIds, dtype=int), :] = (Cell.X - Cell_n.X)
+            #dY[np.array(Cell.cglobalIds, dtype=int), :] = (Cell.X - Cell_n.X)
         self.g[:] = (Set.nu / Set.dt) * dY.flatten()
