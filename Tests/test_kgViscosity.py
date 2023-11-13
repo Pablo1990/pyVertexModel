@@ -14,14 +14,14 @@ class TestKgViscosity(TestCase):
         geo_test = Geo(mat_info['Geo'])
         set_test = Set()
         set_test.stretch()
+        set_test.dt = 1
         v_kg = KgViscosity(geo_test)
         v_kg.compute_work(geo_test, set_test, geo_test)
         self.assertAlmostEqual(v_kg.energy, 0)
 
         geo_n_test = Geo(mat_info['Geo'])
-        for cell in geo_n_test.Cells:
-            cell.Y = cell.Y/10
+        geo_n_test.Cells[0].Y = geo_n_test.Cells[0].Y / 100
 
         v_kg = KgViscosity(geo_test)
-        v_kg.compute_work(geo_test, set_test)
-        self.assertAlmostEqual(v_kg.energy, 0)
+        v_kg.compute_work(geo_test, set_test, geo_n_test)
+        self.assertAlmostEqual(v_kg.energy, 3.194411761833479e+04, 3)

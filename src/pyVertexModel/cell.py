@@ -29,7 +29,7 @@ class Cell:
             self.T = mat_file[2] - 1
 
             if len(mat_file[4]) > 0:
-                self.Y = mat_file[3]
+                self.Y = np.array(mat_file[3], dtype=np.float32)
                 for c_face in mat_file[4][0]:
                     self.Faces.append(face.Face(c_face))
 
@@ -37,8 +37,8 @@ class Cell:
                 self.Vol0 = mat_file[6][0][0]
                 self.Area = mat_file[7][0][0]
                 self.Area0 = mat_file[8][0][0]
-                self.globalIds = np.concatenate(mat_file[9])
-                self.c_global_ids = mat_file[10][0][0]
+                self.globalIds = np.concatenate(mat_file[9]) - 1
+                self.c_global_ids = mat_file[10][0][0] - 1
                 self.AliveStatus = mat_file[11][0][0]
 
     def ComputeCellArea(self, locationFilter=None):
