@@ -81,11 +81,8 @@ cpdef np.ndarray kK(np.ndarray y1_crossed, np.ndarray y2_crossed, np.ndarray y3_
     cdef np.ndarray K_y2_y1 = np.dot(y2_crossed, y1)
     cdef np.ndarray K_y2_y3 = np.dot(y2_crossed, y3)
     cdef np.ndarray K_y3_y1 = np.dot(y3_crossed, y1)
-    print(y2_crossed - y3_crossed)
-    print(y1_crossed - y3_crossed)
-    print(cross(K_y2_y1))
-    print(K_y2_y1)
-    KIJ = (y2_crossed - y3_crossed) * (y1_crossed - y3_crossed) + cross(K_y2_y1) - cross(K_y2_y3) - cross(K_y3_y1)
+
+    KIJ = np.dot(y2_crossed - y3_crossed, y1_crossed - y3_crossed) + cross(K_y2_y1) - cross(K_y2_y3) - cross(K_y3_y1)
     return KIJ
 
 @cython.wraparound(False)
