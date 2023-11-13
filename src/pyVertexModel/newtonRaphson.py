@@ -48,7 +48,7 @@ def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
         dy_reshaped = np.reshape(dy * alpha, (3, (Geo.numF + Geo.numY + Geo.nCells))).T
         Geo.UpdateVertices(dy_reshaped)
         Geo.UpdateMeasures()
-        g, K, Energy, Geo = KgGlobal(Geo_0, Geo_n, Geo, Set)
+        g, K, Energy = KgGlobal(Geo_0, Geo_n, Geo, Set)
         if np.any(np.isinf(K)):
             print("error")
         dyr = np.linalg.norm(dy[dof])
