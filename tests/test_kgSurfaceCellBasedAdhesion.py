@@ -9,7 +9,7 @@ from src.pyVertexModel.set import Set
 
 class TestKgSurfaceCellBasedAdhesion(TestCase):
     def test_compute_work(self):
-        mat_info = scipy.io.loadmat('data/Geo_var_3x3_stretch.mat')
+        mat_info = scipy.io.loadmat('tests/data/Geo_var_3x3_stretch.mat')
         geo_test = Geo(mat_info['Geo'])
         set_test = Set()
         set_test.stretch()

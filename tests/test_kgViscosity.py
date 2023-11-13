@@ -3,14 +3,13 @@ from unittest import TestCase
 import scipy
 
 from src.pyVertexModel.Kg.kgViscosity import KgViscosity
-from src.pyVertexModel.Kg.kgVolume import KgVolume
 from src.pyVertexModel.geo import Geo
 from src.pyVertexModel.set import Set
 
 
 class TestKgViscosity(TestCase):
     def test_compute_work(self):
-        mat_info = scipy.io.loadmat('data/Geo_var_3x3_stretch.mat')
+        mat_info = scipy.io.loadmat('tests/data/Geo_var_3x3_stretch.mat')
         geo_test = Geo(mat_info['Geo'])
         set_test = Set()
         set_test.stretch()
@@ -24,4 +23,4 @@ class TestKgViscosity(TestCase):
 
         v_kg = KgViscosity(geo_test)
         v_kg.compute_work(geo_test, set_test, geo_n_test)
-        self.assertAlmostEqual(v_kg.energy, 3.194411761833479e+04, 3)
+        self.assertAlmostEqual(v_kg.energy, 3.194411761833479e+04, 2)

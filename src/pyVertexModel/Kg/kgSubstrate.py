@@ -13,7 +13,7 @@ class KgSubstrate(Kg):
         kSubstrate = Set.kSubstrate
         self.energy = 0
 
-        energy_per_cell = [];
+        energy_per_cell = []
 
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
             currentCell = Geo.Cells[c]
@@ -27,7 +27,7 @@ class KgSubstrate(Kg):
             for numFace in range(len(currentCell.Faces)):
                 currentFace = Geo.Cells[c].Faces[numFace]
 
-                if currentFace.InterfaceType == 'Bottom' or currentFace.InterfaceType == 3:
+                if currentFace.InterfaceType == 'Bottom' or currentFace.InterfaceType == 2:
                     c_tris = np.concatenate([tris.Edge for tris in currentFace.Tris])
                     c_tris = np.append(c_tris, currentFace.globalIds.astype(int))
                     c_tris = np.unique(c_tris)

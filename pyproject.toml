@@ -1,3 +1,124 @@
 [build-system]
-requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
+requires = [
+    "setuptools",
+    "setuptools-scm",
+    "cython",
+    "wheel",
+    "numpy"
+]
+
+[project]
+name = "pyVertexModel"
+dynamic = [
+    "version",
+]
+dependencies = [
+    "cython",
+    "numpy",
+    "scipy",
+    "pillow",
+    "scikit-image==0.22.0",
+    "cython==3.0.5",
+]
+
+[tool.coverage]
+report = {skip_covered = true, sort = "cover"}
+run = {branch = true, parallel = true, source = [
+    "pyVertexModel",
+]}
+paths.source = [
+    "src",
+    ".tox*/*/lib/python*/site-packages",
+    ".tox*\\*\\Lib\\site-packages",
+]
+[tool.pytest.ini_options]
+addopts = "--color=yes -v"
+testpaths = [
+    "tests",
+]
+
+[tool.ruff]
+fix = true
+force-exclude = true
+ignore = [
+    "B905", # set 'strict=' for zip
+    "SIM105", # use contextlib.suppress(IndexError)
+]
+per-file-ignores = {"__init__.py" = [
+    "F401", # unused-import
+], "test_*.py" = [
+    "S101", # use of 'assert'
+]}
+select = [
+    "A",
+    "B",
+    "C",
+    "DTZ",
+    "E",
+    "EM",
+    "F",
+    "FBT",
+    "I",
+    "ICN",
+    "ISC",
+    "N",
+    "PLC",
+    "PLE",
+    "PLR",
+    "PLW",
+    "Q",
+    "RUF",
+    "S",
+    "SIM",
+    "T",
+    "TID",
+    "UP",
+    "W",
+    "YTT",
+]
+target-version = "py39"
+
+[tool.tomlsort]
+all = true
+spaces_indent_inline_array = 4
+trailing_comma_inline_array = true
+overrides."project.classifiers".inline_arrays = false
+overrides."tool.coverage.paths.source".inline_arrays = false
+overrides."tool.ruff.isort.section-order".inline_arrays = false
+
+[tool.tox]
+legacy_tox_ini = """
+    [gh-actions]
+    python =
+        3.9: py39
+        3.10: py310
+
+    [gh-actions:env]
+    PLATFORM =
+        macos-latest: macos
+        ubuntu-latest: linux
+        windows-latest: windows
+
+    [testenv]
+    platform =
+        linux: linux
+        macos: darwin
+        windows: win32
+    passenv =
+        CI
+        DISPLAY
+        GITHUB_ACTIONS
+        NUMPY_EXPERIMENTAL_ARRAY_FUNCTION
+        PYVISTA_OFF_SCREEN
+        XAUTHORITY
+    deps =
+        pyqt5
+        pytest-cov
+        pytest-qt
+    commands = pytest --cov --cov-report=lcov
+
+    [tox]
+    envlist = py3{9,10}-{linux,macos,windows}
+    isolated_build=true
+"""

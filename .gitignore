@@ -168,3 +168,5 @@ src/pyVertexModel/Kg/kg_functions.c
 *.html
 
 *.csv
+
+*.lcov

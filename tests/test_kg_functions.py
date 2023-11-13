@@ -7,7 +7,7 @@ from src.pyVertexModel.Kg import kg_functions
 
 class Test(TestCase):
     def test_k_k(self):
-        mat_info = scipy.io.loadmat('data/kK_test.mat')
+        mat_info = scipy.io.loadmat('tests/data/kK_test.mat')
         output_KK = kg_functions.kK(mat_info['y1_Crossed'], mat_info['y2_Crossed'], mat_info['y3_Crossed'],
                                     mat_info['y1'][0], mat_info['y2'][0], mat_info['y3'][0])
 
