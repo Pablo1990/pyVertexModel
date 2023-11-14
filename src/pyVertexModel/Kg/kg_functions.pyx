@@ -115,7 +115,6 @@ cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
          kK(y3_crossed, y2_crossed, y1_crossed, y3, y2, y1), np.dot(Q3.transpose(), Q3)]
     ]))
 
-    gs = gs.reshape(-1, 1)  # Reshape gs to match the orientation in MATLAB
 
     return np.array(gs, dtype=np.float32), np.array(Ks, dtype=np.float32), Kss
 

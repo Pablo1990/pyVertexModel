@@ -36,7 +36,7 @@ class KgTriEnergyBarrier(Kg):
                     #     continue
 
                     gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)
-                    gs_fact = np.concatenate(gs * fact)
+                    gs_fact = gs * fact
                     self.g = kg_functions.assembleg(self.g[:], gs_fact[:], np.array(nY, dtype='int'))
                     if calculate_K:
                         Ks = (gs.dot(gs.T) * fact2) + Ks * fact + Kss * fact
