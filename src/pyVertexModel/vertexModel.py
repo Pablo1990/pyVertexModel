@@ -21,7 +21,7 @@ class VertexModel:
         self.Geo = Geo()
         self.Set = Set()
         self.Set.stretch()
-        self.Dofs = degreesOfFreedom.DegreesOfFreedom()
+        self.Dofs = degreesOfFreedom.DegreesOfFreedom(None)
         #self.Set = WoundDefault(self.Set)
         self.InitiateOutputFolder()
 

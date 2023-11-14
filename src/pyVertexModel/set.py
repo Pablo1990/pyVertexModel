@@ -5,7 +5,7 @@ import numpy as np
 
 
 class Set:
-    def __init__(self):
+    def __init__(self, mat_file=None):
         ## =============================  Topology ============================
         self.SeedingMethod = 1
         self.s = 1.5

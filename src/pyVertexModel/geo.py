@@ -136,8 +136,8 @@ class Geo:
         for c in [cell.ID for cell in self.Cells if cell.AliveStatus]:
             dY = dy_reshaped[self.Cells[c].globalIds, :]
             self.Cells[c].Y += dY
-            dYc = dy_reshaped[self.Cells[c].cglobalIds, :]
-            self.Cells[c].X += dYc
+            #dYc = dy_reshaped[self.Cells[c].cglobalIds, :]
+            #self.Cells[c].X += dYc
             for f in range(len(self.Cells[c].Faces)):
                 self.Cells[c].Faces[f].Centre += dy_reshaped[self.Cells[c].Faces[f].globalIds, :]
 
@@ -295,8 +295,8 @@ class Geo:
 
         self.numF = g_ids_tot_f - 1
 
-        for c in range(self.nCells):
-            self.Cells[c].cglobalIds = c + self.numY + self.numF
+        #for c in range(self.nCells):
+        #    self.Cells[c].cglobalIds = c + self.numY + self.numF
 
     def BuildYFromX(self, Cell, Geo, Set):
         Tets = Cell.T

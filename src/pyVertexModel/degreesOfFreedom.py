@@ -2,11 +2,14 @@ import numpy as np
 
 
 class DegreesOfFreedom:
-    def __init__(self):
-        self.Free = []
-        self.Fix = []
-        self.FixP = []
-        self.FixC = []
+    def __init__(self, mat_file=None):
+        if mat_file is None:
+            self.Free = []
+            self.Fix = []
+            self.FixP = []
+            self.FixC = []
+        else:
+            self.Free = mat_file[0]
 
     def ApplyBoundaryCondition(self, t, Geo, Set):
         if Set.TStartBC <= t <= Set.TStopBC:
