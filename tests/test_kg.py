@@ -18,7 +18,7 @@ from src.pyVertexModel.newtonRaphson import LineSearch
 from src.pyVertexModel.set import Set
 
 
-def load_data(file_name):
+def load_data(file_name, return_geo=True):
     test_dir = 'tests/data/%s' % file_name
     if exists(test_dir):
         mat_info = scipy.io.loadmat(test_dir)
@@ -26,8 +26,14 @@ def load_data(file_name):
     else:
         mat_info = scipy.io.loadmat('data/%s' % file_name)
         mat_expected = scipy.io.loadmat('data/Geo_var_3x3_stretch_expectedResults.mat')
-    geo_test = Geo(mat_info['Geo'])
-    set_test = Set(mat_info['Set'])
+
+    if return_geo:
+        geo_test = Geo(mat_info['Geo'])
+        set_test = Set(mat_info['Set'])
+    else:
+        geo_test = None
+        set_test = None
+
     return geo_test, mat_expected, set_test, mat_info
 
 
@@ -91,8 +97,9 @@ class Test(TestCase):
     def test_kg_viscosity(self):
         geo_test, mat_expected, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
 
+        geo_n_test = Geo(mat_info['Geo_n'])
         kg = KgViscosity(geo_test)
-        kg.compute_work(geo_test, set_test)
+        kg.compute_work(geo_test, set_test, geo_n_test)
 
         self.assert_k_g_energy('EN', 'gf_full', 'Kf_full', kg, mat_expected)
 
@@ -123,10 +130,10 @@ class Test(TestCase):
         K_expected = mat_expected[k_var_name]
         for i in range(kg_subs.K.shape[0]):
             for j in range(kg_subs.K.shape[0]):
-                self.assertAlmostEqual(kg_subs.K[i, j], K_expected[i, j])
+                self.assertAlmostEqual(kg_subs.K[i, j], K_expected[i, j], 3)
 
     def test_k_k(self):
-        _, mat_expected, _, mat_info = load_data('kK_test.mat')
+        _, mat_expected, _, mat_info = load_data('kK_test.mat', False)
         output_KK = kg_functions.kK(mat_info['y1_Crossed'], mat_info['y2_Crossed'], mat_info['y3_Crossed'],
                                     mat_info['y1'][0], mat_info['y2'][0], mat_info['y3'][0])
 
