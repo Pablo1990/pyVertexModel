@@ -29,24 +29,19 @@ cpdef np.ndarray assembleg(float[:] g, float[:] ge, np.ndarray nY):
 @cython.nonecheck(False)
 @cython.boundscheck(False)
 cpdef np.ndarray assembleK(float[:, :] K, float[:, :] Ke, nY: np.ndarray):
-
+    #TODO: IMPROVE LIKE ASSEMBLE_G
     cdef int dim = 3
+    cdef np.ndarray idofg = np.zeros(len(nY) * dim, dtype=int)
     cdef int I
-    cdef int J
-    cdef int cont_row = 0
-    cdef int cont_col = 0
-    cdef int col
-    cdef int row
-
     for I in range(len(nY)):
-        for col in range(nY[I] * dim, (nY[I] + 1) * dim):
-            for J in range(len(nY)):
-                for row in range(nY[J] * dim, (nY[J] + 1) * dim):
-                    if Ke[cont_col, cont_row] != 0:
-                        K[col, row] = K[col, row] + Ke[cont_col, cont_row]
-                    cont_row = cont_row + 1
-            cont_col = cont_col + 1
-            cont_row = 0
+        idofg[(I * dim): ((I + 1) * dim)] = np.arange(nY[I] * dim, (nY[I] + 1) * dim)
+
+    # Update the matrix K using sparse matrix addition
+    cdef int i, j
+    for i in range(len(nY) * dim):
+        for j in range(len(nY) * dim):
+            if Ke[i, j] != 0:
+                K[idofg[i], idofg[j]] = K[idofg[i], idofg[j]] + Ke[i, j]
 
     return np.array(K, dtype=np.float32)
 

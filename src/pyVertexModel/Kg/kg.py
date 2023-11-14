@@ -18,16 +18,17 @@ class Kg:
     def compute_work(self, Geo, Set, Geo_n=None, calculate_K=True):
         pass
 
-    def assembleK(self, Ke, nY):
-        idofg = np.zeros(len(nY) * self.dim, dtype=int)
-
+    def assemble_k(self, Ke, nY):
+        dim = 3
+        ids = np.indices((len(nY) * dim, len(nY) * dim))
+        idofg = np.zeros(len(nY) * dim, dtype=int)
         for I in range(len(nY)):
-            idofg[(I * self.dim): ((I + 1) * self.dim)] = np.arange(nY[I] * self.dim, (nY[I] + 1) * self.dim)
+            idofg[(I * dim): ((I + 1) * dim)] = np.arange(nY[I] * dim, (nY[I] + 1) * dim)
 
-        # Update the matrix K using sparse matrix addition
-        self.K[idofg, idofg] = self.K[idofg, idofg] + Ke
+        indices = np.meshgrid(idofg, idofg)
+        self.K[indices[0], indices[1]] += Ke
 
-    def assembleg(self, g, ge, nY):
+    def assemble_g(self, g, ge, nY):
         '''
 
         :param g:
