@@ -22,25 +22,33 @@ cpdef np.ndarray assembleg(float[:] g, float[:] ge, np.ndarray nY):
                 g[col] = g[col] + ge[cont]
             cont = cont + 1
 
-    return np.array(g)
+    return np.array(g, dtype=np.float32)
 
 @cython.wraparound(False)
 @cython.cdivision(True)
 @cython.nonecheck(False)
 @cython.boundscheck(False)
-cpdef np.ndarray assembleK(np.ndarray K, np.ndarray Ke, nY: np.ndarray):
-    #TODO: IMPROVE LIKE ASSEMBLE_G
+cpdef np.ndarray assembleK(float[:, :] K, float[:, :] Ke, nY: np.ndarray):
+
     cdef int dim = 3
-    cdef np.ndarray idofg = np.zeros(len(nY) * dim, dtype=int)
     cdef int I
+    cdef int J
+    cdef int cont_row = 0
+    cdef int cont_col = 0
+    cdef int col
+    cdef int row
+
     for I in range(len(nY)):
-        idofg[(I * dim): ((I + 1) * dim)] = np.arange(nY[I] * dim, (nY[I] + 1) * dim)
+        for col in range(nY[I] * dim, (nY[I] + 1) * dim):
+            for J in range(len(nY)):
+                for row in range(nY[J] * dim, (nY[J] + 1) * dim):
+                    if Ke[cont_col, cont_row] != 0:
+                        K[col, row] = K[col, row] + Ke[cont_col, cont_row]
+                    cont_row = cont_row + 1
+            cont_col = cont_col + 1
+            cont_row = 0
 
-    # Update the matrix K using sparse matrix addition
-    cdef np.ndarray ids = np.arange(len(nY)*3)
-    K[idofg, idofg] = K[idofg, idofg] + Ke[ids, ids]
-
-    return K
+    return np.array(K, dtype=np.float32)
 
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -116,7 +124,7 @@ cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
     ]))
 
 
-    return np.array(gs, dtype=np.float32), np.array(Ks, dtype=np.float32), Kss
+    return np.array(gs, dtype=np.float32), np.array(Ks, dtype=np.float32), np.array(Kss, dtype=np.float32)
 
 @cython.wraparound(False)
 @cython.cdivision(True)

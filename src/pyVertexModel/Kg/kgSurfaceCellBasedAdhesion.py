@@ -66,7 +66,6 @@ class KgSurfaceCellBasedAdhesion(Kg):
                 else:
                     ge = self.calculate_g(Lambda, ge, nY, y1, y2, y3)
 
-
         self.g += ge * fact
         if calculate_K:
             self.K = kg_functions.compute_finalK_SurfaceEnergy(ge, self.K, Cell.Area0)
@@ -78,8 +77,8 @@ class KgSurfaceCellBasedAdhesion(Kg):
         gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)
         gs = Lambda * gs
         ge = kg_functions.assembleg(ge[:], gs[:], np.array(nY, dtype='int'))
-        Ks = np.dot(fact * Lambda, (Ks + Kss))
-        self.K = kg_functions.assembleK(self.K, Ks, np.array(nY, dtype='int'))
+        Ks = np.array(np.dot(fact * Lambda, (Ks + Kss)), dtype=np.float32)
+        self.K = kg_functions.assembleK(self.K[:, :], Ks[:, :], np.array(nY, dtype='int'))
         return ge
 
     def calculate_g(self, Lambda, ge, nY, y1, y2, y3):
