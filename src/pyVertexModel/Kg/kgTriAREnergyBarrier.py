@@ -69,6 +69,12 @@ class KgTriAREnergyBarrier(Kg):
                             gs[3:6] = Set.lambdaR * w_t[numY] * v_y3_2
                             gs[6:9] = Set.lambdaR * w_t[numY] * v_y3_3
 
+                            ## gt
+                            gt = np.zeros([9, 1], dtype=np.float32)
+                            gt[1:3, 1] = v_y3_1
+                            gt[4:6, 1] = v_y3_2
+                            gt[7:9, 1] = v_y3_3
+
                             gs_fact = gs / (Set.lmin0 ** 4)
                             self.g = kg_functions.assembleg(self.g[:], gs_fact[:], nY[numY, :])
 
@@ -77,7 +83,7 @@ class KgTriAREnergyBarrier(Kg):
                                                     [-np.eye(3), np.eye(3), np.zeros((3, 3))],
                                                     [np.eye(3), np.zeros((3, 3)), -np.eye(3)]])
 
-                                Ks = Set.lambdaR * w_t[numY] * matrixK + Set.lambdaR * (np.outer(gs, gs))
+                                Ks = Set.lambdaR * w_t[numY] * matrixK + Set.lambdaR * (np.dot(gt, gt.tranpose()))
                                 Ks_c = np.array(Ks * 1 / (Set.lmin0 ** 4), dtype=np.float32)
                                 self.K = kg_functions.assembleK(self.K[:, :], Ks_c[:, :], nY[numY, :])
 
