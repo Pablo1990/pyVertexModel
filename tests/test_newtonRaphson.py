@@ -15,8 +15,8 @@ class TestKgVolume(TestCase):
         geo_n_test = Geo(mat_info['Geo_n'])
         geo_0_test = Geo(mat_info['Geo_0'])
         dofs_test = DegreesOfFreedom(mat_info['Dofs'])
-        g_test = mat_info['g']
-        dy_test = mat_info['dy']
+        g_test = mat_info['g'][:, 0]
+        dy_test = mat_info['dy'][:, 0]
         set_test = Set(mat_info['Set'])
         alpha = LineSearch(geo_0_test, geo_n_test, geo_test, dofs_test, set_test, g_test, dy_test)
         self.assertAlmostEqual(alpha, 0.694837969748151)

@@ -9,7 +9,10 @@ class DegreesOfFreedom:
             self.FixP = []
             self.FixC = []
         else:
-            self.Free = mat_file[0]
+            self.Free = np.array(mat_file['Free'][0][0][:, 0], dtype=int) - 1
+            self.Fix = np.array(mat_file['Fix'][0][0][:, 0], dtype=int) - 1
+            self.FixP = np.array(mat_file['FixP'][0][0][:, 0], dtype=int) - 1
+            self.FixC = np.array(mat_file['FixC'][0][0][:, 0], dtype=int) - 1
 
     def ApplyBoundaryCondition(self, t, Geo, Set):
         if Set.TStartBC <= t <= Set.TStopBC:

@@ -173,7 +173,7 @@ class KgContractility(Kg):
         return contractilityValue
 
     def getIntensityBasedContractility(self, Set, currentFace):
-        timeAfterAblation = Set.currentT - Set.TInitAblation
+        timeAfterAblation = Set.currentT.astype('double') - Set.TInitAblation.astype('double')
         contractilityValue = 0
 
         if timeAfterAblation >= 0:
