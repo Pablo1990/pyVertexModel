@@ -122,15 +122,15 @@ class Test(TestCase):
         alpha = LineSearch(geo_0_test, geo_n_test, geo_test, dofs_test, set_test, g_test, dy_test)
         self.assertAlmostEqual(alpha, 0.694837969748151)
 
-    def assert_k_g_energy(self, energy_var_name, g_var_name, k_var_name, kg_subs, mat_expected):
-        self.assertAlmostEqual(kg_subs.energy, mat_expected[energy_var_name][0][0], 3)
+    def assert_k_g_energy(self, energy_var_name, g_var_name, k_var_name, kg, mat_expected):
+        self.assertAlmostEqual(kg.energy, mat_expected[energy_var_name][0][0], 3)
         g_expected = mat_expected[g_var_name][:, 0]
-        for i in range(len(kg_subs.g)):
-            self.assertAlmostEqual(kg_subs.g[i], g_expected[i], 3)
+        for i in range(len(kg.g)):
+            self.assertAlmostEqual(kg.g[i], g_expected[i], 3)
         K_expected = mat_expected[k_var_name]
-        for i in range(kg_subs.K.shape[0]):
-            for j in range(kg_subs.K.shape[0]):
-                self.assertAlmostEqual(kg_subs.K[i, j], K_expected[i, j], 3)
+        for i in range(kg.K.shape[0]):
+            for j in range(kg.K.shape[0]):
+                self.assertAlmostEqual(kg.K[i, j], K_expected[i, j], 3)
 
     def test_k_k(self):
         _, mat_expected, _, mat_info = load_data('kK_test.mat', False)
