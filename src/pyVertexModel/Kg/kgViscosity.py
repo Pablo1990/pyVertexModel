@@ -6,16 +6,14 @@ from src.pyVertexModel.Kg.kg import Kg
 
 
 class KgViscosity(Kg):
-    def compute_work(self, Geo, Set, Geo_n=None):
+    def compute_work(self, Geo, Set, Geo_n=None, calculate_K=True):
         start = time.time()
-        self.K = (Set.nu / Set.dt) * np.eye(self.K.shape[0])
+        if calculate_K:
+            self.K = (Set.nu / Set.dt) * np.eye(self.K.shape[0])
         self.calculate_g(Geo, Geo_n, Set)
         self.energy = 0.5 * np.dot(self.g.transpose(), self.g) / Set.nu
         end = time.time()
         self.timeInSeconds = f"Time at Viscosity: {end - start} seconds"
-
-    def compute_work_only_g(self, Geo, Set, Geo_n=None):
-        self.calculate_g(Geo, Geo_n, Set)
 
     def calculate_g(self, Geo, Geo_n, Set):
         dY = np.zeros((Geo.numF + Geo.numY + Geo.nCells, 3))

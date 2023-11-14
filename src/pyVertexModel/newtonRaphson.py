@@ -172,18 +172,19 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set):
 
     return g, K, E
 
+
 def gGlobal(Geo_0, Geo_n, Geo, Set):
     # Surface Energy
     kg_SA = KgSurfaceCellBasedAdhesion(Geo)
-    kg_SA.compute_work_only_g(Geo, Set)
+    kg_SA.compute_work(Geo, Set, None, False)
 
     # Volume Energy
     kg_Vol = KgVolume(Geo)
-    kg_Vol.compute_work_only_g(Geo, Set)
+    kg_Vol.compute_work(Geo, Set, None, False)
 
     # Viscous Energy
     kg_Viscosity = KgViscosity(Geo)
-    kg_Viscosity.compute_work_only_g(Geo, Set, Geo_n)
+    kg_Viscosity.compute_work(Geo, Set, Geo_n, False)
 
     g = kg_Vol.g[:] + kg_Viscosity.g + kg_SA.g[:]
 
@@ -201,13 +202,13 @@ def gGlobal(Geo_0, Geo_n, Geo, Set):
     # Triangle Energy Barrier
     if Set.EnergyBarrierA:
         kg_Tri = KgTriEnergyBarrier(Geo)
-        kg_Tri.compute_work_only_g(Geo, Set)
+        kg_Tri.compute_work(Geo, Set, None, False)
         g += kg_Tri.g
 
     # Triangle Energy Barrier Aspect Ratio
     if Set.EnergyBarrierAR:
         kg_TriAR = KgTriAREnergyBarrier(Geo)
-        kg_TriAR.compute_work_only_g(Geo, Set)
+        kg_TriAR.compute_work(Geo, Set, None, False)
         g += kg_TriAR.g
 
     # Propulsion Forces
@@ -216,13 +217,13 @@ def gGlobal(Geo_0, Geo_n, Geo, Set):
     # Contractility
     if Set.Contractility:
         kg_lt = KgContractility(Geo)
-        kg_lt.compute_work_only_g(Geo, Set)
+        kg_lt.compute_work(Geo, Set, None, False)
         g += kg_lt.g
 
     # Substrate
     if Set.Substrate == 2:
         kg_subs = KgSubstrate(Geo)
-        kg_subs.compute_work_only_g(Geo, Set)
+        kg_subs.compute_work(Geo, Set, None, False)
         g += kg_subs.g
 
     return g

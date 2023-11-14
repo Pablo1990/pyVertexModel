@@ -7,7 +7,7 @@ from src.pyVertexModel.Kg.kg import Kg
 
 
 class KgContractility(Kg):
-    def compute_work(self, Geo, Set, Geo_n=None):
+    def compute_work(self, Geo, Set, Geo_n=None, calculate_K=True):
 
         start = time.time()
         oldSize = self.K.shape[0]
@@ -34,9 +34,9 @@ class KgContractility(Kg):
 
                         # TODO
                         #currentFace.Tris.ContractileG = np.linalg.norm(g_current[:3])
-
-                        K_current = self.computeKContractility(l_i0, y_1, y_2, C)
-                        self.K = kg_functions.assembleK(self.K, K_current, cell.globalIds[currentTri.Edge])
+                        if calculate_K:
+                            K_current = self.computeKContractility(l_i0, y_1, y_2, C)
+                            self.K = kg_functions.assembleK(self.K, K_current, cell.globalIds[currentTri.Edge])
 
                         Energy_c += self.computeEnergyContractility(l_i0, np.linalg.norm(y_1 - y_2), C)
             self.g += ge
@@ -48,26 +48,6 @@ class KgContractility(Kg):
         self.energy = sum(Energy.values())
         end = time.time()
         self.timeInSeconds = f"Time at LineTension: {end - start} seconds"
-
-    def compute_work_only_g(self, Geo, Set, Geo_n=None):
-        for cell in Geo.Cells:
-            if cell.AliveStatus:
-                ge = np.zeros(self.g.shape, dtype=np.float32)
-
-                for currentFace in cell.Faces:
-                    l_i0 = Geo.EdgeLengthAvg_0[next(key for key, value in currentFace.InterfaceType_allValues.items()
-                                                    if value == currentFace.InterfaceType or key == currentFace.InterfaceType)]
-                    for currentTri in currentFace.Tris:
-                        if len(currentTri.SharedByCells) > 1:
-                            C, Geo = self.getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set)
-
-                            y_1 = cell.Y[currentTri.Edge[0]]
-                            y_2 = cell.Y[currentTri.Edge[1]]
-
-                            g_current = self.computeGContractility(l_i0, y_1, y_2, C)
-                            ge = kg_functions.assembleg(ge, g_current, cell.globalIds[currentTri.Edge])
-
-                self.g += ge
 
     def computeKContractility(self, l_i0, y_1, y_2, C):
         dim = 3

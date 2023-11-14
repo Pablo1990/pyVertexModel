@@ -15,11 +15,7 @@ class Kg:
         self.timeInSeconds = -1
 
     @abstractmethod
-    def compute_work(self, Geo, Set, Geo_n=None):
-        pass
-
-    @abstractmethod
-    def compute_work_only_g(self, Geo, Set, Geo_n=None):
+    def compute_work(self, Geo, Set, Geo_n=None, calculate_K=True):
         pass
 
     def assembleK(self, Ke, nY):
