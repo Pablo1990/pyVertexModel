@@ -77,7 +77,7 @@ def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
 
 
 def LineSearch(Geo_0, Geo_n, Geo, Dofs, Set, gc, dy):
-    dy_reshaped = np.reshape(dy, (3, (Geo.numF + Geo.numY + Geo.nCells))).T
+    dy_reshaped = np.reshape(dy, ((Geo.numF + Geo.numY + Geo.nCells), 3))
 
     Geo.UpdateVertices(dy_reshaped)
     Geo.UpdateMeasures()

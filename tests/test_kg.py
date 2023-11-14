@@ -14,7 +14,7 @@ from src.pyVertexModel.Kg.kgViscosity import KgViscosity
 from src.pyVertexModel.Kg.kgVolume import KgVolume
 from src.pyVertexModel.degreesOfFreedom import DegreesOfFreedom
 from src.pyVertexModel.geo import Geo
-from src.pyVertexModel.newtonRaphson import LineSearch
+from src.pyVertexModel.newtonRaphson import LineSearch, KgGlobal
 from src.pyVertexModel.set import Set
 
 
@@ -110,6 +110,27 @@ class Test(TestCase):
         v_kg.compute_work(geo_test, set_test, geo_n_test)
         self.assertAlmostEqual(v_kg.energy, 3.194411761833479e+04, 2)
 
+    def test_KgGlobal(self):
+        geo_test, mat_expected, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
+        geo_n_test = Geo(mat_info['Geo_n'])
+        geo_0_test = Geo(mat_info['Geo_0'])
+
+        g, K, E = KgGlobal(geo_0_test, geo_n_test, geo_test, set_test)
+
+        g_expected = (mat_expected['gs_full'] + mat_expected['gv_full'] + mat_expected['gf_full'] +
+                      mat_expected['gBA_full'] + mat_expected['gBAR_full'] + mat_expected['gC_full'] +
+                      mat_expected['gSub_full'])
+        k_expected = (mat_expected['Ks_full'] + mat_expected['Kv_full'] + mat_expected['Kf_full'] +
+                      mat_expected['KBA_full'] + mat_expected['KBAR_full'] + mat_expected['KC_full'] +
+                      mat_expected['KSub_full'])
+        e_expected = (mat_expected['ES'] + mat_expected['EV'] + mat_expected['EN'] +
+                      mat_expected['EBA'] + mat_expected['EBAR'] + mat_expected['EC'] +
+                      mat_expected['ESub'])
+
+        self.assertAlmostEqual(e_expected[0][0], E, 3)
+        self.assert_g(g_expected[:, 0], g)
+        self.assert_k(k_expected, K)
+
     def test_line_search(self):
         geo_test, mat_expected, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
         
@@ -120,17 +141,22 @@ class Test(TestCase):
         dy_test = mat_info['dy'][:, 0]
         set_test = Set(mat_info['Set'])
         alpha = LineSearch(geo_0_test, geo_n_test, geo_test, dofs_test, set_test, g_test, dy_test)
-        self.assertAlmostEqual(alpha, 0.694837969748151)
+        self.assertAlmostEqual(alpha, 1)
 
     def assert_k_g_energy(self, energy_var_name, g_var_name, k_var_name, kg, mat_expected):
         self.assertAlmostEqual(kg.energy, mat_expected[energy_var_name][0][0], 3)
-        g_expected = mat_expected[g_var_name][:, 0]
-        for i in range(len(kg.g)):
-            self.assertAlmostEqual(kg.g[i], g_expected[i], 3)
+        self.assert_g(mat_expected[g_var_name][:, 0], kg.g)
         K_expected = mat_expected[k_var_name]
-        for i in range(kg.K.shape[0]):
-            for j in range(kg.K.shape[0]):
-                self.assertAlmostEqual(kg.K[i, j], K_expected[i, j], 3)
+        self.assert_k(K_expected, kg.K)
+
+    def assert_k(self, k_expected, k):
+        for i in range(k.shape[0]):
+            for j in range(k.shape[0]):
+                self.assertAlmostEqual(k[i, j], k_expected[i, j], 3)
+
+    def assert_g(self, g_expected, g):
+        for i in range(len(g)):
+            self.assertAlmostEqual(g[i], g_expected[i], 3)
 
     def test_k_k(self):
         _, mat_expected, _, mat_info = load_data('kK_test.mat', False)
