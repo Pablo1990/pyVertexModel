@@ -71,9 +71,9 @@ class KgTriAREnergyBarrier(Kg):
 
                             ## gt
                             gt = np.zeros([9, 1], dtype=np.float32)
-                            gt[1:3, 1] = v_y3_1
-                            gt[4:6, 1] = v_y3_2
-                            gt[7:9, 1] = v_y3_3
+                            gt[1:3, 0] = v_y3_1
+                            gt[4:6, 0] = v_y3_2
+                            gt[7:9, 0] = v_y3_3
 
                             gs_fact = gs / (Set.lmin0 ** 4)
                             self.g = kg_functions.assembleg(self.g[:], gs_fact[:], nY[numY, :])
