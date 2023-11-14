@@ -7,7 +7,7 @@ from src.pyVertexModel.Kg.kg import Kg
 
 
 class KgSurfaceCellBasedAdhesion(Kg):
-    def compute_work(self, Geo, Set, Geo_n=None):
+    def compute_work(self, Geo, Set, Geo_n=None, calculate_K=True):
         Energy = {}
         start = time.time()
 
@@ -18,7 +18,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
                     continue
 
             Cell = Geo.Cells[c]
-            Energy_c = self.work_per_cell(Cell, Geo, Set)
+            Energy_c = self.work_per_cell(Cell, Geo, Set, calculate_K)
             Energy[c] = Energy_c
 
         self.energy = sum(Energy.values())
@@ -26,17 +26,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
         end = time.time()
         self.timeInSeconds = f"Time at SurfaceCell: {end - start} seconds"
 
-    def compute_work_only_g(self, Geo, Set, Geo_n=None):
-        for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
-
-            if Geo.Remodelling:
-                if not np.isin(c, Geo.AssembleNodes):
-                    continue
-
-            Cell = Geo.Cells[c]
-            self.work_per_cell_only_g(Cell, Geo, Set)
-
-    def work_per_cell(self, Cell, Geo, Set):
+    def work_per_cell(self, Cell, Geo, Set, calculate_K=True):
         # TODO: TRY JIT AND NUMBA https://numba.readthedocs.io/en/stable/user/jit.html#basic-usage
         Energy_c = 0
         Ys = Cell.Y
@@ -71,55 +61,29 @@ class KgSurfaceCellBasedAdhesion(Kg):
                 if Geo.Remodelling:
                     if not any(np.isin(nY, Geo.AssemblegIds)):
                         continue
+                if calculate_K:
+                    ge = self.calculate_Kg(Lambda, fact, ge, nY, y1, y2, y3)
+                else:
+                    ge = self.calculate_g(Lambda, ge, nY, y1, y2, y3)
 
-                gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)
-                gs = np.concatenate(Lambda * gs)
-                ge = kg_functions.assembleg(ge[:], gs[:], np.array(nY, dtype='int'))
 
-                Ks = np.dot(fact * Lambda, (Ks + Kss))
-                self.K = kg_functions.assembleK(self.K, Ks, np.array(nY, dtype='int'))
         self.g += ge * fact
-
-        self.K = kg_functions.compute_finalK_SurfaceEnergy(ge, self.K, Cell.Area0)
+        if calculate_K:
+            self.K = kg_functions.compute_finalK_SurfaceEnergy(ge, self.K, Cell.Area0)
 
         Energy_c += (1 / 2) * fact0 * fact
         return Energy_c
 
-    def work_per_cell_only_g(self, Cell, Geo, Set):
-        # TODO: TRY JIT AND NUMBA https://numba.readthedocs.io/en/stable/user/jit.html#basic-usage
-        Ys = Cell.Y
-        ge = np.zeros(self.g.shape, dtype=np.float32)
-        fact0 = 0
-        for face in Cell.Faces:
-            if face.InterfaceType == 'Top':
-                Lambda = Set.lambdaS1 * Cell.ExternalLambda
-            elif face.InterfaceType == 'CellCell':
-                Lambda = Set.lambdaS2 * Cell.InternalLambda
-            elif face.InterfaceType == 'Bottom':
-                Lambda = Set.lambdaS3 * Cell.SubstrateLambda
+    def calculate_Kg(self, Lambda, fact, ge, nY, y1, y2, y3):
+        gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)
+        gs = np.concatenate(Lambda * gs)
+        ge = kg_functions.assembleg(ge[:], gs[:], np.array(nY, dtype='int'))
+        Ks = np.dot(fact * Lambda, (Ks + Kss))
+        self.K = kg_functions.assembleK(self.K, Ks, np.array(nY, dtype='int'))
+        return ge
 
-            fact0 += Lambda * face.Area
-        fact = fact0 / Cell.Area0 ** 2
-        for face in Cell.Faces:
-            if face.InterfaceType == 'Top':
-                Lambda = Set.lambdaS1 * Cell.ExternalLambda
-            elif face.InterfaceType == 'CellCell':
-                Lambda = Set.lambdaS2 * Cell.InternalLambda
-            elif face.InterfaceType == 'Bottom':
-                Lambda = Set.lambdaS3 * Cell.SubstrateLambda
-
-            for t in face.Tris:
-                y1 = Ys[t.Edge[0]]
-                y2 = Ys[t.Edge[1]]
-                y3 = face.Centre
-                n3 = face.globalIds
-                nY = [Cell.globalIds[edge] for edge in t.Edge] + [n3]
-
-                if Geo.Remodelling:
-                    if not any(np.isin(nY, Geo.AssemblegIds)):
-                        continue
-
-                gs, _, _ = kg_functions.gKSArea(y1, y2, y3)
-                gs = np.concatenate(Lambda * gs)
-                ge = kg_functions.assembleg(ge[:], gs[:], np.array(nY, dtype='int'))
-        self.g += ge * fact
+    def calculate_g(self, Lambda, ge, nY, y1, y2, y3):
+        gs, _, _ = kg_functions.gKSArea(y1, y2, y3)
+        gs = np.concatenate(Lambda * gs)
+        ge = kg_functions.assembleg(ge[:], gs[:], np.array(nY, dtype='int'))
+        return ge
