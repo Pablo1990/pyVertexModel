@@ -51,7 +51,7 @@ class KgSubstrate(Kg):
                         if calculate_K:
                             # Calculate Jacobian
                             K_current = self.computeKSubstrate(kSubstrate)
-                            self.K = kg_functions.assembleK(self.K, K_current, currentGlobalID)
+                            self.assemble_k(K_current, currentGlobalID)
 
                         # Calculate energy
                         Energy_c = Energy_c + self.computeEnergySubstrate(kSubstrate, currentVertexYs[2], z0)

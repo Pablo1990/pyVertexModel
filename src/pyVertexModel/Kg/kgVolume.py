@@ -43,7 +43,7 @@ class KgVolume(Kg):
                     gs, Ks = kg_functions.gKDet(y1, y2, y3)
                     ge = kg_functions.assembleg(ge, gs, np.array(nY, dtype='int'))
                     if calculate_K:
-                        self.K = kg_functions.assembleK(self.K, Ks * fact / 6, np.array(nY, dtype='int'))
+                        self.assemble_k(Ks * fact / 6, np.array(nY, dtype='int'))
 
             self.g += ge * fact / 6  # Volume contribution of each triangle is det(Y1,Y2,Y3)/6
             if calculate_K:

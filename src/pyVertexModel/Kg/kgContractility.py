@@ -36,7 +36,7 @@ class KgContractility(Kg):
                         #currentFace.Tris.ContractileG = np.linalg.norm(g_current[:3])
                         if calculate_K:
                             K_current = self.computeKContractility(l_i0, y_1, y_2, C)
-                            self.K = kg_functions.assembleK(self.K[:, :], K_current[:, :], cell.globalIds[currentTri.Edge])
+                            self.assemble_k(K_current[:, :], cell.globalIds[currentTri.Edge])
 
                         Energy_c += self.computeEnergyContractility(l_i0, np.linalg.norm(y_1 - y_2), C)
             self.g += ge
