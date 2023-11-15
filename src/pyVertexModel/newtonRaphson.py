@@ -12,7 +12,7 @@ from src.pyVertexModel.Kg.kgViscosity import KgViscosity
 from src.pyVertexModel.Kg.kgVolume import KgVolume
 
 
-def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
+def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.newton.html
     if Geo.Remodelling:
         # TODO:
@@ -36,16 +36,13 @@ def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
     ig = 0
 
     while (gr > Set.tol or dyr > Set.tol) and Set.iter < Set.MaxIter:
-        start = time.time()
         dy[dof] = kg_functions.mldivide_np(K[np.ix_(dof, dof)], g[dof])
-        end = time.time()
-        print(f"Time at np.linalg.solve: {end - start} seconds")
 
         if np.any(np.isnan(dy)):
             print("error")
 
-        alpha = LineSearch(Geo_0, Geo_n, Geo, Dofs, Set, g, dy)
-        dy_reshaped = np.reshape(dy * alpha, (3, (Geo.numF + Geo.numY + Geo.nCells))).T
+        alpha = line_search(Geo_0, Geo_n, Geo, Dofs, Set, g, dy)
+        dy_reshaped = np.reshape(dy * alpha, ((Geo.numF + Geo.numY + Geo.nCells), 3))
         Geo.UpdateVertices(dy_reshaped)
         Geo.UpdateMeasures()
         g, K, Energy = KgGlobal(Geo_0, Geo_n, Geo, Set)
@@ -76,7 +73,7 @@ def newtonRaphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
     return Geo, g, K, Energy, Set, gr, dyr, dy
 
 
-def LineSearch(Geo_0, Geo_n, Geo, Dofs, Set, gc, dy):
+def line_search(Geo_0, Geo_n, Geo, Dofs, Set, gc, dy):
     dy_reshaped = np.reshape(dy, ((Geo.numF + Geo.numY + Geo.nCells), 3))
 
     Geo.UpdateVertices(dy_reshaped)

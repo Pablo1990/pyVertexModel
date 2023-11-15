@@ -43,7 +43,7 @@ class VertexModel:
         if self.Set.Substrate == 1:
             self.Dofs.GetDOFsSubstrate(self.Geo, self.Set)
         else:
-            self.Dofs.GetDOFs(self.Geo, self.Set)
+            self.Dofs.get_do_fs(self.Geo, self.Set)
         self.Geo.Remodelling = False
 
         self.t = 0
@@ -366,7 +366,7 @@ class VertexModel:
                 self.Set.UpdateSet_F(self.Geo)
 
             g, K, __ = newtonRaphson.KgGlobal(self.Geo_0, self.Geo_n, self.Geo, self.Set)
-            self.Geo, g, __, __, self.Set, gr, dyr, dy = newtonRaphson.newtonRaphson(self.Geo_0, self.Geo_n, self.Geo, self.Dofs, self.Set, K, g, self.numStep, self.t)
+            self.Geo, g, __, __, self.Set, gr, dyr, dy = newtonRaphson.newton_raphson(self.Geo_0, self.Geo_n, self.Geo, self.Dofs, self.Set, K, g, self.numStep, self.t)
             if gr < self.Set.tol and dyr < self.Set.tol and np.all(np.isnan(g(self.Dofs.Free)) == 0) and np.all(
                     np.isnan(dy(self.Dofs.Free)) == 0):
                 if self.Set.nu / self.Set.nu0 == 1:

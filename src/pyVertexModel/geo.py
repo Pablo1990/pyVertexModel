@@ -4,12 +4,12 @@ from src.pyVertexModel import cell, face
 
 
 class Geo:
-    def __init__(self, matFile=None):
+    def __init__(self, mat_file=None):
 
         self.Cells = []
         self.Remodelling = False
 
-        if matFile is None:
+        if mat_file is None:
             self.numF = None
             self.numY = None
             self.EdgeLengthAvg_0 = None
@@ -17,24 +17,24 @@ class Geo:
             self.XgTop = None
             self.XgID = None
             self.nz = 1
-            self.ny = 20
-            self.nx = 20
+            self.ny = 3
+            self.nx = 3
             self.nCells = 0
             self.BorderCells = None
             self.non_dead_cells = []
-        else:
-            self.numF = matFile['numF'][0][0][0][0]
-            self.numY = matFile['numY'][0][0][0][0]
-            self.EdgeLengthAvg_0 = matFile['EdgeLengthAvg_0'][0][0][0][1:4]
-            self.XgBottom = matFile['XgBottom'][0][0][0]-1
-            self.XgTop = matFile['XgTop'][0][0][0] - 1
-            self.XgID = matFile['XgID'][0][0][0] - 1
+        else: # coming from mat_file
+            self.numF = mat_file['numF'][0][0][0][0]
+            self.numY = mat_file['numY'][0][0][0][0]
+            self.EdgeLengthAvg_0 = mat_file['EdgeLengthAvg_0'][0][0][0][1:4]
+            self.XgBottom = mat_file['XgBottom'][0][0][0] - 1
+            self.XgTop = mat_file['XgTop'][0][0][0] - 1
+            self.XgID = mat_file['XgID'][0][0][0] - 1
             self.nz = 1
             self.ny = 3
             self.nx = 3
-            self.nCells = matFile['nCells'][0][0][0][0]
+            self.nCells = mat_file['nCells'][0][0][0][0]
             self.BorderCells = None
-            for c_cell in matFile['Cells'][0][0][0]:
+            for c_cell in mat_file['Cells'][0][0][0]:
                 self.Cells.append(cell.Cell(c_cell))
 
 

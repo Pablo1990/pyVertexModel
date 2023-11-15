@@ -18,9 +18,9 @@ class DegreesOfFreedom:
         if Set.TStartBC <= t <= Set.TStopBC:
             dimP, FixIDs = np.unravel_index(self.FixP, (3, Geo.numY + Geo.numF + Geo.nCells))
             if Set.BC == 1:
-                Geo = self.UpdateDOFsStretch(FixIDs, Geo, Set)
+                Geo = self.update_do_fs_stretch(FixIDs, Geo, Set)
             elif Set.BC == 2:
-                Geo = self.UpdateDOFsCompress(Geo, Set)
+                Geo = self.update_do_fs_compress(Geo, Set)
             self.Free = [dof for dof in self.Free if dof not in self.FixP]
             self.Free = [dof for dof in self.Free if dof not in self.FixC]
         elif Set.BC == 1 or Set.BC == 2:
@@ -29,7 +29,7 @@ class DegreesOfFreedom:
 
         return Geo
 
-    def GetDOFs(self, Geo, Set):
+    def get_do_fs(self, Geo, Set):
         # Define free and constrained vertices
         dim = 3
         gconstrained = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3)
@@ -68,7 +68,7 @@ class DegreesOfFreedom:
         self.FixP = np.array(np.where(gprescribed)[0], dtype=int)
         self.FixC = np.array(np.where(gconstrained)[0], dtype=int)
 
-    def UpdateDOFsCompress(self, Geo, Set):
+    def update_do_fs_compress(self, Geo, Set):
         maxY = Geo.Cells[0].Y[0, 1]
 
         for cell in Geo.Cells:
@@ -81,7 +81,7 @@ class DegreesOfFreedom:
                     maxY = face.Centre[1]
 
         Set.VPrescribed = maxY - Set.dx / ((Set.TStopBC - Set.TStartBC) / Set.dt)
-        self.GetDOFs(Geo, Set)
+        self.get_do_fs(Geo, Set)
 
         dimP, numP = np.unravel_index(self.FixP, (3, Geo.numY + Geo.numF + Geo.nCells))
 
@@ -96,7 +96,7 @@ class DegreesOfFreedom:
 
         return Geo
 
-    def UpdateDOFsStretch(self, FixP, Geo, Set):
+    def update_do_fs_stretch(self, FixP, Geo, Set):
         for cell in Geo.Cells:
             prescYi = np.isin(cell.globalIds, FixP)
             cell.Y[prescYi, 1] = cell.Y[prescYi, 1] + Set.dx / ((Set.TStopBC - Set.TStartBC) / Set.dt)

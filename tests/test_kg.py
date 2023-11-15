@@ -14,7 +14,7 @@ from src.pyVertexModel.Kg.kgViscosity import KgViscosity
 from src.pyVertexModel.Kg.kgVolume import KgVolume
 from src.pyVertexModel.degreesOfFreedom import DegreesOfFreedom
 from src.pyVertexModel.geo import Geo
-from src.pyVertexModel.newtonRaphson import LineSearch, KgGlobal
+from src.pyVertexModel.newtonRaphson import line_search, KgGlobal
 from src.pyVertexModel.set import Set
 
 
@@ -140,7 +140,7 @@ class Test(TestCase):
         g_test = mat_info['g'][:, 0]
         dy_test = mat_info['dy'][:, 0]
         set_test = Set(mat_info['Set'])
-        alpha = LineSearch(geo_0_test, geo_n_test, geo_test, dofs_test, set_test, g_test, dy_test)
+        alpha = line_search(geo_0_test, geo_n_test, geo_test, dofs_test, set_test, g_test, dy_test)
         self.assertAlmostEqual(alpha, 1)
 
     def assert_k_g_energy(self, energy_var_name, g_var_name, k_var_name, kg, mat_expected):
