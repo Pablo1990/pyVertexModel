@@ -43,7 +43,7 @@ class KgSubstrate(Kg):
 
                         # Calculate residual g
                         g_current = self.computeGSubstrate(kSubstrate, currentVertexYs[2], z0)
-                        ge = kg_functions.assembleg(ge, g_current, currentGlobalID)
+                        ge = self.assemble_g(ge, g_current, currentGlobalID)
 
                         # TODO: Save contractile forces (g) to output
                         #Geo.Cells[c].substrate_g[currentVertex] = g_current[2]

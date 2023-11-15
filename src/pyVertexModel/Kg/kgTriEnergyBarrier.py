@@ -37,7 +37,7 @@ class KgTriEnergyBarrier(Kg):
 
                     gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)
                     gs_fact = gs * fact
-                    self.g = kg_functions.assembleg(self.g[:], gs_fact[:], np.array(nY, dtype='int'))
+                    self.g = self.assemble_g(self.g[:], gs_fact[:], np.array(nY, dtype='int'))
                     if calculate_K:
                         gs_transpose = gs.reshape((1, gs.size))
                         gs_ = gs.reshape((gs.size, 1))

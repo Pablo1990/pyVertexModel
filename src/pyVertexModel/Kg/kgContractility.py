@@ -105,7 +105,7 @@ class KgContractility(Kg):
             else:
                 contractilityValue = Set.cLineTension
 
-            contractilityValue = self.addNoiseToParameter(contractilityValue, Set.noiseContractility, currentTri)
+            contractilityValue = self.add_noise_to_parameter(contractilityValue, Set.noiseContractility, currentTri)
 
             for cellToCheck in currentTri.SharedByCells:
                 facesToCheck = Geo.Cells[cellToCheck].Faces

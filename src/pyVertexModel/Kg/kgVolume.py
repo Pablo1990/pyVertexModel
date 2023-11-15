@@ -41,7 +41,7 @@ class KgVolume(Kg):
                         continue
 
                     gs, Ks = kg_functions.gKDet(y1, y2, y3)
-                    ge = kg_functions.assembleg(ge, gs, np.array(nY, dtype='int'))
+                    ge = self.assemble_g(ge, gs, np.array(nY, dtype='int'))
                     if calculate_K:
                         self.assemble_k(Ks * fact / 6, np.array(nY, dtype='int'))
 

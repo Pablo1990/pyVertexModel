@@ -18,46 +18,47 @@ class Kg:
     def compute_work(self, Geo, Set, Geo_n=None, calculate_K=True):
         pass
 
-    def assemble_k(self, Ke, nY):
-        dim = 3
-        ids = np.indices((len(nY) * dim, len(nY) * dim))
-        idofg = np.zeros(len(nY) * dim, dtype=int)
-        for I in range(len(nY)):
-            idofg[(I * dim): ((I + 1) * dim)] = np.arange(nY[I] * dim, (nY[I] + 1) * dim)
+    def assemble_k(self, k_e, n_y):
+        """
+
+        :param k_e:
+        :param n_y:
+        :return:
+        """
+        idofg = np.zeros(len(n_y) * self.dim, dtype=int)
+        for I in range(len(n_y)):
+            idofg[(I * self.dim): ((I + 1) * self.dim)] = np.arange(n_y[I] * self.dim, (n_y[I] + 1) * self.dim)
 
         indices = np.meshgrid(idofg, idofg)
-        self.K[indices[0], indices[1]] += Ke
+        self.K[indices[0], indices[1]] += k_e
 
-    def assemble_g(self, g, ge, nY):
-        '''
+    def assemble_g(self, g, ge, n_y):
+        """
 
         :param g:
         :param ge:
-        :param nY:
+        :param n_y:
         :return:
-        '''
+        """
+        idofg = np.zeros(len(n_y) * self.dim, dtype=int)
 
-        idofg = np.zeros(len(nY) * self.dim, dtype=int)
-
-        for I in range(len(nY)):
-            idofg[(I * self.dim): ((I + 1) * self.dim)] = np.arange(nY[I] * self.dim,
-                                                                (nY[I] + 1) * self.dim)  # global dof
+        for I in range(len(n_y)):
+            idofg[(I * self.dim): ((I + 1) * self.dim)] = np.arange(n_y[I] * self.dim,
+                                                                    (n_y[I] + 1) * self.dim)  # global dof
         g[idofg] = g[idofg] + ge
 
         return g
 
     def cross(self, y):
-        '''
+        """
         Compute the cross product matrix of a 3-self.dimensional vector.
         :param y:3-self.dimensional vector
-        :return:yMat (ndarray): The cross product matrix of the input vector.
-        '''
-        # Test different options
-        # yMat = np.cross(y, np.identity(y.shape[0]) * -1)
-        yMat = np.array([[0, -y[2], y[1]],
+        :return:y_mat (ndarray): The cross product matrix of the input vector.
+        """
+        y_mat = np.array([[0, -y[2], y[1]],
                          [y[2], 0, -y[0]],
                          [-y[1], y[0], 0]])
-        return yMat
+        return y_mat
 
     @staticmethod
     def kK(y1_crossed, y2_crossed, y3_crossed, y1, y2, y3):
@@ -75,11 +76,10 @@ class Kg:
         Returns:
         KK_value (ndarray): Resulting value for KK.
         """
-        KIJ = (y2_crossed - y3_crossed) @ (y1_crossed - y3_crossed) + \
-              np.cross(y2_crossed, y1) - np.cross(y2_crossed, y3) - np.cross(y3_crossed, y1)
-        return KIJ
+        return ((y2_crossed - y3_crossed) @ (y1_crossed - y3_crossed) + np.cross(y2_crossed, y1) -
+                np.cross(y2_crossed, y3) - np.cross(y3_crossed, y1))
 
-    def addNoiseToParameter(self, avgParameter, noise, currentTri=None):
+    def add_noise_to_parameter(self, avgParameter, noise, currentTri=None):
         minValue = avgParameter - avgParameter * noise
         maxValue = avgParameter + avgParameter * noise
 
