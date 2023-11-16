@@ -1,5 +1,3 @@
-import time
-
 import numpy as np
 
 from src.pyVertexModel.Kg import kg_functions

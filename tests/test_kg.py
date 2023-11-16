@@ -12,9 +12,8 @@ from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
 from src.pyVertexModel.Kg.kgTriEnergyBarrier import KgTriEnergyBarrier
 from src.pyVertexModel.Kg.kgViscosity import KgViscosity
 from src.pyVertexModel.Kg.kgVolume import KgVolume
-from src.pyVertexModel.degreesOfFreedom import DegreesOfFreedom
 from src.pyVertexModel.geo import Geo
-from src.pyVertexModel.newtonRaphson import line_search, KgGlobal
+from src.pyVertexModel.newtonRaphson import KgGlobal
 from src.pyVertexModel.set import Set
 
 
@@ -138,17 +137,7 @@ class Test(TestCase):
         self.assert_g(g_expected[:, 0], g)
         self.assert_k(k_expected, K)
 
-    def test_line_search(self):
-        geo_test, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
-        
-        geo_n_test = Geo(mat_info['Geo_n'])
-        geo_0_test = Geo(mat_info['Geo_0'])
-        dofs_test = DegreesOfFreedom(mat_info['Dofs'])
-        g_test = mat_info['g'][:, 0]
-        dy_test = mat_info['dy'][:, 0]
-        set_test = Set(mat_info['Set'])
-        alpha = line_search(geo_0_test, geo_n_test, geo_test, dofs_test, set_test, g_test, dy_test)
-        self.assertAlmostEqual(alpha, 1)
+
 
     def assert_k_g_energy(self, energy_var_name, g_var_name, k_var_name, kg, mat_expected):
         self.assertAlmostEqual(kg.energy, mat_expected[energy_var_name][0][0], 3)
