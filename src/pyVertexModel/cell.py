@@ -25,7 +25,7 @@ class Cell:
             self.T = np.empty(1, 'int')
         else:
             self.ID = mat_file[0][0][0] - 1
-            self.X = mat_file[1][0]
+            self.X = np.array(mat_file[1][0], dtype=np.float32)
             self.T = mat_file[2] - 1
 
             if len(mat_file[4]) > 0:
@@ -38,7 +38,7 @@ class Cell:
                     self.Area = mat_file[7][0][0]
                     self.Area0 = mat_file[8][0][0]
                     self.globalIds = np.concatenate(mat_file[9]) - 1
-                    self.c_global_ids = mat_file[10][0][0] - 1
+                    self.cglobalids = mat_file[10][0][0] - 1
                     self.AliveStatus = mat_file[11][0][0]
 
     def ComputeCellArea(self, locationFilter=None):

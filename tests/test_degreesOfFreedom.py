@@ -1,10 +1,11 @@
 from unittest import TestCase
 
 from Tests import test_kg
+from Tests.tests import Tests
 from src.pyVertexModel.degreesOfFreedom import DegreesOfFreedom
 
 
-class TestDofs(TestCase):
+class TestDofs(Tests):
 
     def test_get_dofs(self):
         geo_test, set_test, mat_info = test_kg.load_data('Geo_3x3_dofs_expected.mat')

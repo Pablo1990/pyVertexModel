@@ -1,9 +1,6 @@
-from os.path import exists
-from unittest import TestCase
-
 import numpy as np
-import scipy
 
+from Tests.tests import Tests, load_data
 from src.pyVertexModel.Kg import kg_functions
 from src.pyVertexModel.Kg.kgContractility import KgContractility
 from src.pyVertexModel.Kg.kgSubstrate import KgSubstrate
@@ -14,27 +11,9 @@ from src.pyVertexModel.Kg.kgViscosity import KgViscosity
 from src.pyVertexModel.Kg.kgVolume import KgVolume
 from src.pyVertexModel.geo import Geo
 from src.pyVertexModel.newtonRaphson import KgGlobal
-from src.pyVertexModel.set import Set
 
 
-def load_data(file_name, return_geo=True):
-    test_dir = 'tests/data/%s' % file_name
-    if exists(test_dir):
-        mat_info = scipy.io.loadmat(test_dir)
-    else:
-        mat_info = scipy.io.loadmat('data/%s' % file_name)
-
-    if return_geo:
-        geo_test = Geo(mat_info['Geo'])
-        set_test = Set(mat_info['Set'])
-    else:
-        geo_test = None
-        set_test = None
-
-    return geo_test, set_test, mat_info
-
-
-class Test(TestCase):
+class Test(Tests):
 
     def test_kg_substrate(self):
         geo_test, set_test, _ = load_data('Geo_var_3x3_stretch.mat')
@@ -134,25 +113,14 @@ class Test(TestCase):
                       mat_expected['ESub'])
 
         self.assertAlmostEqual(e_expected[0][0], E, 3)
-        self.assert_g(g_expected[:, 0], g)
-        self.assert_k(k_expected, K)
-
-
+        self.assert_array1D(g_expected[:, 0], g)
+        self.assert_matrix(k_expected, K)
 
     def assert_k_g_energy(self, energy_var_name, g_var_name, k_var_name, kg, mat_expected):
         self.assertAlmostEqual(kg.energy, mat_expected[energy_var_name][0][0], 3)
-        self.assert_g(mat_expected[g_var_name][:, 0], kg.g)
+        self.assert_array1D(mat_expected[g_var_name][:, 0], kg.g)
         K_expected = mat_expected[k_var_name]
-        self.assert_k(K_expected, kg.K)
-
-    def assert_k(self, k_expected, k):
-        for i in range(k.shape[0]):
-            for j in range(k.shape[0]):
-                self.assertAlmostEqual(k[i, j], k_expected[i, j], 3)
-
-    def assert_g(self, g_expected, g):
-        for i in range(len(g)):
-            self.assertAlmostEqual(g[i], g_expected[i], 3)
+        self.assert_matrix(K_expected, kg.K)
 
     def test_k_k(self):
         _, _, mat_info = load_data('kK_test.mat', False)
@@ -160,9 +128,7 @@ class Test(TestCase):
                                     mat_info['y1'][0], mat_info['y2'][0], mat_info['y3'][0])
 
         expectedResult = np.array([[0.0883044277371917, -0.0428177029418665, -0.415094060433679],
-                          [-0.0428177029418665, -0.0983863643372161, 0.0906607690000001],
-                          [0.415094060433679, -0.0906607690000001, -0.205394436600024]])
+                                   [-0.0428177029418665, -0.0983863643372161, 0.0906607690000001],
+                                   [0.415094060433679, -0.0906607690000001, -0.205394436600024]])
 
-        for i in range(output_KK.shape[0]):
-            for j in range(output_KK.shape[1]):
-                self.assertAlmostEqual(output_KK[i, j], expectedResult[i, j])
+        self.assert_matrix(output_KK, expectedResult)

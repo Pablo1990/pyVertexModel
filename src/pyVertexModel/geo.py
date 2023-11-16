@@ -136,17 +136,17 @@ class Geo:
         for c in [cell.ID for cell in self.Cells if cell.AliveStatus]:
             dY = dy_reshaped[self.Cells[c].globalIds, :]
             self.Cells[c].Y += dY
-            #dYc = dy_reshaped[self.Cells[c].cglobalIds, :]
+            #dYc = dy_reshaped[self.Cells[c].cglobalids, :]
             #self.Cells[c].X += dYc
             for f in range(len(self.Cells[c].Faces)):
                 self.Cells[c].Faces[f].Centre += dy_reshaped[self.Cells[c].Faces[f].globalIds, :]
 
     def UpdateMeasures(self, ids=None):
-        if self.Cells[self.nCells - 1].Vol is None:
+        if self.Cells[self.nCells].Vol is None:
             print('Wont update measures with this Geo')
 
         if ids is None:
-            ids = [cell.ID for cell in self.Cells if cell.AliveStatus]
+            ids = [cell.ID for cell in self.Cells if cell.AliveStatus == 1]
             resetLengths = 1
         else:
             resetLengths = 0

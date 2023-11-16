@@ -27,48 +27,49 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
     # Geo.log = f"{Geo.log} Step: {numStep}, Iter: 0 ||gr||= {gr} ||dyr||= {dyr} dt/dt0={Set.dt / Set.dt0:.3g}\n"
     print(f"Step: {numStep}, Iter: 0 ||gr||= {gr} ||dyr||= {dyr} dt/dt0={Set.dt / Set.dt0:.3g}\n")
 
-    Energy = 0
     Set.iter = 1
     auxgr = np.zeros(3)
     auxgr[0] = gr
     ig = 0
 
     while (gr > Set.tol or dyr > Set.tol) and Set.iter < Set.MaxIter:
-        dy[dof] = kg_functions.mldivide_np(K[np.ix_(dof, dof)], g[dof])
-
-        if np.any(np.isnan(dy)):
-            print("error")
-
-        alpha = line_search(Geo_0, Geo_n, Geo, Dofs, Set, g, dy)
-        dy_reshaped = np.reshape(dy * alpha, ((Geo.numF + Geo.numY + Geo.nCells), 3))
-        Geo.UpdateVertices(dy_reshaped)
-        Geo.UpdateMeasures()
-        g, K, Energy = KgGlobal(Geo_0, Geo_n, Geo, Set)
-        if np.any(np.isinf(K)):
-            print("error")
-        dyr = np.linalg.norm(dy[dof])
-        gr = np.linalg.norm(g[dof])
-        # Geo.log = f"{Geo.log} Step: {numStep}, Iter: {Set.iter}, Time: {t} ||gr||= {gr:.3e} ||dyr||= {dyr:.3e} alpha=
-        # {alpha:.3e} nu/nu0={Set.nu / Set.nu0:.3g}\n"
-        print(f"Step: {numStep}, Iter: {Set.iter}, Time: {t} ||gr||= {gr:.3e} ||dyr||= {dyr:.3e} alpha= {alpha:.3e}"
-              f" nu/nu0={Set.nu / Set.nu0:.3g}\n")
-
-        Set.iter += 1
-        auxgr[ig] = gr
-
-        if ig == 2:
-            ig = 0
-        else:
-            ig += 1
-
-        if (
-                abs(auxgr[0] - auxgr[1]) / auxgr[0] < 1e-3
-                and abs(auxgr[0] - auxgr[2]) / auxgr[0] < 1e-3
-                and abs(auxgr[2] - auxgr[1]) / auxgr[2] < 1e-3
-        ) or abs((gr0 - gr) / gr0) > 1e3:
-            Set.iter = Set.MaxIter
+        Energy, K, dyr, g, gr = newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof, dy,
+                                                         g, gr0, ig, numStep, t)
 
     return Geo, g, K, Energy, Set, gr, dyr, dy
+
+
+def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof, dy, g, gr0, ig, numStep, t):
+    dy[dof] = -np.linalg.solve(K[np.ix_(dof, dof)], g[dof])
+    # dy[dof] = kg_functions.mldivide_np(K[np.ix_(dof, dof)], g[dof])
+    if np.any(np.isnan(dy)):
+        print("error")
+    alpha = line_search(Geo_0, Geo_n, Geo, Dofs, Set, g, dy)
+    dy_reshaped = np.reshape(dy * alpha, ((Geo.numF + Geo.numY + Geo.nCells), 3))
+    Geo.UpdateVertices(dy_reshaped)
+    Geo.UpdateMeasures()
+    g, K, Energy = KgGlobal(Geo_0, Geo_n, Geo, Set)
+    if np.any(np.isinf(K)):
+        print("error")
+    dyr = np.linalg.norm(dy[dof])
+    gr = np.linalg.norm(g[dof])
+    # Geo.log = f"{Geo.log} Step: {numStep}, Iter: {Set.iter}, Time: {t} ||gr||= {gr:.3e} ||dyr||= {dyr:.3e} alpha=
+    # {alpha:.3e} nu/nu0={Set.nu / Set.nu0:.3g}\n"
+    print(f"Step: {numStep}, Iter: {Set.iter}, Time: {t} ||gr||= {gr:.3e} ||dyr||= {dyr:.3e} alpha= {alpha:.3e}"
+          f" nu/nu0={Set.nu / Set.nu0:.3g}\n")
+    Set.iter += 1
+    auxgr[ig] = gr
+    if ig == 2:
+        ig = 0
+    else:
+        ig += 1
+    if (
+            abs(auxgr[0] - auxgr[1]) / auxgr[0] < 1e-3
+            and abs(auxgr[0] - auxgr[2]) / auxgr[0] < 1e-3
+            and abs(auxgr[2] - auxgr[1]) / auxgr[2] < 1e-3
+    ) or abs((gr0 - gr) / gr0) > 1e3:
+        Set.iter = Set.MaxIter
+    return Energy, K, dyr, g, gr
 
 
 def line_search(Geo_0, Geo_n, Geo, Dofs, Set, gc, dy):
