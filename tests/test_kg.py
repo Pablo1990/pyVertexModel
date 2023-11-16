@@ -22,10 +22,8 @@ def load_data(file_name, return_geo=True):
     test_dir = 'tests/data/%s' % file_name
     if exists(test_dir):
         mat_info = scipy.io.loadmat(test_dir)
-        mat_expected = scipy.io.loadmat('tests/data/Geo_var_3x3_stretch_expectedResults.mat')
     else:
         mat_info = scipy.io.loadmat('data/%s' % file_name)
-        mat_expected = scipy.io.loadmat('data/Geo_var_3x3_stretch_expectedResults.mat')
 
     if return_geo:
         geo_test = Geo(mat_info['Geo'])
@@ -34,12 +32,14 @@ def load_data(file_name, return_geo=True):
         geo_test = None
         set_test = None
 
-    return geo_test, mat_expected, set_test, mat_info
+    return geo_test, set_test, mat_info
 
 
 class Test(TestCase):
+
     def test_kg_substrate(self):
-        geo_test, mat_expected, set_test, _ = load_data('Geo_var_3x3_stretch.mat')
+        geo_test, set_test, _ = load_data('Geo_var_3x3_stretch.mat')
+        _, _, mat_expected = load_data('Geo_var_3x3_stretch_expectedResults.mat', False)
 
         kg = KgSubstrate(geo_test)
         kg.compute_work(geo_test, set_test)
@@ -47,7 +47,8 @@ class Test(TestCase):
         self.assert_k_g_energy('ESub', 'gSub_full', 'KSub_full', kg, mat_expected)
 
     def test_kg_contractility(self):
-        geo_test, mat_expected, set_test, _ = load_data('Geo_var_3x3_stretch.mat')
+        geo_test, set_test, _ = load_data('Geo_var_3x3_stretch.mat')
+        _, _, mat_expected = load_data('Geo_var_3x3_stretch_expectedResults.mat', False)
 
         kg = KgContractility(geo_test)
         kg.compute_work(geo_test, set_test)
@@ -55,7 +56,8 @@ class Test(TestCase):
         self.assert_k_g_energy('EC', 'gC_full', 'KC_full', kg, mat_expected)
 
     def test_kg_surface(self):
-        geo_test, mat_expected, set_test, _ = load_data('Geo_var_3x3_stretch.mat')
+        geo_test, set_test, _ = load_data('Geo_var_3x3_stretch.mat')
+        _, _, mat_expected = load_data('Geo_var_3x3_stretch_expectedResults.mat', False)
 
         kg = KgSurfaceCellBasedAdhesion(geo_test)
         kg.compute_work(geo_test, set_test)
@@ -63,7 +65,8 @@ class Test(TestCase):
         self.assert_k_g_energy('ES', 'gs_full', 'Ks_full', kg, mat_expected)
 
     def test_kg_triAR(self):
-        geo_test, mat_expected, set_test, _ = load_data('Geo_var_3x3_stretch.mat')
+        geo_test, set_test, _ = load_data('Geo_var_3x3_stretch.mat')
+        _, _, mat_expected = load_data('Geo_var_3x3_stretch_expectedResults.mat', False)
 
         kg = KgTriAREnergyBarrier(geo_test)
         kg.compute_work(geo_test, set_test)
@@ -71,7 +74,8 @@ class Test(TestCase):
         self.assert_k_g_energy('EBAR', 'gBAR_full', 'KBAR_full', kg, mat_expected)
 
     def test_kg_tri(self):
-        geo_test, mat_expected, set_test, _ = load_data('Geo_var_3x3_stretch.mat')
+        geo_test, set_test, _ = load_data('Geo_var_3x3_stretch.mat')
+        _, _, mat_expected = load_data('Geo_var_3x3_stretch_expectedResults.mat', False)
 
         kg = KgTriEnergyBarrier(geo_test)
         kg.compute_work(geo_test, set_test)
@@ -79,7 +83,8 @@ class Test(TestCase):
         self.assert_k_g_energy('EBA', 'gBA_full', 'KBA_full', kg, mat_expected)
 
     def test_kg_volume(self):
-        geo_test, mat_expected, set_test, _ = load_data('Geo_var_3x3_stretch.mat')
+        geo_test, set_test, _ = load_data('Geo_var_3x3_stretch.mat')
+        _, _, mat_expected = load_data('Geo_var_3x3_stretch_expectedResults.mat', False)
 
         kg = KgVolume(geo_test)
         kg.compute_work(geo_test, set_test)
@@ -95,7 +100,8 @@ class Test(TestCase):
         self.assertAlmostEqual(v_kg.energy, 7.381125000000000e+04)
 
     def test_kg_viscosity(self):
-        geo_test, mat_expected, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
+        geo_test, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
+        _, _, mat_expected = load_data('Geo_var_3x3_stretch_expectedResults.mat', False)
 
         geo_n_test = Geo(mat_info['Geo_n'])
         kg = KgViscosity(geo_test)
@@ -111,7 +117,8 @@ class Test(TestCase):
         self.assertAlmostEqual(v_kg.energy, 3.194411761833479e+04, 2)
 
     def test_KgGlobal(self):
-        geo_test, mat_expected, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
+        geo_test, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
+        _, _, mat_expected = load_data('Geo_var_3x3_stretch_expectedResults.mat', False)
         geo_n_test = Geo(mat_info['Geo_n'])
         geo_0_test = Geo(mat_info['Geo_0'])
 
@@ -132,7 +139,7 @@ class Test(TestCase):
         self.assert_k(k_expected, K)
 
     def test_line_search(self):
-        geo_test, mat_expected, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
+        geo_test, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
         
         geo_n_test = Geo(mat_info['Geo_n'])
         geo_0_test = Geo(mat_info['Geo_0'])
@@ -159,7 +166,7 @@ class Test(TestCase):
             self.assertAlmostEqual(g[i], g_expected[i], 3)
 
     def test_k_k(self):
-        _, mat_expected, _, mat_info = load_data('kK_test.mat', False)
+        _, _, mat_info = load_data('kK_test.mat', False)
         output_KK = kg_functions.kK(mat_info['y1_Crossed'], mat_info['y2_Crossed'], mat_info['y3_Crossed'],
                                     mat_info['y1'][0], mat_info['y2'][0], mat_info['y3'][0])
 
