@@ -29,7 +29,7 @@ class DegreesOfFreedom:
 
         return Geo
 
-    def get_do_fs(self, Geo, Set):
+    def get_dofs(self, Geo, Set):
         # Define free and constrained vertices
         dim = 3
         gconstrained = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3)
@@ -40,8 +40,7 @@ class DegreesOfFreedom:
         else:
             borderIds = []
 
-        for ci in Geo.non_dead_cells:
-            cell = Geo.Cells[ci]
+        for cell in [cell for cell in Geo.Cells if cell.AliveStatus == 1]:
             Y = cell.Y
             gIDsY = cell.globalIds
 
@@ -81,7 +80,7 @@ class DegreesOfFreedom:
                     maxY = face.Centre[1]
 
         Set.VPrescribed = maxY - Set.dx / ((Set.TStopBC - Set.TStartBC) / Set.dt)
-        self.get_do_fs(Geo, Set)
+        self.get_dofs(Geo, Set)
 
         dimP, numP = np.unravel_index(self.FixP, (3, Geo.numY + Geo.numF + Geo.nCells))
 

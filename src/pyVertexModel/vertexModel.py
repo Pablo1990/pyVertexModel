@@ -43,7 +43,7 @@ class VertexModel:
         if self.Set.Substrate == 1:
             self.Dofs.GetDOFsSubstrate(self.Geo, self.Set)
         else:
-            self.Dofs.get_do_fs(self.Geo, self.Set)
+            self.Dofs.get_dofs(self.Geo, self.Set)
         self.Geo.Remodelling = False
 
         self.t = 0
