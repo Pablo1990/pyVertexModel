@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from Tests.tests import Tests, load_data
+from tests.tests import Tests, load_data
 
 
 class TestCell(Tests):

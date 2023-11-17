@@ -1,7 +1,7 @@
 from unittest import TestCase
 
-from Tests import test_kg
-from Tests.tests import Tests
+from tests import test_kg
+from tests.tests import Tests
 from src.pyVertexModel.degreesOfFreedom import DegreesOfFreedom
 
 

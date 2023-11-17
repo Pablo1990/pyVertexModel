@@ -2,7 +2,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from Tests.tests import load_data, Tests
+from tests.tests import load_data, Tests
 from src.pyVertexModel.degreesOfFreedom import DegreesOfFreedom
 from src.pyVertexModel.geo import Geo
 from src.pyVertexModel.newtonRaphson import line_search, newton_raphson, newton_raphson_iteration
