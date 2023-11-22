@@ -10,12 +10,13 @@ class KgTriAREnergyBarrier(Kg):
         start = time.time()
 
         self.energy = 0
+        fact = Set.lambdaR / Set.lmin0 ^ 4
 
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
             # if Geo.Remodelling and c not in Geo.AssembleNodes:
             #     continue
 
-            Energy_c = 0
+            energy_c = 0
             Cell = Geo.Cells[c]
             Ys = Cell.Y
 
@@ -27,7 +28,7 @@ class KgTriAREnergyBarrier(Kg):
 
                     for t in range(len(Tris)):
                         n3 = Cell.Faces[f].globalIds
-                        nY_original = [Cell.globalIds[edge] for edge in Tris[t].Edge] + [n3]
+                        nY_original = np.array([Cell.globalIds[edge] for edge in Tris[t].Edge] + [n3], dtype=int)
 
                         # if Geo.Remodelling and not np.any(np.isin(nY_original, Geo.AssemblegIds)):
                         #     continue
@@ -39,56 +40,35 @@ class KgTriAREnergyBarrier(Kg):
                         ys = np.zeros([3, 3, 3], dtype=np.float32)
                         nY = np.zeros([3, 3], dtype=int)
 
-                        ys[0, :, :] = [y1, y2, y3]
-                        ys[1, :, :] = [y2, y3, y1]
-                        ys[2, :, :] = [y3, y1, y2]
+                        y12 = y1 - y2
+                        y23 = y2 - y3
+                        y31 = y3 - y1
 
-                        nY[0, :] = nY_original
-                        nY[1, :] = [nY_original[1]] + [nY_original[2]] + [nY_original[0]]
-                        nY[2, :] = [nY_original[2]] + [nY_original[0]] + [nY_original[1]]
+                        w1 = np.linalg.norm(y31) ^ 2 - np.linalg.norm(y12) ^ 2
+                        w2 = np.linalg.norm(y12) ^ 2 - np.linalg.norm(y23) ^ 2
+                        w3 = np.linalg.norm(y23) ^ 2 - np.linalg.norm(y31) ^ 2
 
-                        w_t = np.zeros(3)
+                        g1 = np.array([y23, y12, y31], dtype=np.float32)
+                        g2 = np.array([y12, y31, y23], dtype=np.float32)
+                        g3 = np.array([y31, y23, y12], dtype=np.float32)
 
-                        for numY in range(3):
-                            y1 = ys[numY, 0, :].T
-                            y2 = ys[numY, 1, :].T
-                            y3 = ys[numY, 2, :].T
+                        gs = 2 * (w1 * g1 + w2 * g2 + w3 * g3)
+                        gs_fact = gs * fact
+                        self.g = self.assemble_g(self.g[:], gs_fact[:], nY_original)
 
-                            v_y1 = y2 - y1
-                            v_y2 = y3 - y1
+                        if calculate_K:
+                            identity = np.eye(3, 3)
+                            Ks = 2 * np.block([(w2 - w3) * identity, (w1 - w2) * identity, (w3 - w1) * identity,
+                                              (w1 - w2) * identity, (w3 - w1) * identity, (w2 - w3) * identity,
+                                              (w3 - w1) * identity, (w2 - w3) * identity, (w1 - w2) * identity]) + 4
 
-                            v_y3_1 = y3 - y2
-                            v_y3_2 = y2 - y1
-                            v_y3_3 = -(y3 - y1)
+                            Ks_c = np.array(Ks * (np.dot(g1, g1.T) + np.dot(g2, g2.T) + np.dot(g3, g3.T)) * fact,
+                                            dtype=np.float32)
+                            self.assemble_k(Ks_c[:, :], nY_original)
 
-                            w_t[numY] = np.linalg.norm(v_y1) ** 2 - np.linalg.norm(v_y2) ** 2
+                        energy_c = energy_c + fact / 2 * (w1 ^ 2 + w2 ^ 2 + w3 ^ 2)
 
-                            gs = np.zeros(9, dtype=np.float32)
-                            gs[0:3] = Set.lambdaR * w_t[numY] * v_y3_1
-                            gs[3:6] = Set.lambdaR * w_t[numY] * v_y3_2
-                            gs[6:9] = Set.lambdaR * w_t[numY] * v_y3_3
-
-                            ## gt
-                            gt = np.zeros([9, 1], dtype=np.float32)
-                            gt[0:3, 0] = v_y3_1
-                            gt[3:6, 0] = v_y3_2
-                            gt[6:9, 0] = v_y3_3
-
-                            gs_fact = gs / (Set.lmin0 ** 4)
-                            self.g = self.assemble_g(self.g[:], gs_fact[:], nY[numY, :])
-
-                            if calculate_K:
-                                matrixK = np.block([[np.zeros((3, 3)), -np.eye(3), np.eye(3)],
-                                                    [-np.eye(3), np.eye(3), np.zeros((3, 3))],
-                                                    [np.eye(3), np.zeros((3, 3)), -np.eye(3)]])
-
-                                Ks = Set.lambdaR * w_t[numY] * matrixK + Set.lambdaR * (np.dot(gt, gt.transpose()))
-                                Ks_c = np.array(Ks * 1 / (Set.lmin0 ** 4), dtype=np.float32)
-                                self.assemble_k(Ks_c[:, :], nY[numY, :])
-
-                        Energy_c = Energy_c + Set.lambdaR / 2 * np.sum(w_t ** 2) * 1 / (Set.lmin0 ** 4)
-
-            self.energy += Energy_c
+            self.energy += energy_c
 
         end = time.time()
         self.timeInSeconds = f"Time at AREnergyBarrier: {end - start} seconds"
