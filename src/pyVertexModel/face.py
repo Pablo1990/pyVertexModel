@@ -30,7 +30,7 @@ class Face:
         self.InterfaceType_allValues = dict(zip(valueset, catnames))
 
 
-    def BuildFace(self, ci, cj, face_ids, nCells, Cell, XgID, Set, XgTop, XgBottom, oldFace=None):
+    def build_face(self, ci, cj, face_ids, nCells, Cell, XgID, Set, XgTop, XgBottom, oldFace=None):
         self.InterfaceType = None
         ij = [ci, cj]
         self.ij = ij
@@ -48,26 +48,15 @@ class Face:
         self.Area, _ = self.compute_face_area(self.Tris, Cell.Y, self.Centre)
         self.Area0 = self.Area
 
-    def ComputeTriAspectRatio(self, sideLengths):
-        s = np.sum(sideLengths) / 2
-        aspectRatio = (sideLengths[0] * sideLengths[1] * sideLengths[2]) / (
-                8 * (s - sideLengths[0]) * (s - sideLengths[1]) * (s - sideLengths[2]))
-        return aspectRatio
 
-    def ComputeTriLengthMeasurements(self, Tris, Ys, currentTri, FaceCentre):
-        EdgeLength = np.linalg.norm(Ys[Tris[currentTri].Edge[0], :] - Ys[Tris[currentTri].Edge[1], :])
-        LengthsToCentre = [np.linalg.norm(Ys[Tris[currentTri].Edge[0], :] - FaceCentre),
-                           np.linalg.norm(Ys[Tris[currentTri].Edge[1], :] - FaceCentre)]
-        AspectRatio = self.ComputeTriAspectRatio([EdgeLength] + LengthsToCentre)
-        return EdgeLength, LengthsToCentre, AspectRatio
 
-    def ComputeFaceEdgeLengths(self, Face, Ys):
+    def compute_face_edge_lengths(self, Face, Ys):
         EdgeLength = []
         LengthsToCentre = []
         AspectRatio = []
         for currentTri in range(len(Face.Tris)):
-            edge_length, lengths_to_centre, aspect_ratio = self.ComputeTriLengthMeasurements(Face.Tris, Ys, currentTri,
-                                                                                             Face.Centre)
+            edge_length, lengths_to_centre, aspect_ratio = self.compute_tri_length_measurements(Face.Tris, Ys, currentTri,
+                                                                                                Face.Centre)
             EdgeLength.append(edge_length)
             LengthsToCentre.append(lengths_to_centre)
             AspectRatio.append(aspect_ratio)
@@ -160,7 +149,7 @@ class Face:
                                currentTris_2[np.isin(currentTris_2, nonDeadCells)])
 
             self.Tris[currentTri].EdgeLength, self.Tris[currentTri].LengthsToCentre, self.Tris[
-                currentTri].AspectRatio = self.ComputeTriLengthMeasurements(self.Tris, Ys, currentTri, FaceCentre)
+                currentTri].AspectRatio = self.compute_tri_length_measurements(self.Tris, Ys, currentTri, FaceCentre)
             self.Tris[currentTri].EdgeLength_time = [0, self.Tris[currentTri].EdgeLength]
 
         self.Tris.append(tris.Tris())
@@ -171,7 +160,7 @@ class Face:
                            currentTris_2[np.isin(currentTris_2, nonDeadCells)])
 
         self.Tris[len(surf_ids)-1].EdgeLength, self.Tris[len(surf_ids)-1].LengthsToCentre, self.Tris[
-            len(surf_ids)-1].AspectRatio = self.ComputeTriLengthMeasurements(self.Tris, Ys, len(surf_ids)-1, FaceCentre)
+            len(surf_ids)-1].AspectRatio = self.compute_tri_length_measurements(self.Tris, Ys, len(surf_ids) - 1, FaceCentre)
         self.Tris[len(surf_ids)-1].EdgeLength_time = [0, self.Tris[len(surf_ids)-1].EdgeLength]
 
         _, triAreas = self.compute_face_area(self.Tris, Ys, FaceCentre)
@@ -192,24 +181,7 @@ class Face:
             Tri = Tri.Edge
             Y3 = FaceCentre
             YTri = np.vstack([Y[Tri, :], Y3])
-            # TODO: to add to test
-            # YTri = np.array([[-0.625000000000000, -0.625000000000000, 0.312500000000000],
-            #                  [-0.625000000000000, -0.625000000000000, -0.312500000000000],
-            #                  [-1.06776699779592, -0.528295179733333, 0]])
             T = (1 / 2) * np.linalg.norm(np.cross(YTri[1, :] - YTri[0, :], YTri[0, :] - YTri[2, :]))
             trisArea[t] = T
             area = area + T
         return area, trisArea
-
-    def ComputeTriAspectRatio(self, sideLengths):
-        s = np.sum(sideLengths) / 2
-        aspectRatio = (sideLengths[0] * sideLengths[1] * sideLengths[2]) / (
-                8 * (s - sideLengths[0]) * (s - sideLengths[1]) * (s - sideLengths[2]))
-        return aspectRatio
-
-    def ComputeTriLengthMeasurements(self, Tris, Ys, currentTri, FaceCentre):
-        EdgeLength = np.linalg.norm(Ys[Tris[currentTri].Edge[0], :] - Ys[Tris[currentTri].Edge[1], :])
-        LengthsToCentre = [np.linalg.norm(Ys[Tris[currentTri].Edge[0], :] - FaceCentre),
-                           np.linalg.norm(Ys[Tris[currentTri].Edge[1], :] - FaceCentre)]
-        AspectRatio = self.ComputeTriAspectRatio([EdgeLength] + LengthsToCentre)
-        return EdgeLength, LengthsToCentre, AspectRatio

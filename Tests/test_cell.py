@@ -1,17 +1,27 @@
-from unittest import TestCase
-
-from tests.tests import Tests, load_data
+from Tests.tests import Tests, load_data
 
 
 class TestCell(Tests):
     def test_compute_cell_area(self):
         geo_test, _, _ = load_data('Geo_var_3x3_stretch.mat')
-        area_test = geo_test.Cells[0].ComputeCellArea()
-        area_expected = 6.367411435432329
-        self.assertAlmostEqual(area_test, area_expected)
+        geo_expected, _, _ = load_data('Geo_var_3x3_stretch.mat')
+
+        # Compute the area of the all the cells
+        for i in range(geo_test.nCells):
+            geo_test.Cells[i].ComputeCellArea()
+
+        # Check if the area is the same on each cell
+        for i in range(geo_test.nCells):
+            self.assertAlmostEqual(geo_test.Cells[i].Area, geo_expected.Cells[i].Area)
 
     def test_compute_cell_volume(self):
         geo_test, _, _ = load_data('Geo_var_3x3_stretch.mat')
-        volume_test = geo_test.Cells[0].ComputeCellVolume()
-        volume_expected = 1.339890750603544
-        self.assertAlmostEqual(volume_test, volume_expected)
+        geo_expected, _, _ = load_data('Geo_var_3x3_stretch.mat')
+
+        # Compute the volume of the all the cells
+        for i in range(geo_test.nCells):
+            geo_test.Cells[i].ComputeCellVolume()
+
+        # Check if the volume is the same on each cell
+        for i in range(geo_test.nCells):
+            self.assertAlmostEqual(geo_test.Cells[i].Vol, geo_expected.Cells[i].Vol)

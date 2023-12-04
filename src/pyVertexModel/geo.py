@@ -73,8 +73,8 @@ class Geo:
                 ij = [c, cj]
                 face_ids = np.sum(np.isin(self.Cells[c].T, ij), axis=1) == 2
                 newFace = face.Face()
-                newFace.BuildFace(c, cj, face_ids, self.nCells, self.Cells[c], self.XgID,
-                                                 Set, self.XgTop, self.XgBottom)
+                newFace.build_face(c, cj, face_ids, self.nCells, self.Cells[c], self.XgID,
+                                   Set, self.XgTop, self.XgBottom)
                 self.Cells[c].Faces.append(newFace)
 
             self.Cells[c].ComputeCellArea()
@@ -160,7 +160,7 @@ class Geo:
                     for tri, triArea in zip(self.Cells[c].Faces[f].Tris, triAreas):
                         tri.Area = triArea
 
-                    edgeLengths, lengthsToCentre, aspectRatio = self.Cells[c].Faces[f].ComputeFaceEdgeLengths(
+                    edgeLengths, lengthsToCentre, aspectRatio = self.Cells[c].Faces[f].compute_face_edge_lengths(
                         self.Cells[c].Faces[f],
                         self.Cells[c].Y)
                     for tri, edgeLength, lengthToCentre, aspRatio in zip(self.Cells[c].Faces[f].Tris, edgeLengths,

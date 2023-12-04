@@ -244,11 +244,11 @@ class VertexModel:
                 for nTris in range(len(Geo.Cells[c].Faces[f].Tris)):
                     tri = Geo.Cells[c].Faces[f].Tris[nTris]
                     if tri.Location == 'Top':
-                        edgeLengths_Top.append(tri.Edge.ComputeEdgeLength(Geo.Cells[c].Y))
+                        edgeLengths_Top.append(tri.Edge.compute_edge_length(Geo.Cells[c].Y))
                     elif tri.Location == 'Bottom':
-                        edgeLengths_Bottom.append(tri.Edge.ComputeEdgeLength(Geo.Cells[c].Y))
+                        edgeLengths_Bottom.append(tri.Edge.compute_edge_length(Geo.Cells[c].Y))
                     else:
-                        edgeLengths_Lateral.append(tri.Edge.ComputeEdgeLength(Geo.Cells[c].Y))
+                        edgeLengths_Lateral.append(tri.Edge.compute_edge_length(Geo.Cells[c].Y))
 
         self.Set.lmin0 = min(lmin_values)
 
@@ -336,11 +336,11 @@ class VertexModel:
                     lmin_values.append(min(tri.LengthsToCentre))
                     lmin_values.append(tri.EdgeLength)
                     if tri.Location == 'Top':
-                        edgeLengths_Top.append(tri.ComputeEdgeLength(self.Geo.Cells[c].Y))
+                        edgeLengths_Top.append(tri.compute_edge_length(self.Geo.Cells[c].Y))
                     elif tri.Location == 'Bottom':
-                        edgeLengths_Bottom.append(tri.ComputeEdgeLength(self.Geo.Cells[c].Y))
+                        edgeLengths_Bottom.append(tri.compute_edge_length(self.Geo.Cells[c].Y))
                     else:
-                        edgeLengths_Lateral.append(tri.ComputeEdgeLength(self.Geo.Cells[c].Y))
+                        edgeLengths_Lateral.append(tri.compute_edge_length(self.Geo.Cells[c].Y))
 
         self.Set.lmin0 = min(lmin_values)
 

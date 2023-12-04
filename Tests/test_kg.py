@@ -1,6 +1,6 @@
 import numpy as np
 
-from tests.tests import Tests, load_data
+from Tests.tests import Tests, load_data
 from src.pyVertexModel.Kg import kg_functions
 from src.pyVertexModel.Kg.kgContractility import KgContractility
 from src.pyVertexModel.Kg.kgSubstrate import KgSubstrate

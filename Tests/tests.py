@@ -8,7 +8,7 @@ from src.pyVertexModel.set import Set
 
 
 def load_data(file_name, return_geo=True):
-    test_dir = 'tests/data/%s' % file_name
+    test_dir = 'Tests/data/%s' % file_name
     if exists(test_dir):
         mat_info = scipy.io.loadmat(test_dir)
     else:
@@ -27,7 +27,7 @@ def load_data(file_name, return_geo=True):
 class Tests(unittest.TestCase):
     def assert_matrix(self, k_expected, k):
         for i in range(k.shape[0]):
-            for j in range(k.shape[0]):
+            for j in range(k.shape[1]):
                 self.assertAlmostEqual(k[i, j], k_expected[i, j], 3)
 
     def assert_array1D(self, g_expected, g):
