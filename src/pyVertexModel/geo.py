@@ -142,7 +142,7 @@ class Geo:
                 self.Cells[c].Faces[f].Centre += dy_reshaped[self.Cells[c].Faces[f].globalIds, :]
 
     def UpdateMeasures(self, ids=None):
-        if self.Cells[self.nCells].Vol is None:
+        if self.Cells[self.nCells - 1].Vol is None:
             print('Wont update measures with this Geo')
 
         if ids is None:
@@ -154,20 +154,15 @@ class Geo:
         for c in ids:
             if resetLengths:
                 for f in range(len(self.Cells[c].Faces)):
-                    self.Cells[c].Faces[f].Area, triAreas = self.Cells[c].Faces[f].compute_face_area(
-                        self.Cells[c].Faces[f].Tris, self.Cells[c].Y,
-                        self.Cells[c].Faces[f].Centre)
+                    self.Cells[c].Faces[f].Area, triAreas = self.Cells[c].Faces[f].compute_face_area(self.Cells[c].Y)
+
                     for tri, triArea in zip(self.Cells[c].Faces[f].Tris, triAreas):
                         tri.Area = triArea
 
-                    edgeLengths, lengthsToCentre, aspectRatio = self.Cells[c].Faces[f].compute_face_edge_lengths(
-                        self.Cells[c].Faces[f],
-                        self.Cells[c].Y)
-                    for tri, edgeLength, lengthToCentre, aspRatio in zip(self.Cells[c].Faces[f].Tris, edgeLengths,
-                                                                         lengthsToCentre, aspectRatio):
-                        tri.EdgeLength = edgeLength
-                        tri.LengthsToCentre = lengthToCentre
-                        tri.AspectRatio = aspRatio
+                    # Compute the edge lengths of the triangles
+                    for tri in self.Cells[c].Faces[f].Tris:
+                        tri.EdgeLength, tri.LengthsToCentre, tri.AspectRatio = (
+                            tri.compute_tri_length_measurements(self.Cells[c].Y, self.Cells[c].Faces[f].Centre))
 
                     for tri in self.Cells[c].Faces[f].Tris:
                         tri.ContractileG = 0

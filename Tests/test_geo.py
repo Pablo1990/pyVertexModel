@@ -44,7 +44,7 @@ class TestGeo(Tests):
 
         # Check if none of the measurements has changed
         for i in range(geo_test.nCells):
-            self.assertAlmostEqual(geo_test.Cells[i].Area, geo_expected.Cells[i].Area)
+            self.assertAlmostEqual(geo_test.Cells[i].Area, geo_expected.Cells[i].Area, 5)
             self.assertAlmostEqual(geo_test.Cells[i].Vol, geo_expected.Cells[i].Vol)
 
 

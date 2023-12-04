@@ -36,16 +36,16 @@ class Tris:
         """
         return np.linalg.norm(Y[self.Edge[0], :] - Y[self.Edge[1], :])
 
-    def compute_tri_length_measurements(self, Ys, FaceCentre):
+    def compute_tri_length_measurements(self, Ys, face_centre):
         EdgeLength = np.linalg.norm(Ys[self.Edge[0], :] - Ys[self.Edge[1], :])
-        LengthsToCentre = [np.linalg.norm(Ys[self.Edge[0], :] - FaceCentre),
-                           np.linalg.norm(Ys[self.Edge[1], :] - FaceCentre)]
+        LengthsToCentre = [np.linalg.norm(Ys[self.Edge[0], :] - face_centre),
+                           np.linalg.norm(Ys[self.Edge[1], :] - face_centre)]
         AspectRatio = self.compute_tri_aspect_ratio([EdgeLength] + LengthsToCentre)
         return EdgeLength, LengthsToCentre, AspectRatio
 
-    def compute_tri_aspect_ratio(self, sideLengths):
-        s = np.sum(sideLengths) / 2
-        aspectRatio = (sideLengths[0] * sideLengths[1] * sideLengths[2]) / (
-                8 * (s - sideLengths[0]) * (s - sideLengths[1]) * (s - sideLengths[2]))
+    def compute_tri_aspect_ratio(self, side_lengths):
+        s = np.sum(side_lengths) / 2
+        aspectRatio = (side_lengths[0] * side_lengths[1] * side_lengths[2]) / (
+                8 * (s - side_lengths[0]) * (s - side_lengths[1]) * (s - side_lengths[2]))
         return aspectRatio
 

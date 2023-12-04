@@ -44,10 +44,10 @@ class TestNewtonRaphson(Tests):
         gr_expected = mat_info_expected['gr'][0][0]
 
         self.assertAlmostEquals(dyr_expected, dyr_test)
-        self.assertAlmostEquals(energy_expected, energy_test)
         self.assertAlmostEquals(gr_expected, gr_test)
         self.assert_array1D(g_expected, g_test)
         self.assert_matrix(k_expected, k_test)
+        self.assertAlmostEquals(energy_expected, energy_test)
 
     # def test_newton_raphson(self):
     #     geo_test, set_test, mat_info = load_data('Newton_Raphson_3x3_stretch.mat')
