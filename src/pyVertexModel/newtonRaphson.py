@@ -34,7 +34,7 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
     ig = 0
 
     while (gr > Set.tol or dyr > Set.tol) and Set.iter < Set.MaxIter:
-        Energy, K, dyr, g, gr = newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof, dy,
+        Energy, K, dyr, g, gr, ig, auxgr, dy = newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof, dy,
                                                          g, gr0, ig, numStep, t)
 
     return Geo, g, K, Energy, Set, gr, dyr, dy
@@ -65,7 +65,7 @@ def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof, dy, g,
             and abs(auxgr[2] - auxgr[1]) / auxgr[2] < 1e-3
     ) or abs((gr0 - gr) / gr0) > 1e3:
         Set.iter = Set.MaxIter
-    return Energy, K, dyr, g, gr
+    return Energy, K, dyr, g, gr, ig, auxgr, dy
 
 
 def ml_divide(K, dof, g):
