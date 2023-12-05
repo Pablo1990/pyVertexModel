@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 
 from src.pyVertexModel import cell, face
@@ -8,6 +10,7 @@ class Geo:
 
         self.Cells = []
         self.Remodelling = False
+        self.non_dead_cells = []
 
         if mat_file is None:
             self.numF = None
@@ -21,7 +24,6 @@ class Geo:
             self.nx = 3
             self.nCells = 0
             self.BorderCells = None
-            self.non_dead_cells = []
         else: # coming from mat_file
             self.numF = mat_file['numF'][0][0][0][0]
             self.numY = mat_file['numY'][0][0][0][0]
@@ -37,7 +39,25 @@ class Geo:
             for c_cell in mat_file['Cells'][0][0][0]:
                 self.Cells.append(cell.Cell(c_cell))
 
+    def copy(self):
+        new_geo = Geo()
+        new_geo.numF = self.numF
+        new_geo.numY = self.numY
+        new_geo.EdgeLengthAvg_0 = self.EdgeLengthAvg_0
+        new_geo.XgBottom = self.XgBottom
+        new_geo.XgTop = self.XgTop
+        new_geo.XgID = self.XgID
+        new_geo.nz = self.nz
+        new_geo.ny = self.ny
+        new_geo.nx = self.nx
+        new_geo.nCells = self.nCells
+        new_geo.BorderCells = self.BorderCells
+        new_geo.non_dead_cells = self.non_dead_cells
 
+        for c_cell in self.Cells:
+            new_geo.Cells.append(c_cell.copy())
+
+        return new_geo
 
     def BuildCells(self, Set, X, Twg):
 

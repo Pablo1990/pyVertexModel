@@ -8,6 +8,7 @@ from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
 from src.pyVertexModel.Kg.kgTriEnergyBarrier import KgTriEnergyBarrier
 from src.pyVertexModel.Kg.kgViscosity import KgViscosity
 from src.pyVertexModel.Kg.kgVolume import KgVolume
+from src.pyVertexModel.geo import Geo
 
 
 def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
@@ -18,7 +19,7 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
     else:
         dof = Dofs.Free
 
-    dy = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3, dtype=np.float32)
+    dy = np.zeros(((Geo.numY + Geo.numF + Geo.nCells) * 3, 1), dtype=np.float32)
     dyr = np.linalg.norm(dy[dof])
     gr = np.linalg.norm(g[dof])
     gr0 = gr
@@ -40,21 +41,16 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
 
 
 def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof, dy, g, gr0, ig, numStep, t):
-    dy[dof] = -np.linalg.solve(K[np.ix_(dof, dof)], g[dof])
-    # dy[dof] = kg_functions.mldivide_np(K[np.ix_(dof, dof)], g[dof])
-    if np.any(np.isnan(dy)):
-        print("error")
+    dy[dof, 0] = ml_divide(K, dof, g)
+
     alpha = line_search(Geo_0, Geo_n, Geo, Dofs, Set, g, dy)
-    dy_reshaped = np.reshape(dy * alpha, ((Geo.numF + Geo.numY + Geo.nCells), 3))
+    dy_reshaped = np.reshape(dy * alpha, (Geo.numF + Geo.numY + Geo.nCells, 3))
     Geo.UpdateVertices(dy_reshaped)
     Geo.UpdateMeasures()
     g, K, Energy = KgGlobal(Geo_0, Geo_n, Geo, Set)
-    if np.any(np.isinf(K)):
-        print("error")
+
     dyr = np.linalg.norm(dy[dof])
     gr = np.linalg.norm(g[dof])
-    # Geo.log = f"{Geo.log} Step: {numStep}, Iter: {Set.iter}, Time: {t} ||gr||= {gr:.3e} ||dyr||= {dyr:.3e} alpha=
-    # {alpha:.3e} nu/nu0={Set.nu / Set.nu0:.3g}\n"
     print(f"Step: {numStep}, Iter: {Set.iter}, Time: {t} ||gr||= {gr:.3e} ||dyr||= {dyr:.3e} alpha= {alpha:.3e}"
           f" nu/nu0={Set.nu / Set.nu0:.3g}\n")
     Set.iter += 1
@@ -72,14 +68,23 @@ def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof, dy, g,
     return Energy, K, dyr, g, gr
 
 
-def line_search(Geo_0, Geo_n, Geo, Dofs, Set, gc, dy):
-    dy_reshaped = np.reshape(dy, ((Geo.numF + Geo.numY + Geo.nCells), 3))
+def ml_divide(K, dof, g):
+    # dy[dof] = kg_functions.mldivide_np(K[np.ix_(dof, dof)], g[dof])
+    return -np.linalg.solve(K[np.ix_(dof, dof)], g[dof])
 
-    Geo.UpdateVertices(dy_reshaped)
-    Geo.UpdateMeasures()
 
-    g = gGlobal(Geo_0, Geo_n, Geo, Set)
+def line_search(Geo_0, Geo_n, geo, Dofs, Set, gc, dy):
+    dy_reshaped = np.reshape(dy, (geo.numF + geo.numY + geo.nCells, 3))
+
+    # Create a copy of geo to not change the original one
+    Geo_copy = geo.copy()
+
+    Geo_copy.UpdateVertices(dy_reshaped)
+    Geo_copy.UpdateMeasures()
+
+    g = gGlobal(Geo_0, Geo_n, Geo_copy, Set)
     dof = Dofs.Free
+
     gr0 = np.linalg.norm(gc[dof])
     gr = np.linalg.norm(g[dof])
 

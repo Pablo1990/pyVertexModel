@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 
 from src.pyVertexModel import face
@@ -40,6 +42,23 @@ class Cell:
                     self.globalIds = np.concatenate(mat_file[9]) - 1
                     self.cglobalids = mat_file[10][0][0] - 1
                     self.AliveStatus = mat_file[11][0][0]
+
+    def copy(self):
+        new_cell = Cell()
+        new_cell.Y = copy.deepcopy(self.Y)
+        new_cell.globalIds = copy.deepcopy(self.globalIds)
+        new_cell.Faces = copy.deepcopy(self.Faces)
+        new_cell.Area = self.Area
+        new_cell.Area0 = self.Area0
+        new_cell.Vol = self.Vol
+        new_cell.Vol0 = self.Vol0
+        new_cell.AliveStatus = self.AliveStatus
+        new_cell.substrate_g = self.substrate_g
+        new_cell.lambdaB_perc = self.lambdaB_perc
+        new_cell.ID = self.ID
+        new_cell.X = copy.deepcopy(self.X)
+        new_cell.T = copy.deepcopy(self.T)
+        return new_cell
 
     def ComputeCellArea(self, locationFilter=None):
         totalArea = 0
