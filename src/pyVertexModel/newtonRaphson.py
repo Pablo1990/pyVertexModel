@@ -20,7 +20,7 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
         dof = Dofs.Free
 
     dy = np.zeros(((Geo.numY + Geo.numF + Geo.nCells) * 3, 1), dtype=np.float32)
-    dyr = np.linalg.norm(dy[dof])
+    dyr = np.linalg.norm(dy[dof, 0])
     gr = np.linalg.norm(g[dof])
     gr0 = gr
 
@@ -49,7 +49,7 @@ def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof, dy, g,
     Geo.UpdateMeasures()
     g, K, Energy = KgGlobal(Geo_0, Geo_n, Geo, Set)
 
-    dyr = np.linalg.norm(dy[dof])
+    dyr = np.linalg.norm(dy[dof, 0])
     gr = np.linalg.norm(g[dof])
     print(f"Step: {numStep}, Iter: {Set.iter}, Time: {t} ||gr||= {gr:.3e} ||dyr||= {dyr:.3e} alpha= {alpha:.3e}"
           f" nu/nu0={Set.nu / Set.nu0:.3g}\n")
@@ -89,8 +89,8 @@ def line_search(Geo_0, Geo_n, geo, Dofs, Set, gc, dy):
     gr = np.linalg.norm(g[dof])
 
     if gr0 < gr:
-        R0 = np.dot(dy[dof], gc[dof])
-        R1 = np.dot(dy[dof], g[dof])
+        R0 = np.dot(dy[dof, 0], gc[dof])
+        R1 = np.dot(dy[dof, 0], g[dof])
 
         R = R0 / R1
         alpha1 = (R / 2) + np.sqrt((R / 2) ** 2 - R)
