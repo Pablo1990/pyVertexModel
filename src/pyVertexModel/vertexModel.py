@@ -359,7 +359,7 @@ class VertexModel:
             if not self.relaxingNu:
                 self.Set.iIncr = self.numStep
 
-                self.Geo = self.Dofs.ApplyBoundaryCondition(self.t, self.Geo, self.Set)
+                self.Dofs.ApplyBoundaryCondition(self.t, self.Geo, self.Set)
                 # IMPORTANT: Here it updates: Areas, Volumes, etc... Should be
                 # up-to-date
                 self.Geo.UpdateMeasures()
