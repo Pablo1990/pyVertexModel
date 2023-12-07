@@ -14,13 +14,18 @@ from src.pyVertexModel.set import Set
 
 class VertexModel:
 
-    def __init__(self):
+    def __init__(self, mat_file_set=None):
 
         self.X = None
         self.didNotConverge = False
         self.Geo = Geo()
-        self.Set = Set()
-        self.Set.stretch()
+
+        if mat_file_set is not None:
+            self.Set = Set(mat_file_set)
+        else:
+            self.Set = Set()
+            self.Set.stretch()
+
         self.Dofs = degreesOfFreedom.DegreesOfFreedom(None)
         #self.Set = WoundDefault(self.Set)
         self.InitiateOutputFolder()
