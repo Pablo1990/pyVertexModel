@@ -68,16 +68,16 @@ class KgSurfaceCellBasedAdhesion(Kg):
 
         self.g += ge * fact
         if calculate_K:
-            self.K = self.compute_finalK_SurfaceEnergy(ge, self.K, Cell.Area0)
+            self.K = kg_functions.compute_finalK_SurfaceEnergy(ge, self.K, Cell.Area0)
 
         Energy_c += (1 / 2) * fact0 * fact
         return Energy_c
 
     def calculate_Kg(self, Lambda, fact, ge, nY, y1, y2, y3):
-        gs, Ks, Kss = self.gKSArea(y1, y2, y3)
+        gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)
         gs = Lambda * gs
         ge = self.assemble_g(ge, gs, np.array(nY, dtype='int'))
-        Ks = np.array(np.dot(fact * Lambda, (Ks + Kss)), dtype=self.precision_type)
+        Ks = np.dot(fact * Lambda, (Ks + Kss))
 
         self.assemble_k(Ks, np.array(nY, dtype='int'))
         return ge

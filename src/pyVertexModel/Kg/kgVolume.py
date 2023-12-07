@@ -40,14 +40,14 @@ class KgVolume(Kg):
                     if Geo.Remodelling and not any(id in Geo.AssemblegIds for id in nY):
                         continue
 
-                    gs, Ks = self.gKDet(y1, y2, y3)
+                    gs, Ks = kg_functions.gKDet(y1, y2, y3)
                     ge = self.assemble_g(ge, gs, np.array(nY, dtype='int'))
                     if calculate_K:
                         self.assemble_k(Ks * fact / 6, np.array(nY, dtype='int'))
 
             self.g += ge * fact / 6  # Volume contribution of each triangle is det(Y1,Y2,Y3)/6
             if calculate_K:
-                self.K = self.compute_finalK_Volume(ge, self.K, Cell.Vol, Cell.Vol0, n)
+                self.K = kg_functions.compute_finalK_Volume(ge, self.K, Cell.Vol, Cell.Vol0, n)
 
             self.energy += lambdaV / n * ((Cell.Vol - Cell.Vol0) / Cell.Vol0) ** n
 
