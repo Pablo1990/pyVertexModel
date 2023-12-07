@@ -51,9 +51,9 @@ cpdef np.ndarray assembleK(double[:, :] K, double[:, :] Ke, nY: np.ndarray):
 @cython.boundscheck(False)
 cpdef np.ndarray cross(np.ndarray y):
 
-    cdef float y0 = y[0]
-    cdef float y1 = y[1]
-    cdef float y2 = y[2]
+    cdef double y0 = y[0]
+    cdef double y1 = y[1]
+    cdef double y2 = y[2]
 
     cdef np.ndarray yMat = np.array([[0, -y2, y1],
                                      [y2, 0, -y0],
@@ -103,7 +103,7 @@ cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
     cdef np.ndarray Q2 = y3_crossed - y1_crossed
     cdef np.ndarray Q3 = y1_crossed - y2_crossed
 
-    cdef float fact = 1 / np.dot(2, np.linalg.norm(q))
+    cdef double fact = 1 / np.dot(2, np.linalg.norm(q))
 
     cdef np.ndarray gs = np.dot(fact,  np.concatenate([np.dot(Q1.transpose(), q), np.dot(Q2.transpose(), q), np.dot(Q3.transpose(), q)]))
 
@@ -125,11 +125,11 @@ cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
 @cython.cdivision(True)
 @cython.nonecheck(False)
 @cython.boundscheck(False)
-cpdef np.ndarray compute_finalK_SurfaceEnergy(np.ndarray ge, np.ndarray K, float Area0):
+cpdef np.ndarray compute_finalK_SurfaceEnergy(np.ndarray ge, np.ndarray K, double Area0):
     cdef Py_ssize_t i, j
     cdef Py_ssize_t n = ge.shape[0]
-    cdef float[:] ge_view = ge
-    cdef float[:, :] K_view = K
+    cdef double[:] ge_view = ge
+    cdef double[:, :] K_view = K
 
     for i in range(n):
         if ge_view[i] != 0:
@@ -139,11 +139,11 @@ cpdef np.ndarray compute_finalK_SurfaceEnergy(np.ndarray ge, np.ndarray K, float
 
     return np.asarray(K_view)
 
-cpdef np.ndarray compute_finalK_Volume(np.ndarray ge, np.ndarray K, float Vol, float Vol0, int n_dim):
+cpdef np.ndarray compute_finalK_Volume(np.ndarray ge, np.ndarray K, double Vol, double Vol0, int n_dim):
     cdef Py_ssize_t i, j
     cdef Py_ssize_t n = ge.shape[0]
-    cdef float[:] ge_view = ge
-    cdef float[:, :] K_view = K
+    cdef double[:] ge_view = ge
+    cdef double[:, :] K_view = K
 
     for i in range(n):
         if ge_view[i] != 0:
@@ -183,6 +183,6 @@ def mldivide_np(np.ndarray A, np.ndarray B):
     cdef int m = A.shape[0]
     cdef int n = A.shape[1]
     cdef int p = B.shape[0]
-    cdef float[:] X = np.array(np.linalg.solve(A, B), dtype=np.float64)
+    cdef double[:] X = np.array(np.linalg.solve(A, B), dtype=np.float64)
 
     return X
