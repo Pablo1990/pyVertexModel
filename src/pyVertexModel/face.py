@@ -83,7 +83,7 @@ class Face:
         #         [101, 4, 1, 2],
         #         [106, 2, 1, 4]
         #     ])-1
-        tet_order = np.zeros(len(FaceTets)) - 1
+        tet_order = np.zeros(len(FaceTets), dtype=int) - 1
         tet_order[0] = 0
         prev_tet = FaceTets[0, :]
 
@@ -110,7 +110,7 @@ class Face:
             raise Exception('BuildEdges:TetrahedraMinSize', 'Length of the face is lower than 3')
         surf_ids = surf_ids[tet_order]
 
-        Order = np.zeros(len(surf_ids))
+        Order = np.zeros(len(surf_ids), dtype=int)
         for iii in range(len(surf_ids)):
             if iii == len(surf_ids) - 1:
                 v1 = Ys[surf_ids[iii], :] - FaceCentre
@@ -161,7 +161,7 @@ class Face:
 
     def compute_face_area(self, Y):
         area = 0
-        trisArea = np.zeros(len(self.Tris), dtype=np.float32)
+        trisArea = np.zeros(len(self.Tris))
         for t in range(len(self.Tris)):
             Tri = self.Tris[t]
             Tri = Tri.Edge

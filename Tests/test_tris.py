@@ -18,10 +18,10 @@ class TestTris(Tests):
         # Check if the length measurements are the same on each cell
         for i in range(geo_test.nCells):
             self.assertAlmostEqual(geo_test.Cells[i].Faces[0].Tris[0].EdgeLength,
-                                   geo_expected.Cells[i].Faces[0].Tris[0].EdgeLength, 6)
+                                   geo_expected.Cells[i].Faces[0].Tris[0].EdgeLength)
 
             self.assertAlmostEqual(geo_test.Cells[i].Faces[0].Tris[0].AspectRatio,
-                                   geo_expected.Cells[i].Faces[0].Tris[0].AspectRatio, 6)
+                                   geo_expected.Cells[i].Faces[0].Tris[0].AspectRatio)
 
             self.assert_array1D(geo_test.Cells[i].Faces[0].Tris[0].LengthsToCentre,
                                 geo_expected.Cells[i].Faces[0].Tris[0].LengthsToCentre)

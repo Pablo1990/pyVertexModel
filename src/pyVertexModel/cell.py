@@ -9,7 +9,7 @@ class Cell:
 
     def __init__(self, mat_file=None):
 
-        self.Y = np.empty(1, np.float32)
+        self.Y = np.empty(1, np.float64)
         self.globalIds = np.array([], dtype='int')
         self.Faces = []
         self.Area = None
@@ -23,15 +23,15 @@ class Cell:
 
         if mat_file is None:
             self.ID = None
-            self.X = np.empty(1, np.float32)
+            self.X = np.empty(1, np.float64)
             self.T = np.empty(1, 'int')
         else:
             self.ID = mat_file[0][0][0] - 1
-            self.X = np.array(mat_file[1][0], dtype=np.float32)
+            self.X = np.array(mat_file[1][0], dtype=np.float64)
             self.T = mat_file[2] - 1
 
             if len(mat_file[4]) > 0:
-                self.Y = np.array(mat_file[3], dtype=np.float32)
+                self.Y = np.array(mat_file[3], dtype=np.float64)
                 for c_face in mat_file[4][0]:
                     self.Faces.append(face.Face(c_face))
                 if len(mat_file[5]) > 0:

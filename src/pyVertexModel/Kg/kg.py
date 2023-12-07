@@ -6,14 +6,15 @@ import numpy as np
 
 class Kg:
 
-    def __init__(self, Geo):
-        self.precision_type = np.float32
-        self.dimg = (Geo.numY + Geo.numF + Geo.nCells) * 3
-        self.g = np.zeros(self.dimg, dtype=self.precision_type)
-        self.K = np.zeros([self.dimg, self.dimg], dtype=self.precision_type)
-        self.energy = None
-        self.dim = 3
-        self.timeInSeconds = -1
+    def __init__(self, Geo=None):
+        self.precision_type = np.float64
+        if Geo is not None:
+            self.dimg = (Geo.numY + Geo.numF + Geo.nCells) * 3
+            self.g = np.zeros(self.dimg, dtype=self.precision_type)
+            self.K = np.zeros([self.dimg, self.dimg], dtype=self.precision_type)
+            self.energy = None
+            self.dim = 3
+            self.timeInSeconds = -1
 
     @abstractmethod
     def compute_work(self, Geo, Set, Geo_n=None, calculate_K=True):

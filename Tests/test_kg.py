@@ -1,7 +1,7 @@
 import numpy as np
 
 from Tests.tests import Tests, load_data
-from src.pyVertexModel.Kg import kg_functions
+from src.pyVertexModel.Kg import kg
 from src.pyVertexModel.Kg.kgContractility import KgContractility
 from src.pyVertexModel.Kg.kgSubstrate import KgSubstrate
 from src.pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
@@ -195,7 +195,8 @@ class Test(Tests):
 
     def test_k_k(self):
         _, _, mat_info = load_data('kK_test.mat', False)
-        output_KK = kg_functions.kK(mat_info['y1_Crossed'], mat_info['y2_Crossed'], mat_info['y3_Crossed'],
+        kg = KgSubstrate()
+        output_KK = kg.kK(mat_info['y1_Crossed'], mat_info['y2_Crossed'], mat_info['y3_Crossed'],
                                     mat_info['y1'][0], mat_info['y2'][0], mat_info['y3'][0])
 
         expectedResult = np.array([[0.0883044277371917, -0.0428177029418665, -0.415094060433679],
