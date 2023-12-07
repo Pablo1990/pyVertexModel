@@ -25,11 +25,11 @@ def load_data(file_name, return_geo=True):
 
 
 class Tests(unittest.TestCase):
-    def assert_matrix(self, k_expected, k, delta=3):
+    def assert_matrix(self, k_expected, k, delta=6):
         for i in range(k.shape[0]):
             for j in range(k.shape[1]):
                 self.assertAlmostEqual(k[i, j], k_expected[i, j], delta)
 
-    def assert_array1D(self, g_expected, g, delta=3):
+    def assert_array1D(self, g_expected, g, delta=6):
         for i in range(len(g)):
             self.assertAlmostEqual(g[i], g_expected[i], delta)

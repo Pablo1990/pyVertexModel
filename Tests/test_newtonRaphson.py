@@ -30,24 +30,23 @@ class TestNewtonRaphson(Tests):
         ig = 1
         auxgr_test = np.array([gr_test, 0, 0])
 
-        energy_test, k_test, dyr_test, g_test, gr_test = newton_raphson_iteration(dofs_test, geo_test, geo_0_test,
-                                                                                  geo_n_test, k_test, set_test,
-                                                                                  auxgr_test, dofs_test.Free, dy_test,
-                                                                                  g_test, gr0_test, ig, num_step_test,
-                                                                                  t_test)
+        energy_test, k_test, dyr_test, g_test, gr_test, ig_test, auxgr_test, dy_text = (
+            newton_raphson_iteration(dofs_test, geo_test, geo_0_test,
+                                     geo_n_test, k_test, set_test,
+                                     auxgr_test, dofs_test.Free, dy_test,
+                                     g_test, gr0_test, ig, num_step_test,
+                                     t_test))
 
         _, _, mat_info_expected = load_data('Newton_Raphson_Iteration_3x3_stretch_expected.mat', False)
         energy_expected = mat_info_expected['Energy'][0][0]
-        k_expected = mat_info_expected['K']
         dyr_expected = mat_info_expected['dyr'][0][0]
         g_expected = mat_info_expected['g'][:, 0]
         gr_expected = mat_info_expected['gr'][0][0]
 
         self.assertAlmostEqual(dyr_expected, dyr_test)
-        self.assertAlmostEqual(gr_expected, gr_test, 4)
-        self.assertAlmostEqual(energy_expected, energy_test, 3)
+        self.assertAlmostEqual(gr_expected, gr_test)
+        self.assertAlmostEqual(energy_expected, energy_test)
         self.assert_array1D(g_expected, g_test)
-        #self.assert_matrix(k_expected, k_test, 2)
 
     def test_newton_raphson(self):
         geo_test, set_test, mat_info = load_data('Newton_Raphson_3x3_stretch.mat')
@@ -61,16 +60,24 @@ class TestNewtonRaphson(Tests):
         t_test = mat_info['t'][0][0]
 
         Set.iter = 1000000
-        geo_test, g_test, k_test, energy_test, set_test, gr_test, dyr_test, dy_test = newton_raphson(geo_0_test, geo_n_test, geo_test, dofs_test, set_test, k_test, g_test, num_step_test, t_test)
+        geo_test, g_test, k_test, energy_test, set_test, gr_test, dyr_test, dy_test = (
+            newton_raphson(geo_0_test,
+                           geo_n_test,
+                           geo_test,
+                           dofs_test,
+                           set_test, k_test,
+                           g_test,
+                           num_step_test,
+                           t_test))
 
-        gr_expected = mat_info_expected['gr']
-        dyr_expected = mat_info_expected['dyr']
+        gr_expected = mat_info_expected['gr'][0][0]
+        dyr_expected = mat_info_expected['dyr'][0][0]
         dy_expected = mat_info_expected['dy'][:, 0]
         g_expected = mat_info_expected['g'][:, 0]
 
         self.assertAlmostEqual(dyr_expected, dyr_test)
-        self.assertAlmostEqual(gr_expected, gr_test, 4)
-        self.assertAlmostEqual(dy_expected, dy_test, 3)
+        self.assertAlmostEqual(gr_expected, gr_test)
+        self.assert_array1D(dy_expected, dy_test)
         self.assert_array1D(g_expected, g_test)
 
     def test_line_search(self):
@@ -101,7 +108,7 @@ class TestNewtonRaphson(Tests):
         g_test = mat_info_expected['g'][:, 0]
         dofs_test = DegreesOfFreedom(mat_info_expected['Dofs'])
 
-        dy_test = np.zeros(((geo_test.numF + geo_test.numY + geo_test.nCells)*3, 1), dtype=np.float32)
+        dy_test = np.zeros(((geo_test.numF + geo_test.numY + geo_test.nCells) * 3, 1), dtype=np.float32)
         dy_test[dofs_test.Free, 0] = ml_divide(k_test, dofs_test.Free, g_test)
 
         self.assert_array1D(dy_test, mat_info_expected['dy'][:, 0])

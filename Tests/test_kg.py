@@ -137,7 +137,7 @@ class Test(Tests):
 
         v_kg = KgViscosity(geo_test)
         v_kg.compute_work(geo_test, set_test, geo_n_test)
-        self.assertAlmostEqual(v_kg.energy, 3.194411761833479e+04, 2)
+        self.assertAlmostEqual(v_kg.energy, 3.194411761833479e+04)
 
         # Check that the global K, g and E are the same in a different iteration
         _, _, mat_expected = load_data('Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat', False)
@@ -167,7 +167,7 @@ class Test(Tests):
                       mat_expected['EBA'] + mat_expected['EBAR'] + mat_expected['EC'] +
                       mat_expected['ESub'])
 
-        self.assertAlmostEqual(e_expected[0][0], E, 3)
+        self.assertAlmostEqual(e_expected[0][0], E)
         self.assert_array1D(g_expected[:, 0], g)
         self.assert_matrix(k_expected, K)
 
@@ -184,8 +184,8 @@ class Test(Tests):
         k_expected = mat_info['K']
 
         # Check that the results are the same
-        self.assert_array1D(g_expected, g, 15)
-        self.assert_matrix(k_expected, K, 15)
+        self.assert_array1D(g_expected, g)
+        self.assert_matrix(k_expected, K)
 
     def assert_k_g_energy(self, energy_var_name, g_var_name, k_var_name, kg, mat_expected):
         self.assertAlmostEqual(kg.energy, mat_expected[energy_var_name][0][0], 3)
