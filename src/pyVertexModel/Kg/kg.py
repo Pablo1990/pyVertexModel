@@ -7,9 +7,10 @@ import numpy as np
 class Kg:
 
     def __init__(self, Geo):
+        self.precision_type = np.float32
         self.dimg = (Geo.numY + Geo.numF + Geo.nCells) * 3
-        self.g = np.zeros(self.dimg, dtype=np.float32)
-        self.K = np.zeros([self.dimg, self.dimg], dtype=np.float32)
+        self.g = np.zeros(self.dimg, dtype=self.precision_type)
+        self.K = np.zeros([self.dimg, self.dimg], dtype=self.precision_type)
         self.energy = None
         self.dim = 3
         self.timeInSeconds = -1
@@ -49,19 +50,7 @@ class Kg:
 
         return g
 
-    def cross(self, y):
-        """
-        Compute the cross product matrix of a 3-self.dimensional vector.
-        :param y:3-self.dimensional vector
-        :return:y_mat (ndarray): The cross product matrix of the input vector.
-        """
-        y_mat = np.array([[0, -y[2], y[1]],
-                         [y[2], 0, -y[0]],
-                         [-y[1], y[0], 0]])
-        return y_mat
-
-    @staticmethod
-    def kK(y1_crossed, y2_crossed, y3_crossed, y1, y2, y3):
+    def kK(self, y1_crossed, y2_crossed, y3_crossed, y1, y2, y3):
         """
         Helper function to compute a component of Ks.
 
@@ -76,8 +65,13 @@ class Kg:
         Returns:
         KK_value (ndarray): Resulting value for KK.
         """
-        return ((y2_crossed - y3_crossed) @ (y1_crossed - y3_crossed) + np.cross(y2_crossed, y1) -
-                np.cross(y2_crossed, y3) - np.cross(y3_crossed, y1))
+        K_y2_y1 = np.dot(y2_crossed, y1)
+        K_y2_y3 = np.dot(y2_crossed, y3)
+        K_y3_y1 = np.dot(y3_crossed, y1)
+
+        KIJ = (np.dot(y2_crossed - y3_crossed, y1_crossed - y3_crossed) + self.cross(K_y2_y1) - self.cross(K_y2_y3) -
+               self.cross(K_y3_y1))
+        return KIJ
 
     def add_noise_to_parameter(self, avgParameter, noise, currentTri=None):
         minValue = avgParameter - avgParameter * noise
@@ -99,26 +93,63 @@ class Kg:
         y2_crossed = self.cross(y2)
         y3_crossed = self.cross(y3)
 
-        q = np.dot(y2_crossed, y1) - np.dot(y2_crossed, y3) + np.dot(y1_crossed, y3)
+        q = y2_crossed @ y1 - y2_crossed @ y3 + y1_crossed @ y3
 
         Q1 = y2_crossed - y3_crossed
         Q2 = y3_crossed - y1_crossed
         Q3 = y1_crossed - y2_crossed
 
-        fact = 1 / (2 * np.linalg.norm(q))
-        gs = fact * np.array([np.dot(Q1, q), np.dot(Q2, q), np.dot(Q3, q)])
+        fact = 1 / np.dot(2, np.linalg.norm(q))
+        gs = np.dot(fact,
+                    np.concatenate([np.dot(Q1.transpose(), q), np.dot(Q2.transpose(), q), np.dot(Q3.transpose(), q)]))
 
-        Kss = -(2 / np.linalg.norm(q)) * np.outer(gs, gs)
+        Kss = np.dot(-(2 / np.linalg.norm(q)), np.outer(gs, gs))
 
-        Ks = fact * np.block([
-            [np.dot(Q1, Q1), self.kK(y1_crossed, y2_crossed, y3_crossed, y1, y2, y3),
+        Ks = np.dot(fact, np.block([
+            [np.dot(Q1.transpose(), Q1), self.kK(y1_crossed, y2_crossed, y3_crossed, y1, y2, y3),
              self.kK(y1_crossed, y3_crossed, y2_crossed, y1, y3, y2)],
-            [self.kK(y2_crossed, y1_crossed, y3_crossed, y2, y1, y3), np.dot(Q2, Q2),
+            [self.kK(y2_crossed, y1_crossed, y3_crossed, y2, y1, y3), np.dot(Q2.transpose(), Q2),
              self.kK(y2_crossed, y3_crossed, y1_crossed, y2, y3, y1)],
             [self.kK(y3_crossed, y1_crossed, y2_crossed, y3, y1, y2),
-             self.kK(y3_crossed, y2_crossed, y1_crossed, y3, y2, y1), np.dot(Q3, Q3)]
-        ])
-
-        gs = gs.reshape(-1, 1)  # Reshape gs to match the orientation in MATLAB
+             self.kK(y3_crossed, y2_crossed, y1_crossed, y3, y2, y1), np.dot(Q3.transpose(), Q3)]
+        ]))
 
         return gs, Ks, Kss
+
+    def gKDet(self, Y1, Y2, Y3):
+        """
+        Helper function to compute the g and K for the determinant of a 3x3 matrix.
+        :param Y1:
+        :param Y2:
+        :param Y3:
+        :return:
+        """
+        gs = np.zeros(9, dtype=self.precision_type)
+        Ks = np.zeros([9, 9], dtype=self.precision_type)
+
+        gs[:3] = np.cross(Y2, Y3)
+        gs[3:6] = np.cross(Y3, Y1)
+        gs[6:] = np.cross(Y1, Y2)
+
+        Ks[:3, 3:6] = -self.cross(Y3)
+        Ks[:3, 6:] = self.cross(Y2)
+        Ks[3:6, :3] = self.cross(Y3)
+        Ks[3:6, 6:] = -self.cross(Y1)
+        Ks[6:, :3] = -self.cross(Y2)
+        Ks[6:, 3:6] = self.cross(Y1)
+
+        return gs, Ks
+
+    def cross(self, y):
+        """
+        Compute the cross product matrix of a 3-self.dimensional vector.
+        :param y:3-self.dimensional vector
+        :return:y_mat (ndarray): The cross product matrix of the input vector.
+        """
+        y0 = y[0]
+        y1 = y[1]
+        y2 = y[2]
+        y_mat = np.array([[0, -y2, y1],
+                          [y2, 0, -y0],
+                          [-y1, y0, 0]], dtype=self.precision_type)
+        return y_mat

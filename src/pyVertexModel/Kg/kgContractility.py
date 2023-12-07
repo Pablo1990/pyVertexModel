@@ -2,7 +2,6 @@ import time
 
 import numpy as np
 
-from src.pyVertexModel.Kg import kg_functions
 from src.pyVertexModel.Kg.kg import Kg
 
 
@@ -17,7 +16,7 @@ class KgContractility(Kg):
         Energy = {}
         for cell in [cell for cell in Geo.Cells if cell.AliveStatus == 1]:
             c = cell.ID
-            ge = np.zeros(self.g.shape, dtype=np.float32)
+            ge = np.zeros(self.g.shape, dtype=self.precision_type)
             Energy_c = 0
             for currentFace in cell.Faces:
                 l_i0 = Geo.EdgeLengthAvg_0[next(key for key, value in currentFace.InterfaceType_allValues.items()
@@ -30,7 +29,7 @@ class KgContractility(Kg):
                         y_2 = cell.Y[currentTri.Edge[1]]
 
                         g_current = self.computeGContractility(l_i0, y_1, y_2, C)
-                        ge = kg_functions.assembleg(ge[:], g_current[:], cell.globalIds[currentTri.Edge])
+                        ge = self.assemble_g(ge[:], g_current[:], cell.globalIds[currentTri.Edge])
 
                         # TODO
                         #currentFace.Tris.ContractileG = np.linalg.norm(g_current[:3])
@@ -54,7 +53,7 @@ class KgContractility(Kg):
 
         l_i = np.linalg.norm(y_1 - y_2)
 
-        kContractility = np.zeros((6, 6), dtype=np.float32)
+        kContractility = np.zeros((6, 6), dtype=self.precision_type)
         kContractility[0:3, 0:3] = -(C / l_i0) * (1 / l_i ** 3 * np.outer((y_1 - y_2), (y_1 - y_2))) + (
                 (C / l_i0) * np.eye(dim)) / l_i
         kContractility[0:3, 3:6] = -kContractility[0:3, 0:3]
@@ -66,7 +65,7 @@ class KgContractility(Kg):
     def computeGContractility(self, l_i0, y_1, y_2, C):
         l_i = np.linalg.norm(y_1 - y_2)
 
-        gContractility = np.zeros(6, dtype=np.float32)
+        gContractility = np.zeros(6, dtype=self.precision_type)
         gContractility[0:3] = (C / l_i0) * (y_1 - y_2) / l_i
         gContractility[3:6] = -gContractility[0:3]
 

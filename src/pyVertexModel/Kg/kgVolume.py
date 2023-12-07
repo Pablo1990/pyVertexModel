@@ -28,7 +28,7 @@ class KgVolume(Kg):
             lambdaV = Set.lambdaV
             fact = lambdaV * (Cell.Vol - Cell.Vol0) ** (n - 1) / Cell.Vol0 ** n
 
-            ge = np.zeros(self.g.shape, dtype=np.float32)
+            ge = np.zeros(self.g.shape, dtype=self.precision_type)
             for face in Cell.Faces:
                 for tri in face.Tris:
                     y1 = Ys[tri.Edge[0]]
@@ -40,16 +40,33 @@ class KgVolume(Kg):
                     if Geo.Remodelling and not any(id in Geo.AssemblegIds for id in nY):
                         continue
 
-                    gs, Ks = kg_functions.gKDet(y1, y2, y3)
+                    gs, Ks = self.gKDet(y1, y2, y3)
                     ge = self.assemble_g(ge, gs, np.array(nY, dtype='int'))
                     if calculate_K:
                         self.assemble_k(Ks * fact / 6, np.array(nY, dtype='int'))
 
             self.g += ge * fact / 6  # Volume contribution of each triangle is det(Y1,Y2,Y3)/6
             if calculate_K:
-                self.K = kg_functions.compute_finalK_Volume(ge, self.K, Cell.Vol, Cell.Vol0, n)
+                self.K = self.compute_finalK_Volume(ge, self.K, Cell.Vol, Cell.Vol0, n)
 
             self.energy += lambdaV / n * ((Cell.Vol - Cell.Vol0) / Cell.Vol0) ** n
 
         end = time.time()
         self.timeInSeconds = f"Time at Volume: {end - start} seconds"
+
+    def compute_finalK_Volume(self, ge, K, Vol, Vol0, n):
+        """
+        Helper function to compute the final K for the Volume energy.
+        :param ge: The residual g.
+        :param K: The Jacobian K.
+        :param Vol: The current volume.
+        :param Vol0: The target volume.
+        :param n: The power of the volume energy.
+        :return: The final Jacobian K.
+        """
+        dim = 3
+        ge_ = ge.reshape((ge.size, 1))
+        ge_transpose = ge.reshape((1, ge.size))
+
+        K = K + np.dot(ge_, ge_transpose) / 6 / 6 * (Vol - Vol0) ** (n - 2) / Vol0 ** n
+        return K

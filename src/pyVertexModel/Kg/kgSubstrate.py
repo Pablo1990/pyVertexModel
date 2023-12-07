@@ -20,7 +20,7 @@ class KgSubstrate(Kg):
             # if Geo.Remodelling and c not in Geo.AssembleNodes:
             #     continue
 
-            ge = np.zeros(self.g.shape, dtype=np.float32)
+            ge = np.zeros(self.g.shape, dtype=self.precision_type)
             Energy_c = 0
 
             for numFace in range(len(currentCell.Faces)):
@@ -62,12 +62,12 @@ class KgSubstrate(Kg):
         self.timeInSeconds = f"Time at Substrate: {end - start} seconds"
 
     def computeKSubstrate(self, kSubstrate):
-        result = np.zeros([3, 3], dtype=np.float32)
+        result = np.zeros([3, 3], dtype=self.precision_type)
         result[2, 2] = kSubstrate
         return result
 
     def computeGSubstrate(self, K, Yz, Yz0):
-        result = np.zeros(3, dtype=np.float32)
+        result = np.zeros(3, dtype=self.precision_type)
         result[2] = K * (Yz - Yz0)
         return result
 

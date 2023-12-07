@@ -35,7 +35,7 @@ class KgTriEnergyBarrier(Kg):
                     # if Geo.Remodelling and not np.any(np.isin(nY, Geo.AssemblegIds)):
                     #     continue
 
-                    gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)
+                    gs, Ks, Kss = self.gKSArea(y1, y2, y3)
                     gs_fact = gs * fact
                     self.g = self.assemble_g(self.g[:], gs_fact[:], np.array(nY, dtype='int'))
                     if calculate_K:

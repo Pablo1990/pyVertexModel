@@ -24,7 +24,7 @@ class Geo:
             self.nx = 3
             self.nCells = 0
             self.BorderCells = None
-        else: # coming from mat_file
+        else:  # coming from mat_file
             self.numF = mat_file['numF'][0][0][0][0]
             self.numY = mat_file['numY'][0][0][0][0]
             self.EdgeLengthAvg_0 = mat_file['EdgeLengthAvg_0'][0][0][0][1:4]
@@ -69,7 +69,7 @@ class Geo:
             newCell = cell.Cell()
             newCell.ID = c
             newCell.X = X[c, :]
-            newCell.T = Twg[np.any(Twg == c, axis=1), ]
+            newCell.T = Twg[np.any(Twg == c, axis=1),]
 
             # Initialize status of cells: 1 = 'Alive', 0 = 'Ablated', [] = 'Dead'
             if c < Set.TotalCells:
@@ -156,8 +156,8 @@ class Geo:
         for c in [cell.ID for cell in self.Cells if cell.AliveStatus]:
             dY = dy_reshaped[self.Cells[c].globalIds, :]
             self.Cells[c].Y += dY
-            #dYc = dy_reshaped[self.Cells[c].cglobalids, :]
-            #self.Cells[c].X += dYc
+            # dYc = dy_reshaped[self.Cells[c].cglobalids, :]
+            # self.Cells[c].X += dYc
             for f in range(len(self.Cells[c].Faces)):
                 self.Cells[c].Faces[f].Centre += dy_reshaped[self.Cells[c].Faces[f].globalIds, :]
 
@@ -310,7 +310,7 @@ class Geo:
 
         self.numF = g_ids_tot_f - 1
 
-        #for c in range(self.nCells):
+        # for c in range(self.nCells):
         #    self.Cells[c].cglobalIds = c + self.numY + self.numF
 
     def BuildYFromX(self, Cell, Geo, Set):

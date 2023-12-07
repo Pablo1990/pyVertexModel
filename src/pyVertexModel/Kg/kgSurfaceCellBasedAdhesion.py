@@ -30,7 +30,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
         # TODO: TRY JIT AND NUMBA https://numba.readthedocs.io/en/stable/user/jit.html#basic-usage
         Energy_c = 0
         Ys = Cell.Y
-        ge = np.zeros(self.g.shape, dtype=np.float32)
+        ge = np.zeros(self.g.shape, dtype=self.precision_type)
         fact0 = 0
         for face in Cell.Faces:
             if face.InterfaceType == 'Top' or face.InterfaceType == 0:
@@ -68,22 +68,35 @@ class KgSurfaceCellBasedAdhesion(Kg):
 
         self.g += ge * fact
         if calculate_K:
-            self.K = kg_functions.compute_finalK_SurfaceEnergy(ge, self.K, Cell.Area0)
+            self.K = self.compute_finalK_SurfaceEnergy(ge, self.K, Cell.Area0)
 
         Energy_c += (1 / 2) * fact0 * fact
         return Energy_c
 
     def calculate_Kg(self, Lambda, fact, ge, nY, y1, y2, y3):
-        gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)
+        gs, Ks, Kss = self.gKSArea(y1, y2, y3)
         gs = Lambda * gs
         ge = self.assemble_g(ge, gs, np.array(nY, dtype='int'))
-        Ks = np.array(np.dot(fact * Lambda, (Ks + Kss)), dtype=np.float32)
+        Ks = np.array(np.dot(fact * Lambda, (Ks + Kss)), dtype=self.precision_type)
 
         self.assemble_k(Ks, np.array(nY, dtype='int'))
         return ge
 
     def calculate_g(self, Lambda, ge, nY, y1, y2, y3):
-        gs, _, _ = kg_functions.gKSArea(y1, y2, y3)
+        gs, _, _ = self.gKSArea(y1, y2, y3)
         gs = Lambda * gs
         ge = self.assemble_g(ge, gs, np.array(nY, dtype='int'))
         return ge
+
+    def compute_finalK_SurfaceEnergy(self, ge, K, Area0):
+        """
+        Helper function to compute the final K for the Surface energy.
+        :param ge: The residual g.
+        :param K: The Jacobian K.
+        :param Area0: The initial area of the cell.
+        :return: The final K.
+        """
+        ge_ = ge.reshape((ge.size, 1))
+        ge_transpose = ge.reshape((1, ge.size))
+
+        return K + np.dot(ge_, ge_transpose) / Area0 ** 2
