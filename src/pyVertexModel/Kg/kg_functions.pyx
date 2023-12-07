@@ -10,7 +10,7 @@ cimport numpy as np
 @cython.cdivision(True)
 @cython.nonecheck(False)
 @cython.boundscheck(False)
-cpdef np.ndarray assembleg(float[:] g, float[:] ge, np.ndarray nY):
+cpdef np.ndarray assembleg(double[:] g, double[:] ge, np.ndarray nY):
     cdef int dim = 3
     cdef int I
     cdef int cont = 0
@@ -22,13 +22,13 @@ cpdef np.ndarray assembleg(float[:] g, float[:] ge, np.ndarray nY):
                 g[col] = g[col] + ge[cont]
             cont = cont + 1
 
-    return np.array(g, dtype=np.float32)
+    return np.array(g, dtype=np.float64)
 
 @cython.wraparound(False)
 @cython.cdivision(True)
 @cython.nonecheck(False)
 @cython.boundscheck(False)
-cpdef np.ndarray assembleK(float[:, :] K, float[:, :] Ke, nY: np.ndarray):
+cpdef np.ndarray assembleK(double[:, :] K, double[:, :] Ke, nY: np.ndarray):
     #TODO: IMPROVE LIKE ASSEMBLE_G
     cdef int dim = 3
     cdef np.ndarray idofg = np.zeros(len(nY) * dim, dtype=int)
@@ -43,7 +43,7 @@ cpdef np.ndarray assembleK(float[:, :] K, float[:, :] Ke, nY: np.ndarray):
             if Ke[i, j] != 0:
                 K[idofg[i], idofg[j]] = K[idofg[i], idofg[j]] + Ke[i, j]
 
-    return np.array(K, dtype=np.float32)
+    return np.array(K, dtype=np.float64)
 
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -57,7 +57,7 @@ cpdef np.ndarray cross(np.ndarray y):
 
     cdef np.ndarray yMat = np.array([[0, -y2, y1],
                                      [y2, 0, -y0],
-                                     [-y1, y0, 0]], dtype=np.float32)
+                                     [-y1, y0, 0]], dtype=np.float64)
     return yMat
 
 @cython.wraparound(False)
@@ -80,7 +80,7 @@ cpdef np.ndarray kK(np.ndarray y1_crossed, np.ndarray y2_crossed, np.ndarray y3_
     Returns:
     KK_value (ndarray): Resulting value for KK.
     """
-    cdef np.ndarray KIJ = np.zeros([3, 3], dtype=np.float32)
+    cdef np.ndarray KIJ = np.zeros([3, 3], dtype=np.float64)
     cdef np.ndarray K_y2_y1 = np.dot(y2_crossed, y1)
     cdef np.ndarray K_y2_y3 = np.dot(y2_crossed, y3)
     cdef np.ndarray K_y3_y1 = np.dot(y3_crossed, y1)
@@ -119,7 +119,7 @@ cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
     ]))
 
 
-    return np.array(gs, dtype=np.float32), np.array(Ks, dtype=np.float32), np.array(Kss, dtype=np.float32)
+    return np.array(gs, dtype=np.float64), np.array(Ks, dtype=np.float64), np.array(Kss, dtype=np.float64)
 
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -158,8 +158,8 @@ cpdef np.ndarray compute_finalK_Volume(np.ndarray ge, np.ndarray K, float Vol, f
 @cython.nonecheck(False)
 @cython.boundscheck(False)
 cpdef gKDet(np.ndarray Y1, np.ndarray Y2, np.ndarray Y3):
-    cdef np.ndarray gs = np.zeros(9, dtype=np.float32)
-    cdef np.ndarray Ks = np.zeros([9, 9], dtype=np.float32)
+    cdef np.ndarray gs = np.zeros(9, dtype=np.float64)
+    cdef np.ndarray Ks = np.zeros([9, 9], dtype=np.float64)
 
     gs[:3] = np.cross(Y2, Y3)
     gs[3:6] = np.cross(Y3, Y1)
@@ -183,6 +183,6 @@ def mldivide_np(np.ndarray A, np.ndarray B):
     cdef int m = A.shape[0]
     cdef int n = A.shape[1]
     cdef int p = B.shape[0]
-    cdef float[:] X = np.array(np.linalg.solve(A, B), dtype=np.float32)
+    cdef float[:] X = np.array(np.linalg.solve(A, B), dtype=np.float64)
 
     return X
