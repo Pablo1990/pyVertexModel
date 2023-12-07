@@ -43,7 +43,7 @@ cpdef np.ndarray assembleK(double[:, :] K, double[:, :] Ke, nY: np.ndarray):
             if Ke[i, j] != 0:
                 K[idofg[i], idofg[j]] = K[idofg[i], idofg[j]] + Ke[i, j]
 
-    return np.array(K, dtype=np.float64)
+    return K
 
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -118,8 +118,7 @@ cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
          kK(y3_crossed, y2_crossed, y1_crossed, y3, y2, y1), np.dot(Q3.transpose(), Q3)]
     ]))
 
-
-    return np.array(gs, dtype=np.float64), np.array(Ks, dtype=np.float64), np.array(Kss, dtype=np.float64)
+    return gs, Ks, Kss
 
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -183,6 +182,6 @@ def mldivide_np(np.ndarray A, np.ndarray B):
     cdef int m = A.shape[0]
     cdef int n = A.shape[1]
     cdef int p = B.shape[0]
-    cdef double[:] X = np.array(np.linalg.solve(A, B), dtype=np.float64)
+    cdef double[:] X = np.linalg.solve(A, B)
 
     return X
