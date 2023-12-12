@@ -9,6 +9,7 @@ from skimage.measure import regionprops
 
 from src.pyVertexModel import degreesOfFreedom, newtonRaphson
 from src.pyVertexModel.geo import Geo
+from src.pyVertexModel.remodelling import Remodelling
 from src.pyVertexModel.set import Set
 
 
@@ -18,42 +19,42 @@ class VertexModel:
 
         self.X = None
         self.didNotConverge = False
-        self.Geo = Geo()
+        self.geo = Geo()
 
         if mat_file_set is not None:
-            self.Set = Set(mat_file_set)
+            self.set = Set(mat_file_set)
         else:
-            self.Set = Set()
-            self.Set.stretch()
+            self.set = Set()
+            self.set.stretch()
 
         self.Dofs = degreesOfFreedom.DegreesOfFreedom(None)
-        #self.Set = WoundDefault(self.Set)
+        # self.Set = WoundDefault(self.Set)
         self.InitiateOutputFolder()
 
-        if self.Set.InputGeo == 'Bubbles':
+        if self.set.InputGeo == 'Bubbles':
             self.InitializeGeometry_Bubbles()
-        elif self.Set.InputGeo == 'Voronoi':
+        elif self.set.InputGeo == 'Voronoi':
             self.InitializeGeometry_3DVoronoi()
-        elif self.Set.InputGeo == 'VertexModelTime':
+        elif self.set.InputGeo == 'VertexModelTime':
             self.InitializeGeometry_VertexModel2DTime()
 
-        allYs = np.vstack([cell.Y for cell in self.Geo.Cells if cell.AliveStatus == 1])
+        allYs = np.vstack([cell.Y for cell in self.geo.Cells if cell.AliveStatus == 1])
         minZs = min(allYs[:, 2])
         if minZs > 0:
-            self.Set.SubstrateZ = minZs * 0.99
+            self.set.SubstrateZ = minZs * 0.99
         else:
-            self.Set.SubstrateZ = minZs * 1.01
+            self.set.SubstrateZ = minZs * 1.01
 
         # TODO FIXME, this is bad, should be joined somehow
-        if self.Set.Substrate == 1:
-            self.Dofs.GetDOFsSubstrate(self.Geo, self.Set)
+        if self.set.Substrate == 1:
+            self.Dofs.GetDOFsSubstrate(self.geo, self.set)
         else:
-            self.Dofs.get_dofs(self.Geo, self.Set)
-        self.Geo.Remodelling = False
+            self.Dofs.get_dofs(self.geo, self.set)
+        self.geo.Remodelling = False
 
         self.t = 0
         self.tr = 0
-        self.Geo_0 = copy.deepcopy(self.Geo)
+        self.Geo_0 = copy.deepcopy(self.geo)
         # Removing info of unused features from Geo_0
         for cell in self.Geo_0.Cells:
             cell.Vol = None
@@ -61,7 +62,7 @@ class VertexModel:
             cell.Area = None
             cell.Area0 = None
 
-        self.Geo_n = copy.deepcopy(self.Geo)
+        self.Geo_n = copy.deepcopy(self.geo)
         for cell in self.Geo_n.Cells:
             cell.Vol = None
             cell.Vol0 = None
@@ -69,7 +70,7 @@ class VertexModel:
             cell.Area0 = None
 
         self.backupVars = {
-            'Geo_b': self.Geo,
+            'Geo_b': self.geo,
             'tr_b': self.tr,
             'Dofs': self.Dofs
         }
@@ -77,16 +78,30 @@ class VertexModel:
         self.relaxingNu = False
         self.EnergiesPerTimeStep = []
 
+    def brownian_motion(self, scale):
+        """
+        Applies Brownian motion to the vertices of cells in the Geo structure.
+        Displacements are generated with a normal distribution in each dimension.
+        """
 
-    def CreateTetrahedra(self, param, param1, param2, xInternal, Xg_faceIds, Xg_verticesIds, X):
-        pass
+        # Concatenate and sort all tetrahedron vertices
+        all_tets = np.sort(np.vstack([cell.t for cell in self.geo.Cells]), axis=1)
+        all_tets_unique = np.unique(all_tets, axis=0)
+
+        # Generate random displacements with a normal distribution for each dimension
+        displacements = scale * np.random.randn(all_tets_unique.shape[0], 3)
+
+        # Update vertex positions based on 3D Brownian motion displacements
+        for cell in [c for c in self.geo.cells if c.alive_status is not None]:
+            _, corresponding_ids = np.where(np.all(np.sort(cell.t, axis=1)[:, None] == all_tets_unique, axis=2))
+            cell.y += displacements[corresponding_ids, :]
 
     def Build2DVoronoiFromImage(self, param, param1, param2):
         pass
 
     def InitializeGeometry_VertexModel2DTime(self):
         selectedPlanes = [1, 100]
-        xInternal = np.arange(1, self.Set.TotalCells + 1)
+        xInternal = np.arange(1, self.set.TotalCells + 1)
 
         if not os.path.exists("input/LblImg_imageSequence.mat"):
             imgStackLabelled = Image.load('input/LblImg_imageSequence.tif')
@@ -113,7 +128,7 @@ class VertexModel:
         ## Basic features
         features2D = regionprops(img2DLabelled)
         avgDiameter = np.mean([f.MajorAxisLength for f in features2D])
-        cellHeight = avgDiameter * self.Set.CellHeight
+        cellHeight = avgDiameter * self.set.CellHeight
 
         # Building the topology of each plane
         trianglesConnectivity = {}
@@ -161,9 +176,9 @@ class VertexModel:
 
             # Fill Geo info
             if idPlane == bottomPlane - 1:
-                self.Geo.XgBottom = Xg_ids
+                self.geo.XgBottom = Xg_ids
             elif idPlane == topPlane - 1:
-                self.Geo.XgTop = Xg_ids
+                self.geo.XgTop = Xg_ids
 
             # Create tetrahedra
             Twg_numPlane = self.CreateTetrahedra(trianglesConnectivity[numPlane], neighboursNetwork[numPlane],
@@ -172,25 +187,25 @@ class VertexModel:
             Twg.append(Twg_numPlane)
 
         # Fill Geo info
-        self.Geo.nCells = len(xInternal)
-        self.Geo.XgLateral = np.setdiff1d(np.arange(1, np.max(np.concatenate(borderOfborderCellsAndMainCells)) + 1),
-                                        xInternal)
-        self.Geo.XgID = np.setdiff1d(np.arange(1, X.shape[0] + 1), xInternal)
+        self.geo.nCells = len(xInternal)
+        self.geo.XgLateral = np.setdiff1d(np.arange(1, np.max(np.concatenate(borderOfborderCellsAndMainCells)) + 1),
+                                          xInternal)
+        self.geo.XgID = np.setdiff1d(np.arange(1, X.shape[0] + 1), xInternal)
 
         # Define border cells
-        self.Geo.BorderCells = np.unique(np.concatenate([borderCells[numPlane] for numPlane in selectedPlanes]))
-        self.Geo.BorderGhostNodes = self.Geo.XgLateral
+        self.geo.BorderCells = np.unique(np.concatenate([borderCells[numPlane] for numPlane in selectedPlanes]))
+        self.geo.BorderGhostNodes = self.geo.XgLateral
 
         # Create new tetrahedra based on intercalations
-        allCellIds = np.concatenate([xInternal, self.Geo.XgLateral])
+        allCellIds = np.concatenate([xInternal, self.geo.XgLateral])
         neighboursMissing = {}
         for numCell in xInternal:
             Twg_cCell = Twg[np.any(np.isin(Twg, numCell), axis=1), :]
 
-            Twg_cCell_bottom = Twg_cCell[np.any(np.isin(Twg_cCell, self.Geo.XgBottom), axis=1), :]
+            Twg_cCell_bottom = Twg_cCell[np.any(np.isin(Twg_cCell, self.geo.XgBottom), axis=1), :]
             neighbours_bottom = allCellIds[np.isin(allCellIds, Twg_cCell_bottom)]
 
-            Twg_cCell_top = Twg_cCell[np.any(np.isin(Twg_cCell, self.Geo.XgTop), axis=1), :]
+            Twg_cCell_top = Twg_cCell[np.any(np.isin(Twg_cCell, self.geo.XgTop), axis=1), :]
             neighbours_top = allCellIds[np.isin(allCellIds, Twg_cCell_top)]
 
             neighboursMissing[numCell] = np.setxor1d(neighbours_bottom, neighbours_top)
@@ -204,23 +219,23 @@ class VertexModel:
         # After removing ghost tetrahedras, some nodes become disconnected,
         # that is, not a part of any tetrahedra. Therefore, they should be
         # removed from X
-        Twg = Twg[~np.all(np.isin(Twg, self.Geo.XgID), axis=1)]
+        Twg = Twg[~np.all(np.isin(Twg, self.geo.XgID), axis=1)]
         # Re-number the surviving tets
         oldIds, oldTwgNewIds = np.unique(Twg, return_inverse=True, axis=0)
         newIds = np.arange(len(oldIds))
         X = X[oldIds, :]
         Twg = oldTwgNewIds.reshape(Twg.shape)
-        self.Geo.XgBottom = newIds[np.isin(oldIds, self.Geo.XgBottom)]
-        self.Geo.XgTop = newIds[np.isin(oldIds, self.Geo.XgTop)]
-        self.Geo.XgLateral = newIds[np.isin(oldIds, self.Geo.XgLateral)]
-        self.Geo.XgID = newIds[np.isin(oldIds, self.Geo.XgID)]
-        self.Geo.BorderGhostNodes = self.Geo.XgLateral
+        self.geo.XgBottom = newIds[np.isin(oldIds, self.geo.XgBottom)]
+        self.geo.XgTop = newIds[np.isin(oldIds, self.geo.XgTop)]
+        self.geo.XgLateral = newIds[np.isin(oldIds, self.geo.XgLateral)]
+        self.geo.XgID = newIds[np.isin(oldIds, self.geo.XgID)]
+        self.geo.BorderGhostNodes = self.geo.XgLateral
 
         # Normalise Xs
         X = X / imgDims
 
         # Build cells
-        self.Geo.build_cells(self.Set, X, Twg)  # Please define the BuildCells function
+        self.geo.build_cells(self.set, X, Twg)  # Please define the BuildCells function
 
         # Define upper and lower area threshold for remodelling
         allFaces = np.concatenate([Geo.Cells.Faces for c in range(Geo.nCells)])
@@ -231,7 +246,7 @@ class VertexModel:
         Set.lowerAreaThreshold = avgArea - stdArea
 
         # Geo.AssembleNodes = find(cellfun(@isempty, {Geo.Cells.AliveStatus})==0)
-        self.Geo.AssembleNodes = [idx for idx, cell in enumerate(Geo.Cells) if cell.AliveStatus]
+        self.geo.AssembleNodes = [idx for idx, cell in enumerate(Geo.Cells) if cell.AliveStatus]
 
         # Define BarrierTri0
         Set.BarrierTri0 = np.finfo(float).max
@@ -255,18 +270,18 @@ class VertexModel:
                     else:
                         edgeLengths_Lateral.append(tri.Edge.compute_edge_length(Geo.Cells[c].Y))
 
-        self.Set.lmin0 = min(lmin_values)
+        self.set.lmin0 = min(lmin_values)
 
-        self.Geo.AvgEdgeLength_Top = np.mean(edgeLengths_Top)
-        self.Geo.AvgEdgeLength_Bottom = np.mean(edgeLengths_Bottom)
-        self.Geo.AvgEdgeLength_Lateral = np.mean(edgeLengths_Lateral)
-        self.Set.BarrierTri0 = Set.BarrierTri0 / 5
-        self.Set.lmin0 = Set.lmin0 * 10
+        self.geo.AvgEdgeLength_Top = np.mean(edgeLengths_Top)
+        self.geo.AvgEdgeLength_Bottom = np.mean(edgeLengths_Bottom)
+        self.geo.AvgEdgeLength_Lateral = np.mean(edgeLengths_Lateral)
+        self.set.BarrierTri0 = Set.BarrierTri0 / 5
+        self.set.lmin0 = Set.lmin0 * 10
 
-        self.Geo.RemovedDebrisCells = []
+        self.geo.RemovedDebrisCells = []
 
         minZs = np.min([cell.Y for cell in Geo.Cells])
-        self.Geo.CellHeightOriginal = np.abs(minZs[2])
+        self.geo.CellHeightOriginal = np.abs(minZs[2])
 
     def InitiateOutputFolder(self):
         pass
@@ -276,8 +291,8 @@ class VertexModel:
 
     def InitializeGeometry_Bubbles(self):
         # Build nodal mesh
-        self.X, X_IDs = self.BuildTopo(self.Geo.nx, self.Geo.ny, self.Geo.nz, 0)
-        self.Geo.nCells = self.X.shape[0]
+        self.X, X_IDs = self.BuildTopo(self.geo.nx, self.geo.ny, self.geo.nz, 0)
+        self.geo.nCells = self.X.shape[0]
 
         # Centre Nodal position at (0,0)
         self.X[:, 0] = self.X[:, 0] - np.mean(self.X[:, 0])
@@ -285,13 +300,13 @@ class VertexModel:
         self.X[:, 2] = self.X[:, 2] - np.mean(self.X[:, 2])
 
         # Perform Delaunay
-        self.Geo.XgID, self.X = self.SeedWithBoundingBox(self.X, self.Set.s)
+        self.geo.XgID, self.X = self.SeedWithBoundingBox(self.X, self.set.s)
 
-        if self.Set.Substrate == 1:
-            Xg = self.X[self.Geo.XgID, :]
-            self.X = np.delete(self.X, self.Geo.XgID, 0)
+        if self.set.Substrate == 1:
+            Xg = self.X[self.geo.XgID, :]
+            self.X = np.delete(self.X, self.geo.XgID, 0)
             Xg = Xg[Xg[:, 2] > np.mean(self.X[:, 2]), :]
-            self.Geo.XgID = np.arange(self.X.shape[0], self.X.shape[0] + Xg.shape[0] + 2)
+            self.geo.XgID = np.arange(self.X.shape[0], self.X.shape[0] + Xg.shape[0] + 2)
             self.X = np.concatenate((self.X, Xg, [np.mean(self.X[:, 0]), np.mean(self.X[:, 1]), -50]), axis=0)
 
         # This code is to match matlab's output and python's
@@ -300,115 +315,176 @@ class VertexModel:
         Twg = Delaunay(self.X, qhull_options=options).simplices
 
         # Remove tetrahedras formed only by ghost nodes
-        Twg = Twg[~np.all(np.isin(Twg, self.Geo.XgID), axis=1)]
+        Twg = Twg[~np.all(np.isin(Twg, self.geo.XgID), axis=1)]
         # Remove weird IDs
 
         # Re-number the surviving tets
         uniqueTets, indices = np.unique(Twg, return_inverse=True)
-        self.Geo.XgID = np.arange(self.Geo.nCells, len(uniqueTets))
+        self.geo.XgID = np.arange(self.geo.nCells, len(uniqueTets))
         self.X = self.X[uniqueTets]
         Twg = indices.reshape(Twg.shape)
 
-        Xg = self.X[self.Geo.XgID]
-        self.Geo.XgBottom = self.Geo.XgID[Xg[:, 2] < np.mean(self.X[:, 2])]
-        self.Geo.XgTop = self.Geo.XgID[Xg[:, 2] > np.mean(self.X[:, 2])]
+        Xg = self.X[self.geo.XgID]
+        self.geo.XgBottom = self.geo.XgID[Xg[:, 2] < np.mean(self.X[:, 2])]
+        self.geo.XgTop = self.geo.XgID[Xg[:, 2] > np.mean(self.X[:, 2])]
 
-        self.Geo.build_cells(self.Set, self.X, Twg)
+        self.geo.build_cells(self.set, self.X, Twg)
 
         # Define upper and lower area threshold for remodelling
-        allFaces = np.concatenate([cell.Faces for cell in self.Geo.Cells])
+        allFaces = np.concatenate([cell.Faces for cell in self.geo.Cells])
         allTris = np.concatenate([face.Tris for face in allFaces])
         avgArea = np.mean([tri.Area for tri in allTris])
         stdArea = np.std([tri.Area for tri in allTris])
         Set.upperAreaThreshold = avgArea + stdArea
         Set.lowerAreaThreshold = avgArea - stdArea
 
-        self.Geo.AssembleNodes = [i for i, cell in enumerate(self.Geo.Cells) if cell.AliveStatus is not None]
+        self.geo.AssembleNodes = [i for i, cell in enumerate(self.geo.Cells) if cell.AliveStatus is not None]
 
-        self.Set.BarrierTri0 = np.finfo(float).max
-        self.Set.lmin0 = np.finfo(float).max
+        self.set.BarrierTri0 = np.finfo(float).max
+        self.set.lmin0 = np.finfo(float).max
         edgeLengths_Top = []
         edgeLengths_Bottom = []
         edgeLengths_Lateral = []
         lmin_values = []
-        for c in range(self.Geo.nCells):
-            for f in range(len(self.Geo.Cells[c].Faces)):
-                Face = self.Geo.Cells[c].Faces[f]
-                self.Set.BarrierTri0 = min([min([tri.Area for tri in Face.Tris]), self.Set.BarrierTri0])
+        for c in range(self.geo.nCells):
+            for f in range(len(self.geo.Cells[c].Faces)):
+                Face = self.geo.Cells[c].Faces[f]
+                self.set.BarrierTri0 = min([min([tri.Area for tri in Face.Tris]), self.set.BarrierTri0])
 
-                for nTris in range(len(self.Geo.Cells[c].Faces[f].Tris)):
-                    tri = self.Geo.Cells[c].Faces[f].Tris[nTris]
+                for nTris in range(len(self.geo.Cells[c].Faces[f].Tris)):
+                    tri = self.geo.Cells[c].Faces[f].Tris[nTris]
                     lmin_values.append(min(tri.LengthsToCentre))
                     lmin_values.append(tri.EdgeLength)
                     if tri.Location == 'Top':
-                        edgeLengths_Top.append(tri.compute_edge_length(self.Geo.Cells[c].Y))
+                        edgeLengths_Top.append(tri.compute_edge_length(self.geo.Cells[c].Y))
                     elif tri.Location == 'Bottom':
-                        edgeLengths_Bottom.append(tri.compute_edge_length(self.Geo.Cells[c].Y))
+                        edgeLengths_Bottom.append(tri.compute_edge_length(self.geo.Cells[c].Y))
                     else:
-                        edgeLengths_Lateral.append(tri.compute_edge_length(self.Geo.Cells[c].Y))
+                        edgeLengths_Lateral.append(tri.compute_edge_length(self.geo.Cells[c].Y))
 
-        self.Set.lmin0 = min(lmin_values)
+        self.set.lmin0 = min(lmin_values)
 
-        self.Geo.AvgEdgeLength_Top = np.mean(edgeLengths_Top)
-        self.Geo.AvgEdgeLength_Bottom = np.mean(edgeLengths_Bottom)
-        self.Geo.AvgEdgeLength_Lateral = np.mean(edgeLengths_Lateral)
-        self.Set.BarrierTri0 = self.Set.BarrierTri0 / 10
-        self.Set.lmin0 = self.Set.lmin0 * 10
+        self.geo.AvgEdgeLength_Top = np.mean(edgeLengths_Top)
+        self.geo.AvgEdgeLength_Bottom = np.mean(edgeLengths_Bottom)
+        self.geo.AvgEdgeLength_Lateral = np.mean(edgeLengths_Lateral)
+        self.set.BarrierTri0 = self.set.BarrierTri0 / 10
+        self.set.lmin0 = self.set.lmin0 * 10
 
     def IterateOverTime(self):
 
-        while self.t <= self.Set.tend and not self.didNotConverge:
-            self.Set.currentT = self.t
+        while self.t <= self.set.tend and not self.didNotConverge:
+            self.set.currentT = self.t
             print("Time: " + str(self.t))
 
             if not self.relaxingNu:
-                self.Set.iIncr = self.numStep
+                self.set.iIncr = self.numStep
 
-                self.Dofs.ApplyBoundaryCondition(self.t, self.Geo, self.Set)
+                self.Dofs.ApplyBoundaryCondition(self.t, self.geo, self.set)
                 # IMPORTANT: Here it updates: Areas, Volumes, etc... Should be
                 # up-to-date
-                self.Geo.update_measures()
-                self.Set.UpdateSet_F(self.Geo)
+                self.geo.update_measures()
+                self.set.UpdateSet_F(self.geo)
 
-            g, K, __ = newtonRaphson.KgGlobal(self.Geo_0, self.Geo_n, self.Geo, self.Set)
-            self.Geo, g, __, __, self.Set, gr, dyr, dy = newtonRaphson.newton_raphson(self.Geo_0, self.Geo_n, self.Geo, self.Dofs, self.Set, K, g, self.numStep, self.t)
-            if gr < self.Set.tol and dyr < self.Set.tol and np.all(np.isnan(g(self.Dofs.Free)) == 0) and np.all(
+            g, K, __ = newtonRaphson.KgGlobal(self.Geo_0, self.Geo_n, self.geo, self.set)
+            self.geo, g, __, __, self.set, gr, dyr, dy = newtonRaphson.newton_raphson(self.Geo_0, self.Geo_n, self.geo,
+                                                                                      self.Dofs, self.set, K, g,
+                                                                                      self.numStep, self.t)
+            if gr < self.set.tol and dyr < self.set.tol and np.all(np.isnan(g(self.Dofs.Free)) == 0) and np.all(
                     np.isnan(dy(self.Dofs.Free)) == 0):
-                if self.Set.nu / self.Set.nu0 == 1:
+                if self.set.nu / self.set.nu0 == 1:
+                    # Assuming this is within a larger loop or function
+                    # ...
 
-                    self.Geo.BuildXFromY(self.Geo_n)
-                    self.Set.lastTConverged = self.t
+                    # STEP has converged
+                    self.geo.log += f"\n STEP {self.set.i_incr} has converged ...\n"
+
+                    # REMODELLING
+                    if self.set.Remodelling and abs(self.t - self.tr) >= self.set.RemodelingFrequency:
+                        Remodelling(self.geo, self.Geo_n, self.Geo_0, self.set, self.Dofs)
+                        self.tr = self.t
+
+                    # Append Energies
+                    # energies_per_time_step.append(energies)
+
+                    # Build X From Y
+                    self.geo.BuildXFromY(self.Geo_n)
+
+                    # Update last time converged
+                    self.set.last_t_converged = self.t
+
+                    # Analyse cells
+                    # non_debris_features = []
+                    # for c in non_debris_cells:
+                    #     if c not in geo.xg_bottom:
+                    #         non_debris_features.append(analyse_cell(geo, c))
+
+                    # Convert to DataFrame (if needed)
+                    # non_debris_features_df = pd.DataFrame(non_debris_features)
+
+                    # Analyse debris cells
+                    # debris_features = []
+                    # for c in debris_cells:
+                    #     if c not in geo.xg_bottom:
+                    #         debris_features.append(analyse_cell(geo, c))
+
+                    # Compute wound features
+                    # if debris_features:
+                    #     wound_features = compute_wound_features(geo)
+
+                    # Test Geo
+                    self.check_integrity()
+
+                    # Post Processing and Saving Data
+                    # post_processing_vtk(self.Geo, self.Geo_0, set, self.numStep)
+                    # Save data using your preferred method (e.g., pickle, numpy, pandas)
+
+                    # Update Contractility Value and Edge Length
+                    for num_cell in range(len(self.geo.cells)):
+                        c_cell = self.geo.cells[num_cell]
+                        for n_face in range(len(c_cell.faces)):
+                            face = c_cell.faces[n_face]
+                            for n_tri in range(len(face.tris)):
+                                tri = face.tris[n_tri]
+                                tri.past_contractility_value = tri.contractility_value
+                                tri.contractility_value = None
+                                tri.edge_length_time.append([self.t, tri.edge_length])
+
+                    # Brownian Motion
+                    self.brownian_motion(self.set.brownian_motion)
+
+                    self.geo.BuildXFromY(self.Geo_n)
+                    self.set.lastTConverged = self.t
 
                     ## New Step
-                    self.t = self.t + self.Set.dt
-                    self.Set.dt = np.amin(self.Set.dt + self.Set.dt * 0.5, self.Set.dt0)
-                    self.Set.MaxIter = self.Set.MaxIter0
+                    self.t = self.t + self.set.dt
+                    self.set.dt = np.amin(self.set.dt + self.set.dt * 0.5, self.set.dt0)
+                    self.set.MaxIter = self.set.MaxIter0
                     self.numStep = self.numStep + 1
-                    self.backupVars.Geo_b = self.Geo
+                    self.backupVars.Geo_b = self.geo
                     self.backupVars.tr_b = self.tr
                     self.backupVars.Dofs = self.Dofs
-                    self.Geo_n = self.Geo
+                    self.Geo_n = self.geo
                     self.relaxingNu = False
                 else:
-                    self.Set.nu = np.amax(self.Set.nu / 2, self.Set.nu0)
+                    self.set.nu = np.amax(self.set.nu / 2, self.set.nu0)
                     self.relaxingNu = True
             else:
                 # TODO
-                #self.backupVars.Geo_b.log = self.Geo.log
-                self.Geo = self.backupVars.Geo_b
+                # self.backupVars.Geo_b.log = self.Geo.log
+                self.geo = self.backupVars.Geo_b
                 self.tr = self.backupVars.tr_b
                 self.Dofs = self.backupVars.Dofs
                 self.Geo_n = Geo
                 self.relaxingNu = False
-                if self.Set.iter == self.Set.MaxIter0:
-                    self.Set.MaxIter = self.Set.MaxIter0 * 1.1
-                    self.Set.nu = 10 * self.Set.nu0
+                if self.set.iter == self.set.MaxIter0:
+                    self.set.MaxIter = self.set.MaxIter0 * 1.1
+                    self.set.nu = 10 * self.set.nu0
                 else:
-                    if self.Set.iter >= self.Set.MaxIter and self.Set.iter > self.Set.MaxIter0 and self.Set.dt / self.Set.dt0 > 1 / 100:
-                        self.Set.MaxIter = self.Set.MaxIter0
-                        self.Set.nu = self.Set.nu0
-                        self.Set.dt = self.Set.dt / 2
-                        self.t = self.Set.lastTConverged + self.Set.dt
+                    if self.set.iter >= self.set.MaxIter and self.set.iter > self.set.MaxIter0 and self.set.dt / self.set.dt0 > 1 / 100:
+                        self.set.MaxIter = self.set.MaxIter0
+                        self.set.nu = self.set.nu0
+                        self.set.dt = self.set.dt / 2
+                        self.t = self.set.lastTConverged + self.set.dt
                     else:
                         self.didNotConverge = True
 
@@ -450,7 +526,6 @@ class VertexModel:
         y = y.flatten()
         z = z.flatten()
         Xg = np.column_stack((x, y, z)) + r0
-
 
         # Find unique values considering the tolerance
         tolerance = 1e-6
@@ -562,4 +637,50 @@ class VertexModel:
         XgID = np.concatenate((XgID, nXgID))
         return X, XgID
 
+    def check_integrity(self):
+        """
+        Performs tests on the properties of cells, faces, and triangles (tris) within the Geo structure.
+        Ensures that certain geometrical properties are above minimal threshold values.
+        """
 
+        # Define minimum error thresholds for edge length, area, and volume
+        min_error_edge = 1e-5
+        min_error_area = min_error_edge ** 2
+        min_error_volume = min_error_edge ** 3
+
+        # Test Cells properties:
+        # Conditions checked:
+        # - Volume > minimum error volume
+        # - Initial Volume > minimum error volume
+        # - Area > minimum error area
+        # - Initial Area > minimum error area
+        for c_cell in self.geo.Cells:
+            if c_cell.alive_status:
+                assert c_cell.vol > min_error_volume, "Cell volume is too low"
+                assert c_cell.vol0 > min_error_volume, "Cell initial volume is too low"
+                assert c_cell.area > min_error_area, "Cell area is too low"
+                assert c_cell.area0 > min_error_area, "Cell initial area is too low"
+
+        # Test Faces properties:
+        # Conditions checked:
+        # - Area > minimum error area
+        # - Initial Area > minimum error area
+        for c_cell in self.geo.Cells:
+            if c_cell.alive_status:
+                for face in c_cell.faces:
+                    assert face.area > min_error_area, "Face area is too low"
+                    assert face.area0 > min_error_area, "Face initial area is too low"
+
+        # Test Tris properties:
+        # Conditions checked:
+        # - Edge length > minimum error edge length
+        # - Any Lengths to Centre > minimum error edge length
+        # - Area > minimum error area
+        for c_cell in self.geo.Cells:
+            if c_cell.alive_status:
+                for face in c_cell.Faces:
+                    for tris in face.tris:
+                        assert tris.edge_length > min_error_edge, "Triangle edge length is too low"
+                        assert any(length > min_error_edge for length in
+                                   tris.lengths_to_centre), "Triangle lengths to centre are too low"
+                        assert tris.area > min_error_area, "Triangle area is too low"
