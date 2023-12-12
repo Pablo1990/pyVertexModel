@@ -4,6 +4,9 @@ from src.pyVertexModel import tris
 
 
 class Face:
+    """
+    Class that contains the information of a face.
+    """
 
     def __init__(self, mat_file=None):
         self.Tris = []

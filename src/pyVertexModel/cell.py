@@ -6,8 +6,15 @@ from src.pyVertexModel import face
 
 
 class Cell:
+    """
+    Class that contains the information of a cell.
+    """
 
     def __init__(self, mat_file=None):
+        """
+
+        :param mat_file:
+        """
 
         self.Y = np.empty(1, np.float64)
         self.globalIds = np.array([], dtype='int')
@@ -44,6 +51,10 @@ class Cell:
                     self.AliveStatus = mat_file[11][0][0]
 
     def copy(self):
+        """
+
+        :return:
+        """
         new_cell = Cell()
         new_cell.Y = copy.deepcopy(self.Y)
         new_cell.globalIds = copy.deepcopy(self.globalIds)
@@ -61,6 +72,11 @@ class Cell:
         return new_cell
 
     def ComputeCellArea(self, locationFilter=None):
+        """
+        Compute the area of the cell
+        :param locationFilter:
+        :return:
+        """
         totalArea = 0
         for f in range(len(self.Faces)):
             if locationFilter is not None:
@@ -73,6 +89,10 @@ class Cell:
         return totalArea
 
     def ComputeCellVolume(self):
+        """
+        Compute the volume of the cell
+        :return:
+        """
         v = 0
         for f in range(len(self.Faces)):
             face = self.Faces[f]
@@ -92,3 +112,22 @@ class Cell:
 
         self.Vol = v
         return v
+
+
+def compute_Y(Geo, T, cellCentre, Set):
+    x = np.vstack([Geo.Cells[t].X for t in T])
+    newY = np.mean(x, axis=0)
+
+    if len(set([Geo.Cells[t].AliveStatus for t in T])) == 1 and 'Bubbles' in Set.InputGeo:
+        vc = newY - cellCentre
+        dir = vc / np.linalg.norm(vc)
+        offset = Set.f * dir
+        newY = cellCentre + offset
+
+    if 'Bubbles' not in Set.InputGeo:
+        if np.sum(np.isin(T, Geo.XgTop)) > 0:
+            newY[2] = newY[2] / (np.sum(np.isin(T, Geo.XgTop)) / 2)
+        elif np.sum(np.isin(T, Geo.XgBottom)) > 0:
+            newY[2] = newY[2] / (np.sum(np.isin(T, Geo.XgBottom)) / 2)
+
+    return newY

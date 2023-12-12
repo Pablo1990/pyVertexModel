@@ -3,6 +3,10 @@ import numpy as np
 
 class DegreesOfFreedom:
     def __init__(self, mat_file=None):
+        """
+        Initialize the degrees of freedom.
+        :param mat_file:
+        """
         if mat_file is None:
             self.Free = []
             self.Fix = []
@@ -15,6 +19,14 @@ class DegreesOfFreedom:
             self.FixC = np.array(mat_file['FixC'][0][0][:, 0], dtype=int) - 1
 
     def ApplyBoundaryCondition(self, t, Geo, Set):
+        """
+        Apply the boundary condition to the degrees of freedom. The boundary condition can be either stretching or
+        compressing.
+        :param t:
+        :param Geo:
+        :param Set:
+        :return:
+        """
         if Set.TStartBC <= t <= Set.TStopBC:
             dimP, FixIDs = np.unravel_index(self.FixP, (Geo.numY + Geo.numF + Geo.nCells, 3))
             if Set.BC == 1:
@@ -25,6 +37,12 @@ class DegreesOfFreedom:
             self.Free = [dof for dof in self.Free if dof not in self.FixC]
 
     def get_dofs(self, Geo, Set):
+        """
+        Get the degrees of freedom. The degrees of freedom are the vertices that are not constrained or prescribed.
+        :param Geo:
+        :param Set:
+        :return:
+        """
         # Define free and constrained vertices
         dim = 3
         g_constrained = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3, dtype=bool)
@@ -63,6 +81,12 @@ class DegreesOfFreedom:
         self.FixC = np.array(np.where(g_constrained)[0], dtype=int)
 
     def update_do_fs_compress(self, Geo, Set):
+        """
+        Update the degrees of freedom for the compressing boundary condition.
+        :param Geo:
+        :param Set:
+        :return:
+        """
         maxY = Geo.Cells[0].Y[0, 1]
 
         for cell in Geo.Cells:
@@ -91,6 +115,13 @@ class DegreesOfFreedom:
         return Geo
 
     def update_dofs_stretch(self, FixP, Geo, Set):
+        """
+        Update the degrees of freedom for the stretching boundary condition.
+        :param FixP:
+        :param Geo:
+        :param Set:
+        :return:
+        """
         for cell in Geo.Cells:
             prescYi = np.isin(cell.globalIds, FixP)
             cell.Y[prescYi, 1] = cell.Y[prescYi, 1] + Set.dx / ((Set.TStopBC - Set.TStartBC) / Set.dt)
