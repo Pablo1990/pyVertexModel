@@ -45,8 +45,8 @@ def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof, dy, g,
 
     alpha = line_search(Geo_0, Geo_n, Geo, Dofs, Set, g, dy)
     dy_reshaped = np.reshape(dy * alpha, (Geo.numF + Geo.numY + Geo.nCells, 3))
-    Geo.UpdateVertices(dy_reshaped)
-    Geo.UpdateMeasures()
+    Geo.update_vertices(dy_reshaped)
+    Geo.update_measures()
     g, K, Energy = KgGlobal(Geo_0, Geo_n, Geo, Set)
 
     dyr = np.linalg.norm(dy[dof, 0])
@@ -79,8 +79,8 @@ def line_search(Geo_0, Geo_n, geo, Dofs, Set, gc, dy):
     # Create a copy of geo to not change the original one
     Geo_copy = geo.copy()
 
-    Geo_copy.UpdateVertices(dy_reshaped)
-    Geo_copy.UpdateMeasures()
+    Geo_copy.update_vertices(dy_reshaped)
+    Geo_copy.update_measures()
 
     g = gGlobal(Geo_0, Geo_n, Geo_copy, Set)
     dof = Dofs.Free

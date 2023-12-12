@@ -6,8 +6,53 @@ from scipy.spatial import Delaunay
 from src.pyVertexModel.geo import edgeValenceT
 
 
-def PostFlip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, newYgIds, Set, flipName, segmentToChange):
-    pass
+def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, newYgIds, Set, flipName, segmentToChange):
+    """
+    Summary of this function goes here
+    Detailed explanation goes here
+    """
+
+    hasConverged = 0
+    Geo_backup = Geo.copy()
+    Geo_n_backup = Geo_n.copy()
+    Geo_0_backup = Geo_0.copy()
+    Dofs_backup = Dofs.copy()
+
+    Geo['log'] += f"{flipName}-Flip: {segmentToChange[0]} {segmentToChange[1]}.\n"
+
+    Geo.add_and_rebuild_cells(oldTets, Tnew, Ynew, Set, 1)
+    Geo_n = Geo.copy()
+    # Geo_0 = add_and_rebuild_cells(Geo_0, oldTets, Tnew, Ynew, Set, 0)
+    # PostProcessingVTK(Geo, Geo_0, Set, Set.iIncr+1)
+    # PostProcessingVTK(Geo_0, Geo_0, Set, Set.iIncr+2)
+
+    if check_tris(Geo):  # && ~CheckConvexity(Tnew,Geo_backup)
+        # PostProcessingVTK(Geo, Geo_0, Set, Set.iIncr+1)
+        if Set['NeedToConverge']:
+            Dofs.get_dofs(Geo, Set)
+            Dofs, Geo = get_remodel_dofs(Tnew, Dofs, Geo)
+            Geo, Set, DidNotConverge = solve_remodeling_step(Geo_0, Geo_n, Geo, Dofs, Set)
+            if DidNotConverge:
+                Geo = Geo_backup
+                Geo_n = Geo_n_backup
+                Geo_0 = Geo_0_backup
+                Dofs = Dofs_backup
+                Geo['log'] += f"{flipName}-Flip rejected: did not converge\n"
+                return Geo_0, Geo_n, Geo, Dofs, newYgIds, hasConverged
+            Geo.update_measures()
+
+        newYgIds = list(set(newYgIds + Geo['AssemblegIds']))
+
+        hasConverged = 1
+    else:
+        Geo = Geo_backup
+        Geo_n = Geo_n_backup
+        Dofs = Dofs_backup
+        Geo_0 = Geo_0_backup
+        Geo['log'] += f"{flipName}-Flip rejected: is not compatible\n"
+        return Geo_0, Geo_n, Geo, Dofs, newYgIds, hasConverged
+
+    return Geo_0, Geo_n, Geo, Dofs, newYgIds, hasConverged
 
 
 def FlipNM(segmentToChange, cellToIntercalateWith, oldTets, oldYs, Geo_0, Geo_n, Geo, Dofs, Set, newYgIds):
@@ -16,7 +61,8 @@ def FlipNM(segmentToChange, cellToIntercalateWith, oldTets, oldYs, Geo_0, Geo_n,
     [Ynew, Tnew] = YFlipNM(oldTets, cellToIntercalateWith, oldYs, segmentToChange, Geo, Set)
 
     if len(Tnew) != 0:
-        Geo_0, Geo_n, Geo, Dofs, newYgIds, hasConverged = PostFlip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, newYgIds, Set, flipName, segmentToChange)
+        [Geo_0, Geo_n, Geo, Dofs, newYgIds, hasConverged] = post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs,
+                                                                   newYgIds, Set, flipName, segmentToChange)
 
     return Geo_0, Geo_n, Geo, Dofs, Set, newYgIds, hasConverged, Tnew
 
@@ -259,11 +305,9 @@ def YFlipNM(old_tets, cell_to_intercalate_with, oldYs, XsToDisconnect, Geo, Set)
                             new_tets = np.append(new_tets, [Xs_c], axis=0)
 
                         Geo_new = Geo.copy()
-                        Geo_new.RemoveTetrahedra(old_tets)
-                        Set['TryingFlips'] = 1
-                        Geo_new.AddTetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), [], Set)
-                        Set['TryingFlips'] = 0
-                        Geo_new.Rebuild(Geo, Set)
+                        Geo_new.remove_tetrahedra(old_tets)
+                        Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), [], Set)
+                        Geo_new.rebuild(Geo, Set)
                         new_tets_tree.append(new_tets)
                         vol_diff.append(abs(new_vol - old_vol) / old_vol)
                         cell_winning.append(np.sum(np.isin(new_tets, cell_to_intercalate_with)) / len(new_tets))

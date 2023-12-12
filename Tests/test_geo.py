@@ -15,7 +15,7 @@ class TestGeo(Tests):
         geo_expected, _, _ = load_data('Geo_var_3x3_stretch.mat')
 
         # Update the vertices
-        geo_test.UpdateVertices(dy_reshaped)
+        geo_test.update_vertices(dy_reshaped)
 
         # Check if each cell's vertices are the same
         for i in range(geo_test.nCells):
@@ -31,7 +31,7 @@ class TestGeo(Tests):
         dy_reshaped = np.reshape(dy, ((geo_test.numF + geo_test.numY + geo_test.nCells), 3))
 
         # Update the vertices
-        geo_test.UpdateVertices(dy_reshaped)
+        geo_test.update_vertices(dy_reshaped)
 
         # Check if each cell's vertices are the same
         for i in range(geo_test.nCells):
@@ -50,7 +50,7 @@ class TestGeo(Tests):
         geo_expected, _, _ = load_data('Geo_var_3x3_stretch.mat')
 
         # Test if update measures function does not change anything
-        geo_test.UpdateMeasures()
+        geo_test.update_measures()
 
         # Check if none of the measurements has changed
         for i in range(geo_test.nCells):

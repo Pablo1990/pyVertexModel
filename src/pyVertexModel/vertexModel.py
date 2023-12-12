@@ -220,7 +220,7 @@ class VertexModel:
         X = X / imgDims
 
         # Build cells
-        self.Geo.BuildCells(self.Set, X, Twg)  # Please define the BuildCells function
+        self.Geo.build_cells(self.Set, X, Twg)  # Please define the BuildCells function
 
         # Define upper and lower area threshold for remodelling
         allFaces = np.concatenate([Geo.Cells.Faces for c in range(Geo.nCells)])
@@ -313,7 +313,7 @@ class VertexModel:
         self.Geo.XgBottom = self.Geo.XgID[Xg[:, 2] < np.mean(self.X[:, 2])]
         self.Geo.XgTop = self.Geo.XgID[Xg[:, 2] > np.mean(self.X[:, 2])]
 
-        self.Geo.BuildCells(self.Set, self.X, Twg)
+        self.Geo.build_cells(self.Set, self.X, Twg)
 
         # Define upper and lower area threshold for remodelling
         allFaces = np.concatenate([cell.Faces for cell in self.Geo.Cells])
@@ -367,7 +367,7 @@ class VertexModel:
                 self.Dofs.ApplyBoundaryCondition(self.t, self.Geo, self.Set)
                 # IMPORTANT: Here it updates: Areas, Volumes, etc... Should be
                 # up-to-date
-                self.Geo.UpdateMeasures()
+                self.Geo.update_measures()
                 self.Set.UpdateSet_F(self.Geo)
 
             g, K, __ = newtonRaphson.KgGlobal(self.Geo_0, self.Geo_n, self.Geo, self.Set)
