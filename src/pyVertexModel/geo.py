@@ -5,9 +5,48 @@ import numpy as np
 from src.pyVertexModel import cell, face
 
 
-class Geo:
-    def __init__(self, mat_file=None):
+def edgeValence(Geo, nodesEdge):
+    nodeTets1 = np.sort(Geo.Cells[nodesEdge[0]].T, axis=1)
+    nodeTets2 = np.sort(Geo.Cells[nodesEdge[1]].T, axis=1)
 
+    tetIds = np.isin(nodeTets1, nodeTets2).all(axis=1)
+    sharedTets = nodeTets1[tetIds]
+    if not any(np.isin(nodesEdge, Geo.XgID)):
+        sharedYs = Geo.Cells[nodesEdge[0]].Y[tetIds]
+    else:
+        sharedYs = []
+    valence = sharedTets.shape[0]
+
+    return valence, sharedTets, sharedYs
+
+
+def edgeValenceT(tets, nodesEdge):
+    # Tets in common with an edge
+    tets1 = tets[np.any(np.isin(tets, nodesEdge[0]), axis=1)]
+    tets2 = tets[np.any(np.isin(tets, nodesEdge[1]), axis=1)]
+
+    nodeTets1 = np.sort(tets1, axis=1)
+    nodeTets2 = np.sort(tets2, axis=1)
+
+    tetIds = np.isin(nodeTets1, nodeTets2).all(axis=1)
+    sharedTets = nodeTets1[tetIds]
+    valence = sharedTets.shape[0]
+
+    tetIds = np.where(np.isin(np.sort(tets, axis=1), sharedTets).all(axis=1))[0]
+
+    return valence, sharedTets, tetIds
+
+
+class Geo:
+    """
+    Class that contains the information of the geometry.
+    """
+
+    def __init__(self, mat_file=None):
+        """
+
+        :param mat_file:
+        """
         self.Cells = []
         self.Remodelling = False
         self.non_dead_cells = []
@@ -40,6 +79,10 @@ class Geo:
                 self.Cells.append(cell.Cell(c_cell))
 
     def copy(self):
+        """
+
+        :return:
+        """
         new_geo = Geo()
         new_geo.numF = self.numF
         new_geo.numY = self.numY
@@ -336,3 +379,155 @@ class Geo:
             elif any(i in Geo.XgBottom for i in T):
                 newY[2] /= sum(i in Geo.XgBottom for i in T) / 2
         return newY
+
+    def Rebuild(self, oldGeo, Set):
+        nonDeadCells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]
+        aliveCells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1]
+        debrisCells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
+
+        for cc in aliveCells + debrisCells:
+            Cell = self.Cells[cc]
+
+            for numT in range(len(Cell.T)):
+                tet = Cell.T[numT]
+                Cell.T[numT] = tet
+
+            Neigh_nodes = np.unique(Cell.T)
+            Neigh_nodes = Neigh_nodes[Neigh_nodes != cc]
+
+            for j in range(len(Neigh_nodes)):
+                cj = Neigh_nodes[j]
+                ij = [cc, cj]
+                face_ids = np.sum(np.isin(Cell.T, ij), axis=1) == 2
+
+                oldFaceExists = any([c_face.ij == ij for c_face in oldGeo.Cells[cc].Faces])
+
+                if oldFaceExists:
+                    oldFace = [c_face for c_face in oldGeo.Cells[cc].Faces if c_face.ij == ij][0]
+                else:
+                    oldFace = None
+
+                self.Cells[cc].Faces[j] = face.Face()
+                self.Cells[cc].Faces[j].BuildFace(cc, cj, face_ids, self.nCells, self.Cells[cc], self.XgID, Set,
+                                                  self.XgTop, self.XgBottom, oldFace)
+
+                woundEdgeTris = []
+                for tris_sharedCells in [tri.SharedByCells for tri in self.Cells[cc].Faces[j].Tris]:
+                    woundEdgeTris.append(any([self.Cells[cell].AliveStatus == 0 for cell in tris_sharedCells]))
+
+                if any(woundEdgeTris) and not oldFaceExists:
+                    for woundTriID in [i for i, x in enumerate(woundEdgeTris) if x]:
+                        woundTri = self.Cells[cc].Faces[j].Tris[woundTriID]
+                        allTris = [tri for c_face in oldGeo.Cells[cc].Faces for tri in c_face.Tris]
+                        matchingTris = [tri for tri in allTris if
+                                        set(tri.SharedByCells).intersection(set(woundTri.SharedByCells))]
+
+                        meanDistanceToTris = []
+                        for c_Edge in [tri.Edge for tri in matchingTris]:
+                            meanDistanceToTris.append(np.mean(
+                                np.linalg.norm(self.Cells[cc].Y[woundTri.Edge, :] - oldGeo.Cells[cc].Y[c_Edge, :],
+                                               axis=1)))
+
+                        if meanDistanceToTris:
+                            matchingID = np.argmin(meanDistanceToTris)
+                            self.Cells[cc].Faces[j].Tris[woundTriID].EdgeLength_time = matchingTris[
+                                matchingID].EdgeLength_time
+                        else:
+                            self.Cells[cc].Faces[j].Tris[woundTriID].EdgeLength_time = None
+
+            self.Cells[cc].Faces = self.Cells[cc].Faces[:len(Neigh_nodes)]
+
+    def RemoveTetrahedra(self, removingTets):
+        oldYs = []
+        for removingTet in removingTets:
+            for numNode in removingTet:
+                idToRemove = np.isin(np.sort(self.Cells[numNode].T, axis=1), np.sort(removingTet), axis=1).all(axis=1)
+                self.Cells[numNode].T = self.Cells[numNode].T[~idToRemove]
+                if self.Cells[numNode].AliveStatus is not None:
+                    oldYs.extend(self.Cells[numNode].Y[idToRemove])
+                    self.Cells[numNode].Y = self.Cells[numNode].Y[~idToRemove]
+                    self.numY -= 1
+        return oldYs
+
+    def AddTetrahedra(self, oldGeo, newTets, Ynew=None, Set=None):
+        if Ynew is None:
+            Ynew = []
+
+        for newTet in newTets:
+            if any(~np.isin(newTet, self.XgID)):
+                for numNode in newTet:
+                    if ~any(np.isin(newTet, self.XgID)) and np.isin(np.sort(newTet),
+                                                                    np.sort(self.Cells[numNode].T, axis=1)).all(axis=1):
+                        self.Cells[numNode].Y = self.Cells[numNode].Y[
+                            ~np.isin(np.sort(self.Cells[numNode].T, axis=1), np.sort(newTet))]
+                        self.Cells[numNode].T = self.Cells[numNode].T[
+                            ~np.isin(np.sort(self.Cells[numNode].T, axis=1), np.sort(newTet))]
+                    else:
+                        if len(self.Cells[numNode].T) == 0 or ~np.isin(np.sort(newTet), np.sort(self.Cells[numNode].T,
+                                                                                                axis=1)).all(axis=1):
+                            self.Cells[numNode].T = np.append(self.Cells[numNode].T, [newTet], axis=0)
+                            if self.Cells[numNode].AliveStatus is not None and Set is not None:
+                                if Ynew:
+                                    self.Cells[numNode].Y = np.append(self.Cells[numNode].Y,
+                                                                      Ynew[np.isin(newTets, newTet)],
+                                                                      axis=0)
+                                else:
+                                    self.Cells[numNode].Y = np.append(self.Cells[numNode].Y,
+                                                                      oldGeo.RecalculateYsFromPrevious(newTet, numNode,
+                                                                                                       Set), axis=0)
+                                self.numY += 1
+
+    def RecalculateYsFromPrevious(self, Tnew, mainNodesToConnect, Set):
+        allTs = np.vstack([c_cell.T for c_cell in self.Cells if c_cell.AliveStatus is not None])
+        allYs = np.vstack([c_cell.Y for c_cell in self.Cells if c_cell.AliveStatus is not None])
+        nGhostNodes_allTs = np.sum(np.isin(allTs, self.XgID), axis=1)
+        Ynew = []
+
+        possibleDebrisCells = [c_cell.AliveStatus == 0 for c_cell in self.Cells if c_cell.AliveStatus is not None]
+        if any(possibleDebrisCells):
+            debrisCells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
+        else:
+            debrisCells = [-1]
+
+        for numTet in range(Tnew.shape[0]):
+            mainNode_current = mainNodesToConnect[np.isin(mainNodesToConnect, Tnew[numTet, :])]
+            nGhostNodes_cTet = np.sum(np.isin(Tnew[numTet, :], self.XgID))
+            YnewlyComputed = cell.compute_Y(self, Tnew[numTet, :], self.Cells[mainNode_current[0]].X, Set)
+
+            if any(np.isin(Tnew[numTet, :], debrisCells)):
+                contributionOldYs = 1
+            else:
+                contributionOldYs = Set.contributionOldYs
+
+            if all(~np.isin(Tnew[numTet, :], np.concatenate([self.XgBottom, self.XgTop]))):
+                Ynew.append(YnewlyComputed)
+            else:
+                tetsToUse = np.sum(np.isin(allTs, Tnew[numTet, :]), axis=1) > 2
+
+                if any(np.isin(Tnew[numTet, :], self.XgTop)):
+                    tetsToUse = tetsToUse & np.any(np.isin(allTs, self.XgTop), axis=1)
+                elif any(np.isin(Tnew[numTet, :], self.XgBottom)):
+                    tetsToUse = tetsToUse & np.any(np.isin(allTs, self.XgBottom), axis=1)
+
+                tetsToUse = tetsToUse & (nGhostNodes_allTs == nGhostNodes_cTet)
+
+                if any(tetsToUse):
+                    Ynew.append(contributionOldYs * np.mean(allYs[tetsToUse, :], axis=0) + (
+                            1 - contributionOldYs) * YnewlyComputed)
+                else:
+                    tetsToUse = np.sum(np.isin(allTs, Tnew[numTet, :]), axis=1) > 1
+
+                    if any(np.isin(Tnew[numTet, :], self.XgTop)):
+                        tetsToUse = tetsToUse & np.any(np.isin(allTs, self.XgTop), axis=1)
+                    elif any(np.isin(Tnew[numTet, :], self.XgBottom)):
+                        tetsToUse = tetsToUse & np.any(np.isin(allTs, self.XgBottom), axis=1)
+
+                    tetsToUse = tetsToUse & (nGhostNodes_allTs == nGhostNodes_cTet)
+
+                    if any(tetsToUse):
+                        Ynew.append(contributionOldYs * np.mean(allYs[tetsToUse, :], axis=0) + (
+                                1 - contributionOldYs) * YnewlyComputed)
+                    else:
+                        Ynew.append(YnewlyComputed)
+
+        return np.array(Ynew)
