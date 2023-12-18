@@ -211,9 +211,9 @@ class Cell:
                     'Sphericity': self.compute_sphericity(),
                     'Elongation': self.compute_elongation(),
                     'Ellipticity': self.compute_ellipticity(),
-                    'Neighbours': self.compute_neighbours(),
-                    'Neighbours_top': self.compute_neighbours(location_filter=0),
-                    'Neighbours_bottom': self.compute_neighbours(location_filter=2),
+                    'Neighbours': len(self.compute_neighbours()),
+                    'Neighbours_top': len(self.compute_neighbours(location_filter=0)),
+                    'Neighbours_bottom': len(self.compute_neighbours(location_filter=2)),
                     'Tilting': self.compute_tilting(),
                     'Perimeter_top': self.compute_perimeter(filter_location=0),
                     'Perimeter_bottom': self.compute_perimeter(filter_location=2),
@@ -276,7 +276,10 @@ class Cell:
                 for t in range(len(self.Faces[f].Tris)):
                     neighbours.append(self.Faces[f].Tris[t].SharedByCells)
 
-        return neighbours
+        neighbours_unique = np.unique(neighbours)
+        neighbours_unique = neighbours_unique[neighbours_unique != self.ID]
+
+        return neighbours_unique
 
     def compute_tilting(self):
         """
