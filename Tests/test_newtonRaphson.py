@@ -72,8 +72,8 @@ class TestNewtonRaphson(Tests):
 
         gr_expected = mat_info_expected['gr'][0][0]
         dyr_expected = mat_info_expected['dyr'][0][0]
-        dy_expected = mat_info_expected['dy'][:, 0]
-        g_expected = mat_info_expected['g'][:, 0]
+        dy_expected = np.array(mat_info_expected['dy'][:, 0])
+        g_expected = np.array(mat_info_expected['g'][:, 0])
 
         self.assertAlmostEqual(dyr_expected, dyr_test)
         self.assertAlmostEqual(gr_expected, gr_test)
