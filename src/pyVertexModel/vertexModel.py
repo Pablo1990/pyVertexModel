@@ -495,7 +495,8 @@ class VertexModel:
         for numZ in range(nz):
             x = np.arange(nx)
             y = np.arange(ny)
-            x, y = np.meshgrid(x, y)
+            # Like matlab's meshgrid
+            y, x = np.meshgrid(x, y)
             x = x.flatten()
             y = y.flatten()
             z = np.ones_like(x) * numZ
