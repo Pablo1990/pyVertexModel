@@ -170,3 +170,5 @@ src/pyVertexModel/Kg/kg_functions.c
 *.csv
 
 *.lcov
+
+Result/*
