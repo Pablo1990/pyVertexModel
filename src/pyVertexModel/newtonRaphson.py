@@ -12,6 +12,19 @@ from src.pyVertexModel.geo import Geo
 
 
 def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
+    """
+    Newton-Raphson method
+    :param Geo_0:
+    :param Geo_n:
+    :param Geo:
+    :param Dofs:
+    :param Set:
+    :param K:
+    :param g:
+    :param numStep:
+    :param t:
+    :return:
+    """
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.newton.html
     if Geo.Remodelling:
         # TODO:
@@ -40,7 +53,25 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
     return Geo, g, K, Energy, Set, gr, dyr, dy
 
 
-def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof, dy, g, gr0, ig, numStep, t):
+def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g, gr0, ig, numStep, t):
+    """
+    Newton-Raphson iteration
+    :param Dofs:
+    :param Geo:
+    :param Geo_0:
+    :param Geo_n:
+    :param K:
+    :param Set:
+    :param aux_gr:
+    :param dof:
+    :param dy:
+    :param g:
+    :param gr0:
+    :param ig:
+    :param numStep:
+    :param t:
+    :return:
+    """
     dy[dof, 0] = ml_divide(K, dof, g)
 
     alpha = line_search(Geo_0, Geo_n, Geo, Dofs, Set, g, dy)
@@ -54,26 +85,47 @@ def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof, dy, g,
     print(f"Step: {numStep}, Iter: {Set.iter}, Time: {t} ||gr||= {gr:.3e} ||dyr||= {dyr:.3e} alpha= {alpha:.3e}"
           f" nu/nu0={Set.nu / Set.nu0:.3g}\n")
     Set.iter += 1
-    auxgr[ig] = gr
-    if ig == 2:
-        ig = 0
-    else:
-        ig += 1
+
+    # Check if the three previous steps are very similar. Thus, the solution is not converging
+    aux_gr[ig] = gr
+    ig = 0 if ig == 2 else ig + 1
     if (
-            abs(auxgr[0] - auxgr[1]) / auxgr[0] < 1e-3
-            and abs(auxgr[0] - auxgr[2]) / auxgr[0] < 1e-3
-            and abs(auxgr[2] - auxgr[1]) / auxgr[2] < 1e-3
-    ) or abs((gr0 - gr) / gr0) > 1e3:
+            all(aux_gr[i] != 0 for i in range(3)) and
+            abs(aux_gr[0] - aux_gr[1]) / aux_gr[0] < 1e-3 and
+            abs(aux_gr[0] - aux_gr[2]) / aux_gr[0] < 1e-3 and
+            abs(aux_gr[2] - aux_gr[1]) / aux_gr[2] < 1e-3
+    ) or (
+            gr0 != 0 and abs((gr0 - gr) / gr0) > 1e3
+    ):
         Set.iter = Set.MaxIter
-    return Energy, K, dyr, g, gr, ig, auxgr, dy
+
+    return Energy, K, dyr, g, gr, ig, aux_gr, dy
 
 
 def ml_divide(K, dof, g):
+    """
+    Solve the linear system K * dy = g
+    :param K:
+    :param dof:
+    :param g:
+    :return:
+    """
     # dy[dof] = kg_functions.mldivide_np(K[np.ix_(dof, dof)], g[dof])
     return -np.linalg.solve(K[np.ix_(dof, dof)], g[dof])
 
 
 def line_search(Geo_0, Geo_n, geo, Dofs, Set, gc, dy):
+    """
+    Line search to find the best alpha to minimize the energy
+    :param Geo_0:   Initial geometry
+    :param Geo_n:   Geometry at the previous time step
+    :param geo:     Current geometry
+    :param Dofs:    Dofs object
+    :param Set:     Set object
+    :param gc:      Gradient at the current step
+    :param dy:      Displacement at the current step
+    :return:        alpha
+    """
     dy_reshaped = np.reshape(dy, (geo.numF + geo.numY + geo.nCells, 3))
 
     # Create a copy of geo to not change the original one
