@@ -176,7 +176,7 @@ class Cell:
 
         # Add the properties to the array
         for num_property in range(len(properties)):
-            property_array.SetName(properties[num_property])  # Set a name for the array
+            property_array.SetName(properties[num_property])
             for property_value in properties:
                 property_array.InsertNextValue(property_value)
 
@@ -302,9 +302,9 @@ class Cell:
         for f in range(len(self.Faces)):
             if filter_location is not None:
                 if self.Faces[f].InterfaceType == filter_location:
-                    perimeter = perimeter + self.Faces[f].Perimeter
+                    perimeter = perimeter + self.Faces[f].compute_perimeter()
             else:
-                perimeter = perimeter + self.Faces[f].Perimeter
+                perimeter = perimeter + self.Faces[f].compute_perimeter()
 
         return perimeter
 

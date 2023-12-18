@@ -14,11 +14,11 @@ class Face:
         self.Tris = []
         if mat_file is None:
             self.InterfaceType = None
-            self.ij = -1
-            self.globalIds = -1
-            self.Centre = -1
-            self.Area = -1
-            self.Area0 = -1
+            self.ij = None
+            self.globalIds = None
+            self.Centre = None
+            self.Area = None
+            self.Area0 = None
         else:
             self.ij = mat_file[0][0] - 1
             self.Centre = mat_file[1][0]
@@ -75,7 +75,7 @@ class Face:
         self.Centre = Centre
         return Centre
 
-    def build_edges(self, T, face_ids, FaceCentre, FaceInterfaceType, X, Ys, nonDeadCells):
+    def build_edges(self, T, face_ids, face_centre, face_interface_type, X, Ys, non_dead_cells):
         FaceTets = T[face_ids,]
 
         # TODO: INCORPORATE THIS INTO A TEST
@@ -118,13 +118,13 @@ class Face:
         Order = np.zeros(len(surf_ids), dtype=int)
         for iii in range(len(surf_ids)):
             if iii == len(surf_ids) - 1:
-                v1 = Ys[surf_ids[iii], :] - FaceCentre
-                v2 = Ys[surf_ids[0], :] - FaceCentre
-                Order[iii] = np.dot(np.cross(v1, v2), FaceCentre - X) / len(surf_ids)
+                v1 = Ys[surf_ids[iii], :] - face_centre
+                v2 = Ys[surf_ids[0], :] - face_centre
             else:
-                v1 = Ys[surf_ids[iii], :] - FaceCentre
-                v2 = Ys[surf_ids[iii + 1], :] - FaceCentre
-                Order[iii] = np.dot(np.cross(v1, v2), FaceCentre - X) / len(surf_ids)
+                v1 = Ys[surf_ids[iii], :] - face_centre
+                v2 = Ys[surf_ids[iii + 1], :] - face_centre
+
+            Order[iii] = np.dot(np.cross(v1, v2), face_centre - X) / len(surf_ids)
 
         if np.all(Order < 0):
             surf_ids = np.flip(surf_ids)
@@ -134,24 +134,23 @@ class Face:
             self.Tris[currentTri].Edge = [surf_ids[currentTri], surf_ids[currentTri + 1]]
             currentTris_1 = T[self.Tris[currentTri].Edge[0], :]
             currentTris_2 = T[self.Tris[currentTri].Edge[1], :]
-            self.Tris[currentTri].SharedByCells = np.intersect1d(currentTris_1[np.isin(currentTris_1, nonDeadCells)],
-                                                                 currentTris_2[np.isin(currentTris_2, nonDeadCells)])
+            self.Tris[currentTri].SharedByCells = np.intersect1d(currentTris_1[np.isin(currentTris_1, non_dead_cells)],
+                                                                 currentTris_2[np.isin(currentTris_2, non_dead_cells)])
 
-            self.Tris[currentTri].EdgeLength, self.Tris[currentTri].LengthsToCentre, self.Tris[currentTri].AspectRatio\
-                = self.Tris[currentTri].compute_tri_length_measurements(Ys, FaceCentre)
+            self.Tris[currentTri].EdgeLength, self.Tris[currentTri].LengthsToCentre, self.Tris[currentTri].AspectRatio \
+                = self.Tris[currentTri].compute_tri_length_measurements(Ys, face_centre)
             self.Tris[currentTri].EdgeLength_time = [0, self.Tris[currentTri].EdgeLength]
 
         self.Tris.append(tris.Tris())
         self.Tris[len(surf_ids) - 1].Edge = [surf_ids[len(surf_ids) - 1], surf_ids[0]]
         currentTris_1 = T[self.Tris[len(surf_ids) - 1].Edge[0], :]
         currentTris_2 = T[self.Tris[len(surf_ids) - 1].Edge[1], :]
-        self.Tris[len(surf_ids) - 1].SharedByCells = np.intersect1d(currentTris_1[np.isin(currentTris_1, nonDeadCells)],
-                                                                    currentTris_2[np.isin(currentTris_2, nonDeadCells)])
-
+        self.Tris[len(surf_ids) - 1].SharedByCells = np.intersect1d(currentTris_1[np.isin(currentTris_1, non_dead_cells)],
+                                                                    currentTris_2[np.isin(currentTris_2, non_dead_cells)])
 
         self.Tris[len(surf_ids) - 1].EdgeLength, self.Tris[len(surf_ids) - 1].LengthsToCentre, self.Tris[
             len(surf_ids) - 1].AspectRatio = self.Tris[len(surf_ids) - 1].compute_tri_length_measurements(Ys,
-                                                                                                          FaceCentre)
+                                                                                                          face_centre)
         self.Tris[len(surf_ids) - 1].EdgeLength_time = [0, self.Tris[len(surf_ids) - 1].EdgeLength]
 
         _, triAreas = self.compute_face_area(Ys)
@@ -159,20 +158,31 @@ class Face:
             self.Tris[i].Area = triAreas[i]
 
         for tri in self.Tris:
-            tri.Location = FaceInterfaceType
+            tri.Location = face_interface_type
 
         for tri in self.Tris:
-            tri.ContractileG = 0
+            tri.ContractileG = 0.0
 
     def compute_face_area(self, Y):
-        area = 0
+        area = 0.0
         trisArea = np.zeros(len(self.Tris))
         for t in range(len(self.Tris)):
             Tri = self.Tris[t]
             Tri = Tri.Edge
             Y3 = self.Centre
             YTri = np.vstack([Y[Tri, :], Y3])
-            T = (1 / 2) * np.linalg.norm(np.cross(YTri[1, :] - YTri[0, :], YTri[0, :] - YTri[2, :]))
-            trisArea[t] = T
-            area = area + T
+            tri_area = (1 / 2) * np.linalg.norm(np.cross(YTri[1, :] - YTri[0, :], YTri[0, :] - YTri[2, :]))
+            trisArea[t] = tri_area
+            area = area + tri_area
         return area, trisArea
+
+    def compute_perimeter(self):
+        """
+        Compute the perimeter of the face based on the edges that are shared by more than one cell.
+        :return: float
+        """
+        perimeter = 0.0
+        for tri in self.Tris:
+            if len(tri.SharedByCells) > 1:
+                perimeter += tri.EdgeLength
+        return perimeter

@@ -691,9 +691,6 @@ class Geo:
         if not os.path.exists(new_sub_folder):
             os.makedirs(new_sub_folder)
 
-
-
-
         # Initialize an array to store the VTK of each cell
         vtk_cells = []
 
@@ -702,7 +699,7 @@ class Geo:
             writer.SetFileName(new_sub_folder)
             name_out = os.path.join(new_sub_folder, f'Cell_{c:04d}_t{step:04d}{file_extension}')
 
-            vtk_cells[c] = self.Cells[c].create_vtk_cell(geo_0, set, step)
+            vtk_cells[c] = self.Cells[c].create_vtk(geo_0, set, step)
 
             # Write to a VTK file
             writer.SetInputData(vtk_cells[c])
