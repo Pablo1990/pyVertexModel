@@ -9,6 +9,8 @@ class Face:
     """
 
     def __init__(self, mat_file=None):
+        self.Aspect_Ratio = None
+        self.Perimeter = None
         self.Tris = []
         if mat_file is None:
             self.InterfaceType = None

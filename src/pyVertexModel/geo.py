@@ -1,6 +1,8 @@
 import copy
+import os
 
 import numpy as np
+import vtk
 
 from src.pyVertexModel import cell, face
 
@@ -206,9 +208,9 @@ class Geo:
                                    Set, self.XgTop, self.XgBottom)
                 self.Cells[c].Faces.append(newFace)
 
-            self.Cells[c].ComputeCellArea()
+            self.Cells[c].compute_area()
             self.Cells[c].Area0 = self.Cells[c].Area
-            self.Cells[c].ComputeCellVolume()
+            self.Cells[c].compute_volume()
             self.Cells[c].Vol0 = self.Cells[c].Vol
             self.Cells[c].ExternalLambda = 1
             self.Cells[c].InternalLambda = 1
@@ -296,8 +298,8 @@ class Geo:
                     for tri in self.Cells[c].Faces[f].Tris:
                         tri.ContractileG = 0
 
-            self.Cells[c].ComputeCellArea()
-            self.Cells[c].ComputeCellVolume()
+            self.Cells[c].compute_area()
+            self.Cells[c].compute_volume()
 
     def BuildXFromY(self, Geo, Geo_n):
         proportionOfMax = 0
@@ -670,3 +672,40 @@ class Geo:
                         Ynew.append(YnewlyComputed)
 
         return np.array(Ynew)
+
+    def create_vtk_cell(self, geo_0, set, step):
+        """
+
+        :param geo_0:
+        :param set:
+        :param step:
+        :return:
+        """
+
+        # Initial setup: defining file paths and extensions
+        str0 = set.OutputFolder  # Base name for the output file
+        file_extension = '.vtk'  # File extension
+
+        # Creating a new subdirectory for cells data
+        new_sub_folder = os.path.join(os.getcwd(), str0, 'Cells')
+        if not os.path.exists(new_sub_folder):
+            os.makedirs(new_sub_folder)
+
+
+
+
+        # Initialize an array to store the VTK of each cell
+        vtk_cells = []
+
+        for c in [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]:
+            writer = vtk.vtkPolyDataWriter()
+            writer.SetFileName(new_sub_folder)
+            name_out = os.path.join(new_sub_folder, f'Cell_{c:04d}_t{step:04d}{file_extension}')
+
+            vtk_cells[c] = self.Cells[c].create_vtk_cell(geo_0, set, step)
+
+            # Write to a VTK file
+            writer.SetInputData(vtk_cells[c])
+            writer.Write()
+
+

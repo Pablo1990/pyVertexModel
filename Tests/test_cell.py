@@ -8,7 +8,7 @@ class TestCell(Tests):
 
         # Compute the area of the all the cells
         for i in range(geo_test.nCells):
-            geo_test.Cells[i].ComputeCellArea()
+            geo_test.Cells[i].compute_area()
 
         # Check if the area is the same on each cell
         for i in range(geo_test.nCells):
@@ -20,7 +20,7 @@ class TestCell(Tests):
 
         # Compute the volume of the all the cells
         for i in range(geo_test.nCells):
-            geo_test.Cells[i].ComputeCellVolume()
+            geo_test.Cells[i].compute_volume()
 
         # Check if the volume is the same on each cell
         for i in range(geo_test.nCells):
