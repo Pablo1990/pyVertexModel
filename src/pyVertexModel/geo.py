@@ -435,7 +435,7 @@ class Geo:
     def compute_y(self, Geo, T, cellCentre, Set):
         x = [Geo.Cells[i].X for i in T]
         newY = np.mean(x, axis=0)
-        if len(set([Geo.Cells[i].AliveStatus for i in T])) == 1 and Set.InputGeo == 'Bubbles':
+        if sum([Geo.Cells[i].AliveStatus is not None for i in T]) == 1 and "Bubbles" in Set.InputGeo:
             vc = newY - cellCentre
             dir = vc / np.linalg.norm(vc)
             offset = Set.f * dir

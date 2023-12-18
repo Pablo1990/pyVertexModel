@@ -67,7 +67,7 @@ class Face:
 
     def build_face_centre(self, ij, ncells, X, Ys, H, extrapolate_face_centre):
         Centre = np.sum(Ys, axis=0) / len(Ys)
-        if any(node in range(ncells) for node in ij) and extrapolate_face_centre:
+        if sum(node in range(ncells) for node in ij) == 1 and extrapolate_face_centre:
             runit = (Centre - X)
             runit = runit / np.linalg.norm(runit)
             Centre = X + H * runit
