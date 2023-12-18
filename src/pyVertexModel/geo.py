@@ -1,8 +1,8 @@
-import copy
 import os
 
 import numpy as np
 import vtk
+import open3d as o3d
 
 from src.pyVertexModel import cell, face
 
@@ -675,7 +675,7 @@ class Geo:
 
     def create_vtk_cell(self, geo_0, set, step):
         """
-
+        Creates a VTK file for each cell
         :param geo_0:
         :param set:
         :param step:
@@ -704,6 +704,18 @@ class Geo:
             # Write to a VTK file
             writer.SetInputData(vtk_cells[-1])
             writer.Write()
+
+            # Write to a ply file
+            ply_writer = vtk.vtkPLYWriter()
+            ply_writer.SetFileName(name_out.replace(file_extension, '.ply'))
+            ply_writer.SetInputData(vtk_cells[-1])
+            ply_writer.Write()
+
+            #mesh = o3d.io.read_triangle_mesh(name_out.replace(file_extension, '.ply'))
+            #mesh.compute_vertex_normals()
+
+            # Visualize the mesh
+            #o3d.visualization.draw_geometries([mesh])
 
         return vtk_cells
 
