@@ -1,6 +1,7 @@
 import unittest
 from os.path import exists
 
+import numpy as np
 import scipy
 
 from src.pyVertexModel.geo import Geo
@@ -24,12 +25,13 @@ def load_data(file_name, return_geo=True):
     return geo_test, set_test, mat_info
 
 
-class Tests(unittest.TestCase):
-    def assert_matrix(self, k_expected, k, delta=6):
-        for i in range(k.shape[0]):
-            for j in range(k.shape[1]):
-                self.assertAlmostEqual(k[i, j], k_expected[i, j], delta)
+def assert_matrix(k_expected, k, delta=6):
+    np.testing.assert_array_almost_equal(k_expected, k, decimal=delta)
 
-    def assert_array1D(self, g_expected, g, delta=6):
-        for i in range(len(g)):
-            self.assertAlmostEqual(g[i], g_expected[i], delta)
+
+def assert_array1D(g_expected, g, delta=6):
+    np.testing.assert_array_almost_equal(g_expected, g, decimal=delta)
+
+
+class Tests(unittest.TestCase):
+    pass

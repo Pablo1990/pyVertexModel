@@ -1,3 +1,5 @@
+import numpy as np
+
 from Tests.tests import Tests, load_data
 
 
@@ -13,4 +15,4 @@ class TestFace(Tests):
 
         # Check if the area is the same on each cell
         for i in range(geo_test.nCells):
-            self.assertAlmostEqual(geo_test.Cells[i].Faces[0].Area, geo_expected.Cells[i].Faces[0].Area)
+            np.testing.assert_almost_equal(geo_test.Cells[i].Faces[0].Area, geo_expected.Cells[i].Faces[0].Area)

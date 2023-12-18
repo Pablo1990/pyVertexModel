@@ -1,6 +1,6 @@
 import numpy as np
 
-from Tests.tests import Tests, load_data
+from Tests.tests import Tests, load_data, assert_matrix, assert_array1D
 
 
 class TestGeo(Tests):
@@ -19,12 +19,12 @@ class TestGeo(Tests):
 
         # Check if each cell's vertices are the same
         for i in range(geo_test.nCells):
-            self.assert_matrix(geo_test.Cells[i].Y, geo_expected.Cells[i].Y)
+            assert_matrix(geo_test.Cells[i].Y, geo_expected.Cells[i].Y)
 
         # Check if each cell's faces are the same
         for i in range(geo_test.nCells):
             for j in range(len(geo_test.Cells[i].Faces)):
-                self.assert_array1D(geo_test.Cells[i].Faces[j].Centre, geo_expected.Cells[i].Faces[j].Centre)
+                assert_array1D(geo_test.Cells[i].Faces[j].Centre, geo_expected.Cells[i].Faces[j].Centre)
 
         # Test with fixed displacement of 1
         dy = np.ones((geo_test.numF + geo_test.numY + geo_test.nCells, 3))
@@ -35,12 +35,12 @@ class TestGeo(Tests):
 
         # Check if each cell's vertices are the same
         for i in range(geo_test.nCells):
-            self.assert_matrix(geo_test.Cells[i].Y, geo_expected.Cells[i].Y + 1)
+            assert_matrix(geo_test.Cells[i].Y, geo_expected.Cells[i].Y + 1)
 
         # Check if each cell's faces are the same
         for i in range(geo_test.nCells):
             for j in range(len(geo_test.Cells[i].Faces)):
-                self.assert_array1D(geo_test.Cells[i].Faces[j].Centre, geo_expected.Cells[i].Faces[j].Centre + 1)
+                assert_array1D(geo_test.Cells[i].Faces[j].Centre, geo_expected.Cells[i].Faces[j].Centre + 1)
 
     def test_update_measures(self):
         # Load data
@@ -54,8 +54,8 @@ class TestGeo(Tests):
 
         # Check if none of the measurements has changed
         for i in range(geo_test.nCells):
-            self.assertAlmostEqual(geo_test.Cells[i].Area, geo_expected.Cells[i].Area)
-            self.assertAlmostEqual(geo_test.Cells[i].Vol, geo_expected.Cells[i].Vol)
+            np.testing.assert_almost_equal(geo_test.Cells[i].Area, geo_expected.Cells[i].Area)
+            np.testing.assert_almost_equal(geo_test.Cells[i].Vol, geo_expected.Cells[i].Vol)
 
 
 

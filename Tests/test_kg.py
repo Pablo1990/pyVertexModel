@@ -1,6 +1,6 @@
 import numpy as np
 
-from Tests.tests import Tests, load_data
+from Tests.tests import Tests, load_data, assert_array1D, assert_matrix
 from src.pyVertexModel.Kg import kg
 from src.pyVertexModel.Kg.kgContractility import KgContractility
 from src.pyVertexModel.Kg.kgSubstrate import KgSubstrate
@@ -111,7 +111,7 @@ class Test(Tests):
 
         v_kg = KgVolume(geo_test)
         v_kg.compute_work(geo_test, set_test)
-        self.assertAlmostEqual(v_kg.energy, 7.381125000000000e+04)
+        np.testing.assert_almost_equal(v_kg.energy, 7.381125000000000e+04)
 
         # Check that the global K, g and E are the same in a different iteration
         _, _, mat_expected = load_data('Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat', False)
@@ -137,7 +137,7 @@ class Test(Tests):
 
         v_kg = KgViscosity(geo_test)
         v_kg.compute_work(geo_test, set_test, geo_n_test)
-        self.assertAlmostEqual(v_kg.energy, 3.194411761833479e+04)
+        np.testing.assert_almost_equal(v_kg.energy, 3.194411761833479e+04)
 
         # Check that the global K, g and E are the same in a different iteration
         _, _, mat_expected = load_data('Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat', False)
@@ -167,9 +167,9 @@ class Test(Tests):
                       mat_expected['EBA'] + mat_expected['EBAR'] + mat_expected['EC'] +
                       mat_expected['ESub'])
 
-        self.assertAlmostEqual(e_expected[0][0], E)
-        self.assert_array1D(g_expected[:, 0], g)
-        self.assert_matrix(k_expected, K)
+        np.testing.assert_almost_equal(e_expected[0][0], E)
+        assert_array1D(g_expected[:, 0], g)
+        assert_matrix(k_expected, K)
 
         # Check that the global K is the same in a different iteration
         geo_test, set_test, mat_info = load_data('Geo_var_3x3_stretch_Iter6_expectedResults.mat')
@@ -184,14 +184,14 @@ class Test(Tests):
         k_expected = mat_info['K']
 
         # Check that the results are the same
-        self.assert_array1D(g_expected, g)
-        self.assert_matrix(k_expected, K)
+        assert_array1D(g_expected, g)
+        assert_matrix(k_expected, K)
 
     def assert_k_g_energy(self, energy_var_name, g_var_name, k_var_name, kg, mat_expected):
-        self.assertAlmostEqual(kg.energy, mat_expected[energy_var_name][0][0], 3)
-        self.assert_array1D(mat_expected[g_var_name][:, 0], kg.g)
+        np.testing.assert_almost_equal(kg.energy, mat_expected[energy_var_name][0][0], 3)
+        assert_array1D(mat_expected[g_var_name][:, 0], kg.g)
         K_expected = mat_expected[k_var_name]
-        self.assert_matrix(K_expected, kg.K)
+        assert_matrix(K_expected, kg.K)
 
     def test_k_k(self):
         _, _, mat_info = load_data('kK_test.mat', False)
@@ -203,4 +203,4 @@ class Test(Tests):
                                    [-0.0428177029418665, -0.0983863643372161, 0.0906607690000001],
                                    [0.415094060433679, -0.0906607690000001, -0.205394436600024]])
 
-        self.assert_matrix(output_KK, expectedResult)
+        assert_matrix(output_KK, expectedResult)

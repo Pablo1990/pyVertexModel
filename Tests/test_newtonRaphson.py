@@ -2,7 +2,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from Tests.tests import load_data, Tests
+from Tests.tests import load_data, Tests, assert_array1D, assert_matrix
 from src.pyVertexModel.degreesOfFreedom import DegreesOfFreedom
 from src.pyVertexModel.geo import Geo
 from src.pyVertexModel.newtonRaphson import line_search, newton_raphson, newton_raphson_iteration, ml_divide
@@ -43,10 +43,10 @@ class TestNewtonRaphson(Tests):
         g_expected = mat_info_expected['g'][:, 0]
         gr_expected = mat_info_expected['gr'][0][0]
 
-        self.assertAlmostEqual(dyr_expected, dyr_test)
-        self.assertAlmostEqual(gr_expected, gr_test)
-        self.assertAlmostEqual(energy_expected, energy_test)
-        self.assert_array1D(g_expected, g_test)
+        np.testing.assert_almost_equal(dyr_expected, dyr_test)
+        np.testing.assert_almost_equal(gr_expected, gr_test)
+        np.testing.assert_almost_equal(energy_expected, energy_test)
+        assert_array1D(g_expected, g_test)
 
     def test_newton_raphson(self):
         geo_test, set_test, mat_info = load_data('Newton_Raphson_3x3_stretch.mat')
@@ -72,13 +72,13 @@ class TestNewtonRaphson(Tests):
 
         gr_expected = mat_info_expected['gr'][0][0]
         dyr_expected = mat_info_expected['dyr'][0][0]
-        dy_expected = np.array(mat_info_expected['dy'][:, 0])
-        g_expected = np.array(mat_info_expected['g'][:, 0])
+        dy_expected = np.array(mat_info_expected['dy'])
+        g_expected = mat_info_expected['g'][:, 0]
 
-        self.assertAlmostEqual(dyr_expected, dyr_test)
-        self.assertAlmostEqual(gr_expected, gr_test)
-        self.assert_array1D(dy_expected, dy_test)
-        self.assert_array1D(g_expected, g_test)
+        np.testing.assert_almost_equal(dyr_expected, dyr_test)
+        np.testing.assert_almost_equal(gr_expected, gr_test)
+        assert_array1D(dy_expected, np.array(dy_test))
+        assert_array1D(g_expected, g_test)
 
     def test_line_search(self):
         geo_test, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
@@ -92,14 +92,14 @@ class TestNewtonRaphson(Tests):
         set_test = Set(mat_info['Set'])
         alpha = line_search(geo_0_test, geo_n_test, geo_test, dofs_test, set_test, g_test, dy_test)
 
-        self.assertAlmostEqual(alpha, 1)
+        np.testing.assert_almost_equal(alpha, 1)
 
         # Check geo_test hasn't changed for every cell
         for i in range(geo_test.nCells):
-            self.assert_matrix(geo_test.Cells[i].Y, geo_expected.Cells[i].Y)
+            assert_matrix(geo_test.Cells[i].Y, geo_expected.Cells[i].Y)
             # Check faces haven't changed
             for j in range(len(geo_test.Cells[i].Faces)):
-                self.assert_array1D(geo_test.Cells[i].Faces[j].Centre, geo_expected.Cells[i].Faces[j].Centre)
+                assert_array1D(geo_test.Cells[i].Faces[j].Centre, geo_expected.Cells[i].Faces[j].Centre)
 
     def test_ml_divide(self):
         geo_test, _, _ = load_data('Newton_Raphson_3x3_stretch.mat')
@@ -111,4 +111,4 @@ class TestNewtonRaphson(Tests):
         dy_test = np.zeros(((geo_test.numF + geo_test.numY + geo_test.nCells) * 3, 1), dtype=np.float32)
         dy_test[dofs_test.Free, 0] = ml_divide(k_test, dofs_test.Free, g_test)
 
-        self.assert_array1D(dy_test, mat_info_expected['dy'][:, 0])
+        assert_array1D(dy_test, mat_info_expected['dy'])

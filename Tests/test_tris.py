@@ -1,6 +1,8 @@
 from unittest import TestCase
 
-from Tests.tests import load_data, Tests
+import numpy as np
+
+from Tests.tests import load_data, Tests, assert_array1D
 
 
 class TestTris(Tests):
@@ -17,11 +19,11 @@ class TestTris(Tests):
 
         # Check if the length measurements are the same on each cell
         for i in range(geo_test.nCells):
-            self.assertAlmostEqual(geo_test.Cells[i].Faces[0].Tris[0].EdgeLength,
-                                   geo_expected.Cells[i].Faces[0].Tris[0].EdgeLength)
+            np.testing.assert_almost_equal(geo_test.Cells[i].Faces[0].Tris[0].EdgeLength,
+                                           geo_expected.Cells[i].Faces[0].Tris[0].EdgeLength)
 
-            self.assertAlmostEqual(geo_test.Cells[i].Faces[0].Tris[0].AspectRatio,
-                                   geo_expected.Cells[i].Faces[0].Tris[0].AspectRatio)
+            np.testing.assert_almost_equal(geo_test.Cells[i].Faces[0].Tris[0].AspectRatio,
+                                           geo_expected.Cells[i].Faces[0].Tris[0].AspectRatio)
 
-            self.assert_array1D(geo_test.Cells[i].Faces[0].Tris[0].LengthsToCentre,
+            assert_array1D(geo_test.Cells[i].Faces[0].Tris[0].LengthsToCentre,
                                 geo_expected.Cells[i].Faces[0].Tris[0].LengthsToCentre)

@@ -1,3 +1,5 @@
+import numpy as np
+
 from Tests.tests import Tests, load_data
 
 
@@ -12,7 +14,7 @@ class TestCell(Tests):
 
         # Check if the area is the same on each cell
         for i in range(geo_test.nCells):
-            self.assertAlmostEqual(geo_test.Cells[i].Area, geo_expected.Cells[i].Area)
+            np.testing.assert_almost_equal(geo_test.Cells[i].Area, geo_expected.Cells[i].Area)
 
     def test_compute_cell_volume(self):
         geo_test, _, _ = load_data('Geo_var_3x3_stretch.mat')
@@ -24,4 +26,4 @@ class TestCell(Tests):
 
         # Check if the volume is the same on each cell
         for i in range(geo_test.nCells):
-            self.assertAlmostEqual(geo_test.Cells[i].Vol, geo_expected.Cells[i].Vol)
+            np.testing.assert_almost_equal(geo_test.Cells[i].Vol, geo_expected.Cells[i].Vol)
