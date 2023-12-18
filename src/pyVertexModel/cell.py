@@ -149,38 +149,44 @@ class Cell:
         :return:
         """
         points = vtk.vtkPoints()
-        points.SetNumberOfPoints(len(self.Y))
+        points.SetNumberOfPoints(len(self.Y) + len(self.Faces))
         for i in range(len(self.Y)):
             points.SetPoint(i, self.Y[i, 0], self.Y[i, 1], self.Y[i, 2])
 
-        vpoly = vtk.vtkPolyData()
-        vpoly.SetPoints(points)
-
         cell = vtk.vtkCellArray()
         # Go through all the faces and create the triangles for the VTK cell
+        total_tris = 0
         for f in range(len(self.Faces)):
             c_face = self.Faces[f]
+            points.SetPoint(len(self.Y) + f, c_face.Centre[0], c_face.Centre[1], c_face.Centre[2])
             for t in range(len(c_face.Tris)):
                 cell.InsertNextCell(3)
                 cell.InsertCellPoint(c_face.Tris[t].Edge[0])
                 cell.InsertCellPoint(c_face.Tris[t].Edge[1])
-                cell.InsertCellPoint(c_face.globalIds)
+                cell.InsertCellPoint(len(self.Y) + f)
+
+            total_tris += len(c_face.Tris)
+
+        vpoly = vtk.vtkPolyData()
+        vpoly.SetPoints(points)
 
         vpoly.SetPolys(cell)
-
-        # Create a vtkFloatArray for the property
-        property_array = vtk.vtkFloatArray()
 
         # Get all the different properties of a cell
         properties = self.compute_features()
 
         # Go through the different properties of the dictionary and add them to the vtkFloatArray
         for key, value in properties.items():
+            # Create a vtkFloatArray to store the properties of the cell
+            property_array = vtk.vtkFloatArray()
             property_array.SetName(key)
-            property_array.InsertNextValue(value)
 
-        # Add the property array to the cell data
-        vpoly.GetCellData().AddArray(property_array)
+            # Add as many values as tris the cell has
+            for i in range(total_tris):
+                property_array.InsertNextValue(value)
+
+            # Add the property array to the cell data
+            vpoly.GetCellData().AddArray(property_array)
 
         return vpoly
 
@@ -276,7 +282,10 @@ class Cell:
                 for t in range(len(self.Faces[f].Tris)):
                     neighbours.append(self.Faces[f].Tris[t].SharedByCells)
 
-        neighbours_unique = np.unique(neighbours)
+        # Flatten the list of lists into a single 1-D array
+        neighbours_flat = np.concatenate(neighbours)
+
+        neighbours_unique = np.unique(neighbours_flat)
         neighbours_unique = neighbours_unique[neighbours_unique != self.ID]
 
         return neighbours_unique
