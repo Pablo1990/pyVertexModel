@@ -371,9 +371,10 @@ class VertexModel:
         self.set.lmin0 = self.set.lmin0 * 10
 
     def IterateOverTime(self):
+        # Create VTK files for initial state
+        self.geo.create_vtk_cell(self.Geo_0, self.set, 0)
 
         while self.t <= self.set.tend and not self.didNotConverge:
-            self.geo.create_vtk_cell(self.Geo_0, self.set, self.numStep)
             self.set.currentT = self.t
             print("Time: " + str(self.t))
 
@@ -393,9 +394,6 @@ class VertexModel:
             if gr < self.set.tol and dyr < self.set.tol and np.all(np.isnan(g(self.Dofs.Free)) == 0) and np.all(
                     np.isnan(dy(self.Dofs.Free)) == 0):
                 if self.set.nu / self.set.nu0 == 1:
-                    # Assuming this is within a larger loop or function
-                    # ...
-
                     # STEP has converged
                     self.geo.log += f"\n STEP {self.set.i_incr} has converged ...\n"
 
@@ -436,7 +434,7 @@ class VertexModel:
                     self.check_integrity()
 
                     # Post Processing and Saving Data
-                    # post_processing_vtk(self.Geo, self.Geo_0, set, self.numStep)
+                    self.geo.create_vtk_cell(self.Geo_0, self.set, self.numStep)
                     # Save data using your preferred method (e.g., pickle, numpy, pandas)
 
                     # Update Contractility Value and Edge Length
