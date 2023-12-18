@@ -27,3 +27,5 @@ class TestCell(Tests):
         # Check if the volume is the same on each cell
         for i in range(geo_test.nCells):
             np.testing.assert_almost_equal(geo_test.Cells[i].Vol, geo_expected.Cells[i].Vol)
+
+

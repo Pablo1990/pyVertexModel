@@ -110,7 +110,7 @@ class Cell:
         totalArea = 0.0
         for f in range(len(self.Faces)):
             if location_filter is not None:
-                if self.Faces[f].InterfaceType == location_filter:
+                if self.Faces[f].InterfaceType == self.Faces[f].InterfaceType_allValues[location_filter]:
                     totalArea = totalArea + self.Faces[f].Area
             else:
                 totalArea = totalArea + self.Faces[f].Area
@@ -174,11 +174,10 @@ class Cell:
         # Get all the different properties of a cell
         properties = self.compute_features()
 
-        # Add the properties to the array
-        for num_property in range(len(properties)):
-            property_array.SetName(properties[num_property])
-            for property_value in properties:
-                property_array.InsertNextValue(property_value)
+        # Go through the different properties of the dictionary and add them to the vtkFloatArray
+        for key, value in properties.items():
+            property_array.SetName(key)
+            property_array.InsertNextValue(value)
 
         # Add the property array to the cell data
         vpoly.GetCellData().AddArray(property_array)
@@ -270,7 +269,7 @@ class Cell:
         neighbours = []
         for f in range(len(self.Faces)):
             if location_filter is not None:
-                if self.Faces[f].InterfaceType == location_filter:
+                if self.Faces[f].InterfaceType == self.Faces[f].InterfaceType_allValues[location_filter]:
                     for t in range(len(self.Faces[f].Tris)):
                         neighbours.append(self.Faces[f].Tris[t].SharedByCells)
             else:
@@ -301,7 +300,7 @@ class Cell:
         perimeter = 0.0
         for f in range(len(self.Faces)):
             if filter_location is not None:
-                if self.Faces[f].InterfaceType == filter_location:
+                if self.Faces[f].InterfaceType == self.Faces[f].InterfaceType_allValues[filter_location]:
                     perimeter = perimeter + self.Faces[f].compute_perimeter()
             else:
                 perimeter = perimeter + self.Faces[f].compute_perimeter()

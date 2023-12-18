@@ -114,14 +114,15 @@ class Set:
             self.woundDefault()
 
             current_datetime = datetime.now()
-            self.OutputFolder = ['Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")), self.InputGeo, '_Cells_',
-                                 str(self.TotalCells), '_visc_', str(self.nu), '_lVol_', str(self.lambdaV),
-                                 '_muBulk_', str(self.mu_bulk), '_lBulk_', str(self.lambda_bulk), '_kSubs_',
-                                 str(self.kSubstrate), '_lt_', str(self.cLineTension), '_noise_',
-                                 str(self.noiseContractility), '_pString_', str(self.purseStringStrength),
-                                 '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
-                                 '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1), '_lS2_',
-                                 str(self.lambdaS2), '_lS3_', str(self.lambdaS3)]
+            self.OutputFolder = ''.join(['Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")), self.InputGeo,
+                                          '_Cells_', str(self.TotalCells), '_visc_', str(self.nu), '_lVol_',
+                                          str(self.lambdaV), '_muBulk_', str(self.mu_bulk), '_lBulk_',
+                                          str(self.lambda_bulk), '_kSubs_',
+                                          str(self.kSubstrate), '_lt_', str(self.cLineTension), '_noise_',
+                                          str(self.noiseContractility), '_pString_', str(self.purseStringStrength),
+                                          '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
+                                          '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
+                                          '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3)])
         else:
             for param in mat_file.dtype.fields:
                 if len(mat_file[param][0][0]) == 0:
@@ -203,4 +204,4 @@ class Set:
 
     def UpdateSet_F(self, Geo):
         self.f_Init = 0.75
-        self.f = self.f_Init * np.mean([cell.Vol/cell.Vol0 for cell in np.array(Geo.Cells)[Geo.non_dead_cells]]) ** 3
+        self.f = self.f_Init * np.mean([cell.Vol / cell.Vol0 for cell in np.array(Geo.Cells)[Geo.non_dead_cells]]) ** 3

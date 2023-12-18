@@ -373,6 +373,7 @@ class VertexModel:
     def IterateOverTime(self):
 
         while self.t <= self.set.tend and not self.didNotConverge:
+            self.geo.create_vtk_cell(self.Geo_0, self.set, self.numStep)
             self.set.currentT = self.t
             print("Time: " + str(self.t))
 
