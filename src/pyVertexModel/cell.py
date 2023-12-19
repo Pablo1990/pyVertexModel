@@ -46,7 +46,7 @@ class Cell:
         """
 
         self.axes_lengths = None
-        self.Y = np.empty(1, np.float64)
+        self.Y = None
         self.globalIds = np.array([], dtype='int')
         self.Faces = []
         self.Area = None
@@ -60,7 +60,7 @@ class Cell:
 
         if mat_file is None:
             self.ID = None
-            self.X = np.empty(1, np.float64)
+            self.X = np.empty(1, dtype=np.float64)
             self.T = np.empty(1, 'int')
         else:
             self.ID = mat_file[0][0][0] - 1

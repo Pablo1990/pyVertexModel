@@ -22,7 +22,7 @@ class Set:
             self.tend = 61
             ## ============================ Mechanics =============================
             # Volumes
-            self.lambdaV = 5
+            self.lambdaV = 5.0
             self.lambdaV_Debris = 0.001
             # Surface area
             self.SurfaceType = 1
@@ -34,11 +34,11 @@ class Set:
             self.lambdaS4CellFactor = []
             # Tri energy Area
             self.EnergyBarrierA = True
-            self.lambdaB = 5
-            self.Beta = 1
+            self.lambdaB = 5.0
+            self.Beta = 1.0
             # Tri energy Aspect ratio
             self.EnergyBarrierAR = True
-            self.lambdaR = 5
+            self.lambdaR = 5.0
             # Bending
             self.Bending = False
             self.lambdaBend = 0.01
@@ -57,9 +57,9 @@ class Set:
             self.lambda_bulk = 2000
             # Substrate
             self.Substrate = 2
-            self.kSubstrate = 500
+            self.kSubstrate = 500.0
             ## ============================ Viscosity =============================
-            self.nu = 1000
+            self.nu = 1000.0
             self.LocalViscosityEdgeBased = False
             self.nu_Local_EdgeBased = 0
             self.LocalViscosityOption = 2
@@ -71,7 +71,7 @@ class Set:
             self.Reset_PercentageGeo0 = 0.15
             ## ============================ Solution ==============================
             self.tol = 1e-08
-            self.MaxIter = 50
+            self.MaxIter = 30
             self.Parallel = False
             self.Sparse = False
             self.lastTConverged = 0
@@ -115,14 +115,14 @@ class Set:
 
             current_datetime = datetime.now()
             self.OutputFolder = ''.join(['Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")), self.InputGeo,
-                                          '_Cells_', str(self.TotalCells), '_visc_', str(self.nu), '_lVol_',
-                                          str(self.lambdaV), '_muBulk_', str(self.mu_bulk), '_lBulk_',
-                                          str(self.lambda_bulk), '_kSubs_',
-                                          str(self.kSubstrate), '_lt_', str(self.cLineTension), '_noise_',
-                                          str(self.noiseContractility), '_pString_', str(self.purseStringStrength),
-                                          '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
-                                          '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
-                                          '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3)])
+                                         '_Cells_', str(self.TotalCells), '_visc_', str(self.nu), '_lVol_',
+                                         str(self.lambdaV), '_muBulk_', str(self.mu_bulk), '_lBulk_',
+                                         str(self.lambda_bulk), '_kSubs_',
+                                         str(self.kSubstrate), '_lt_', str(self.cLineTension), '_noise_',
+                                         str(self.noiseContractility), '_pString_', str(self.purseStringStrength),
+                                         '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
+                                         '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
+                                         '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3)])
         else:
             for param in mat_file.dtype.fields:
                 if len(mat_file[param][0][0]) == 0:

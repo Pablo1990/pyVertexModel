@@ -43,7 +43,7 @@ cpdef np.ndarray assembleK(double[:, :] K, double[:, :] Ke, nY: np.ndarray):
             if Ke[i, j] != 0:
                 K[idofg[i], idofg[j]] = K[idofg[i], idofg[j]] + Ke[i, j]
 
-    return K
+    return np.array(K)
 
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -148,7 +148,7 @@ cpdef np.ndarray compute_finalK_Volume(np.ndarray ge, np.ndarray K, double Vol, 
         if ge_view[i] != 0:
             for j in range(n):
                 if ge_view[j] != 0:
-                    K_view[i, j] += ge_view[i] * ge_view[j] / 6 / 6 * (Vol - Vol0) ** (n - 2) / Vol0 ** n_dim
+                    K_view[i, j] += ge_view[i] * ge_view[j] / 6.0 / 6.0 * (Vol - Vol0) ** (n - 2.0) / Vol0 ** n_dim
 
     return np.asarray(K_view)
 

@@ -42,7 +42,7 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
     print(f"Step: {numStep}, Iter: 0 ||gr||= {gr} ||dyr||= {dyr} dt/dt0={Set.dt / Set.dt0:.3g}\n")
 
     Set.iter = 1
-    auxgr = np.zeros(3)
+    auxgr = np.zeros(3, dtype=np.float64)
     auxgr[0] = gr
     ig = 0
 
@@ -86,7 +86,7 @@ def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g
           f" nu/nu0={Set.nu / Set.nu0:.3g}\n")
     Set.iter += 1
 
-    # Check if the three previous steps are very similar. Thus, the solution is not converging
+    # Checking if the three previous steps are very similar. Thus, the solution is not converging
     aux_gr[ig] = gr
     ig = 0 if ig == 2 else ig + 1
     if (

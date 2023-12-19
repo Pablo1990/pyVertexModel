@@ -26,7 +26,7 @@ class KgVolume(Kg):
             Cell = Geo.Cells[c]
             Ys = Cell.Y
             lambdaV = Set.lambdaV
-            fact = lambdaV * (Cell.Vol - Cell.Vol0) ** (n - 1) / Cell.Vol0 ** n
+            fact = lambdaV * (Cell.Vol - Cell.Vol0) ** (n - 1.0) / Cell.Vol0 ** n
 
             ge = np.zeros(self.g.shape, dtype=self.precision_type)
             for face in Cell.Faces:
@@ -43,11 +43,11 @@ class KgVolume(Kg):
                     gs, Ks = kg_functions.gKDet(y1, y2, y3)
                     ge = self.assemble_g(ge, gs, np.array(nY, dtype='int'))
                     if calculate_K:
-                        self.assemble_k(Ks * fact / 6, np.array(nY, dtype='int'))
+                        self.assemble_k(Ks * fact / 6.0, np.array(nY, dtype='int'))
 
-            self.g += ge * fact / 6  # Volume contribution of each triangle is det(Y1,Y2,Y3)/6
+            self.g += ge * fact / 6.0  # Volume contribution of each triangle is det(Y1,Y2,Y3)/6
             if calculate_K:
-                self.K = kg_functions.compute_finalK_Volume(ge, self.K, Cell.Vol, Cell.Vol0, n)
+                self.K = self.compute_finalK_Volume(ge, self.K, Cell.Vol, Cell.Vol0, n)
 
             self.energy += lambdaV / n * ((Cell.Vol - Cell.Vol0) / Cell.Vol0) ** n
 
@@ -68,5 +68,5 @@ class KgVolume(Kg):
         ge_ = ge.reshape((ge.size, 1))
         ge_transpose = ge.reshape((1, ge.size))
 
-        K = K + np.dot(ge_, ge_transpose) / 6 / 6 * (Vol - Vol0) ** (n - 2) / Vol0 ** n
+        K = K + np.dot(ge_, ge_transpose) / 6.0 / 6.0 * (Vol - Vol0) ** (n - 2) / Vol0 ** n
         return K

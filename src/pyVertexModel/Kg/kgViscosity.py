@@ -9,7 +9,7 @@ class KgViscosity(Kg):
     def compute_work(self, Geo, Set, Geo_n=None, calculate_K=True):
         start = time.time()
         if calculate_K:
-            self.K = (Set.nu / Set.dt) * np.eye(self.K.shape[0])
+            self.K = (Set.nu / Set.dt) * np.eye(self.K.shape[0], dtype=self.precision_type)
         self.calculate_g(Geo, Geo_n, Set)
         self.energy = 0.5 * np.dot(self.g.transpose(), self.g) / Set.nu
         end = time.time()
@@ -33,4 +33,4 @@ class KgViscosity(Kg):
                     dY[np.array(Face.globalIds, dtype=int), :] = (Face.Centre - Face_n.Centre)
 
             #dY[np.array(Cell.cglobalIds, dtype=int), :] = (Cell.X - Cell_n.X)
-        self.g[:] = (Set.nu / Set.dt) * dY.flatten()
+        self.g[:] = (Set.nu / Set.dt) * dY.flatten('C')
