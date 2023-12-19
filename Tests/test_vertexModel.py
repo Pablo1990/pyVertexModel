@@ -8,7 +8,63 @@ from src.pyVertexModel.vertexModel import VertexModel
 class TestVertexModel(Tests):
 
     def test_initialize_geometry_bubbles(self):
-        # TODO: PUT IS AS A TEST
+        # Load data
+        vModel = VertexModel()
+        X, X_IDs = vModel.BuildTopo(vModel.geo.nx, vModel.geo.ny, vModel.geo.nz, 0)
+        vModel.geo.nCells = X.shape[0]
+
+        # Centre Nodal position at (0,0)
+        X[:, 0] = X[:, 0] - np.mean(X[:, 0])
+        X[:, 1] = X[:, 1] - np.mean(X[:, 1])
+        X[:, 2] = X[:, 2] - np.mean(X[:, 2])
+
+        # First test: compare with initial seeds of cells
+        X_initial_expected = np.array([
+            [-1, -1, 0],
+            [-1, 0, 0],
+            [-1, 1, 0],
+            [0, -1, 0],
+            [0, 0, 0],
+            [0, 1, 0],
+            [1, -1, 0],
+            [1, 0, 0],
+            [1, 1, 0]])
+
+        assert_matrix(X_initial_expected, X)
+
+        # Second test: compare with first step
+        X_test, XgID_test, XgIDBB, nCells = vModel.generate_first_ghost_nodes(X)
+
+        X_expected = np.array([
+                [-1.0, -1.0, 0.0],
+                [-1.0, 0.0, 0.0],
+                [-1.0, 1.0, 0.0],
+                [0.0, -1.0, 0.0],
+                [0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [1.0, -1.0, 0.0],
+                [1.0, 0.0, 0.0],
+                [1.0, 1.0, 0.0],
+                [-5.0, 6.12323399573677e-16, 3.06161699786838e-16],
+                [-3.53553390593274, 4.32978028117747e-16, -3.53553390593274],
+                [-3.53553390593274, 4.32978028117747e-16, 3.53553390593274],
+                [-9.18485099360515e-16, -5.0, 3.06161699786838e-16],
+                [-6.49467042176620e-16, -3.53553390593274, -3.53553390593274],
+                [-6.49467042176620e-16, -3.53553390593274, 3.53553390593274],
+                [-6.12323399573677e-16, 7.49879891330929e-32, -5.0],
+                [0.0, 0.0, 5.0],
+                [2.16489014058873e-16, 3.53553390593274, 3.53553390593274],
+                [2.16489014058873e-16, 3.53553390593274, -3.53553390593274],
+                [3.06161699786838e-16, 5.0, 3.06161699786838e-16],
+                [3.53553390593274, -8.65956056235493e-16, 3.53553390593274],
+                [3.53553390593274, -8.65956056235493e-16, -3.53553390593274],
+                [5.0, -1.22464679914735e-15, 3.06161699786838e-16]])
+
+        assert_matrix(X_expected, X_test)
+
+        # Perform Delaunay
+        XgID_test, X_test = vModel.SeedWithBoundingBox(X, vModel.set.s)
+
         X_expected = np.array([
             [-1, -1, 0],
             [-1, 0, 0],
@@ -138,32 +194,6 @@ class TestVertexModel(Tests):
              63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89,
              90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112,
              113, 114, 115, 116, 117, 118, 119, 120])
-
-        vModel = VertexModel()
-        X, X_IDs = vModel.BuildTopo(vModel.geo.nx, vModel.geo.ny, vModel.geo.nz, 0)
-        vModel.geo.nCells = X.shape[0]
-
-        # Centre Nodal position at (0,0)
-        X[:, 0] = X[:, 0] - np.mean(X[:, 0])
-        X[:, 1] = X[:, 1] - np.mean(X[:, 1])
-        X[:, 2] = X[:, 2] - np.mean(X[:, 2])
-
-        # First test: compare with initial seeds of cells
-        X_initial_expected = np.array([
-            [-1, -1, 0],
-            [-1, 0, 0],
-            [-1, 1, 0],
-            [0, -1, 0],
-            [0, 0, 0],
-            [0, 1, 0],
-            [1, -1, 0],
-            [1, 0, 0],
-            [1, 1, 0]])
-
-        assert_matrix(X_initial_expected, X)
-
-        # Perform Delaunay
-        XgID_test, X_test = vModel.SeedWithBoundingBox(X, vModel.set.s)
 
         # Test
         assert_array1D(XgID_expected, XgID_test)

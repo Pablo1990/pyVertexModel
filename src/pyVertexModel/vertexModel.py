@@ -470,10 +470,10 @@ class VertexModel:
             else:
                 # TODO
                 # self.backupVars.Geo_b.log = self.Geo.log
-                self.geo = self.backupVars.Geo_b
-                self.tr = self.backupVars.tr_b
-                self.Dofs = self.backupVars.Dofs
-                self.Geo_n = Geo
+                self.geo = self.backupVars['Geo_b']
+                self.tr = self.backupVars['tr_b']
+                self.Dofs = self.backupVars['Dofs']
+                self.Geo_n = copy.deepcopy(self.geo)
                 self.relaxingNu = False
                 if self.set.iter == self.set.MaxIter0:
                     self.set.MaxIter = self.set.MaxIter0 * 1.1
@@ -508,36 +508,17 @@ class VertexModel:
         return X, X_Ids
 
     def SeedWithBoundingBox(self, X, s):
-        nCells = X.shape[0]
-        r0 = np.mean(X, axis=0)
-        r = 5 * np.max(np.abs(X - r0))
+        """
+        This function seeds nodes in desired entities (edges, faces and tetrahedrons) while cell-centers are bounded
+        by ghost nodes.
+        :param X:
+        :param s:
+        :return:
+        """
 
-        # Bounding Box 2
-        rr = np.mean(X, axis=0)
+        X, XgID, XgIDBB, nCells = self.generate_first_ghost_nodes(X)
 
-        theta = np.linspace(0, 2 * np.pi, 5)
-        phi = np.linspace(0, np.pi, 5)
-        theta, phi = np.meshgrid(theta, phi, indexing='ij')  # Ensure the order matches MATLAB
-
-        x = r * np.sin(phi) * np.cos(theta)
-        y = r * np.sin(phi) * np.sin(theta)
-        z = r * np.cos(phi)
-
-        # Reshape to column vectors, ensuring the same order as MATLAB
-        x = x.flatten('C')
-        y = y.flatten('C')
-        z = z.flatten('C')
-
-        # Offset the points by r0 and combine into a single array
-        Xg = np.column_stack((x, y, z)) + r0
-
-        # Find unique values considering the tolerance
-        tolerance = 1e-6
-        Xg = np.unique(Xg.round(decimals=int(-np.log10(tolerance))), axis=0)
-
-        XgID = np.arange(nCells, nCells + Xg.shape[0])
-        XgIDBB = XgID.copy()
-        X = np.vstack((X, Xg))
+        # first Delaunay with ghost nodes
         N = 3  # The dimensions of our points
         options = 'Qt Qbb Qc' if N <= 3 else 'Qt Qbb Qc Qx'  # Set the QHull options
         Tri = Delaunay(X, qhull_options=options)
@@ -582,6 +563,35 @@ class VertexModel:
         X = np.delete(X, XgIDBB, axis=0)
         XgID = np.arange(nCells, X.shape[0])
         return XgID, X
+
+    def generate_first_ghost_nodes(self, X):
+        # Bounding Box 1
+        nCells = X.shape[0]
+        r0 = np.mean(X, axis=0)
+        r = 5 * np.max(np.abs(X - r0))
+        # Define bounding nodes: bounding sphere
+        theta = np.linspace(0, 2 * np.pi, 5)
+        phi = np.linspace(0, np.pi, 5)
+        theta, phi = np.meshgrid(theta, phi, indexing='ij')  # Ensure the order matches MATLAB
+        x = r * np.sin(phi) * np.cos(theta)
+        y = r * np.sin(phi) * np.sin(theta)
+        z = r * np.cos(phi)
+        # Reshape to column vectors, ensuring the same order as MATLAB
+        x = x.flatten('C')
+        y = y.flatten('C')
+        z = z.flatten('C')
+        # Offset the points by r0 and combine into a single array
+        Xg = np.column_stack((x, y, z)) + r0
+        # Find unique values considering the tolerance
+        tolerance = 1e-6
+        _, idx = np.unique(Xg.round(decimals=int(-np.log10(tolerance))), axis=0, return_index=True)
+        Xg = Xg[idx]
+
+        # Add new bounding nodes to X
+        XgID = np.arange(nCells, nCells + Xg.shape[0])
+        XgIDBB = XgID.copy()
+        X = np.vstack((X, Xg))
+        return X, XgID, XgIDBB, nCells
 
     def AreTri(self, p1, p2, p3):
         return 0.5 * np.linalg.norm(np.cross(p2 - p1, p3 - p1))
