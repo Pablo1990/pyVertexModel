@@ -52,6 +52,14 @@ class Face:
         self.Area0 = self.Area
 
     def build_interface_type(self, ij, XgID, XgTop, XgBottom):
+        """
+        Build the interface type of the face.
+        :param ij:
+        :param XgID:
+        :param XgTop:
+        :param XgBottom:
+        :return:
+        """
         if any(node in XgID for node in ij):
             if any(node in XgTop for node in ij):
                 ftype = self.InterfaceType_allValues[0]  # Top
@@ -66,6 +74,16 @@ class Face:
         return ftype
 
     def build_face_centre(self, ij, ncells, X, Ys, H, extrapolate_face_centre):
+        """
+        Compute the centre of the face.
+        :param ij:
+        :param ncells:
+        :param X:
+        :param Ys:
+        :param H:
+        :param extrapolate_face_centre:
+        :return:
+        """
         Centre = np.sum(Ys, axis=0) / len(Ys)
         if sum(node in range(ncells) for node in ij) == 1 and extrapolate_face_centre:
             runit = (Centre - X)
@@ -76,6 +94,17 @@ class Face:
         return Centre
 
     def build_edges(self, T, face_ids, face_centre, face_interface_type, X, Ys, non_dead_cells):
+        """
+        Build the edges of the face.
+        :param T:
+        :param face_ids:
+        :param face_centre:
+        :param face_interface_type:
+        :param X:
+        :param Ys:
+        :param non_dead_cells:
+        :return:
+        """
         FaceTets = T[face_ids,]
 
         # TODO: INCORPORATE THIS INTO A TEST
