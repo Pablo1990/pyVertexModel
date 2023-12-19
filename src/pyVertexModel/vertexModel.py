@@ -495,11 +495,11 @@ class VertexModel:
         for numZ in range(nz):
             x = np.arange(nx)
             y = np.arange(ny)
-            x, y = np.meshgrid(x, y)
-            x = x.flatten()
-            y = y.flatten()
+            x, y = np.meshgrid(x, y, indexing='ij')
+            x = x.flatten('C')
+            y = y.flatten('C')
             z = np.ones_like(x) * numZ
-            X = np.vstack((X, np.column_stack((y, x, z))))
+            X = np.vstack((X, np.column_stack((x, y, z))))
 
             if columnarCells:
                 X_Ids.append(np.arange(len(x)))
@@ -517,19 +517,23 @@ class VertexModel:
 
         theta = np.linspace(0, 2 * np.pi, 5)
         phi = np.linspace(0, np.pi, 5)
-        theta, phi = np.meshgrid(theta, phi)
+        theta, phi = np.meshgrid(theta, phi, indexing='ij')  # Ensure the order matches MATLAB
+
         x = r * np.sin(phi) * np.cos(theta)
         y = r * np.sin(phi) * np.sin(theta)
         z = r * np.cos(phi)
-        x = x.flatten()
-        y = y.flatten()
-        z = z.flatten()
+
+        # Reshape to column vectors, ensuring the same order as MATLAB
+        x = x.flatten('C')
+        y = y.flatten('C')
+        z = z.flatten('C')
+
+        # Offset the points by r0 and combine into a single array
         Xg = np.column_stack((x, y, z)) + r0
 
         # Find unique values considering the tolerance
         tolerance = 1e-6
-        unique_values, idx = np.unique(Xg.round(decimals=int(-np.log10(tolerance))), axis=0, return_index=True)
-        Xg = Xg[np.sort(idx)]
+        Xg = np.unique(Xg.round(decimals=int(-np.log10(tolerance))), axis=0)
 
         XgID = np.arange(nCells, nCells + Xg.shape[0])
         XgIDBB = XgID.copy()
