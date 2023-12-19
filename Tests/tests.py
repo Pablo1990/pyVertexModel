@@ -25,11 +25,11 @@ def load_data(file_name, return_geo=True):
     return geo_test, set_test, mat_info
 
 
-def assert_matrix(k_expected, k, delta=6):
+def assert_matrix(k_expected, k, delta=10):
     np.testing.assert_array_almost_equal(k_expected, k, decimal=delta)
 
 
-def assert_array1D(g_expected, g, delta=6):
+def assert_array1D(g_expected, g, delta=10):
     np.testing.assert_array_almost_equal(g_expected, g, decimal=delta)
 
 

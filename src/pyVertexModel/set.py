@@ -50,9 +50,9 @@ class Set:
             # Contractility
             self.Contractility = True
             self.cLineTension = 0.0001
-            self.noiseContractility = 0.1
+            self.noiseContractility = 0
             # In plane elasticity
-            self.InPlaneElasticity = True
+            self.InPlaneElasticity = False
             self.mu_bulk = 3000
             self.lambda_bulk = 2000
             # Substrate

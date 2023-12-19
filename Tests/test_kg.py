@@ -167,9 +167,9 @@ class Test(Tests):
                       mat_expected['EBA'] + mat_expected['EBAR'] + mat_expected['EC'] +
                       mat_expected['ESub'])
 
-        np.testing.assert_almost_equal(e_expected[0][0], E)
         assert_array1D(g_expected[:, 0], g)
         assert_matrix(k_expected, K)
+        np.testing.assert_almost_equal(e_expected[0][0], E)
 
         # Check that the global K is the same in a different iteration
         geo_test, set_test, mat_info = load_data('Geo_var_3x3_stretch_Iter6_expectedResults.mat')
@@ -188,10 +188,10 @@ class Test(Tests):
         assert_matrix(k_expected, K)
 
     def assert_k_g_energy(self, energy_var_name, g_var_name, k_var_name, kg, mat_expected):
-        np.testing.assert_almost_equal(kg.energy, mat_expected[energy_var_name][0][0], 3)
         assert_array1D(mat_expected[g_var_name][:, 0], kg.g)
         K_expected = mat_expected[k_var_name]
         assert_matrix(K_expected, kg.K)
+        np.testing.assert_almost_equal(kg.energy, mat_expected[energy_var_name][0][0], 3)
 
     def test_k_k(self):
         _, _, mat_info = load_data('kK_test.mat', False)
