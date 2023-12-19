@@ -495,12 +495,11 @@ class VertexModel:
         for numZ in range(nz):
             x = np.arange(nx)
             y = np.arange(ny)
-            # Like matlab's meshgrid
-            y, x = np.meshgrid(x, y)
+            x, y = np.meshgrid(x, y)
             x = x.flatten()
             y = y.flatten()
             z = np.ones_like(x) * numZ
-            X = np.vstack((X, np.column_stack((x, y, z))))
+            X = np.vstack((X, np.column_stack((y, x, z))))
 
             if columnarCells:
                 X_Ids.append(np.arange(len(x)))
@@ -535,7 +534,9 @@ class VertexModel:
         XgID = np.arange(nCells, nCells + Xg.shape[0])
         XgIDBB = XgID.copy()
         X = np.vstack((X, Xg))
-        Tri = Delaunay(X)
+        N = 3  # The dimensions of our points
+        options = 'Qt Qbb Qc' if N <= 3 else 'Qt Qbb Qc Qx'  # Set the QHull options
+        Tri = Delaunay(X, qhull_options=options)
 
         Side = np.array([[0, 1, 2], [0, 1, 3], [1, 2, 3], [0, 2, 3]])
         Edges = np.array([[0, 1], [1, 2], [2, 0], [0, 3], [1, 3], [2, 3]])
