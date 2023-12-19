@@ -441,7 +441,7 @@ class Geo:
             offset = Set.f * dir
             newY = cellCentre + offset
 
-        if Set.InputGeo != 'Bubbles':
+        if 'Bubbles' not in Set.InputGeo:
             if any(i in Geo.XgTop for i in T):
                 newY[2] /= sum(i in Geo.XgTop for i in T) / 2
             elif any(i in Geo.XgBottom for i in T):
@@ -553,8 +553,14 @@ class Geo:
 
     def add_and_rebuild_cells(self, old_geo, old_tets, new_tets, y_new, set, update_measurements):
         """
-        Summary of this function goes here
-        Detailed explanation goes here
+
+        :param old_geo:
+        :param old_tets:
+        :param new_tets:
+        :param y_new:
+        :param set:
+        :param update_measurements:
+        :return:
         """
         self.remove_tetrahedra(old_tets)
         self.add_tetrahedra(old_geo, new_tets, y_new, set)
@@ -578,6 +584,11 @@ class Geo:
             self.Cells[num_cell].lambda_b_perc -= 0.01 * diff
 
     def remove_tetrahedra(self, removingTets):
+        """
+        Remove the tetrahedra from the cells
+        :param removingTets:
+        :return:
+        """
         oldYs = []
         for removingTet in removingTets:
             for numNode in removingTet:
@@ -590,6 +601,14 @@ class Geo:
         return oldYs
 
     def add_tetrahedra(self, oldGeo, newTets, Ynew=None, Set=None):
+        """
+        Add the tetrahedra to the cells
+        :param oldGeo:
+        :param newTets:
+        :param Ynew:
+        :param Set:
+        :return:
+        """
         if Ynew is None:
             Ynew = []
 
