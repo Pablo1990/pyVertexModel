@@ -75,6 +75,9 @@ class Kg:
         return KIJ
 
     def add_noise_to_parameter(self, avgParameter, noise, currentTri=None):
+        # TODO: CHECK THIS FUNCTION
+        noise = 0
+        # THIS FUNCTION IS NOT GOOD
         minValue = avgParameter - avgParameter * noise
         maxValue = avgParameter + avgParameter * noise
 
