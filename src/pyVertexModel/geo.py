@@ -112,12 +112,14 @@ class Geo:
 
     def __init__(self, mat_file=None):
         """
-
-        :param mat_file:
+        Initialize the geometry
+        :param mat_file:    The mat file of the geometry
         """
         self.Cells = []
         self.Remodelling = False
-        self.non_dead_cells = []
+        self.non_dead_cells = None
+        self.BorderCells = None
+        self.BorderGhostNodes = None
 
         if mat_file is None:
             self.numF = None
@@ -130,7 +132,6 @@ class Geo:
             self.ny = 3
             self.nx = 3
             self.nCells = 0
-            self.BorderCells = None
         else:  # coming from mat_file
             self.numF = mat_file['numF'][0][0][0][0]
             self.numY = mat_file['numY'][0][0][0][0]
@@ -142,13 +143,12 @@ class Geo:
             self.ny = 3
             self.nx = 3
             self.nCells = mat_file['nCells'][0][0][0][0]
-            self.BorderCells = None
             for c_cell in mat_file['Cells'][0][0][0]:
                 self.Cells.append(cell.Cell(c_cell))
 
     def copy(self):
         """
-
+        Copy the geometry
         :return:
         """
         new_geo = Geo()
@@ -170,31 +170,38 @@ class Geo:
 
         return new_geo
 
-    def build_cells(self, Set, X, Twg):
+    def build_cells(self, c_set, X, twg):
+        """
+        Build the cells of the geometry
+        :param c_set: The settings of the simulation
+        :param X:   The X of the geometry
+        :param twg: The T of the geometry
+        :return:    The cells of the geometry
+        """
 
         # Build the Cells struct Array
-        if Set.InputGeo == 'Bubbles':
-            Set.TotalCells = self.nx * self.ny * self.nz
+        if c_set.InputGeo == 'Bubbles':
+            c_set.TotalCells = self.nx * self.ny * self.nz
 
         for c in range(len(X)):
             newCell = cell.Cell()
             newCell.ID = c
             newCell.X = X[c, :]
-            newCell.T = Twg[np.any(Twg == c, axis=1),]
+            newCell.T = twg[np.any(twg == c, axis=1),]
 
             # Initialize status of cells: 1 = 'Alive', 0 = 'Ablated', [] = 'Dead'
-            if c < Set.TotalCells:
+            if c < c_set.TotalCells:
                 newCell.AliveStatus = 1
 
             self.Cells.append(newCell)
 
         for c in range(self.nCells):
-            self.Cells[c].Y = self.build_y_from_x(self.Cells[c], self, Set)
+            self.Cells[c].Y = self.build_y_from_x(self.Cells[c], self, c_set)
 
-        if Set.Substrate == 1:
+        if c_set.Substrate == 1:
             XgSub = X.shape[0]  # THE SUBSTRATE NODE
             for c in range(self.nCells):
-                self.Cells[c].Y = self.BuildYSubstrate(self.Cells[c], self.Cells, self.XgID, Set, XgSub)
+                self.Cells[c].Y = self.BuildYSubstrate(self.Cells[c], self.Cells, self.XgID, c_set, XgSub)
 
         for c in range(self.nCells):
             Neigh_nodes = np.unique(self.Cells[c].T)
@@ -205,7 +212,7 @@ class Geo:
                 face_ids = np.sum(np.isin(self.Cells[c].T, ij), axis=1) == 2
                 newFace = face.Face()
                 newFace.build_face(c, cj, face_ids, self.nCells, self.Cells[c], self.XgID,
-                                   Set, self.XgTop, self.XgBottom)
+                                   c_set, self.XgTop, self.XgBottom)
                 self.Cells[c].Faces.append(newFace)
 
             self.Cells[c].compute_area()
@@ -236,22 +243,22 @@ class Geo:
             self.EdgeLengthAvg_0.append(np.mean(edge_lengths))
 
         # Differential adhesion values
-        for l1, val in Set.lambdaS1CellFactor:
+        for l1, val in c_set.lambdaS1CellFactor:
             ci = l1
             self.Cells[ci].ExternalLambda = val
 
-        for l2, val in Set.lambdaS2CellFactor:
+        for l2, val in c_set.lambdaS2CellFactor:
             ci = l2
             self.Cells[ci].InternalLambda = val
 
-        for l3, val in Set.lambdaS3CellFactor:
+        for l3, val in c_set.lambdaS3CellFactor:
             ci = l3
             self.Cells[ci].SubstrateLambda = val
 
         # Unique Ids for each point (vertex, node or face center) used in K
         self.build_global_ids()
 
-        if Set.Substrate == 1:
+        if c_set.Substrate == 1:
             for c in range(self.nCells):
                 for f in range(len(self.Cells[c].Faces)):
                     Face = self.Cells[c].Faces[f]
@@ -259,11 +266,16 @@ class Geo:
 
                     if Face.ij[1] == XgSub:
                         # update the position of the surface centers on the substrate
-                        Face.Centre[2] = Set.SubstrateZ
+                        Face.Centre[2] = c_set.SubstrateZ
 
         self.update_measures()
 
     def update_vertices(self, dy_reshaped):
+        """
+        Update the vertices of the geometry
+        :param dy_reshaped: The displacement of the vertices
+        :return:
+        """
         for c in [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus]:
             dY = dy_reshaped[self.Cells[c].globalIds, :]
             self.Cells[c].Y += dY
@@ -273,6 +285,11 @@ class Geo:
                 self.Cells[c].Faces[f].Centre += dy_reshaped[self.Cells[c].Faces[f].globalIds, :]
 
     def update_measures(self, ids=None):
+        """
+        Update the measures of the geometry
+        :param ids: The ids of the cells to update. If None, all cells are updated
+        :return:
+        """
         if self.Cells[self.nCells - 1].Vol is None:
             print('Wont update measures with this Geo')
 
@@ -301,34 +318,35 @@ class Geo:
             self.Cells[c].compute_area()
             self.Cells[c].compute_volume()
 
-    def BuildXFromY(self, Geo, Geo_n):
-        proportionOfMax = 0
+    def BuildXFromY(self, geo_n):
+        """
+        Build the X from the Y of the previous step
+        :param geo_n:   The previous geometry
+        :return:        The new X of the current geometry
+        """
+        # Obtain IDs from alive cells
+        aliveCells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1]
 
-        aliveCells = [cell["ID"] for cell in Geo["Cells"] if cell.get("AliveStatus")]
-        allCellsToUpdate = list(
-            set(range(len(Geo["Cells"])).difference(Geo["BorderCells"]).difference(Geo["BorderGhostNodes"])))
+        # Obtain cells that are not border cells or border ghost nodes
+        allCellsToUpdate = [c.ID for c in self.Cells if c.ID not in self.BorderCells or c.ID not in self.BorderGhostNodes]
 
         for c in allCellsToUpdate:
-            if Geo["Cells"][c].get("T"):
-                if c in Geo["XgID"]:
-                    dY = np.zeros((Geo["Cells"][c]["T"].shape[0], 3))
-                    for tet in range(Geo["Cells"][c]["T"].shape[0]):
-                        gTet = Geo["Cells"][c]["T"][tet, :]
-                        gTet_Cells = [cell for cell in gTet if cell in aliveCells]
+            if self.Cells[c].T:
+                if c in self.XgID:
+                    dY = np.zeros((self.Cells[c].T.shape[0], 3))
+                    for tet in range(self.Cells[c].T.shape[0]):
+                        gTet = geo_n.Cells[c].T[tet]
+                        gTet_Cells = [c_cell for c_cell in gTet if c_cell in aliveCells]
                         cm = gTet_Cells[0]
-                        Cell = Geo["Cells"][cm]
-                        Cell_n = Geo_n["Cells"][cm]
-                        hit = np.sum(np.isin(Cell["T"], gTet), axis=1) == 4
-                        dY[tet, :] = Cell["Y"][hit, :] - Cell_n["Y"][hit, :]
+                        c_cell = self.Cells[cm]
+                        c_cell_n = geo_n.Cells[cm]
+                        hit = np.sum(np.isin(c_cell.T, gTet), axis=1) == 4
+                        dY[tet, :] = c_cell.Y[hit] - c_cell_n.Y[hit]
 
-                    Geo["Cells"][c]["X"] = Geo["Cells"][c]["X"] + (proportionOfMax) * np.max(dY, axis=0) + (
-                            1 - proportionOfMax) * np.mean(dY, axis=0)
                 else:
-                    dY = Geo["Cells"][c]["Y"] - Geo_n["Cells"][c]["Y"]
-                    Geo["Cells"][c]["X"] = Geo["Cells"][c]["X"] + (proportionOfMax) * np.max(dY, axis=0) + (
-                            1 - proportionOfMax) * np.mean(dY, axis=0)
+                    dY = self.Cells[c].Y - geo_n.Cells[c].Y
 
-        return Geo
+                self.Cells[c].X = self.Cells[c].X + np.mean(dY, axis=0)
 
     def BuildYSubstrate(self, Cell, Cells, XgID, Set, XgSub):
         Tets = Cell.T

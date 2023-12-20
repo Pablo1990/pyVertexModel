@@ -379,7 +379,7 @@ class VertexModel:
             print("Time: " + str(self.t))
 
             if not self.relaxingNu:
-                self.set.iIncr = self.numStep
+                self.set.i_incr = self.numStep
 
                 self.Dofs.ApplyBoundaryCondition(self.t, self.geo, self.set)
                 # IMPORTANT: Here it updates: Areas, Volumes, etc... Should be
@@ -391,11 +391,11 @@ class VertexModel:
             self.geo, g, __, __, self.set, gr, dyr, dy = newtonRaphson.newton_raphson(self.Geo_0, self.Geo_n, self.geo,
                                                                                       self.Dofs, self.set, K, g,
                                                                                       self.numStep, self.t)
-            if gr < self.set.tol and dyr < self.set.tol and np.all(np.isnan(g(self.Dofs.Free)) == 0) and np.all(
-                    np.isnan(dy(self.Dofs.Free)) == 0):
+            if (gr < self.set.tol and dyr < self.set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
+                    np.all(~np.isnan(dy[self.Dofs.Free]))):
                 if self.set.nu / self.set.nu0 == 1:
                     # STEP has converged
-                    self.geo.log += f"\n STEP {self.set.i_incr} has converged ...\n"
+                    print(f"\n STEP {str(self.set.i_incr)} has converged ...\n")
 
                     # REMODELLING
                     if self.set.Remodelling and abs(self.t - self.tr) >= self.set.RemodelingFrequency:
@@ -435,7 +435,6 @@ class VertexModel:
 
                     # Post Processing and Saving Data
                     self.geo.create_vtk_cell(self.Geo_0, self.set, self.numStep)
-                    # Save data using your preferred method (e.g., pickle, numpy, pandas)
 
                     # Update Contractility Value and Edge Length
                     for num_cell in range(len(self.geo.cells)):
@@ -451,17 +450,20 @@ class VertexModel:
                     # Brownian Motion
                     self.brownian_motion(self.set.brownian_motion)
 
+                    # Preparing for new step
                     self.geo.BuildXFromY(self.Geo_n)
                     self.set.lastTConverged = self.t
 
-                    ## New Step
+                    # New Step
                     self.t = self.t + self.set.dt
                     self.set.dt = np.amin(self.set.dt + self.set.dt * 0.5, self.set.dt0)
                     self.set.MaxIter = self.set.MaxIter0
                     self.numStep = self.numStep + 1
-                    self.backupVars.Geo_b = self.geo
-                    self.backupVars.tr_b = self.tr
-                    self.backupVars.Dofs = self.Dofs
+                    self.backupVars = {
+                        'Geo_b': self.geo,
+                        'tr_b': self.tr,
+                        'Dofs': self.Dofs
+                    }
                     self.Geo_n = self.geo
                     self.relaxingNu = False
                 else:
