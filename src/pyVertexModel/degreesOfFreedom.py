@@ -49,8 +49,8 @@ class DegreesOfFreedom:
         g_constrained = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3, dtype=bool)
         g_prescribed = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3, dtype=bool)
 
-        if Geo.BorderCells is not None:
-            borderIds = np.concatenate([cell.globalIds for cell in Geo.Cells[Geo.BorderCells]])
+        if Geo.BorderCells is not None and len(Geo.BorderCells) > 0:
+            borderIds = np.concatenate([Geo.Cells[cell].globalIds for cell in Geo.BorderCells])
         else:
             borderIds = []
 

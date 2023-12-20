@@ -672,21 +672,21 @@ class VertexModel:
         # - Area > minimum error area
         # - Initial Area > minimum error area
         for c_cell in self.geo.Cells:
-            if c_cell.alive_status:
-                assert c_cell.vol > min_error_volume, "Cell volume is too low"
-                assert c_cell.vol0 > min_error_volume, "Cell initial volume is too low"
-                assert c_cell.area > min_error_area, "Cell area is too low"
-                assert c_cell.area0 > min_error_area, "Cell initial area is too low"
+            if c_cell.AliveStatus:
+                assert c_cell.Vol > min_error_volume, "Cell volume is too low"
+                assert c_cell.Vol0 > min_error_volume, "Cell initial volume is too low"
+                assert c_cell.Area > min_error_area, "Cell area is too low"
+                assert c_cell.Area0 > min_error_area, "Cell initial area is too low"
 
         # Test Faces properties:
         # Conditions checked:
         # - Area > minimum error area
         # - Initial Area > minimum error area
         for c_cell in self.geo.Cells:
-            if c_cell.alive_status:
-                for face in c_cell.faces:
-                    assert face.area > min_error_area, "Face area is too low"
-                    assert face.area0 > min_error_area, "Face initial area is too low"
+            if c_cell.AliveStatus:
+                for face in c_cell.Faces:
+                    assert face.Area > min_error_area, "Face area is too low"
+                    assert face.Area0 > min_error_area, "Face initial area is too low"
 
         # Test Tris properties:
         # Conditions checked:
@@ -694,10 +694,10 @@ class VertexModel:
         # - Any Lengths to Centre > minimum error edge length
         # - Area > minimum error area
         for c_cell in self.geo.Cells:
-            if c_cell.alive_status:
+            if c_cell.AliveStatus:
                 for face in c_cell.Faces:
-                    for tris in face.tris:
-                        assert tris.edge_length > min_error_edge, "Triangle edge length is too low"
+                    for tris in face.Tris:
+                        assert tris.EdgeLength > min_error_edge, "Triangle edge length is too low"
                         assert any(length > min_error_edge for length in
-                                   tris.lengths_to_centre), "Triangle lengths to centre are too low"
-                        assert tris.area > min_error_area, "Triangle area is too low"
+                                   tris.LengthsToCentre), "Triangle lengths to centre are too low"
+                        assert tris.Area > min_error_area, "Triangle area is too low"

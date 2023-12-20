@@ -117,9 +117,9 @@ class Geo:
         """
         self.Cells = []
         self.Remodelling = False
-        self.non_dead_cells = None
-        self.BorderCells = None
-        self.BorderGhostNodes = None
+        self.non_dead_cells = []
+        self.BorderCells = []
+        self.BorderGhostNodes = []
 
         if mat_file is None:
             self.numF = None
@@ -328,10 +328,11 @@ class Geo:
         aliveCells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1]
 
         # Obtain cells that are not border cells or border ghost nodes
-        allCellsToUpdate = [c.ID for c in self.Cells if c.ID not in self.BorderCells or c.ID not in self.BorderGhostNodes]
+        allCellsToUpdate = [c.ID for c in self.Cells if c.ID not in self.BorderCells or
+                            c.ID not in self.BorderGhostNodes]
 
         for c in allCellsToUpdate:
-            if self.Cells[c].T:
+            if self.Cells[c].T is not None:
                 if c in self.XgID:
                     dY = np.zeros((self.Cells[c].T.shape[0], 3))
                     for tet in range(self.Cells[c].T.shape[0]):

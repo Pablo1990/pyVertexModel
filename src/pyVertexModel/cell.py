@@ -60,8 +60,8 @@ class Cell:
 
         if mat_file is None:
             self.ID = None
-            self.X = np.empty(1, dtype=np.float64)
-            self.T = np.empty(1, 'int')
+            self.X = None
+            self.T = None
         else:
             self.ID = mat_file[0][0][0] - 1
             self.X = np.array(mat_file[1][0], dtype=np.float64)
