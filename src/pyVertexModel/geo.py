@@ -343,7 +343,6 @@ class Geo:
                         c_cell_n = geo_n.Cells[cm]
                         hit = np.sum(np.isin(c_cell.T, gTet), axis=1) == 4
                         dY[tet, :] = c_cell.Y[hit] - c_cell_n.Y[hit]
-
                 else:
                     dY = self.Cells[c].Y - geo_n.Cells[c].Y
 

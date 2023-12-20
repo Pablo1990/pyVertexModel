@@ -109,6 +109,8 @@ class Set:
             self.dt = self.dt0
             self.MaxIter0 = self.MaxIter
             self.contributionOldFaceCentre = self.contributionOldYs
+            self.brownian_motion = True
+            self.brownian_motion_scale = 0.01
 
             ## Wound variables
             self.woundDefault()

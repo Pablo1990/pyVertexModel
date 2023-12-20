@@ -55,6 +55,7 @@ class VertexModel:
         self.t = 0
         self.tr = 0
         self.Geo_0 = copy.deepcopy(self.geo)
+
         # Removing info of unused features from Geo_0
         for cell in self.Geo_0.Cells:
             cell.Vol = None
@@ -82,19 +83,21 @@ class VertexModel:
         """
         Applies Brownian motion to the vertices of cells in the Geo structure.
         Displacements are generated with a normal distribution in each dimension.
+        :param scale:
+        :return:
         """
 
         # Concatenate and sort all tetrahedron vertices
-        all_tets = np.sort(np.vstack([cell.t for cell in self.geo.Cells]), axis=1)
+        all_tets = np.sort(np.vstack([cell.T for cell in self.geo.Cells]), axis=1)
         all_tets_unique = np.unique(all_tets, axis=0)
 
         # Generate random displacements with a normal distribution for each dimension
         displacements = scale * np.random.randn(all_tets_unique.shape[0], 3)
 
         # Update vertex positions based on 3D Brownian motion displacements
-        for cell in [c for c in self.geo.cells if c.alive_status is not None]:
-            _, corresponding_ids = np.where(np.all(np.sort(cell.t, axis=1)[:, None] == all_tets_unique, axis=2))
-            cell.y += displacements[corresponding_ids, :]
+        for cell in [c for c in self.geo.Cells if c.AliveStatus is not None]:
+            _, corresponding_ids = np.where(np.all(np.sort(cell.T, axis=1)[:, None] == all_tets_unique, axis=2))
+            cell.Y += displacements[corresponding_ids, :]
 
     def Build2DVoronoiFromImage(self, param, param1, param2):
         pass
@@ -436,27 +439,24 @@ class VertexModel:
                     # Post Processing and Saving Data
                     self.geo.create_vtk_cell(self.Geo_0, self.set, self.numStep)
 
-                    # Update Contractility Value and Edge Length
-                    for num_cell in range(len(self.geo.cells)):
-                        c_cell = self.geo.cells[num_cell]
-                        for n_face in range(len(c_cell.faces)):
-                            face = c_cell.faces[n_face]
-                            for n_tri in range(len(face.tris)):
-                                tri = face.tris[n_tri]
-                                tri.past_contractility_value = tri.contractility_value
-                                tri.contractility_value = None
-                                tri.edge_length_time.append([self.t, tri.edge_length])
+                    # TODO: Update Contractility Value and Edge Length
+                    # for num_cell in range(len(self.geo.Cells)):
+                    #     c_cell = self.geo.Cells[num_cell]
+                    #     for n_face in range(len(c_cell.Faces)):
+                    #         face = c_cell.Faces[n_face]
+                    #         for n_tri in range(len(face.Tris)):
+                    #             tri = face.Tris[n_tri]
+                    #             tri.past_contractility_value = tri.contractility_value
+                    #             tri.contractility_value = None
+                    #             tri.edge_length_time.append([self.t, tri.edge_length])
 
                     # Brownian Motion
-                    self.brownian_motion(self.set.brownian_motion)
-
-                    # Preparing for new step
-                    self.geo.BuildXFromY(self.Geo_n)
-                    self.set.lastTConverged = self.t
+                    if self.set.brownian_motion:
+                        self.brownian_motion(self.set.brownian_motion_scale)
 
                     # New Step
                     self.t = self.t + self.set.dt
-                    self.set.dt = np.amin(self.set.dt + self.set.dt * 0.5, self.set.dt0)
+                    self.set.dt = np.min([self.set.dt + self.set.dt * 0.5, self.set.dt0])
                     self.set.MaxIter = self.set.MaxIter0
                     self.numStep = self.numStep + 1
                     self.backupVars = {
@@ -467,7 +467,7 @@ class VertexModel:
                     self.Geo_n = self.geo
                     self.relaxingNu = False
                 else:
-                    self.set.nu = np.amax(self.set.nu / 2, self.set.nu0)
+                    self.set.nu = np.max([self.set.nu / 2, self.set.nu0])
                     self.relaxingNu = True
             else:
                 # TODO
