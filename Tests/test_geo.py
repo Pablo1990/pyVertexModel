@@ -71,8 +71,13 @@ class TestGeo(Tests):
         for i in range(geo_test.nCells):
             np.testing.assert_almost_equal(geo_test.Cells[i].globalIds, geo_expected.Cells[i].globalIds)
 
+        # Check if numY and numF are the same
+        np.testing.assert_almost_equal(geo_test.numY, geo_expected.numY)
+
         # Check if the faces have the same global ids
         for i in range(geo_test.nCells):
             for j in range(len(geo_test.Cells[i].Faces)):
                 np.testing.assert_almost_equal(geo_test.Cells[i].Faces[j].globalIds,
                                                geo_expected.Cells[i].Faces[j].globalIds)
+
+        np.testing.assert_almost_equal(geo_test.numF, geo_expected.numF)

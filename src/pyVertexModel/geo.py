@@ -391,8 +391,8 @@ class Geo:
         for ci in self.non_dead_cells:
             Cell = self.Cells[ci]
 
-            g_ids = np.zeros(len(Cell.Y), dtype=int)
-            g_ids_f = np.zeros(len(Cell.Faces), dtype=int)
+            g_ids = np.zeros(len(Cell.Y), dtype=int) - 1
+            g_ids_f = np.zeros(len(Cell.Faces), dtype=int) - 1
 
             for cj in range(ci):
                 ij = [ci, cj]
@@ -412,16 +412,16 @@ class Geo:
                         for f2 in range(len(CellJ.Faces)):
                             FaceJ = CellJ.Faces[f2]
 
-                            if np.sum(np.isin(FaceJ.ij, ij)) == 2:
+                            if np.all(np.isin(FaceJ.ij, ij)):
                                 g_ids_f[f] = FaceJ.globalIds
 
-            nz = np.sum(g_ids == 0)
-            g_ids[g_ids == 0] = np.arange(g_ids_tot, g_ids_tot + nz)
+            nz = np.sum(g_ids == -1)
+            g_ids[g_ids == -1] = np.arange(g_ids_tot, g_ids_tot + nz)
 
             self.Cells[ci].globalIds = g_ids
 
-            nz_f = np.sum(g_ids_f == 0)
-            g_ids_f[g_ids_f == 0] = np.arange(g_ids_tot_f, g_ids_tot_f + nz_f)
+            nz_f = np.sum(g_ids_f == -1)
+            g_ids_f[g_ids_f == -1] = np.arange(g_ids_tot_f, g_ids_tot_f + nz_f)
 
             for f in range(len(Cell.Faces)):
                 self.Cells[ci].Faces[f].globalIds = g_ids_f[f]
