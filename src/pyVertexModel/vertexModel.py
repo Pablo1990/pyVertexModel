@@ -394,102 +394,112 @@ class VertexModel:
             self.geo, g, __, __, self.set, gr, dyr, dy = newtonRaphson.newton_raphson(self.Geo_0, self.Geo_n, self.geo,
                                                                                       self.Dofs, self.set, K, g,
                                                                                       self.numStep, self.t)
-            if (gr < self.set.tol and dyr < self.set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
-                    np.all(~np.isnan(dy[self.Dofs.Free]))):
-                if self.set.nu / self.set.nu0 == 1:
-                    # STEP has converged
-                    print(f"\n STEP {str(self.set.i_incr)} has converged ...\n")
-
-                    # REMODELLING
-                    if self.set.Remodelling and abs(self.t - self.tr) >= self.set.RemodelingFrequency:
-                        Remodelling(self.geo, self.Geo_n, self.Geo_0, self.set, self.Dofs)
-                        self.tr = self.t
-
-                    # Append Energies
-                    # energies_per_time_step.append(energies)
-
-                    # Build X From Y
-                    self.geo.BuildXFromY(self.Geo_n)
-
-                    # Update last time converged
-                    self.set.last_t_converged = self.t
-
-                    # Analyse cells
-                    # non_debris_features = []
-                    # for c in non_debris_cells:
-                    #     if c not in geo.xg_bottom:
-                    #         non_debris_features.append(analyse_cell(geo, c))
-
-                    # Convert to DataFrame (if needed)
-                    # non_debris_features_df = pd.DataFrame(non_debris_features)
-
-                    # Analyse debris cells
-                    # debris_features = []
-                    # for c in debris_cells:
-                    #     if c not in geo.xg_bottom:
-                    #         debris_features.append(analyse_cell(geo, c))
-
-                    # Compute wound features
-                    # if debris_features:
-                    #     wound_features = compute_wound_features(geo)
-
-                    # Test Geo
-                    self.check_integrity()
-
-                    # Post Processing and Saving Data
-                    self.geo.create_vtk_cell(self.Geo_0, self.set, self.numStep)
-
-                    # TODO: Update Contractility Value and Edge Length
-                    # for num_cell in range(len(self.geo.Cells)):
-                    #     c_cell = self.geo.Cells[num_cell]
-                    #     for n_face in range(len(c_cell.Faces)):
-                    #         face = c_cell.Faces[n_face]
-                    #         for n_tri in range(len(face.Tris)):
-                    #             tri = face.Tris[n_tri]
-                    #             tri.past_contractility_value = tri.contractility_value
-                    #             tri.contractility_value = None
-                    #             tri.edge_length_time.append([self.t, tri.edge_length])
-
-                    # Brownian Motion
-                    if self.set.brownian_motion:
-                        self.brownian_motion(self.set.brownian_motion_scale)
-
-                    # New Step
-                    self.t = self.t + self.set.dt
-                    self.set.dt = np.min([self.set.dt + self.set.dt * 0.5, self.set.dt0])
-                    self.set.MaxIter = self.set.MaxIter0
-                    self.numStep = self.numStep + 1
-                    self.backupVars = {
-                        'Geo_b': self.geo,
-                        'tr_b': self.tr,
-                        'Dofs': self.Dofs
-                    }
-                    self.Geo_n = self.geo
-                    self.relaxingNu = False
-                else:
-                    self.set.nu = np.max([self.set.nu / 2, self.set.nu0])
-                    self.relaxingNu = True
-            else:
-                # TODO
-                # self.backupVars.Geo_b.log = self.Geo.log
-                self.geo = self.backupVars['Geo_b']
-                self.tr = self.backupVars['tr_b']
-                self.Dofs = self.backupVars['Dofs']
-                self.Geo_n = copy.deepcopy(self.geo)
-                self.relaxingNu = False
-                if self.set.iter == self.set.MaxIter0:
-                    self.set.MaxIter = self.set.MaxIter0 * 1.1
-                    self.set.nu = 10 * self.set.nu0
-                else:
-                    if self.set.iter >= self.set.MaxIter and self.set.iter > self.set.MaxIter0 and self.set.dt / self.set.dt0 > 1 / 100:
-                        self.set.MaxIter = self.set.MaxIter0
-                        self.set.nu = self.set.nu0
-                        self.set.dt = self.set.dt / 2
-                        self.t = self.set.lastTConverged + self.set.dt
-                    else:
-                        self.didNotConverge = True
+            self.post_newton_raphson(dy, dyr, g, gr)
 
         return self.didNotConverge
+
+    def post_newton_raphson(self, dy, dyr, g, gr):
+        if (gr < self.set.tol and dyr < self.set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
+                np.all(~np.isnan(dy[self.Dofs.Free]))):
+            self.iteration_converged()
+        else:
+            self.iteration_did_not_converged()
+
+    def iteration_did_not_converged(self):
+        # TODO
+        # self.backupVars.Geo_b.log = self.Geo.log
+        self.geo = self.backupVars['Geo_b']
+        self.tr = self.backupVars['tr_b']
+        self.Dofs = self.backupVars['Dofs']
+        self.Geo_n = copy.deepcopy(self.geo)
+        self.relaxingNu = False
+        if self.set.iter == self.set.MaxIter0:
+            self.set.MaxIter = self.set.MaxIter0 * 1.1
+            self.set.nu = 10 * self.set.nu0
+        else:
+            if self.set.iter >= self.set.MaxIter and self.set.iter > self.set.MaxIter0 and self.set.dt / self.set.dt0 > 1 / 100:
+                self.set.MaxIter = self.set.MaxIter0
+                self.set.nu = self.set.nu0
+                self.set.dt = self.set.dt / 2
+                self.t = self.set.lastTConverged + self.set.dt
+            else:
+                self.didNotConverge = True
+
+    def iteration_converged(self):
+        if self.set.nu / self.set.nu0 == 1:
+            # STEP has converged
+            print(f"\n STEP {str(self.set.i_incr)} has converged ...\n")
+
+            # REMODELLING
+            if self.set.Remodelling and abs(self.t - self.tr) >= self.set.RemodelingFrequency:
+                Remodelling(self.geo, self.Geo_n, self.Geo_0, self.set, self.Dofs)
+                self.tr = self.t
+
+            # Append Energies
+            # energies_per_time_step.append(energies)
+
+            # Build X From Y
+            self.geo.BuildXFromY(self.Geo_n)
+
+            # Update last time converged
+            self.set.last_t_converged = self.t
+
+            # Analyse cells
+            # non_debris_features = []
+            # for c in non_debris_cells:
+            #     if c not in geo.xg_bottom:
+            #         non_debris_features.append(analyse_cell(geo, c))
+
+            # Convert to DataFrame (if needed)
+            # non_debris_features_df = pd.DataFrame(non_debris_features)
+
+            # Analyse debris cells
+            # debris_features = []
+            # for c in debris_cells:
+            #     if c not in geo.xg_bottom:
+            #         debris_features.append(analyse_cell(geo, c))
+
+            # Compute wound features
+            # if debris_features:
+            #     wound_features = compute_wound_features(geo)
+
+            # Test Geo
+            self.check_integrity()
+
+            # Post Processing and Saving Data
+            if self.set.VTK:
+                self.geo.create_vtk_cell(self.Geo_0, self.set, self.numStep)
+
+            # TODO: Update Contractility Value and Edge Length
+            # for num_cell in range(len(self.geo.Cells)):
+            #     c_cell = self.geo.Cells[num_cell]
+            #     for n_face in range(len(c_cell.Faces)):
+            #         face = c_cell.Faces[n_face]
+            #         for n_tri in range(len(face.Tris)):
+            #             tri = face.Tris[n_tri]
+            #             tri.past_contractility_value = tri.contractility_value
+            #             tri.contractility_value = None
+            #             tri.edge_length_time.append([self.t, tri.edge_length])
+
+            # Brownian Motion
+            if self.set.brownian_motion:
+                self.brownian_motion(self.set.brownian_motion_scale)
+
+            # New Step
+            self.t = self.t + self.set.dt
+            self.set.dt = np.min([self.set.dt + self.set.dt * 0.5, self.set.dt0])
+            self.set.MaxIter = self.set.MaxIter0
+            self.numStep = self.numStep + 1
+            self.backupVars = {
+                'Geo_b': self.geo,
+                'tr_b': self.tr,
+                'Dofs': self.Dofs
+            }
+            self.Geo_n = self.geo
+            self.relaxingNu = False
+        else:
+            self.set.nu = np.max([self.set.nu / 2, self.set.nu0])
+            self.relaxingNu = True
 
     def BuildTopo(self, nx, ny, nz, columnarCells):
         X = np.empty((0, 3))
