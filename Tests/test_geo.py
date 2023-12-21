@@ -1,3 +1,5 @@
+from unittest import TestCase
+
 import numpy as np
 
 from Tests.tests import Tests, load_data, assert_matrix, assert_array1D
@@ -57,6 +59,19 @@ class TestGeo(Tests):
             np.testing.assert_almost_equal(geo_test.Cells[i].Area, geo_expected.Cells[i].Area)
             np.testing.assert_almost_equal(geo_test.Cells[i].Vol, geo_expected.Cells[i].Vol)
 
+    def test_build_global_ids(self):
+        # Load data
+        geo_test, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
 
+        # Create a copy of geo to test against
+        geo_expected, _, _ = load_data('Geo_var_3x3_stretch.mat')
 
+        # Test if build_global_ids function does not change anything
+        geo_test.build_global_ids()
 
+        # Check if none of the measurements has changed
+        for i in range(geo_test.nCells):
+            np.testing.assert_almost_equal(geo_test.Cells[i].globalIds, geo_expected.Cells[i].globalIds)
+            # Check if the faces have the same global ids
+            for j in range(len(geo_test.Cells[i].Faces)):
+                np.testing.assert_almost_equal(geo_test.Cells[i].Faces[j].globalIds, geo_expected.Cells[i].Faces[j].globalIds)
