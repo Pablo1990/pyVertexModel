@@ -398,14 +398,12 @@ class Geo:
                 ij = [ci, cj]
                 CellJ = self.Cells[cj]
 
-                for num_id, face_ids_i in enumerate(np.sum(np.isin(Cell.T, ij), axis=1) == 2):
-                    if not face_ids_i:
-                        continue
+                face_ids_i = np.sum(np.isin(Cell.T, ij), axis=1) == 2
 
-                    sorted_cellJ_T = np.sort(CellJ.T, axis=1)
-                    sorted_Cell_T_num_id = np.sort(Cell.T[num_id], axis=0)
-                    correctID = np.where(np.all(np.isin(sorted_cellJ_T, sorted_Cell_T_num_id), axis=1))
-                    g_ids[num_id] = CellJ.globalIds[correctID]
+                # Initialize gIds with the same shape as CellJ.globalIds
+                for numId in np.where(face_ids_i)[0]:
+                    match = np.all(np.isin(CellJ.T, Cell.T[numId, :]), axis=1)
+                    g_ids[numId] = CellJ.globalIds[match]
 
                 for f in range(len(Cell.Faces)):
                     Face = Cell.Faces[f]
@@ -417,27 +415,27 @@ class Geo:
                             if np.sum(np.isin(FaceJ.ij, ij)) == 2:
                                 g_ids_f[f] = FaceJ.globalIds
 
-            nz = np.where(g_ids == 0)
-            g_ids[g_ids == 0] = g_ids_tot + nz[0]
+            nz = np.sum(g_ids == 0)
+            g_ids[g_ids == 0] = np.arange(g_ids_tot, g_ids_tot + nz)
 
             self.Cells[ci].globalIds = g_ids
 
-            nz_f = np.where(g_ids_f == 0)
-            g_ids_f[g_ids_f == 0] = g_ids_tot_f + nz_f[0]
+            nz_f = np.sum(g_ids_f == 0)
+            g_ids_f[g_ids_f == 0] = np.arange(g_ids_tot_f, g_ids_tot_f + nz_f)
 
             for f in range(len(Cell.Faces)):
                 self.Cells[ci].Faces[f].globalIds = g_ids_f[f]
 
-            g_ids_tot += len(nz[0])
-            g_ids_tot_f += len(nz_f[0])
+            g_ids_tot += nz
+            g_ids_tot_f += nz_f
 
-        self.numY = g_ids_tot - 1
+        self.numY = g_ids_tot
 
         for c in range(self.nCells):
             for f in range(len(self.Cells[c].Faces)):
                 self.Cells[c].Faces[f].globalIds += self.numY
 
-        self.numF = g_ids_tot_f - 1
+        self.numF = g_ids_tot_f
 
         # for c in range(self.nCells):
         #    self.Cells[c].cglobalIds = c + self.numY + self.numF

@@ -1,5 +1,3 @@
-from unittest import TestCase
-
 import numpy as np
 
 from Tests.tests import Tests, load_data, assert_matrix, assert_array1D
@@ -72,6 +70,9 @@ class TestGeo(Tests):
         # Check if none of the measurements has changed
         for i in range(geo_test.nCells):
             np.testing.assert_almost_equal(geo_test.Cells[i].globalIds, geo_expected.Cells[i].globalIds)
-            # Check if the faces have the same global ids
+
+        # Check if the faces have the same global ids
+        for i in range(geo_test.nCells):
             for j in range(len(geo_test.Cells[i].Faces)):
-                np.testing.assert_almost_equal(geo_test.Cells[i].Faces[j].globalIds, geo_expected.Cells[i].Faces[j].globalIds)
+                np.testing.assert_almost_equal(geo_test.Cells[i].Faces[j].globalIds,
+                                               geo_expected.Cells[i].Faces[j].globalIds)
