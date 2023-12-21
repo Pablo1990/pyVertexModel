@@ -109,7 +109,7 @@ class Set:
             self.dt = self.dt0
             self.MaxIter0 = self.MaxIter
             self.contributionOldFaceCentre = self.contributionOldYs
-            self.brownian_motion = True
+            self.brownian_motion = False
             self.brownian_motion_scale = 0.01
 
             ## Wound variables
@@ -205,5 +205,5 @@ class Set:
             self.NoBulk_110()
 
     def UpdateSet_F(self, Geo):
-        self.f_Init = 0.75
-        self.f = self.f_Init * np.mean([cell.Vol / cell.Vol0 for cell in np.array(Geo.Cells)[Geo.non_dead_cells]]) ** 3
+        pass
+        #self.f = np.mean([cell.Vol / cell.Vol0 for cell in np.array(Geo.Cells)[Geo.non_dead_cells]]) ** 3

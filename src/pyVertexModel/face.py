@@ -3,6 +3,13 @@ import numpy as np
 from src.pyVertexModel import tris
 
 
+def get_key(dictionary, target_value):
+    for key, value in dictionary.items():
+        if value == target_value:
+            return key
+    return None
+
+
 class Face:
     """
     Class that contains the information of a face.
@@ -174,8 +181,9 @@ class Face:
         self.Tris[len(surf_ids) - 1].Edge = [surf_ids[len(surf_ids) - 1], surf_ids[0]]
         currentTris_1 = T[self.Tris[len(surf_ids) - 1].Edge[0], :]
         currentTris_2 = T[self.Tris[len(surf_ids) - 1].Edge[1], :]
-        self.Tris[len(surf_ids) - 1].SharedByCells = np.intersect1d(currentTris_1[np.isin(currentTris_1, non_dead_cells)],
-                                                                    currentTris_2[np.isin(currentTris_2, non_dead_cells)])
+        self.Tris[len(surf_ids) - 1].SharedByCells = np.intersect1d(
+            currentTris_1[np.isin(currentTris_1, non_dead_cells)],
+            currentTris_2[np.isin(currentTris_2, non_dead_cells)])
 
         self.Tris[len(surf_ids) - 1].EdgeLength, self.Tris[len(surf_ids) - 1].LengthsToCentre, self.Tris[
             len(surf_ids) - 1].AspectRatio = self.Tris[len(surf_ids) - 1].compute_tri_length_measurements(Ys,

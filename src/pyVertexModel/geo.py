@@ -262,7 +262,7 @@ class Geo:
             for c in range(self.nCells):
                 for f in range(len(self.Cells[c].Faces)):
                     Face = self.Cells[c].Faces[f]
-                    Face.InterfaceType = Face.BuildInterfaceType(Face.ij, self.XgID)
+                    Face.InterfaceType = Face.build_interface_type(Face.ij, self.XgID)
 
                     if Face.ij[1] == XgSub:
                         # update the position of the surface centers on the substrate
