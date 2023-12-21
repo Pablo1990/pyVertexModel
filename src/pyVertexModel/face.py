@@ -37,7 +37,7 @@ class Face:
         self.InterfaceType = None
         ij = [ci, cj]
         self.ij = ij
-        self.globalIds = -1
+        self.globalIds = None
         self.build_interface_type(ij, XgID, XgTop, XgBottom)
 
         if oldFace is not None:

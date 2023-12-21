@@ -467,8 +467,7 @@ class VertexModel:
             self.check_integrity()
 
             # Post Processing and Saving Data
-            if self.set.VTK:
-                self.geo.create_vtk_cell(self.Geo_0, self.set, self.numStep)
+            self.geo.create_vtk_cell(self.Geo_0, self.set, self.numStep)
 
             # TODO: Update Contractility Value and Edge Length
             # for num_cell in range(len(self.geo.Cells)):
