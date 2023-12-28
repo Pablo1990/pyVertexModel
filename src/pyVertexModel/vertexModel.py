@@ -588,7 +588,7 @@ class VertexModel:
 
         # Recalculating face centres here based on the previous
         # change
-        self.geo.rebuild(self.geo, self.set)
+        self.geo.rebuild(self.geo.copy(), self.set)
         self.geo.build_global_ids()
         self.geo.update_measures()
         for cell in self.geo.Cells:

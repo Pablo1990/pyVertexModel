@@ -483,10 +483,10 @@ class Geo:
                 ij = [cc, cj]
                 face_ids = np.sum(np.isin(Cell.T, ij), axis=1) == 2
 
-                oldFaceExists = any([c_face.ij == ij for c_face in oldGeo.Cells[cc].Faces])
+                oldFaceExists = any([np.all(c_face.ij == ij) for c_face in oldGeo.Cells[cc].Faces])
 
                 if oldFaceExists:
-                    oldFace = [c_face for c_face in oldGeo.Cells[cc].Faces if c_face.ij == ij][0]
+                    oldFace = [c_face for c_face in oldGeo.Cells[cc].Faces if np.all(c_face.ij == ij)][0]
                 else:
                     oldFace = None
 
@@ -569,7 +569,7 @@ class Geo:
 
     def add_and_rebuild_cells(self, old_geo, old_tets, new_tets, y_new, set, update_measurements):
         """
-
+        Add and rebuild the cells
         :param old_geo:
         :param old_tets:
         :param new_tets:
