@@ -63,23 +63,22 @@ def fitEllipsoidToPoints(points):
     x, y, z = points[:, 0], points[:, 1], points[:, 2]
 
     # Define the objective function for ellipsoid fitting
-    def ellipsoidError(a, b, c):
+    def ellipsoidError(points):
         """
         Calculate the sum of squared distances from the ellipsoid surface to the input points
-        :param a:   Semi-axis length in x-direction
-        :param b:   Semi-axis length in y-direction
-        :param c:   Semi-axis length in z-direction
+        :param points:  The input points
         :return:    The sum of squared distances from the ellipsoid surface to the input points
         """
+        a, b, c = points
         distances = (x ** 2 / a ** 2) + (y ** 2 / b ** 2) + (z ** 2 / c ** 2) - 1
         error = np.sum(distances ** 2)
         return error
 
     # Initial guess for the semi-axis lengths
-    initialGuess = np.ndarray([np.std(x), np.std(y), np.std(z)])
+    initialGuess = np.array([np.std(x), np.std(y), np.std(z)])
 
     # Perform optimization to find the best-fitting ellipsoid parameters
-    result = minimize(ellipsoidError, initialGuess, method='BFGS')
+    result = minimize(ellipsoidError, x0=initialGuess, method='BFGS')
 
     # Extract optimized parameters and normalize
     paramsOptimized = result.x
@@ -90,9 +89,9 @@ def fitEllipsoidToPoints(points):
 
 def extrapolate_points_to_ellipsoid(points, ellipsoid_axis_normalised1, ellipsoid_axis_normalised2,
                                     ellipsoid_axis_normalised3):
-    points[:, 1] = points[:, 1] * ellipsoid_axis_normalised1
-    points[:, 2] = points[:, 2] * ellipsoid_axis_normalised2
-    points[:, 3] = points[:, 3] * ellipsoid_axis_normalised3
+    points[:, 0] = points[:, 0] * ellipsoid_axis_normalised1
+    points[:, 1] = points[:, 1] * ellipsoid_axis_normalised2
+    points[:, 2] = points[:, 2] * ellipsoid_axis_normalised3
 
     return points
 
@@ -466,7 +465,7 @@ class VertexModel:
 
             # Extrapolate Xs
             self.X = extrapolate_points_to_ellipsoid(self.X, ellipsoid_axis_normalised1, ellipsoid_axis_normalised2,
-                                                 ellipsoid_axis_normalised3)
+                                                     ellipsoid_axis_normalised3)
 
         # Perform Delaunay
         self.geo.XgID, self.X = self.SeedWithBoundingBox(self.X, self.set.s)
@@ -545,7 +544,9 @@ class VertexModel:
 
     def extrapolate_ys_faces_ellipsoid(self):
         # Original axis values
-        a, b, c, paramsOptimized_top = fitEllipsoidToPoints([cell.Y for cell in self.geo.Cells[1:self.set.TotalCells]])
+        Ys_top = np.concatenate([cell.Y for cell in self.geo.Cells[1:self.set.TotalCells]])
+
+        a, b, c, paramsOptimized_top = fitEllipsoidToPoints(Ys_top)
         a, b, c, paramsOptimized_bottom = fitEllipsoidToPoints(self.geo.Cells[0].Y)
         # Normalised based on those
         ellipsoid_axis_normalised1 = self.set.ellipsoid_axis1 / paramsOptimized_top[0]
@@ -563,24 +564,28 @@ class VertexModel:
         # Changes vertices of other cells
         for tetToCheck in topTs:
             for nodeInTet in tetToCheck:
-                if nodeInTet not in self.geo.XgTop:
+                if (nodeInTet not in self.geo.XgTop and self.geo.Cells[nodeInTet] is not None and
+                        self.geo.Cells[nodeInTet].Y is not None):
                     newPoint = self.geo.Cells[nodeInTet].Y[
-                        np.isin(np.sort(self.geo.Cells[nodeInTet].T, axis=1), tetToCheck)]
+                        np.all(np.isin(self.geo.Cells[nodeInTet].T, tetToCheck), axis=1)]
                     newPoint_extrapolated = extrapolate_points_to_ellipsoid(newPoint, ellipsoid_axis_normalised1,
                                                                             ellipsoid_axis_normalised2,
                                                                             ellipsoid_axis_normalised3)
                     self.geo.Cells[nodeInTet].Y[
-                        np.isin(np.sort(self.geo.Cells[nodeInTet].T, axis=1), tetToCheck)] = newPoint_extrapolated
+                        np.all(np.isin(self.geo.Cells[nodeInTet].T, tetToCheck), axis=1)] = newPoint_extrapolated
+
         for tetToCheck in bottomsTs:
             for nodeInTet in tetToCheck:
-                if nodeInTet not in self.geo.XgTop:
+                if (nodeInTet not in self.geo.XgTop and self.geo.Cells[nodeInTet] is not None and
+                        self.geo.Cells[nodeInTet].Y is not None):
                     newPoint = self.geo.Cells[nodeInTet].Y[
-                        np.isin(np.sort(self.geo.Cells[nodeInTet].T, axis=1), tetToCheck)]
+                        np.all(np.isin(self.geo.Cells[nodeInTet].T, tetToCheck), axis=1)]
                     newPoint_extrapolated = extrapolate_points_to_ellipsoid(newPoint, lumen_axis_normalised1,
                                                                             lumen_axis_normalised2,
                                                                             lumen_axis_normalised3)
                     self.geo.Cells[nodeInTet].Y[
-                        np.isin(np.sort(self.geo.Cells[nodeInTet].T, axis=1), tetToCheck)] = newPoint_extrapolated
+                        np.all(np.isin(self.geo.Cells[nodeInTet].T, tetToCheck), axis=1)] = newPoint_extrapolated
+
         # Recalculating face centres here based on the previous
         # change
         self.geo.rebuild(self.geo, self.set)

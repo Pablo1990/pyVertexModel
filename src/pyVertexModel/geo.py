@@ -491,7 +491,7 @@ class Geo:
                     oldFace = None
 
                 self.Cells[cc].Faces[j] = face.Face()
-                self.Cells[cc].Faces[j].BuildFace(cc, cj, face_ids, self.nCells, self.Cells[cc], self.XgID, Set,
+                self.Cells[cc].Faces[j].build_face(cc, cj, face_ids, self.nCells, self.Cells[cc], self.XgID, Set,
                                                   self.XgTop, self.XgBottom, oldFace)
 
                 woundEdgeTris = []
