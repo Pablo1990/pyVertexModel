@@ -10,7 +10,7 @@ class TestVertexModel(Tests):
     def test_initialize_geometry_bubbles(self):
         # Load data
         vModel = VertexModel()
-        X, X_IDs = vModel.BuildTopo(vModel.geo.nx, vModel.geo.ny, vModel.geo.nz, 0)
+        X, X_IDs = vModel.build_topo(vModel.geo.nx, vModel.geo.ny, vModel.geo.nz, 0)
         vModel.geo.nCells = X.shape[0]
 
         # Centre Nodal position at (0,0)

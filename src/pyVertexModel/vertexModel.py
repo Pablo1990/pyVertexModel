@@ -1,8 +1,11 @@
 import copy
+import math
 import os
 
 import numpy as np
 from PIL.Image import Image
+from numpy import mean
+from scipy.optimize import minimize
 from scipy.spatial import Delaunay
 from scipy.spatial.distance import cdist
 from skimage.measure import regionprops
@@ -11,6 +14,87 @@ from src.pyVertexModel import degreesOfFreedom, newtonRaphson
 from src.pyVertexModel.geo import Geo
 from src.pyVertexModel.remodelling import Remodelling
 from src.pyVertexModel.set import Set
+
+
+def generate_points_in_sphere(total_cells):
+    """
+    Generate points in a sphere
+    :param total_cells: The total number of cells
+    :return:        The X, Y, Z coordinates of the points
+    """
+    r_unit = 1
+
+    # Calculating area, distance, and increments for theta and phi
+    Area = 4 * math.pi * r_unit ** 2 / total_cells
+    Distance = math.sqrt(Area)
+    M_theta = round(math.pi / Distance)
+    d_theta = math.pi / M_theta
+    d_phi = Area / d_theta
+
+    # Initializing lists for X, Y, Z coordinates
+    X, Y, Z = [], [], []
+    N_new = 0
+
+    for m in range(M_theta):
+        Theta = math.pi * (m + 0.5) / M_theta
+        M_phi = round(2 * math.pi * math.sin(Theta) / d_phi)
+
+        for n in range(M_phi):
+            Phi = 2 * math.pi * n / M_phi
+
+            # Updating node count
+            N_new += 1
+
+            # Calculating and appending coordinates
+            X.append(math.sin(Theta) * math.cos(Phi))
+            Y.append(math.sin(Theta) * math.sin(Phi))
+            Z.append(math.cos(Theta))
+
+    return X, Y, Z, N_new
+
+
+def fitEllipsoidToPoints(points):
+    """
+    Fit an ellipsoid to a set of points using the least-squares method
+    :param points:
+    :return:
+    """
+    # Extract coordinates from the input array
+    x, y, z = points[:, 0], points[:, 1], points[:, 2]
+
+    # Define the objective function for ellipsoid fitting
+    def ellipsoidError(a, b, c):
+        """
+        Calculate the sum of squared distances from the ellipsoid surface to the input points
+        :param a:   Semi-axis length in x-direction
+        :param b:   Semi-axis length in y-direction
+        :param c:   Semi-axis length in z-direction
+        :return:    The sum of squared distances from the ellipsoid surface to the input points
+        """
+        distances = (x ** 2 / a ** 2) + (y ** 2 / b ** 2) + (z ** 2 / c ** 2) - 1
+        error = np.sum(distances ** 2)
+        return error
+
+    # Initial guess for the semi-axis lengths
+    initialGuess = np.ndarray([np.std(x), np.std(y), np.std(z)])
+
+    # Perform optimization to find the best-fitting ellipsoid parameters
+    result = minimize(ellipsoidError, initialGuess, method='BFGS')
+
+    # Extract optimized parameters and normalize
+    paramsOptimized = result.x
+    a, b, c = paramsOptimized / np.max(paramsOptimized)
+
+    return a, b, c, paramsOptimized
+
+
+def extrapolate_points_to_ellipsoid(points, ellipsoid_axis_normalised1, ellipsoid_axis_normalised2,
+                                    ellipsoid_axis_normalised3):
+    points[:, 1] = points[:, 1] * ellipsoid_axis_normalised1
+    points[:, 2] = points[:, 2] * ellipsoid_axis_normalised2
+    points[:, 3] = points[:, 3] * ellipsoid_axis_normalised3
+
+    return points
 
 
 class VertexModel:
@@ -294,13 +378,24 @@ class VertexModel:
 
     def InitializeGeometry_Bubbles(self):
         # Build nodal mesh
-        self.X, X_IDs = self.BuildTopo(self.geo.nx, self.geo.ny, self.geo.nz, 0)
+        self.X, X_IDs = self.build_topo(self.geo.nx, self.geo.ny, self.geo.nz, 0)
         self.geo.nCells = self.X.shape[0]
 
         # Centre Nodal position at (0,0)
         self.X[:, 0] = self.X[:, 0] - np.mean(self.X[:, 0])
         self.X[:, 1] = self.X[:, 1] - np.mean(self.X[:, 1])
         self.X[:, 2] = self.X[:, 2] - np.mean(self.X[:, 2])
+
+        if self.set.InputGeo == 'Bubbles_Cyst':
+            a, b, c, paramsOptimized = fitEllipsoidToPoints(self.X)
+
+            ellipsoid_axis_normalised1 = mean([self.set.ellipsoid_axis1, self.set.lumen_axis1]) / paramsOptimized[0]
+            ellipsoid_axis_normalised2 = mean([self.set.ellipsoid_axis2, self.set.lumen_axis2]) / paramsOptimized[1]
+            ellipsoid_axis_normalised3 = mean([self.set.ellipsoid_axis3, self.set.lumen_axis3]) / paramsOptimized[2]
+
+            # Extrapolate Xs
+            self.X = extrapolate_points_to_ellipsoid(self.X, ellipsoid_axis_normalised1, ellipsoid_axis_normalised2,
+                                                 ellipsoid_axis_normalised3)
 
         # Perform Delaunay
         self.geo.XgID, self.X = self.SeedWithBoundingBox(self.X, self.set.s)
@@ -333,13 +428,17 @@ class VertexModel:
 
         self.geo.build_cells(self.set, self.X, Twg)
 
+        if self.set.InputGeo == 'Bubbles_Cyst':
+            # Extrapolate Face centres and Ys to the ellipsoid
+            self.extrapolate_ys_faces_ellipsoid()
+
         # Define upper and lower area threshold for remodelling
         allFaces = np.concatenate([cell.Faces for cell in self.geo.Cells])
         allTris = np.concatenate([face.Tris for face in allFaces])
         avgArea = np.mean([tri.Area for tri in allTris])
         stdArea = np.std([tri.Area for tri in allTris])
-        Set.upperAreaThreshold = avgArea + stdArea
-        Set.lowerAreaThreshold = avgArea - stdArea
+        self.set.upperAreaThreshold = avgArea + stdArea
+        self.set.lowerAreaThreshold = avgArea - stdArea
 
         self.geo.AssembleNodes = [i for i, cell in enumerate(self.geo.Cells) if cell.AliveStatus is not None]
 
@@ -372,6 +471,67 @@ class VertexModel:
         self.geo.AvgEdgeLength_Lateral = np.mean(edgeLengths_Lateral)
         self.set.BarrierTri0 = self.set.BarrierTri0 / 10
         self.set.lmin0 = self.set.lmin0 * 10
+
+    def extrapolate_ys_faces_ellipsoid(self):
+        # Original axis values
+        a, b, c, paramsOptimized_top = fitEllipsoidToPoints([cell.Y for cell in self.geo.Cells[1:self.set.TotalCells]])
+        a, b, c, paramsOptimized_bottom = fitEllipsoidToPoints(self.geo.Cells[0].Y)
+        # Normalised based on those
+        ellipsoid_axis_normalised1 = self.set.ellipsoid_axis1 / paramsOptimized_top[0]
+        ellipsoid_axis_normalised2 = self.set.ellipsoid_axis2 / paramsOptimized_top[1]
+        ellipsoid_axis_normalised3 = self.set.ellipsoid_axis3 / paramsOptimized_top[2]
+        lumen_axis_normalised1 = self.set.lumen_axis1 / paramsOptimized_bottom[0]
+        lumen_axis_normalised2 = self.set.lumen_axis2 / paramsOptimized_bottom[1]
+        lumen_axis_normalised3 = self.set.lumen_axis3 / paramsOptimized_bottom[2]
+        # Extrapolate top layer as the outer ellipsoid, the bottom layer as
+        # the lumen, and lateral is rebuilt.
+        allTs = np.unique(np.sort(np.concatenate([cell.T for cell in self.geo.Cells[:self.set.TotalCells]]), axis=1),
+                          axis=0)
+        topTs = allTs[np.any(np.isin(allTs, self.geo.XgTop), axis=1)]
+        bottomsTs = allTs[np.any(np.isin(allTs, self.geo.XgBottom), axis=1)]
+        # Changes vertices of other cells
+        for tetToCheck in topTs:
+            for nodeInTet in tetToCheck:
+                if nodeInTet not in self.geo.XgTop:
+                    newPoint = self.geo.Cells[nodeInTet].Y[
+                        np.isin(np.sort(self.geo.Cells[nodeInTet].T, axis=1), tetToCheck)]
+                    newPoint_extrapolated = extrapolate_points_to_ellipsoid(newPoint, ellipsoid_axis_normalised1,
+                                                                            ellipsoid_axis_normalised2,
+                                                                            ellipsoid_axis_normalised3)
+                    self.geo.Cells[nodeInTet].Y[
+                        np.isin(np.sort(self.geo.Cells[nodeInTet].T, axis=1), tetToCheck)] = newPoint_extrapolated
+        for tetToCheck in bottomsTs:
+            for nodeInTet in tetToCheck:
+                if nodeInTet not in self.geo.XgTop:
+                    newPoint = self.geo.Cells[nodeInTet].Y[
+                        np.isin(np.sort(self.geo.Cells[nodeInTet].T, axis=1), tetToCheck)]
+                    newPoint_extrapolated = extrapolate_points_to_ellipsoid(newPoint, lumen_axis_normalised1,
+                                                                            lumen_axis_normalised2,
+                                                                            lumen_axis_normalised3)
+                    self.geo.Cells[nodeInTet].Y[
+                        np.isin(np.sort(self.geo.Cells[nodeInTet].T, axis=1), tetToCheck)] = newPoint_extrapolated
+        # Recalculating face centres here based on the previous
+        # change
+        self.geo.rebuild(self.geo, self.set)
+        self.geo.build_global_ids()
+        self.geo.update_measures()
+        for cell in self.geo.Cells:
+            cell.Area0 = self.set.cell_A0
+            cell.Vol0 = self.set.cell_V0
+        self.geo.Cells[0].Area0 = self.set.lumen_V0 * (self.set.cell_A0 / self.set.cell_V0)
+        self.geo.Cells[0].Vol0 = self.set.lumen_V0
+        # Calculate the mean volume excluding the first cell
+        meanVolume = np.mean([cell.Vol for cell in self.geo.Cells[1:self.set.TotalCells]])
+        print(f'Average Cell Volume: {meanVolume}')
+        # Calculate the standard deviation of volumes excluding the first cell
+        stdVolume = np.std([cell.Vol for cell in self.geo.Cells[1:self.set.TotalCells]])
+        print(f'Standard Deviation of Cell Volumes: {stdVolume}')
+        # Display the volume of the first cell
+        firstCellVolume = self.geo.Cells[0].Vol
+        print(f'Volume of Lumen: {firstCellVolume}')
+        # Calculate the sum of volumes excluding the first cell
+        sumVolumes = np.sum([cell.Vol for cell in self.geo.Cells[1:self.set.TotalCells]])
+        print(f'Tissue Volume: {sumVolumes}')
 
     def IterateOverTime(self):
         # Create VTK files for initial state
@@ -408,9 +568,9 @@ class VertexModel:
     def iteration_did_not_converged(self):
         # TODO
         # self.backupVars.Geo_b.log = self.Geo.log
-        self.geo = self.backupVars['Geo_b']
-        self.tr = self.backupVars['tr_b']
-        self.Dofs = self.backupVars['Dofs']
+        self.geo = self.backupVars.Geo_b
+        self.tr = self.backupVars.tr_b
+        self.Dofs = self.backupVars.Dofs
         self.Geo_n = copy.deepcopy(self.geo)
         self.relaxingNu = False
         if self.set.iter == self.set.MaxIter0:
@@ -500,22 +660,33 @@ class VertexModel:
             self.set.nu = np.max([self.set.nu / 2, self.set.nu0])
             self.relaxingNu = True
 
-    def BuildTopo(self, nx, ny, nz, columnarCells):
+    def build_topo(self, nx, ny, nz, c_set, columnar_cells=False):
         X = np.empty((0, 3))
         X_Ids = []
-        for numZ in range(nz):
-            x = np.arange(nx)
-            y = np.arange(ny)
-            x, y = np.meshgrid(x, y, indexing='ij')
-            x = x.flatten('C')
-            y = y.flatten('C')
-            z = np.ones_like(x) * numZ
-            X = np.vstack((X, np.column_stack((x, y, z))))
+        if c_set.InputGeo == 'Bubbles':
+            for numZ in range(nz):
+                x = np.arange(nx)
+                y = np.arange(ny)
+                x, y = np.meshgrid(x, y, indexing='ij')
+                x = x.flatten('C')
+                y = y.flatten('C')
+                z = np.ones_like(x) * numZ
+                X = np.vstack((X, np.column_stack((x, y, z))))
 
-            if columnarCells:
-                X_Ids.append(np.arange(len(x)))
-            else:
-                X_Ids = np.arange(X.shape[0])
+                if columnar_cells:
+                    X_Ids.append(np.arange(len(x)))
+                else:
+                    X_Ids = np.arange(X.shape[0])
+
+        elif c_set.InputGeo == 'Bubbles_Cyst':
+            X, Y, Z, _ = generate_points_in_sphere(c_set.TotalCells)
+
+            X = np.array([X, Y, Z]).T * 10
+
+            # Lumen as the first cell
+            lumenCell = np.mean(X, axis=0)
+            X = np.vstack([lumenCell, X])
+            c_set.TotalCells = X.shape[0]
         return X, X_Ids
 
     def SeedWithBoundingBox(self, X, s):

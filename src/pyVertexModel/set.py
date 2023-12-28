@@ -6,6 +6,15 @@ import numpy as np
 
 class Set:
     def __init__(self, mat_file=None):
+        self.lumen_V0 = None
+        self.cell_V0 = None
+        self.cell_A0 = None
+        self.lumen_axis1 = None
+        self.lumen_axis2 = None
+        self.lumen_axis3 = None
+        self.ellipsoid_axis1 = None
+        self.ellipsoid_axis2 = None
+        self.ellipsoid_axis3 = None
         if mat_file is None:
             ## =============================  Topology ============================
             self.SeedingMethod = 1
@@ -149,10 +158,52 @@ class Set:
         self.InputGeo = 'Bubbles'
         self.VTK = False
 
+    def cyst(self):
+        self.InputGeo = 'Bubbles_Cyst'
+        self.ellipsoid_axis1 = 33 / 2
+        self.ellipsoid_axis2 = 31 / 2
+        self.ellipsoid_axis3 = 23 / 2
+        self.lumen_axis1 = 23 / 2
+        self.lumen_axis2 = 20 / 2
+        self.lumen_axis3 = 12 / 2
+        self.cell_V0 = 440
+        self.cell_A0 = 328
+        self.lumen_V0 = 4308
+        self.TotalCells = 30
+        self.s = 1.5 * 10
+        self.f = 0.5 * 10
+
+        #self.ablation = False
+
+        self.InPlaneElasticity = False
+        self.nu = 1
+        self.Nincr = 61 * 2
+
+        self.lambdaB = 1
+        self.lambdaR = 0.3
+
+        self.lambdaV = 400
+
+        self.Substrate = 0
+        self.kSubstrate = 0
+
+        self.cLineTension = 0.1
+
+        self.lambdaS1 = 8
+        self.lambdaS2 = 0.01 * self.lambdaS1
+        self.lambdaS3 = self.lambdaS2
+        self.lambdaS4 = self.lambdaS2
+
+        self.brownian_motion = 0.05
+
+        self.Remodelling = 1
+        self.RemodelStiffness = 0.1
+        self.VTK = True
+
     def NoBulk_110(self):
         self.InputGeo = 'VertexModelTime'
-        # 40 cells; 3 cells to ablate
-        # 110 cells; 7 cells to ablate
+        # 40 cells 3 cells to ablate
+        # 110 cells 7 cells to ablate
         self.TotalCells = 110
 
         self.InPlaneElasticity = False
