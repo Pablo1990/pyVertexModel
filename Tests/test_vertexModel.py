@@ -10,7 +10,7 @@ class TestVertexModel(Tests):
     def test_initialize_geometry_bubbles(self):
         # Load data
         vModel = VertexModel()
-        X, X_IDs = vModel.build_topo(vModel.geo.nx, vModel.geo.ny, vModel.geo.nz, 0)
+        X, X_IDs = build_topo(vModel.geo.nx, vModel.geo.ny, vModel.geo.nz, 0)
         vModel.geo.nCells = X.shape[0]
 
         # Centre Nodal position at (0,0)
@@ -33,7 +33,7 @@ class TestVertexModel(Tests):
         assert_matrix(X_initial_expected, X)
 
         # Second test: compare with first step
-        X_test, XgID_test, XgIDBB, nCells = vModel.generate_first_ghost_nodes(X)
+        X_test, XgID_test, XgIDBB, nCells = generate_first_ghost_nodes(X)
 
         X_expected = np.array([
                 [-1.0, -1.0, 0.0],

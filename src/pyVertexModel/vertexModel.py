@@ -97,6 +97,77 @@ def extrapolate_points_to_ellipsoid(points, ellipsoid_axis_normalised1, ellipsoi
     return points
 
 
+def generate_first_ghost_nodes(X):
+    # Bounding Box 1
+    nCells = X.shape[0]
+    r0 = np.mean(X, axis=0)
+    r = 5 * np.max(np.abs(X - r0))
+    # Define bounding nodes: bounding sphere
+    theta = np.linspace(0, 2 * np.pi, 5)
+    phi = np.linspace(0, np.pi, 5)
+    theta, phi = np.meshgrid(theta, phi, indexing='ij')  # Ensure the order matches MATLAB
+    x = r * np.sin(phi) * np.cos(theta)
+    y = r * np.sin(phi) * np.sin(theta)
+    z = r * np.cos(phi)
+    # Reshape to column vectors, ensuring the same order as MATLAB
+    x = x.flatten('C')
+    y = y.flatten('C')
+    z = z.flatten('C')
+    # Offset the points by r0 and combine into a single array
+    Xg = np.column_stack((x, y, z)) + r0
+    # Find unique values considering the tolerance
+    tolerance = 1e-6
+    _, idx = np.unique(Xg.round(decimals=int(-np.log10(tolerance))), axis=0, return_index=True)
+    Xg = Xg[idx]
+
+    # Add new bounding nodes to X
+    XgID = np.arange(nCells, nCells + Xg.shape[0])
+    XgIDBB = XgID.copy()
+    X = np.vstack((X, Xg))
+    return X, XgID, XgIDBB, nCells
+
+
+def build_topo(nx, ny, nz, c_set, columnar_cells=False):
+    """
+    This function builds the topology of the mesh.
+    :param nx:  Number of nodes in x direction
+    :param ny:  Number of nodes in y direction
+    :param nz:  Number of nodes in z direction
+    :param c_set:   Set class
+    :param columnar_cells:  Boolean to indicate if the cells are columnar
+    :return:    X:  Nodal positions
+                X_Ids:  Nodal IDs
+    """
+    X = np.empty((0, 3))
+    X_Ids = []
+    if c_set.InputGeo == 'Bubbles':
+        for numZ in range(nz):
+            x = np.arange(nx)
+            y = np.arange(ny)
+            x, y = np.meshgrid(x, y, indexing='ij')
+            x = x.flatten('C')
+            y = y.flatten('C')
+            z = np.ones_like(x) * numZ
+            X = np.vstack((X, np.column_stack((x, y, z))))
+
+            if columnar_cells:
+                X_Ids.append(np.arange(len(x)))
+            else:
+                X_Ids = np.arange(X.shape[0])
+
+    elif c_set.InputGeo == 'Bubbles_Cyst':
+        X, Y, Z, _ = generate_points_in_sphere(c_set.TotalCells)
+
+        X = np.array([X, Y, Z]).T * 10
+
+        # Lumen as the first cell
+        lumenCell = np.mean(X, axis=0)
+        X = np.vstack([lumenCell, X])
+        c_set.TotalCells = X.shape[0]
+
+    return X, X_Ids
+
+
 class VertexModel:
 
     def __init__(self, mat_file_set=None):
@@ -109,13 +180,13 @@ class VertexModel:
             self.set = Set(mat_file_set)
         else:
             self.set = Set()
-            self.set.stretch()
+            self.set.cyst()
 
         self.Dofs = degreesOfFreedom.DegreesOfFreedom(None)
         # self.Set = WoundDefault(self.Set)
         self.InitiateOutputFolder()
 
-        if self.set.InputGeo == 'Bubbles':
+        if "Bubbles" in self.set.InputGeo:
             self.InitializeGeometry_Bubbles()
         elif self.set.InputGeo == 'Voronoi':
             self.InitializeGeometry_3DVoronoi()
@@ -378,7 +449,7 @@ class VertexModel:
 
     def InitializeGeometry_Bubbles(self):
         # Build nodal mesh
-        self.X, X_IDs = self.build_topo(self.geo.nx, self.geo.ny, self.geo.nz, 0)
+        self.X, X_IDs = build_topo(self.geo.nx, self.geo.ny, self.geo.nz, self.set)
         self.geo.nCells = self.X.shape[0]
 
         # Centre Nodal position at (0,0)
@@ -660,35 +731,6 @@ class VertexModel:
             self.set.nu = np.max([self.set.nu / 2, self.set.nu0])
             self.relaxingNu = True
 
-    def build_topo(self, nx, ny, nz, c_set, columnar_cells=False):
-        X = np.empty((0, 3))
-        X_Ids = []
-        if c_set.InputGeo == 'Bubbles':
-            for numZ in range(nz):
-                x = np.arange(nx)
-                y = np.arange(ny)
-                x, y = np.meshgrid(x, y, indexing='ij')
-                x = x.flatten('C')
-                y = y.flatten('C')
-                z = np.ones_like(x) * numZ
-                X = np.vstack((X, np.column_stack((x, y, z))))
-
-                if columnar_cells:
-                    X_Ids.append(np.arange(len(x)))
-                else:
-                    X_Ids = np.arange(X.shape[0])
-
-        elif c_set.InputGeo == 'Bubbles_Cyst':
-            X, Y, Z, _ = generate_points_in_sphere(c_set.TotalCells)
-
-            X = np.array([X, Y, Z]).T * 10
-
-            # Lumen as the first cell
-            lumenCell = np.mean(X, axis=0)
-            X = np.vstack([lumenCell, X])
-            c_set.TotalCells = X.shape[0]
-        return X, X_Ids
-
     def SeedWithBoundingBox(self, X, s):
         """
         This function seeds nodes in desired entities (edges, faces and tetrahedrons) while cell-centers are bounded
@@ -698,7 +740,7 @@ class VertexModel:
         :return:
         """
 
-        X, XgID, XgIDBB, nCells = self.generate_first_ghost_nodes(X)
+        X, XgID, XgIDBB, nCells = generate_first_ghost_nodes(X)
 
         # first Delaunay with ghost nodes
         N = 3  # The dimensions of our points
@@ -745,35 +787,6 @@ class VertexModel:
         X = np.delete(X, XgIDBB, axis=0)
         XgID = np.arange(nCells, X.shape[0])
         return XgID, X
-
-    def generate_first_ghost_nodes(self, X):
-        # Bounding Box 1
-        nCells = X.shape[0]
-        r0 = np.mean(X, axis=0)
-        r = 5 * np.max(np.abs(X - r0))
-        # Define bounding nodes: bounding sphere
-        theta = np.linspace(0, 2 * np.pi, 5)
-        phi = np.linspace(0, np.pi, 5)
-        theta, phi = np.meshgrid(theta, phi, indexing='ij')  # Ensure the order matches MATLAB
-        x = r * np.sin(phi) * np.cos(theta)
-        y = r * np.sin(phi) * np.sin(theta)
-        z = r * np.cos(phi)
-        # Reshape to column vectors, ensuring the same order as MATLAB
-        x = x.flatten('C')
-        y = y.flatten('C')
-        z = z.flatten('C')
-        # Offset the points by r0 and combine into a single array
-        Xg = np.column_stack((x, y, z)) + r0
-        # Find unique values considering the tolerance
-        tolerance = 1e-6
-        _, idx = np.unique(Xg.round(decimals=int(-np.log10(tolerance))), axis=0, return_index=True)
-        Xg = Xg[idx]
-
-        # Add new bounding nodes to X
-        XgID = np.arange(nCells, nCells + Xg.shape[0])
-        XgIDBB = XgID.copy()
-        X = np.vstack((X, Xg))
-        return X, XgID, XgIDBB, nCells
 
     def AreTri(self, p1, p2, p3):
         return 0.5 * np.linalg.norm(np.cross(p2 - p1, p3 - p1))
