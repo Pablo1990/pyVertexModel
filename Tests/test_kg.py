@@ -1,7 +1,6 @@
 import numpy as np
 
 from Tests.tests import Tests, load_data, assert_array1D, assert_matrix
-from src.pyVertexModel.Kg import kg
 from src.pyVertexModel.Kg.kgContractility import KgContractility
 from src.pyVertexModel.Kg.kgSubstrate import KgSubstrate
 from src.pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
@@ -13,79 +12,76 @@ from src.pyVertexModel.geo import Geo
 from src.pyVertexModel.newtonRaphson import KgGlobal
 
 
+def assert_k_g_energy(energy_var_name, g_var_name, k_var_name, kg, mat_expected):
+    assert_array1D(mat_expected[g_var_name][:, 0], kg.g)
+    K_expected = mat_expected[k_var_name]
+    assert_matrix(K_expected, kg.K)
+    np.testing.assert_almost_equal(kg.energy, mat_expected[energy_var_name][0][0], 3)
+
+
+def kg_surface_area_filename(filename, filename_expected):
+    geo_test, set_test, _ = load_data(filename_expected)
+    _, _, mat_expected = load_data(filename, False)
+    kg = KgSurfaceCellBasedAdhesion(geo_test)
+    kg.compute_work(geo_test, set_test)
+    assert_k_g_energy('ES', 'gs_full', 'Ks_full', kg, mat_expected)
+
+
 class Test(Tests):
 
     def test_kg_substrate(self):
-        geo_test, set_test, _ = load_data('Geo_var_3x3_stretch.mat')
-        _, _, mat_expected = load_data('Geo_var_3x3_stretch_expectedResults.mat', False)
-
-        kg = KgSubstrate(geo_test)
-        kg.compute_work(geo_test, set_test)
-
-        self.assert_k_g_energy('ESub', 'gSub_full', 'KSub_full', kg, mat_expected)
+        self.test_kg_substrate_filename('Geo_var_3x3_stretch.mat', 'Geo_var_3x3_stretch_expectedResults.mat')
 
         # Check that the global K, g and E are the same in a different iteration
-        _, _, mat_expected = load_data('Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat', False)
-        geo_test, set_test, _ = load_data('Geo_var_3x3_stretch_Iter6_expectedResults.mat')
+        filename = 'Geo_var_3x3_stretch_Iter6_expectedResults.mat'
+        filename_expected = 'Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat'
+        self.test_kg_substrate_filename(filename, filename_expected)
 
+    def test_kg_substrate_filename(self, filename, filename_expected):
+        geo_test, set_test, _ = load_data(filename)
+        _, _, mat_expected = load_data(filename_expected, False)
         kg = KgSubstrate(geo_test)
         kg.compute_work(geo_test, set_test)
-
-        self.assert_k_g_energy('ESub', 'gSub_full', 'KSub_full', kg, mat_expected)
+        assert_k_g_energy('ESub', 'gSub_full', 'KSub_full', kg, mat_expected)
 
     def test_kg_contractility(self):
-        geo_test, set_test, _ = load_data('Geo_var_3x3_stretch.mat')
-        _, _, mat_expected = load_data('Geo_var_3x3_stretch_expectedResults.mat', False)
-
-        kg = KgContractility(geo_test)
-        kg.compute_work(geo_test, set_test)
-
-        self.assert_k_g_energy('EC', 'gC_full', 'KC_full', kg, mat_expected)
+        self.test_kg_contractility_filename('Geo_var_3x3_stretch.mat', 'Geo_var_3x3_stretch_expectedResults.mat')
 
         # Check that the global K, g and E are the same in a different iteration
-        _, _, mat_expected = load_data('Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat', False)
-        geo_test, set_test, _ = load_data('Geo_var_3x3_stretch_Iter6_expectedResults.mat')
+        filename = 'Geo_var_3x3_stretch_Iter6_expectedResults.mat'
+        filename_expected = 'Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat'
+        self.test_kg_contractility_filename(filename, filename_expected)
 
+    def test_kg_contractility_filename(self, filename, filename_expected):
+        geo_test, set_test, _ = load_data(filename)
+        _, _, mat_expected = load_data(filename_expected, False)
         kg = KgContractility(geo_test)
         kg.compute_work(geo_test, set_test)
-
-        self.assert_k_g_energy('EC', 'gC_full', 'KC_full', kg, mat_expected)
+        assert_k_g_energy('EC', 'gC_full', 'KC_full', kg, mat_expected)
 
     def test_kg_surface(self):
-        geo_test, set_test, _ = load_data('Geo_var_3x3_stretch.mat')
-        _, _, mat_expected = load_data('Geo_var_3x3_stretch_expectedResults.mat', False)
-
-        kg = KgSurfaceCellBasedAdhesion(geo_test)
-        kg.compute_work(geo_test, set_test)
-
-        self.assert_k_g_energy('ES', 'gs_full', 'Ks_full', kg, mat_expected)
+        kg_surface_area_filename('Geo_var_3x3_stretch_expectedResults.mat', 'Geo_var_3x3_stretch.mat')
 
         # Check that the global K, g and E are the same in a different iteration
-        _, _, mat_expected = load_data('Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat', False)
-        geo_test, set_test, _ = load_data('Geo_var_3x3_stretch_Iter6_expectedResults.mat')
+        filename = 'Geo_var_3x3_stretch_Iter6_expectedResults.mat'
+        filename_expected = 'Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat'
 
-        kg = KgSurfaceCellBasedAdhesion(geo_test)
-        kg.compute_work(geo_test, set_test)
-
-        self.assert_k_g_energy('ES', 'gs_full', 'Ks_full', kg, mat_expected)
+        kg_surface_area_filename(filename, filename_expected)
 
     def test_kg_triAR(self):
-        geo_test, set_test, _ = load_data('Geo_var_3x3_stretch.mat')
-        _, _, mat_expected = load_data('Geo_var_3x3_stretch_expectedResults.mat', False)
-
-        kg = KgTriAREnergyBarrier(geo_test)
-        kg.compute_work(geo_test, set_test)
-
-        self.assert_k_g_energy('EBAR', 'gBAR_full', 'KBAR_full', kg, mat_expected)
+        self.test_kg_tri_AR('Geo_var_3x3_stretch.mat', 'Geo_var_3x3_stretch_expectedResults.mat')
 
         # Check that the global K, g and E are the same in a different iteration
-        _, _, mat_expected = load_data('Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat', False)
-        geo_test, set_test, _ = load_data('Geo_var_3x3_stretch_Iter6_expectedResults.mat')
+        filename = 'Geo_var_3x3_stretch_Iter6_expectedResults.mat'
+        filename_expected = 'Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat'
+        self.test_kg_tri_AR(filename, filename_expected)
 
+    def test_kg_tri_AR(self, filename, filename_expected):
+        geo_test, set_test, _ = load_data(filename)
+        _, _, mat_expected = load_data(filename_expected, False)
         kg = KgTriAREnergyBarrier(geo_test)
         kg.compute_work(geo_test, set_test)
-
-        self.assert_k_g_energy('EBAR', 'gBAR_full', 'KBAR_full', kg, mat_expected)
+        assert_k_g_energy('EBAR', 'gBAR_full', 'KBAR_full', kg, mat_expected)
 
     def test_kg_tri(self):
         geo_test, set_test, _ = load_data('Geo_var_3x3_stretch.mat')
@@ -94,17 +90,12 @@ class Test(Tests):
         kg = KgTriEnergyBarrier(geo_test)
         kg.compute_work(geo_test, set_test)
 
-        self.assert_k_g_energy('EBA', 'gBA_full', 'KBA_full', kg, mat_expected)
+        assert_k_g_energy('EBA', 'gBA_full', 'KBA_full', kg, mat_expected)
 
     def test_kg_volume(self):
+        self.test_kg_volume_filename('Geo_var_3x3_stretch.mat', 'Geo_var_3x3_stretch_expectedResults.mat')
+
         geo_test, set_test, _ = load_data('Geo_var_3x3_stretch.mat')
-        _, _, mat_expected = load_data('Geo_var_3x3_stretch_expectedResults.mat', False)
-
-        kg = KgVolume(geo_test)
-        kg.compute_work(geo_test, set_test)
-
-        self.assert_k_g_energy('EV', 'gv_full', 'Kv_full', kg, mat_expected)
-
         for cell in geo_test.Cells:
             if cell.Vol0 is not None:
                 cell.Vol0 = cell.Vol0 / 10
@@ -114,24 +105,22 @@ class Test(Tests):
         np.testing.assert_almost_equal(v_kg.energy, 7.381125000000000e+04)
 
         # Check that the global K, g and E are the same in a different iteration
-        _, _, mat_expected = load_data('Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat', False)
-        geo_test, set_test, _ = load_data('Geo_var_3x3_stretch_Iter6_expectedResults.mat')
+        filename = 'Geo_var_3x3_stretch_Iter6_expectedResults.mat'
+        filename_expected = 'Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat'
+        self.test_kg_volume_filename(filename, filename_expected)
 
+    def test_kg_volume_filename(self, filename, filename_expected):
+        geo_test, set_test, _ = load_data(filename)
+        _, _, mat_expected = load_data(filename_expected, False)
         kg = KgVolume(geo_test)
         kg.compute_work(geo_test, set_test)
+        assert_k_g_energy('EV', 'gv_full', 'Kv_full', kg, mat_expected)
 
-        self.assert_k_g_energy('EV', 'gv_full', 'Kv_full', kg, mat_expected)
+    def test_kg_viscosity_1(self):
+        self.test_kg_viscosity_filename('Geo_var_3x3_stretch.mat', 'Geo_var_3x3_stretch_expectedResults.mat')
 
-    def test_kg_viscosity(self):
+    def test_kg_viscosity_2(self):
         geo_test, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
-        _, _, mat_expected = load_data('Geo_var_3x3_stretch_expectedResults.mat', False)
-
-        geo_n_test = Geo(mat_info['Geo_n'])
-        kg = KgViscosity(geo_test)
-        kg.compute_work(geo_test, set_test, geo_n_test)
-
-        self.assert_k_g_energy('EN', 'gf_full', 'Kf_full', kg, mat_expected)
-
         geo_n_test = Geo(mat_info['Geo'])
         geo_n_test.Cells[0].Y = geo_n_test.Cells[0].Y / 100
 
@@ -139,15 +128,25 @@ class Test(Tests):
         v_kg.compute_work(geo_test, set_test, geo_n_test)
         np.testing.assert_almost_equal(v_kg.energy, 3.194411761833479e+04)
 
+    def test_kg_viscosity_3(self):
         # Check that the global K, g and E are the same in a different iteration
-        _, _, mat_expected = load_data('Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat', False)
-        geo_test, set_test, _ = load_data('Geo_var_3x3_stretch_Iter6_expectedResults.mat')
+        filename = 'Geo_var_3x3_stretch_Iter6_expectedResults.mat'
+        filename_expected = 'Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat'
+        self.test_kg_viscosity_filename(filename, filename_expected)
 
+    def test_kg_viscosity_filename(self, filename, filename_expected):
+        """
+        Test the viscosity energy.
+        :param filename:
+        :param filename_expected:
+        :return:
+        """
+        geo_test, set_test, mat_info = load_data(filename)
+        _, _, mat_expected = load_data(filename_expected, False)
         geo_n_test = Geo(mat_info['Geo_n'])
         kg = KgViscosity(geo_test)
         kg.compute_work(geo_test, set_test, geo_n_test)
-
-        self.assert_k_g_energy('EN', 'gf_full', 'Kf_full', kg, mat_expected)
+        assert_k_g_energy('EN', 'gf_full', 'Kf_full', kg, mat_expected)
 
     def test_KgGlobal(self):
         geo_test, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
@@ -171,6 +170,7 @@ class Test(Tests):
         assert_matrix(k_expected, K)
         np.testing.assert_almost_equal(e_expected[0][0], E)
 
+    def test_kg_global(self):
         # Check that the global K is the same in a different iteration
         geo_test, set_test, mat_info = load_data('Geo_var_3x3_stretch_Iter6_expectedResults.mat')
         geo_n_test = Geo(mat_info['Geo_n'])
@@ -187,11 +187,22 @@ class Test(Tests):
         assert_array1D(g_expected, g)
         assert_matrix(k_expected, K)
 
-    def assert_k_g_energy(self, energy_var_name, g_var_name, k_var_name, kg, mat_expected):
-        assert_array1D(mat_expected[g_var_name][:, 0], kg.g)
-        K_expected = mat_expected[k_var_name]
-        assert_matrix(K_expected, kg.K)
-        np.testing.assert_almost_equal(kg.energy, mat_expected[energy_var_name][0][0], 3)
+    def test_kg_global_cyst(self):
+        # Check with a different simulation 'cyst'
+        geo_test, set_test, mat_info = load_data('Geo_var_cyst.mat')
+        geo_n_test = Geo(mat_info['Geo_n'])
+        geo_0_test = Geo(mat_info['Geo_0'])
+
+        # Compute the global K, and g
+        g, K, E = KgGlobal(geo_0_test, geo_n_test, geo_test, set_test)
+
+        # Get the expected results from the mat file
+        g_expected = mat_info['g'][:, 0]
+        k_expected = mat_info['K']
+
+        # Check that the results are the same
+        assert_array1D(g_expected, g)
+        assert_matrix(k_expected, K)
 
     def test_k_k(self):
         _, _, mat_info = load_data('kK_test.mat', False)
