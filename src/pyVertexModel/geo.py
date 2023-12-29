@@ -105,6 +105,23 @@ def get_node_neighbours_per_domain(geo, node, node_of_domain, main_node=None):
     return node_neighbours
 
 
+def compute_y(Geo, T, cellCentre, Set):
+    x = [Geo.Cells[i].X for i in T]
+    newY = np.mean(x, axis=0)
+    if sum([Geo.Cells[i].AliveStatus is not None for i in T]) == 1 and "Bubbles" in Set.InputGeo:
+        vc = newY - cellCentre
+        dir = vc / np.linalg.norm(vc)
+        offset = Set.f * dir
+        newY = cellCentre + offset
+
+    if "Bubbles" not in Set.InputGeo:
+        if any(i in Geo.XgTop for i in T):
+            newY[2] /= sum(i in Geo.XgTop for i in T) / 2
+        elif any(i in Geo.XgBottom for i in T):
+            newY[2] /= sum(i in Geo.XgBottom for i in T) / 2
+    return newY
+
+
 class Geo:
     """
     Class that contains the information of the geometry.
@@ -445,24 +462,8 @@ class Geo:
         dim = Cell.X.shape[0]
         Y = np.zeros((len(Tets), dim))
         for i in range(len(Tets)):
-            Y[i] = self.compute_y(Geo, Tets[i], Cell.X, Set)
+            Y[i] = compute_y(Geo, Tets[i], Cell.X, Set)
         return Y
-
-    def compute_y(self, Geo, T, cellCentre, Set):
-        x = [Geo.Cells[i].X for i in T]
-        newY = np.mean(x, axis=0)
-        if sum([Geo.Cells[i].AliveStatus is not None for i in T]) == 1 and "Bubbles" in Set.InputGeo:
-            vc = newY - cellCentre
-            dir = vc / np.linalg.norm(vc)
-            offset = Set.f * dir
-            newY = cellCentre + offset
-
-        if 'Bubbles' not in Set.InputGeo:
-            if any(i in Geo.XgTop for i in T):
-                newY[2] /= sum(i in Geo.XgTop for i in T) / 2
-            elif any(i in Geo.XgBottom for i in T):
-                newY[2] /= sum(i in Geo.XgBottom for i in T) / 2
-        return newY
 
     def rebuild(self, oldGeo, Set):
         aliveCells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1]
@@ -734,7 +735,6 @@ class Geo:
             writer = vtk.vtkPolyDataWriter()
             name_out = os.path.join(new_sub_folder, f'Cell_{c:04d}_t{step:04d}{file_extension}')
             writer.SetFileName(name_out)
-
             vtk_cells.append(self.Cells[c].create_vtk(geo_0, set, step))
 
             # Write to a VTK file

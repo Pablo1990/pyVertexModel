@@ -492,9 +492,14 @@ class VertexModel:
         self.X = self.X[uniqueTets]
         Twg = indices.reshape(Twg.shape)
 
-        Xg = self.X[self.geo.XgID]
-        self.geo.XgBottom = self.geo.XgID[Xg[:, 2] < np.mean(self.X[:, 2])]
-        self.geo.XgTop = self.geo.XgID[Xg[:, 2] > np.mean(self.X[:, 2])]
+        if self.set.InputGeo == 'Bubbles_Cyst':
+            self.geo.XgBottom = [0]
+            self.geo.XgTop = self.geo.XgID
+            self.geo.XgID = np.append(self.geo.XgID, 0)
+        else:
+            Xg = self.X[self.geo.XgID]
+            self.geo.XgBottom = self.geo.XgID[Xg[:, 2] < np.mean(self.X[:, 2])]
+            self.geo.XgTop = self.geo.XgID[Xg[:, 2] > np.mean(self.X[:, 2])]
 
         self.geo.build_cells(self.set, self.X, Twg)
 
@@ -586,8 +591,7 @@ class VertexModel:
                     self.geo.Cells[nodeInTet].Y[
                         np.all(np.isin(self.geo.Cells[nodeInTet].T, tetToCheck), axis=1)] = newPoint_extrapolated
 
-        # Recalculating face centres here based on the previous
-        # change
+        # Recalculating face centres here based on the previous changes
         self.geo.rebuild(self.geo.copy(), self.set)
         self.geo.build_global_ids()
         self.geo.update_measures()

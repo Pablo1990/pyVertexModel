@@ -31,7 +31,10 @@ def compute_2D_circularity(area, perimeter):
     Compute the 2D circularity of the cell
     :return:
     """
-    return 4 * np.pi * area / perimeter ** 2
+    if perimeter == 0:
+        return 0
+    else:
+        return 4 * np.pi * area / perimeter ** 2
 
 
 class Cell:
@@ -283,10 +286,12 @@ class Cell:
                     neighbours.append(self.Faces[f].Tris[t].SharedByCells)
 
         # Flatten the list of lists into a single 1-D array
-        neighbours_flat = np.concatenate(neighbours)
-
-        neighbours_unique = np.unique(neighbours_flat)
-        neighbours_unique = neighbours_unique[neighbours_unique != self.ID]
+        if len(neighbours) > 0:
+            neighbours_flat = np.concatenate(neighbours)
+            neighbours_unique = np.unique(neighbours_flat)
+            neighbours_unique = neighbours_unique[neighbours_unique != self.ID]
+        else:
+            neighbours_unique = []
 
         return neighbours_unique
 
@@ -345,4 +350,8 @@ class Cell:
         Compute the 2D aspect ratio of the cell
         :return:
         """
-        return self.compute_area(filter_location) / self.compute_perimeter(filter_location) ** 2
+        perimeter = self.compute_perimeter(filter_location)
+        if perimeter == 0:
+            return 0
+        else:
+            return self.compute_area(filter_location) / self.compute_perimeter(filter_location) ** 2
