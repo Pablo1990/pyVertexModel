@@ -212,3 +212,45 @@ class Test(Tests):
                                    [0.415094060433679, -0.0906607690000001, -0.205394436600024]])
 
         assert_matrix(output_KK, expectedResult)
+
+    def test_kg_volume_cyst(self):
+        # Check with a different simulation 'cyst'
+        filename = 'Geo_var_cyst.mat'
+        filename_expected = 'Geo_var_cyst.mat'
+        test_kg_volume_filename(filename, filename_expected)
+
+    def test_kg_surface_cyst(self):
+        # Check with a different simulation 'cyst'
+        filename = 'Geo_var_cyst.mat'
+        filename_expected = 'Geo_var_cyst.mat'
+        kg_surface_area_filename(filename, filename_expected)
+
+    def test_kg_tri_cyst(self):
+        # Check with a different simulation 'cyst'
+        filename = 'Geo_var_cyst.mat'
+        filename_expected = 'Geo_var_cyst.mat'
+        test_kg_tri_filename(filename, filename_expected)
+
+    def test_kg_triAR_cyst(self):
+        # Check with a different simulation 'cyst'
+        filename = 'Geo_var_cyst.mat'
+        filename_expected = 'Geo_var_cyst.mat'
+        test_kg_tri_AR(filename, filename_expected)
+
+    def test_kg_viscosity_cyst(self):
+        # Check with a different simulation 'cyst'
+        filename = 'Geo_var_cyst.mat'
+        filename_expected = 'Geo_var_cyst.mat'
+        test_kg_viscosity_filename(filename, filename_expected)
+
+    def test_kg_contractility_cyst(self):
+        # Check with a different simulation 'cyst'
+        filename = 'Geo_var_cyst.mat'
+        filename_expected = 'Geo_var_cyst.mat'
+        test_kg_contractility_filename(filename, filename_expected)
+
+    def test_kg_substrate_cyst(self):
+        # Check with a different simulation 'cyst'
+        filename = 'Geo_var_cyst.mat'
+        filename_expected = 'Geo_var_cyst.mat'
+        test_kg_substrate_filename(filename, filename_expected)
