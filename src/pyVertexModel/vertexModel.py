@@ -647,9 +647,9 @@ class VertexModel:
     def iteration_did_not_converged(self):
         # TODO
         # self.backupVars.Geo_b.log = self.Geo.log
-        self.geo = self.backupVars.Geo_b
-        self.tr = self.backupVars.tr_b
-        self.Dofs = self.backupVars.Dofs
+        self.geo = self.backupVars['Geo_b']
+        self.tr = self.backupVars['tr_b']
+        self.Dofs = self.backupVars['Dofs']
         self.Geo_n = copy.deepcopy(self.geo)
         self.relaxingNu = False
         if self.set.iter == self.set.MaxIter0:
