@@ -166,9 +166,9 @@ class Set:
         self.lumen_axis1 = 23 / 2
         self.lumen_axis2 = 20 / 2
         self.lumen_axis3 = 12 / 2
-        self.cell_V0 = 440
-        self.cell_A0 = 328
-        self.lumen_V0 = 4308
+        self.cell_V0 = 440.0
+        self.cell_A0 = 328.0
+        self.lumen_V0 = 4308.0
         self.TotalCells = 30
         self.s = 1.5 * 10
         self.f = 0.5 * 10
@@ -182,7 +182,7 @@ class Set:
         self.lambdaB = 1
         self.lambdaR = 0.3
 
-        self.lambdaV = 400
+        self.lambdaV = 400.0
 
         self.Substrate = 0
         self.kSubstrate = 0
