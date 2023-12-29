@@ -254,7 +254,3 @@ class Set:
     def menu_input(self, inputMode=None, batchMode=None):
         if inputMode == 7:
             self.NoBulk_110()
-
-    def UpdateSet_F(self, Geo):
-        pass
-        #self.f = np.mean([cell.Vol / cell.Vol0 for cell in np.array(Geo.Cells)[Geo.non_dead_cells]]) ** 3

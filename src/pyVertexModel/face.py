@@ -55,6 +55,11 @@ class Face:
 
         self.build_edges(Cell.T, face_ids, self.Centre, self.InterfaceType, Cell.X, Cell.Y,
                          list(range(nCells)))
+
+        # Move centre to the mean of the edge centres
+        self.Centre = np.mean(np.concatenate(Cell.Y[[tri.Edge for tri in self.Tris], :]), axis=0)
+        #self.Centre = np.mean(Cell.Y[self.Tris.Edge], :], axis=0)
+
         self.Area, _ = self.compute_face_area(Cell.Y)
         self.Area0 = self.Area
 
@@ -67,15 +72,13 @@ class Face:
         :param XgBottom:
         :return:
         """
-        if any(node in XgID for node in ij):
-            if any(node in XgTop for node in ij):
-                ftype = self.InterfaceType_allValues[0]  # Top
-            elif any(node in XgBottom for node in ij):
-                ftype = self.InterfaceType_allValues[2]  # Bottom/Substrate
-            else:
-                ftype = self.InterfaceType_allValues[1]  # Border face
+
+        if any(node in XgTop for node in ij):
+            ftype = self.InterfaceType_allValues[0]  # Top
+        elif any(node in XgBottom for node in ij):
+            ftype = self.InterfaceType_allValues[2]  # Bottom/Substrate
         else:
-            ftype = self.InterfaceType_allValues[1]  # Lateral domain/cell-cell contact
+            ftype = self.InterfaceType_allValues[1]  # Border face
 
         self.InterfaceType = ftype
         return ftype

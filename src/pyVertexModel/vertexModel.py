@@ -628,7 +628,6 @@ class VertexModel:
                 # IMPORTANT: Here it updates: Areas, Volumes, etc... Should be
                 # up-to-date
                 self.geo.update_measures()
-                self.set.UpdateSet_F(self.geo)
 
             g, K, __ = newtonRaphson.KgGlobal(self.Geo_0, self.Geo_n, self.geo, self.set)
             self.geo, g, __, __, self.set, gr, dyr, dy = newtonRaphson.newton_raphson(self.Geo_0, self.Geo_n, self.geo,
