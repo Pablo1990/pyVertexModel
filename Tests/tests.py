@@ -26,11 +26,11 @@ def load_data(file_name, return_geo=True):
 
 
 def assert_matrix(k_expected, k, delta=4):
-    np.testing.assert_array_almost_equal(k_expected, k, decimal=delta)
+    np.testing.assert_allclose(k_expected, k, rtol=1e-9, atol=0)
 
 
 def assert_array1D(g_expected, g, delta=4):
-    np.testing.assert_array_almost_equal(g_expected, g, decimal=delta)
+    np.testing.assert_allclose(g_expected, g, rtol=1e-9, atol=0)
 
 
 class Tests(unittest.TestCase):

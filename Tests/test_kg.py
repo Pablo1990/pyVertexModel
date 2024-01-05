@@ -1,4 +1,5 @@
 import numpy as np
+from src.pyVertexModel.Kg import kg_functions
 
 from Tests.tests import Tests, load_data, assert_array1D, assert_matrix
 from src.pyVertexModel.Kg.kgContractility import KgContractility
@@ -247,3 +248,21 @@ class Test(Tests):
         filename = 'Geo_var_cyst.mat'
         filename_expected = 'Geo_var_cyst.mat'
         test_kg_contractility_filename(filename, filename_expected)
+
+    def test_kg_gkDet(self):
+        # Check gkDet function
+        _, _, mat_info = load_data('test_gkDet.mat', False)
+
+        y1 = mat_info['y1'][0]
+        y2 = mat_info['y2'][0]
+        y3 = mat_info['y3'][0]
+
+        [gs, Ks] = kg_functions.gKDet(y1, y2, y3)
+
+        gs_expected = mat_info['gs'][:, 0]
+        Ks_expected = mat_info['Ks']
+
+        # Assert that the results are the same
+        assert_array1D(gs_expected, gs)
+        assert_matrix(Ks_expected, Ks)
+
