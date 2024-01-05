@@ -1,6 +1,13 @@
 import numpy as np
 
 
+def compute_tri_aspect_ratio(side_lengths):
+    s = np.sum(side_lengths) / 2
+    aspectRatio = (side_lengths[0] * side_lengths[1] * side_lengths[2]) / (
+            8 * (s - side_lengths[0]) * (s - side_lengths[1]) * (s - side_lengths[2]))
+    return aspectRatio
+
+
 class Tris:
     def __init__(self, mat_file=None):
         if mat_file is None:
@@ -18,7 +25,7 @@ class Tris:
             self.EdgeLength = mat_file[3][0][0]
             self.LengthsToCentre = mat_file[4][0]
             self.SharedByCells = mat_file[5][0] - 1
-            self.Location = mat_file[6][0][0]
+            self.Location = mat_file[6][0][0] - 1
             self.ContractilityG = mat_file[7][0][0]
             self.ContractilityValue = None
             self.EdgeLength_time = mat_file[9][0]
@@ -40,12 +47,6 @@ class Tris:
         EdgeLength = np.linalg.norm(Ys[self.Edge[0], :] - Ys[self.Edge[1], :])
         LengthsToCentre = [np.linalg.norm(Ys[self.Edge[0], :] - face_centre),
                            np.linalg.norm(Ys[self.Edge[1], :] - face_centre)]
-        AspectRatio = self.compute_tri_aspect_ratio([EdgeLength] + LengthsToCentre)
+        AspectRatio = compute_tri_aspect_ratio([EdgeLength] + LengthsToCentre)
         return EdgeLength, LengthsToCentre, AspectRatio
-
-    def compute_tri_aspect_ratio(self, side_lengths):
-        s = np.sum(side_lengths) / 2
-        aspectRatio = (side_lengths[0] * side_lengths[1] * side_lengths[2]) / (
-                8 * (s - side_lengths[0]) * (s - side_lengths[1]) * (s - side_lengths[2]))
-        return aspectRatio
 
