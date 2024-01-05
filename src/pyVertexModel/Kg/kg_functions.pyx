@@ -148,7 +148,7 @@ cpdef np.ndarray compute_finalK_Volume(np.ndarray ge, np.ndarray K, double Vol, 
         if ge_view[i] != 0:
             for j in range(n):
                 if ge_view[j] != 0:
-                    K_view[i, j] += ge_view[i] * ge_view[j] / 6 / 6 * (Vol - Vol0) ** (n - 2) / Vol0 ** n_dim
+                    K_view[i, j] += ge_view[i] * ge_view[j] / 6 / 6 * (Vol - Vol0) ** (n_dim - 2) / Vol0 ** n_dim
 
     return np.asarray(K_view)
 
