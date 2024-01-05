@@ -45,9 +45,9 @@ def test_kg_tri_filename(filename, filename_expected):
 
 def assert_k_g_energy(energy_var_name, g_var_name, k_var_name, kg, mat_expected):
     assert_array1D(mat_expected[g_var_name][:, 0], kg.g)
+    np.testing.assert_almost_equal(kg.energy, mat_expected[energy_var_name][0][0], 3)
     K_expected = mat_expected[k_var_name]
     assert_matrix(K_expected, kg.K)
-    np.testing.assert_almost_equal(kg.energy, mat_expected[energy_var_name][0][0], 3)
 
 
 def kg_surface_area_filename(filename, filename_expected):
@@ -266,3 +266,65 @@ class Test(Tests):
         assert_array1D(gs_expected, gs)
         assert_matrix(Ks_expected, Ks)
 
+    def test_kg_assemble_K(self):
+        """
+        Test the assemble_K function
+        :return:
+        """
+        # Load the test data
+        filename = 'Geo_var_3x3_stretch.mat'
+        geo_test, set_test, mat_info = load_data(filename)
+
+        # Create the kg object
+        kg = KgVolume(geo_test)
+
+        # Create a dummy K_e and n_y
+        K_e = np.ones((9, 9))
+        n_y = np.array([2, 1, 0])
+        kg.assemble_k(K_e, n_y)
+
+        # Assert that the results are the same with the dummy K_e
+        assert_matrix(kg.K[:9, :9], K_e)
+
+    def test_kg_assemble_K_1(self):
+        """
+        Test the assemble_K function
+        :return:
+        """
+        # Load the test data
+        filename = 'Geo_var_3x3_stretch.mat'
+        geo_test, set_test, mat_info = load_data(filename)
+
+        # Create the kg object
+        kg = KgVolume(geo_test)
+
+        # Create a dummy K_e and n_y
+        K_e = np.ones((9, 9))
+        n_y = np.array([3, 5, 4])
+        kg.assemble_k(K_e, n_y)
+
+        # Assert that the results are the same with the dummy K_e
+        assert_matrix(kg.K[9:18, 9:18], K_e)
+
+    def test_kg_volume_cyst_cell1(self):
+        # Check with a different simulation 'cyst'
+        filename = 'Geo_var_cyst.mat'
+        filename_expected = 'Geo_var_cyst_expectedResults_cell1.mat'
+
+        geo_test, set_test, _ = load_data(filename)
+        _, _, mat_expected = load_data(filename_expected, False)
+
+        # Make every cell dead except the first cell
+        for cell in geo_test.Cells:
+            cell.AliveStatus = False
+
+        geo_test.Cells[0].AliveStatus = True
+
+        kg = KgVolume(geo_test)
+        [gs_expected, Ks_expected, ge_expected] = kg.compute_work(geo_test, set_test)
+
+        assert_array1D(mat_expected['gs'][:, 0], gs_expected)
+        assert_array1D(mat_expected['ge_full'][:, 0], ge_expected)
+        assert_matrix(mat_expected['Ks'], Ks_expected)
+
+        assert_k_g_energy('Energy', 'g_full', 'K_full', kg, mat_expected)

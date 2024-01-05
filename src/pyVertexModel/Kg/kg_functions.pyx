@@ -138,7 +138,7 @@ cpdef np.ndarray compute_finalK_SurfaceEnergy(np.ndarray ge, np.ndarray K, doubl
 
     return np.asarray(K_view)
 
-cpdef np.ndarray compute_finalK_Volume(np.ndarray ge, np.ndarray K, double Vol, double Vol0, int n_dim):
+cpdef np.ndarray compute_finalK_Volume(np.ndarray ge, np.ndarray K, double Vol, double Vol0, int n_dim, double lambdaV):
     cdef Py_ssize_t i, j
     cdef Py_ssize_t n = ge.shape[0]
     cdef double[:] ge_view = ge
@@ -148,7 +148,7 @@ cpdef np.ndarray compute_finalK_Volume(np.ndarray ge, np.ndarray K, double Vol, 
         if ge_view[i] != 0:
             for j in range(n):
                 if ge_view[j] != 0:
-                    K_view[i, j] += ge_view[i] * ge_view[j] / 6 / 6 * (Vol - Vol0) ** (n_dim - 2) / Vol0 ** n_dim
+                    K_view[i, j] += lambdaV * ge_view[i] * ge_view[j] / 6 / 6 * (Vol - Vol0) ** (n_dim - 2) / Vol0 ** n_dim
 
     return np.asarray(K_view)
 

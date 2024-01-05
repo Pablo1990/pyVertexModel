@@ -6,6 +6,24 @@ from src.pyVertexModel.Kg import kg_functions
 from src.pyVertexModel.Kg.kg import Kg
 
 
+def compute_finalK_Volume(ge, K, Vol, Vol0, n):
+    """
+    Helper function to compute the final K for the Volume energy.
+    :param ge: The residual g.
+    :param K: The Jacobian K.
+    :param Vol: The current volume.
+    :param Vol0: The target volume.
+    :param n: The power of the volume energy.
+    :return: The final Jacobian K.
+    """
+    dim = 3
+    ge_ = ge.reshape((ge.size, 1))
+    ge_transpose = ge.reshape((1, ge.size))
+
+    K = K + np.dot(ge_, ge_transpose) / 6 / 6 * (Vol - Vol0) ** (n - 2) / Vol0 ** n
+    return K
+
+
 class KgVolume(Kg):
     def compute_work(self, Geo, Set, Geo_n=None, calculate_K=True):
         # The residual g and Jacobian K of Volume Energy
@@ -47,7 +65,7 @@ class KgVolume(Kg):
             self.g += ge * fact / 6  # Volume contribution of each triangle is det(Y1,Y2,Y3)/6
             if calculate_K:
                 # Both give the same result
-                self.K = kg_functions.compute_finalK_Volume(ge, self.K, Cell.Vol, Cell.Vol0, n)
+                self.K = kg_functions.compute_finalK_Volume(ge, self.K, Cell.Vol, Cell.Vol0, n, lambdaV)
                 # self.K = self.compute_finalK_Volume(ge, self.K, Cell.Vol, Cell.Vol0, n)
 
             self.energy += lambdaV / n * ((Cell.Vol - Cell.Vol0) / Cell.Vol0) ** n
@@ -55,19 +73,4 @@ class KgVolume(Kg):
         end = time.time()
         self.timeInSeconds = f"Time at Volume: {end - start} seconds"
 
-    def compute_finalK_Volume(self, ge, K, Vol, Vol0, n):
-        """
-        Helper function to compute the final K for the Volume energy.
-        :param ge: The residual g.
-        :param K: The Jacobian K.
-        :param Vol: The current volume.
-        :param Vol0: The target volume.
-        :param n: The power of the volume energy.
-        :return: The final Jacobian K.
-        """
-        dim = 3
-        ge_ = ge.reshape((ge.size, 1))
-        ge_transpose = ge.reshape((1, ge.size))
-
-        K = K + np.dot(ge_, ge_transpose) / 6 / 6 * (Vol - Vol0) ** (n - 2) / Vol0 ** n
-        return K
+        return gs, Ks, ge

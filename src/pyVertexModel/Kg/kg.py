@@ -22,14 +22,15 @@ class Kg:
 
     def assemble_k(self, k_e, n_y):
         """
-
+        Assemble the local Jacobian matrix into the global Jacobian matrix.
         :param k_e:
         :param n_y:
         :return:
         """
         idofg = np.zeros(len(n_y) * self.dim, dtype=int)
-        for I in range(len(n_y)):
-            idofg[(I * self.dim): ((I + 1) * self.dim)] = np.arange(n_y[I] * self.dim, (n_y[I] + 1) * self.dim)
+
+        for index in range(len(n_y)):
+            idofg[(index * self.dim): ((index + 1) * self.dim)] = np.arange(n_y[index] * self.dim, (n_y[index] + 1) * self.dim)
 
         indices = np.meshgrid(idofg, idofg)
         self.K[indices[0], indices[1]] += k_e
