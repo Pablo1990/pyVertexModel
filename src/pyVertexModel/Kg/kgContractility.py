@@ -72,8 +72,8 @@ class KgContractility(Kg):
         return gContractility
 
     def computeEnergyContractility(self, l_i0, l_i, C):
-        energyConctratility = (C / l_i0) * l_i
-        return energyConctratility
+        energyContractility = (C / l_i0) * l_i
+        return energyContractility
 
     CUTOFF = 3
 
