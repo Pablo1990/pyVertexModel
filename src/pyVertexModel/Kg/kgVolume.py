@@ -22,7 +22,6 @@ class KgVolume(Kg):
             if Geo.Remodelling and c not in Geo.AssembleNodes:
                 continue
 
-            Energy_c = 0
             Cell = Geo.Cells[c]
             Ys = Cell.Y
             lambdaV = Set.lambdaV
@@ -47,7 +46,9 @@ class KgVolume(Kg):
 
             self.g += ge * fact / 6  # Volume contribution of each triangle is det(Y1,Y2,Y3)/6
             if calculate_K:
+                # Both give the same result
                 self.K = kg_functions.compute_finalK_Volume(ge, self.K, Cell.Vol, Cell.Vol0, n)
+                # self.K = self.compute_finalK_Volume(ge, self.K, Cell.Vol, Cell.Vol0, n)
 
             self.energy += lambdaV / n * ((Cell.Vol - Cell.Vol0) / Cell.Vol0) ** n
 
