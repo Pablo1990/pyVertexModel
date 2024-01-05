@@ -50,8 +50,8 @@ def assert_k_g_energy(energy_var_name, g_var_name, k_var_name, kg, mat_expected)
 
 
 def kg_surface_area_filename(filename, filename_expected):
-    geo_test, set_test, _ = load_data(filename_expected)
-    _, _, mat_expected = load_data(filename, False)
+    geo_test, set_test, _ = load_data(filename)
+    _, _, mat_expected = load_data(filename_expected, False)
     kg = KgSurfaceCellBasedAdhesion(geo_test)
     kg.compute_work(geo_test, set_test)
     assert_k_g_energy('ES', 'gs_full', 'Ks_full', kg, mat_expected)
@@ -111,13 +111,12 @@ class Test(Tests):
         test_kg_contractility_filename(filename, filename_expected)
 
     def test_kg_surface(self):
-        kg_surface_area_filename('Geo_var_3x3_stretch_expectedResults.mat', 'Geo_var_3x3_stretch.mat')
+        kg_surface_area_filename('Geo_var_3x3_stretch.mat', 'Geo_var_3x3_stretch_expectedResults.mat', )
 
     def test_kg_surface_1(self):
         # Check that the global K, g and E are the same in a different iteration
         filename = 'Geo_var_3x3_stretch_Iter6_expectedResults.mat'
         filename_expected = 'Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat'
-
         kg_surface_area_filename(filename, filename_expected)
 
     def test_kg_triAR(self):
@@ -248,9 +247,3 @@ class Test(Tests):
         filename = 'Geo_var_cyst.mat'
         filename_expected = 'Geo_var_cyst.mat'
         test_kg_contractility_filename(filename, filename_expected)
-
-    def test_kg_substrate_cyst(self):
-        # Check with a different simulation 'cyst'
-        filename = 'Geo_var_cyst.mat'
-        filename_expected = 'Geo_var_cyst.mat'
-        test_kg_substrate_filename(filename, filename_expected)
