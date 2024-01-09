@@ -2,7 +2,67 @@ import time
 
 import numpy as np
 
-from src.pyVertexModel.Kg.kg import Kg
+from src.pyVertexModel.Kg.kg import Kg, add_noise_to_parameter
+
+
+def getIntensityBasedContractility(Set, currentFace):
+    timeAfterAblation = float(Set.currentT) - float(Set.TInitAblation)
+    contractilityValue = 0
+
+    if timeAfterAblation >= 0:
+        distanceToTimeVariables = np.abs(Set.Contractility_TimeVariability - timeAfterAblation) / \
+                                  Set.Contractility_TimeVariability[1]
+        indicesOfClosestTimePoints = np.argsort(distanceToTimeVariables)
+        closestTimePointsDistance = 1 - distanceToTimeVariables[indicesOfClosestTimePoints]
+
+        if currentFace.InterfaceType == 'Top':
+            contractilityValue = Set.Contractility_Variability_PurseString[indicesOfClosestTimePoints[0]] * \
+                                 closestTimePointsDistance[0] + Set.Contractility_Variability_PurseString[
+                                     indicesOfClosestTimePoints[1]] * closestTimePointsDistance[1]
+        elif currentFace.InterfaceType == 'CellCell':
+            contractilityValue = Set.Contractility_Variability_LateralCables[indicesOfClosestTimePoints[0]] * \
+                                 closestTimePointsDistance[0] + Set.Contractility_Variability_LateralCables[
+                                     indicesOfClosestTimePoints[1]] * closestTimePointsDistance[1]
+
+    return contractilityValue
+
+
+def getDelayedContractility(currentT, purseStringStrength, currentTri, CUTOFF):
+    delayMinutes = 6
+    distanceToTimeVariables = (currentT - delayMinutes) - currentTri.EdgeLength_time[:, 0]
+    contractilityValue = 0
+
+    if any(distanceToTimeVariables >= 0):
+        indicesOfClosestTimePoints = np.argsort(np.abs(distanceToTimeVariables))
+        closestTimePointsDistance = 1 - np.abs(distanceToTimeVariables[indicesOfClosestTimePoints])
+        if any(closestTimePointsDistance == 1):
+            CORRESPONDING_EDGELENGTH_6MINUTES_AGO = currentTri.EdgeLength_time[indicesOfClosestTimePoints[0], 1]
+        else:
+            closestTimePointsDistance = closestTimePointsDistance / np.sum(closestTimePointsDistance[0:2])
+            CORRESPONDING_EDGELENGTH_6MINUTES_AGO = currentTri.EdgeLength_time[
+                                                        indicesOfClosestTimePoints[0], 1] * \
+                                                    closestTimePointsDistance[0] + currentTri.EdgeLength_time[
+                                                        indicesOfClosestTimePoints[1], 1] * \
+                                                    closestTimePointsDistance[1]
+
+        if CORRESPONDING_EDGELENGTH_6MINUTES_AGO <= 0:
+            CORRESPONDING_EDGELENGTH_6MINUTES_AGO = 0
+
+        contractilityValue = ((CORRESPONDING_EDGELENGTH_6MINUTES_AGO / currentTri.EdgeLength_time[
+            0, 1]) ** 4.5) * purseStringStrength
+
+    if contractilityValue < 1:
+        contractilityValue = 1
+
+    if contractilityValue > CUTOFF or np.isinf(contractilityValue):
+        contractilityValue = CUTOFF
+
+    return contractilityValue
+
+
+def computeEnergyContractility(l_i0, l_i, C):
+    energyContractility = (C / l_i0) * l_i
+    return energyContractility
 
 
 class KgContractility(Kg):
@@ -11,7 +71,7 @@ class KgContractility(Kg):
         start = time.time()
         oldSize = self.K.shape[0]
         # TODO:
-        #self.K = self.K[range(Geo.numY * 3), range(Geo.numY * 3)]
+        # self.K = self.K[range(Geo.numY * 3), range(Geo.numY * 3)]
 
         Energy = {}
         for cell in [cell for cell in Geo.Cells if cell.AliveStatus == 1]:
@@ -20,7 +80,8 @@ class KgContractility(Kg):
             Energy_c = 0
             for currentFace in cell.Faces:
                 l_i0 = Geo.EdgeLengthAvg_0[next(key for key, value in currentFace.InterfaceType_allValues.items()
-                                                if value == currentFace.InterfaceType or key == currentFace.InterfaceType)]
+                                                if
+                                                value == currentFace.InterfaceType or key == currentFace.InterfaceType)]
                 for currentTri in currentFace.Tris:
                     if len(currentTri.SharedByCells) > 1:
                         C, Geo = self.getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set)
@@ -32,12 +93,12 @@ class KgContractility(Kg):
                         ge = self.assemble_g(ge[:], g_current[:], cell.globalIds[currentTri.Edge])
 
                         # TODO
-                        #currentFace.Tris.ContractileG = np.linalg.norm(g_current[:3])
+                        # currentFace.Tris.ContractileG = np.linalg.norm(g_current[:3])
                         if calculate_K:
                             K_current = self.computeKContractility(l_i0, y_1, y_2, C)
                             self.assemble_k(K_current[:, :], cell.globalIds[currentTri.Edge])
 
-                        Energy_c += self.computeEnergyContractility(l_i0, np.linalg.norm(y_1 - y_2), C)
+                        Energy_c += computeEnergyContractility(l_i0, np.linalg.norm(y_1 - y_2), C)
             self.g += ge
             Energy[c] = Energy_c
 
@@ -71,23 +132,20 @@ class KgContractility(Kg):
 
         return gContractility
 
-    def computeEnergyContractility(self, l_i0, l_i, C):
-        energyContractility = (C / l_i0) * l_i
-        return energyContractility
-
-    CUTOFF = 3
-
     def getContractilityBasedOnLocation(self, currentFace, currentTri, Geo, Set):
         contractilityValue = None
         CUTOFF = 3
 
         if currentTri.ContractilityValue is None:
-            if Set.DelayedAdditionalContractility == 1:
-                contractilityValue = self.getDelayedContractility(Set.currentT, Set.purseStringStrength,
-                                                                  currentTri,
-                                                                  CUTOFF * Set.purseStringStrength)
+            if Set.ablation:
+                if Set.DelayedAdditionalContractility == 1:
+                    contractilityValue = getDelayedContractility(Set.currentT, Set.purseStringStrength,
+                                                                 currentTri,
+                                                                 CUTOFF * Set.purseStringStrength)
+                else:
+                    contractilityValue = getIntensityBasedContractility(Set, currentFace)
             else:
-                contractilityValue = self.getIntensityBasedContractility(Set, currentFace)
+                contractilityValue = 1
 
             if currentFace.InterfaceType == 'Top' or currentFace.InterfaceType == 0:
                 if any([Geo.Cells[cell].AliveStatus == 0 for cell in currentTri.SharedByCells]):
@@ -104,7 +162,7 @@ class KgContractility(Kg):
             else:
                 contractilityValue = Set.cLineTension
 
-            contractilityValue = self.add_noise_to_parameter(contractilityValue, Set.noiseContractility, currentTri)
+            contractilityValue = add_noise_to_parameter(contractilityValue, Set.noiseContractility, currentTri)
 
             for cellToCheck in currentTri.SharedByCells:
                 facesToCheck = Geo.Cells[cellToCheck].Faces
@@ -118,56 +176,3 @@ class KgContractility(Kg):
             contractilityValue = currentTri.ContractilityValue
 
         return contractilityValue, Geo
-
-    def getDelayedContractility(self, currentT, purseStringStrength, currentTri, CUTOFF):
-        delayMinutes = 6
-        distanceToTimeVariables = (currentT - delayMinutes) - currentTri.EdgeLength_time[:, 0]
-        contractilityValue = 0
-
-        if any(distanceToTimeVariables >= 0):
-            indicesOfClosestTimePoints = np.argsort(np.abs(distanceToTimeVariables))
-            closestTimePointsDistance = 1 - np.abs(distanceToTimeVariables[indicesOfClosestTimePoints])
-            if any(closestTimePointsDistance == 1):
-                CORRESPONDING_EDGELENGTH_6MINUTES_AGO = currentTri.EdgeLength_time[indicesOfClosestTimePoints[0], 1]
-            else:
-                closestTimePointsDistance = closestTimePointsDistance / np.sum(closestTimePointsDistance[0:2])
-                CORRESPONDING_EDGELENGTH_6MINUTES_AGO = currentTri.EdgeLength_time[
-                                                            indicesOfClosestTimePoints[0], 1] * \
-                                                        closestTimePointsDistance[0] + currentTri.EdgeLength_time[
-                                                            indicesOfClosestTimePoints[1], 1] * \
-                                                        closestTimePointsDistance[1]
-
-            if CORRESPONDING_EDGELENGTH_6MINUTES_AGO <= 0:
-                CORRESPONDING_EDGELENGTH_6MINUTES_AGO = 0
-
-            contractilityValue = ((CORRESPONDING_EDGELENGTH_6MINUTES_AGO / currentTri.EdgeLength_time[
-                0, 1]) ** 4.5) * purseStringStrength
-
-        if contractilityValue < 1:
-            contractilityValue = 1
-
-        if contractilityValue > CUTOFF or np.isinf(contractilityValue):
-            contractilityValue = CUTOFF
-
-        return contractilityValue
-
-    def getIntensityBasedContractility(self, Set, currentFace):
-        timeAfterAblation = float(Set.currentT) - float(Set.TInitAblation)
-        contractilityValue = 0
-
-        if timeAfterAblation >= 0:
-            distanceToTimeVariables = np.abs(Set.Contractility_TimeVariability - timeAfterAblation) / \
-                                      Set.Contractility_TimeVariability[1]
-            indicesOfClosestTimePoints = np.argsort(distanceToTimeVariables)
-            closestTimePointsDistance = 1 - distanceToTimeVariables[indicesOfClosestTimePoints]
-
-            if currentFace.InterfaceType == 'Top':
-                contractilityValue = Set.Contractility_Variability_PurseString[indicesOfClosestTimePoints[0]] * \
-                                     closestTimePointsDistance[0] + Set.Contractility_Variability_PurseString[
-                                         indicesOfClosestTimePoints[1]] * closestTimePointsDistance[1]
-            elif currentFace.InterfaceType == 'CellCell':
-                contractilityValue = Set.Contractility_Variability_LateralCables[indicesOfClosestTimePoints[0]] * \
-                                     closestTimePointsDistance[0] + Set.Contractility_Variability_LateralCables[
-                                         indicesOfClosestTimePoints[1]] * closestTimePointsDistance[1]
-
-        return contractilityValue

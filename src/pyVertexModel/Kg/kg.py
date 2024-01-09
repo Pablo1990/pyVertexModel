@@ -4,6 +4,25 @@ from abc import abstractmethod
 import numpy as np
 
 
+def add_noise_to_parameter(avgParameter, noise, currentTri=None):
+    # TODO: CHECK THIS FUNCTION
+    noise = 0
+    # THIS FUNCTION IS NOT GOOD
+    minValue = avgParameter - avgParameter * noise
+    maxValue = avgParameter + avgParameter * noise
+
+    if minValue < 0:
+        minValue = 2.2204e-16  # equivalent to MATLAB eps
+
+    finalValue = minValue + (maxValue - minValue) * random.random()
+
+    # if currentTri is not None:
+    #     if currentTri.pastContractilityValue:
+    #         finalValue = (finalValue + currentTri.pastContractilityValue) / 2
+
+    return finalValue
+
+
 class Kg:
 
     def __init__(self, Geo=None):
@@ -74,24 +93,6 @@ class Kg:
         KIJ = (np.dot(y2_crossed - y3_crossed, y1_crossed - y3_crossed) + self.cross(K_y2_y1) - self.cross(K_y2_y3) -
                self.cross(K_y3_y1))
         return KIJ
-
-    def add_noise_to_parameter(self, avgParameter, noise, currentTri=None):
-        # TODO: CHECK THIS FUNCTION
-        noise = 0
-        # THIS FUNCTION IS NOT GOOD
-        minValue = avgParameter - avgParameter * noise
-        maxValue = avgParameter + avgParameter * noise
-
-        if minValue < 0:
-            minValue = 2.2204e-16  # equivalent to MATLAB eps
-
-        finalValue = minValue + (maxValue - minValue) * random.random()
-
-        # if currentTri is not None:
-        #     if currentTri.pastContractilityValue:
-        #         finalValue = (finalValue + currentTri.pastContractilityValue) / 2
-
-        return finalValue
 
     def gKSArea(self, y1, y2, y3):
         y1_crossed = self.cross(y1)

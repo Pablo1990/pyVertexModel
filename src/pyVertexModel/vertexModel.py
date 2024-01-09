@@ -175,12 +175,16 @@ class VertexModel:
         self.didNotConverge = False
         self.geo = Geo()
 
+        # Set definition
         if mat_file_set is not None:
             self.set = Set(mat_file_set)
         else:
             self.set = Set()
             self.set.cyst()
 
+        self.set.update_derived_parameters()
+
+        # Degrees of freedom definition
         self.Dofs = degreesOfFreedom.DegreesOfFreedom(None)
         # self.Set = WoundDefault(self.Set)
         self.InitiateOutputFolder()

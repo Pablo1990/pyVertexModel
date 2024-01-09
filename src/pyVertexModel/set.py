@@ -6,6 +6,7 @@ import numpy as np
 
 class Set:
     def __init__(self, mat_file=None):
+        self.ablation = False
         self.lumen_V0 = None
         self.cell_V0 = None
         self.cell_A0 = None
@@ -16,20 +17,20 @@ class Set:
         self.ellipsoid_axis2 = None
         self.ellipsoid_axis3 = None
         if mat_file is None:
-            ## =============================  Topology ============================
+            # =============================  Topology ============================
             self.SeedingMethod = 1
             self.s = 1.5
             self.ObtainX = 0
-            ## Type of inputto obtain  the initial topology of the cells
+            # Type of input to obtain  the initial topology of the cells
             self.InputGeo = 'Bubbles'
             self.CellHeight = 15
             self.TotalCells = 40
-            ## ===========================  Add Substrate =========================
+            # ===========================  Add Substrate =========================
             self.Substrate = True
             self.kSubstrate = 0
-            ## ============================ Time ==================================
+            # ============================ Time ==================================
             self.tend = 61
-            ## ============================ Mechanics =============================
+            # ============================ Mechanics =============================
             # Volumes
             self.lambdaV = 5.0
             self.lambdaV_Debris = 0.001
@@ -142,31 +143,27 @@ class Set:
 
         current_datetime = datetime.now()
         new_outputFolder = ''.join(['Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")), self.InputGeo,
-                                     '_Cells_', str(self.TotalCells), '_visc_', str(self.nu), '_lVol_',
-                                     str(self.lambdaV), '_muBulk_', str(self.mu_bulk), '_lBulk_',
-                                     str(self.lambda_bulk), '_kSubs_',
-                                     str(self.kSubstrate), '_lt_', str(self.cLineTension), '_noise_',
-                                     str(self.noiseContractility), '_pString_', str(self.purseStringStrength),
-                                     '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
-                                     '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
-                                     '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3)])
+                                    '_Cells_', str(self.TotalCells), '_visc_', str(self.nu), '_lVol_',
+                                    str(self.lambdaV), '_muBulk_', str(self.mu_bulk), '_lBulk_',
+                                    str(self.lambda_bulk), '_kSubs_',
+                                    str(self.kSubstrate), '_lt_', str(self.cLineTension), '_noise_',
+                                    str(self.noiseContractility),
+                                    '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
+                                    '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
+                                    '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3)])
         self.define_if_not_defined("OutputFolder", new_outputFolder)
-
 
     def stretch(self):
         self.tend = 300
         self.Nincr = 300
         self.BC = 1
         self.dx = 2
-
         self.lambdaS1 = 1
         self.lambdaS2 = 0.8
         self.VPrescribed = 1.5
         self.VFixd = -1.5
         self.ApplyBC = True
-
         self.lambdaS3 = 0.1
-
         self.InputGeo = 'Bubbles'
         self.VTK = False
 
@@ -184,9 +181,7 @@ class Set:
         self.TotalCells = 30
         self.s = 1.5 * 10
         self.f = 0.5 * 10
-
-        # self.ablation = False
-
+        self.ablation = False
         self.InPlaneElasticity = False
         self.nu = 1
         self.nu_LP_Initial = self.nu
@@ -248,12 +243,12 @@ class Set:
         self.VTK = True
 
     def woundDefault(self):
-        ## ============================== Ablation ============================
-        self.Ablation = False
+        # ============================== Ablation ============================
+        self.ablation = False
         self.TInitAblation = 1
         self.TEndAblation = self.tend
         self.lambdaSFactor_Debris = np.finfo(float).eps
-        ## =========================== Contractility ==========================
+        # =========================== Contractility ==========================
         self.Contractility = True
         self.DelayedAdditionalContractility = 0
         self.purseStringStrength = 10
