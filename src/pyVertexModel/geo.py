@@ -134,8 +134,8 @@ class Geo:
             self.nx = 3
             self.nCells = 0
         else:  # coming from mat_file
-            if 'NumF' in mat_file.dtype.names:
-                self.numF = mat_file['NumF'][0][0][0][0]
+            if 'numF' in mat_file.dtype.names:
+                self.numF = mat_file['numF'][0][0][0][0]
             if 'numY' in mat_file.dtype.names:
                 self.numY = mat_file['numY'][0][0][0][0]
             if 'EdgeLengthAvg_0' in mat_file.dtype.names:
