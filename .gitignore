@@ -172,3 +172,5 @@ src/pyVertexModel/Kg/kg_functions.c
 *.lcov
 
 Result/*
+
+.idea/runConfigurations/
