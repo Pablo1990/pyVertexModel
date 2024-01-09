@@ -17,7 +17,10 @@ def load_data(file_name, return_geo=True):
 
     if return_geo:
         geo_test = Geo(mat_info['Geo'])
-        set_test = Set(mat_info['Set'])
+        if 'Set' in mat_info.keys():
+            set_test = Set(mat_info['Set'])
+        else:
+            set_test = None
     else:
         geo_test = None
         set_test = None
@@ -26,11 +29,11 @@ def load_data(file_name, return_geo=True):
 
 
 def assert_matrix(k_expected, k, delta=4):
-    np.testing.assert_allclose(k_expected, k, rtol=1e-5, atol=0)
+    np.testing.assert_allclose(k_expected, k, rtol=0, atol=1e-9)
 
 
 def assert_array1D(g_expected, g, delta=4):
-    np.testing.assert_allclose(g_expected, g, rtol=1e-5, atol=0)
+    np.testing.assert_allclose(g_expected, g, rtol=0, atol=1e-9)
 
 
 class Tests(unittest.TestCase):

@@ -150,9 +150,12 @@ class Geo:
             self.nx = 3
             self.nCells = 0
         else:  # coming from mat_file
-            self.numF = mat_file['numF'][0][0][0][0]
-            self.numY = mat_file['numY'][0][0][0][0]
-            self.EdgeLengthAvg_0 = mat_file['EdgeLengthAvg_0'][0][0][0][1:4]
+            if 'NumF' in mat_file.dtype.names:
+                self.numF = mat_file['NumF'][0][0][0][0]
+            if 'numY' in mat_file.dtype.names:
+                self.numY = mat_file['numY'][0][0][0][0]
+            if 'EdgeLengthAvg_0' in mat_file.dtype.names:
+                self.EdgeLengthAvg_0 = mat_file['EdgeLengthAvg_0'][0][0][0][1:4]
             self.XgBottom = mat_file['XgBottom'][0][0][0] - 1
             self.XgTop = mat_file['XgTop'][0][0][0] - 1
             self.XgID = mat_file['XgID'][0][0][0] - 1
@@ -160,8 +163,10 @@ class Geo:
             self.ny = 3
             self.nx = 3
             self.nCells = mat_file['nCells'][0][0][0][0]
-            for c_cell in mat_file['Cells'][0][0][0]:
-                self.Cells.append(cell.Cell(c_cell))
+
+            if 'Cells' in mat_file.dtype.names:
+                for c_cell in mat_file['Cells'][0][0][0]:
+                    self.Cells.append(cell.Cell(c_cell))
 
     def copy(self):
         """
@@ -259,18 +264,18 @@ class Geo:
 
             self.EdgeLengthAvg_0.append(np.mean(edge_lengths))
 
-        # Differential adhesion values
-        for l1, val in c_set.lambdaS1CellFactor:
-            ci = l1
-            self.Cells[ci].ExternalLambda = val
-
-        for l2, val in c_set.lambdaS2CellFactor:
-            ci = l2
-            self.Cells[ci].InternalLambda = val
-
-        for l3, val in c_set.lambdaS3CellFactor:
-            ci = l3
-            self.Cells[ci].SubstrateLambda = val
+        # # Differential adhesion values
+        # for l1, val in c_set.lambdaS1CellFactor:
+        #     ci = l1
+        #     self.Cells[ci].ExternalLambda = val
+        #
+        # for l2, val in c_set.lambdaS2CellFactor:
+        #     ci = l2
+        #     self.Cells[ci].InternalLambda = val
+        #
+        # for l3, val in c_set.lambdaS3CellFactor:
+        #     ci = l3
+        #     self.Cells[ci].SubstrateLambda = val
 
         # Unique Ids for each point (vertex, node or face center) used in K
         self.build_global_ids()
