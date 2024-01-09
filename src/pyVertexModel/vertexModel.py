@@ -179,10 +179,10 @@ class VertexModel:
         if mat_file_set is not None:
             self.set = Set(mat_file_set)
         else:
+            # TODO Create a menu to select the set
             self.set = Set()
             self.set.cyst()
-
-        self.set.update_derived_parameters()
+            self.set.update_derived_parameters()
 
         # Degrees of freedom definition
         self.Dofs = degreesOfFreedom.DegreesOfFreedom(None)
@@ -682,7 +682,7 @@ class VertexModel:
             # energies_per_time_step.append(energies)
 
             # Build X From Y
-            self.geo.BuildXFromY(self.Geo_n)
+            self.geo.build_x_from_y(self.Geo_n)
 
             # Update last time converged
             self.set.last_t_converged = self.t

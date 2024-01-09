@@ -324,7 +324,7 @@ class Geo:
             self.Cells[c].compute_area()
             self.Cells[c].compute_volume()
 
-    def BuildXFromY(self, geo_n):
+    def build_x_from_y(self, geo_n):
         """
         Build the X from the Y of the previous step
         :param geo_n:   The previous geometry

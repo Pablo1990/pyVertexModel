@@ -1,8 +1,9 @@
 import numpy as np
 from scipy.spatial import Delaunay
 
-from Tests.tests import Tests, assert_array1D, assert_matrix
-from src.pyVertexModel.vertexModel import VertexModel
+from Tests.test_geo import check_if_cells_are_the_same
+from Tests.tests import Tests, assert_array1D, assert_matrix, load_data
+from src.pyVertexModel.vertexModel import VertexModel, generate_first_ghost_nodes, build_topo
 
 
 class TestVertexModel(Tests):
@@ -198,3 +199,19 @@ class TestVertexModel(Tests):
         # Test
         assert_array1D(XgID_expected, XgID_test)
         assert_matrix(X_expected, X_test)
+
+    def test_initialize_geometry_cyst(self):
+        """
+        Test the initialize geometry function with the cyst input.
+        :return:
+        """
+
+        # Load data
+        geo_expected, set_test, mat_info = load_data('initialize_cells_cyst_expected.mat')
+
+        # Test if initialize geometry function does not change anything
+        vModel_test = VertexModel(mat_info)
+
+        # Check if the cells are initialized correctly
+        check_if_cells_are_the_same(geo_expected, vModel_test.geo)
+
