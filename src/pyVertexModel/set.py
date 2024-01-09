@@ -54,7 +54,7 @@ class Set:
             self.BendingAreaDependent = True
             # Propulsion
             self.Propulsion = False
-            # Confinment
+            # Confinement
             self.Confinement = False
             # Contractility
             self.Contractility = True
@@ -67,31 +67,34 @@ class Set:
             # Substrate
             self.Substrate = 2
             self.kSubstrate = 500.0
-            ## ============================ Viscosity =============================
+            # Brownian motion
+            self.brownian_motion = False
+            self.brownian_motion_scale = 0
+            # ============================ Viscosity =============================
             self.nu = 1000.0
             self.LocalViscosityEdgeBased = False
             self.nu_Local_EdgeBased = 0
             self.LocalViscosityOption = 2
-            ## =========================== Remodelling ============================
+            # =========================== Remodelling ============================
             self.Remodelling = False
             self.RemodelTol = 0
             self.contributionOldYs = 0
             self.RemodelStiffness = 0.6
             self.Reset_PercentageGeo0 = 0.15
-            ## ============================ Solution ==============================
+            # ============================ Solution ==============================
             self.tol = 1e-08
             self.MaxIter = 30
             self.Parallel = False
             self.Sparse = False
             self.lastTConverged = 0
-            ## ================= Boundary Condition and loading selfting ===========
+            # ================= Boundary Condition and loading selfting ===========
             self.BC = None
             self.VFixd = -math.inf
             self.VPrescribed = math.inf
             self.dx = 2
             self.TStartBC = 20
             self.TStopBC = 200
-            ## =========================== PostProcessing =========================
+            # =========================== PostProcessing =========================
             self.diary = False
             self.OutputRemove = True
             self.VTK = True
@@ -100,46 +103,55 @@ class Set:
             self.SaveWorkspace = False
             self.SaveSetting = False
             self.log = 'log.txt'
-            ## ========================= Derived variables ========================
-            self.Nincr = self.tend * 2
-            ## ========================= Derived variables ========================
-            self.RemodelingFrequency = (self.tend / self.Nincr)
-            self.lambdaS2 = self.lambdaS1 * 0.1
-            self.lambdaS3 = self.lambdaS1 / 10
-            self.lambdaS4 = self.lambdaS1 / 10
-            self.SubstrateZ = - self.CellHeight / 2
-            self.f = self.s / 2
-            self.nu_LP_Initial = self.nu
-
-            self.BarrierTri0 = 0.001 * self.s
-
-            self.nu0 = self.nu
-            self.dt0 = self.tend / self.Nincr
-            self.dt = self.dt0
-            self.MaxIter0 = self.MaxIter
-            self.contributionOldFaceCentre = self.contributionOldYs
-            self.brownian_motion = False
-            self.brownian_motion_scale = 0.01
-
-            ## Wound variables
-            self.woundDefault()
-
-            current_datetime = datetime.now()
-            self.OutputFolder = ''.join(['Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")), self.InputGeo,
-                                         '_Cells_', str(self.TotalCells), '_visc_', str(self.nu), '_lVol_',
-                                         str(self.lambdaV), '_muBulk_', str(self.mu_bulk), '_lBulk_',
-                                         str(self.lambda_bulk), '_kSubs_',
-                                         str(self.kSubstrate), '_lt_', str(self.cLineTension), '_noise_',
-                                         str(self.noiseContractility), '_pString_', str(self.purseStringStrength),
-                                         '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
-                                         '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
-                                         '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3)])
         else:
             for param in mat_file.dtype.fields:
                 if len(mat_file[param][0][0]) == 0:
                     setattr(self, param, None)
                 else:
                     setattr(self, param, mat_file[param][0][0][0][0])
+
+    def define_if_not_defined(self, param, value):
+        """
+        Define a parameter if it is not defined
+        :param param:
+        :param value:
+        :return:
+        """
+        if not hasattr(self, param):
+            setattr(self, param, value)
+
+    def update_derived_parameters(self):
+        """
+        Update derived parameters
+        :return:
+        """
+        self.define_if_not_defined("Nincr", self.tend * 2)
+        self.define_if_not_defined("dt", self.tend / self.Nincr)
+        self.define_if_not_defined("RemodelingFrequency", self.tend / self.Nincr)
+        self.define_if_not_defined("lambdaS2", self.lambdaS1 * 0.1)
+        self.define_if_not_defined("lambdaS3", self.lambdaS1 / 10)
+        self.define_if_not_defined("lambdaS4", self.lambdaS1 / 10)
+        self.define_if_not_defined("SubstrateZ", - self.CellHeight / 2)
+        self.define_if_not_defined("f", self.s / 2)
+        self.define_if_not_defined("nu_LP_Initial", self.nu)
+        self.define_if_not_defined("BarrierTri0", 0.001 * self.s)
+        self.define_if_not_defined("nu0", self.nu)
+        self.define_if_not_defined("dt0", self.tend / self.Nincr)
+        self.define_if_not_defined("MaxIter0", self.MaxIter)
+        self.define_if_not_defined("contributionOldFaceCentre", self.contributionOldYs)
+
+        current_datetime = datetime.now()
+        new_outputFolder = ''.join(['Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")), self.InputGeo,
+                                     '_Cells_', str(self.TotalCells), '_visc_', str(self.nu), '_lVol_',
+                                     str(self.lambdaV), '_muBulk_', str(self.mu_bulk), '_lBulk_',
+                                     str(self.lambda_bulk), '_kSubs_',
+                                     str(self.kSubstrate), '_lt_', str(self.cLineTension), '_noise_',
+                                     str(self.noiseContractility), '_pString_', str(self.purseStringStrength),
+                                     '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
+                                     '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
+                                     '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3)])
+        self.define_if_not_defined("OutputFolder", new_outputFolder)
+
 
     def stretch(self):
         self.tend = 300
@@ -173,10 +185,12 @@ class Set:
         self.s = 1.5 * 10
         self.f = 0.5 * 10
 
-        #self.ablation = False
+        # self.ablation = False
 
         self.InPlaneElasticity = False
         self.nu = 1
+        self.nu_LP_Initial = self.nu
+        self.nu0 = self.nu
         self.Nincr = 61 * 2
 
         self.lambdaB = 1
