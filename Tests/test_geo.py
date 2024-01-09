@@ -4,20 +4,32 @@ from Tests.tests import Tests, load_data, assert_matrix, assert_array1D
 
 
 def check_if_cells_are_the_same(geo_expected, geo_test):
-    for i in range(geo_test.nCells):
-        np.testing.assert_almost_equal(geo_test.Cells[i].Vol, geo_expected.Cells[i].Vol)
-        np.testing.assert_almost_equal(geo_test.Cells[i].Area, geo_expected.Cells[i].Area)
+    # Put together all the volumes and areas
+    vol_test = [geo_test.Cells[i].Vol for i in range(geo_test.nCells)]
+    vol_expected = [geo_expected.Cells[i].Vol for i in range(geo_expected.nCells)]
+    area_test = [geo_test.Cells[i].Area for i in range(geo_test.nCells)]
+    area_expected = [geo_expected.Cells[i].Area for i in range(geo_expected.nCells)]
+
+    # Check if the volumes and areas are the same
+    assert_matrix(vol_test, vol_expected)
+    assert_matrix(area_test, area_expected)
+
     # Check if numY and numF are the same
     np.testing.assert_almost_equal(geo_test.numY, geo_expected.numY)
+
+    # Put together all the vertices
+    Y_test = [geo_test.Cells[i].Y for i in range(geo_test.nCells)]
+    Y_expected = [geo_expected.Cells[i].Y for i in range(geo_expected.nCells)]
+
     # Check if the Ys are the same
-    for i in range(geo_test.nCells):
-        assert_matrix(geo_test.Cells[i].Y, geo_expected.Cells[i].Y)
+    assert_matrix(Y_test, Y_expected)
     # Check if the faces have the same global ids and the same centres
     for i in range(geo_test.nCells):
         for j in range(len(geo_test.Cells[i].Faces)):
             assert_array1D(geo_test.Cells[i].Faces[j].Centre, geo_expected.Cells[i].Faces[j].Centre)
             np.testing.assert_almost_equal(geo_test.Cells[i].Faces[j].globalIds,
                                            geo_expected.Cells[i].Faces[j].globalIds)
+
     np.testing.assert_almost_equal(geo_test.numF, geo_expected.numF)
 
 
