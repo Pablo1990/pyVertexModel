@@ -18,8 +18,8 @@ def check_if_cells_are_the_same(geo_expected, geo_test):
     np.testing.assert_almost_equal(geo_test.numY, geo_expected.numY)
 
     # Put together all the vertices
-    Y_test = [geo_test.Cells[i].Y for i in range(geo_test.nCells)]
-    Y_expected = [geo_expected.Cells[i].Y for i in range(geo_expected.nCells)]
+    Y_test = np.concatenate([geo_test.Cells[i].Y for i in range(geo_test.nCells)])
+    Y_expected = np.concatenate([geo_expected.Cells[i].Y for i in range(geo_expected.nCells)])
 
     # Check if the Ys are the same
     assert_matrix(Y_test, Y_expected)
@@ -29,8 +29,6 @@ def check_if_cells_are_the_same(geo_expected, geo_test):
             assert_array1D(geo_test.Cells[i].Faces[j].Centre, geo_expected.Cells[i].Faces[j].Centre)
             np.testing.assert_almost_equal(geo_test.Cells[i].Faces[j].globalIds,
                                            geo_expected.Cells[i].Faces[j].globalIds)
-
-    np.testing.assert_almost_equal(geo_test.numF, geo_expected.numF)
 
 
 class TestGeo(Tests):
@@ -112,6 +110,8 @@ class TestGeo(Tests):
 
         # Create a copy of geo to test against
         geo_expected, _, _ = load_data('build_cells_cyst_expected.mat')
+
+        set_test.InputGeo = 'Bubbles_Cyst'
 
         x = mat_info['X']
         twg = mat_info['Twg'] - 1

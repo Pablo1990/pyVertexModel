@@ -7,6 +7,7 @@ import open3d as o3d
 from src.pyVertexModel import cell, face
 
 
+
 def edgeValence(Geo, nodesEdge):
     """
 
@@ -105,23 +106,6 @@ def get_node_neighbours_per_domain(geo, node, node_of_domain, main_node=None):
     return node_neighbours
 
 
-def compute_y(Geo, T, cellCentre, Set):
-    x = [Geo.Cells[i].X for i in T]
-    newY = np.mean(x, axis=0)
-    if sum([Geo.Cells[i].AliveStatus is not None for i in T]) == 1 and "Bubbles" in Set.InputGeo:
-        vc = newY - cellCentre
-        dir = vc / np.linalg.norm(vc)
-        offset = Set.f * dir
-        newY = cellCentre + offset
-
-    if "Bubbles" not in Set.InputGeo:
-        if any(i in Geo.XgTop for i in T):
-            newY[2] /= sum(i in Geo.XgTop for i in T) / 2
-        elif any(i in Geo.XgBottom for i in T):
-            newY[2] /= sum(i in Geo.XgBottom for i in T) / 2
-    return newY
-
-
 class Geo:
     """
     Class that contains the information of the geometry.
@@ -218,7 +202,7 @@ class Geo:
             self.Cells.append(newCell)
 
         for c in range(self.nCells):
-            self.Cells[c].Y = self.build_y_from_x(self.Cells[c], self, c_set)
+            self.Cells[c].Y = self.Cells[c].build_y_from_x(self, c_set)
 
         if c_set.Substrate == 1:
             XgSub = X.shape[0]  # THE SUBSTRATE NODE
@@ -461,14 +445,6 @@ class Geo:
 
         # for c in range(self.nCells):
         #    self.Cells[c].cglobalIds = c + self.numY + self.numF
-
-    def build_y_from_x(self, Cell, Geo, Set):
-        Tets = Cell.T
-        dim = Cell.X.shape[0]
-        Y = np.zeros((len(Tets), dim))
-        for i in range(len(Tets)):
-            Y[i] = compute_y(Geo, Tets[i], Cell.X, Set)
-        return Y
 
     def rebuild(self, oldGeo, Set):
         aliveCells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1]
@@ -746,7 +722,7 @@ class Geo:
             writer.SetInputData(vtk_cells[-1])
             writer.Write()
 
-            #TODO: Write to a ply file with additional information like cell features
+            # TODO: Write to a ply file with additional information like cell features
             # ply_writer = vtk.vtkPLYWriter()
             # ply_writer.SetFileName(name_out.replace(file_extension, '.ply'))
             # ply_writer.SetInputData(vtk_cells[-1])

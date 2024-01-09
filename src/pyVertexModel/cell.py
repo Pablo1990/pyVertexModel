@@ -7,25 +7,6 @@ from src.pyVertexModel import face
 from sklearn.decomposition import PCA
 
 
-def compute_Y(Geo, T, cellCentre, Set):
-    x = np.vstack([Geo.Cells[t].X for t in T])
-    newY = np.mean(x, axis=0)
-
-    if len(set([Geo.Cells[t].AliveStatus for t in T])) == 1 and 'Bubbles' in Set.InputGeo:
-        vc = newY - cellCentre
-        dir = vc / np.linalg.norm(vc)
-        offset = Set.f * dir
-        newY = cellCentre + offset
-
-    if 'Bubbles' not in Set.InputGeo:
-        if np.sum(np.isin(T, Geo.XgTop)) > 0:
-            newY[2] = newY[2] / (np.sum(np.isin(T, Geo.XgTop)) / 2)
-        elif np.sum(np.isin(T, Geo.XgBottom)) > 0:
-            newY[2] = newY[2] / (np.sum(np.isin(T, Geo.XgBottom)) / 2)
-
-    return newY
-
-
 def compute_2D_circularity(area, perimeter):
     """
     Compute the 2D circularity of the cell
@@ -35,6 +16,23 @@ def compute_2D_circularity(area, perimeter):
         return 0
     else:
         return 4 * np.pi * area / perimeter ** 2
+
+
+def compute_y(geo, T, cellCentre, Set):
+    x = [geo.Cells[i].X for i in T]
+    newY = np.mean(x, axis=0)
+    if sum([geo.Cells[i].AliveStatus is not None for i in T]) == 1 and "Bubbles" in Set.InputGeo:
+        vc = newY - cellCentre
+        dir = vc / np.linalg.norm(vc)
+        offset = Set.f * dir
+        newY = cellCentre + offset
+
+    if "Bubbles" not in Set.InputGeo:
+        if any(i in geo.XgTop for i in T):
+            newY[2] /= sum(i in geo.XgTop for i in T) / 2
+        elif any(i in geo.XgBottom for i in T):
+            newY[2] /= sum(i in geo.XgBottom for i in T) / 2
+    return newY
 
 
 class Cell:
@@ -355,3 +353,11 @@ class Cell:
             return 0
         else:
             return self.compute_area(filter_location) / self.compute_perimeter(filter_location) ** 2
+
+    def build_y_from_x(self, geo, c_set):
+        Tets = self.T
+        dim = self.X.shape[0]
+        Y = np.zeros((len(Tets), dim))
+        for i in range(len(Tets)):
+            Y[i] = compute_y(geo, Tets[i], self.X, c_set)
+        return Y
