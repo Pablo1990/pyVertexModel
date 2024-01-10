@@ -174,3 +174,5 @@ src/pyVertexModel/Kg/kg_functions.c
 Result/*
 
 .idea/runConfigurations/
+
+src/pyVertexModel/Result/*
