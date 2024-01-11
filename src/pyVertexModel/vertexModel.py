@@ -85,7 +85,7 @@ def fitEllipsoidToPoints(points):
     paramsOptimized = result.x
     a, b, c = paramsOptimized / np.max(paramsOptimized)
 
-    return a, b, c, paramsOptimized
+    return abs(a), abs(b), abs(c), abs(paramsOptimized)
 
 
 def extrapolate_points_to_ellipsoid(points, ellipsoid_axis_normalised1, ellipsoid_axis_normalised2,
@@ -284,6 +284,73 @@ def delaunay_compute_entities(tris, X, XgID, XgIDBB, nCells, s):
     XgID = np.arange(nCells, X.shape[0])
 
     return X, XgID
+
+
+def extrapolate_ys_faces_ellipsoid(geo, c_set):
+    # Original axis values
+    Ys_top = np.concatenate([cell.Y for cell in geo.Cells[1:c_set.TotalCells]])
+
+    a, b, c, paramsOptimized_top = fitEllipsoidToPoints(Ys_top)
+    a, b, c, paramsOptimized_bottom = fitEllipsoidToPoints(geo.Cells[0].Y)
+    # Normalised based on those
+    ellipsoid_axis_normalised1 = c_set.ellipsoid_axis1 / paramsOptimized_top[0]
+    ellipsoid_axis_normalised2 = c_set.ellipsoid_axis2 / paramsOptimized_top[1]
+    ellipsoid_axis_normalised3 = c_set.ellipsoid_axis3 / paramsOptimized_top[2]
+    lumen_axis_normalised1 = c_set.lumen_axis1 / paramsOptimized_bottom[0]
+    lumen_axis_normalised2 = c_set.lumen_axis2 / paramsOptimized_bottom[1]
+    lumen_axis_normalised3 = c_set.lumen_axis3 / paramsOptimized_bottom[2]
+    # Extrapolate top layer as the outer ellipsoid, the bottom layer as the lumen, and lateral is rebuilt.
+    allTs = np.unique(np.sort(np.concatenate([cell.T for cell in geo.Cells[:c_set.TotalCells]]), axis=1), axis=0)
+    topTs = allTs[np.any(np.isin(allTs, geo.XgTop), axis=1)]
+    bottomsTs = allTs[np.any(np.isin(allTs, geo.XgBottom), axis=1)]
+    # Changes vertices of other cells
+    for tetToCheck in topTs:
+        for nodeInTet in tetToCheck:
+            if (nodeInTet not in geo.XgTop and geo.Cells[nodeInTet] is not None and
+                    geo.Cells[nodeInTet].Y is not None):
+                newPoint = geo.Cells[nodeInTet].Y[
+                    np.all(np.isin(geo.Cells[nodeInTet].T, tetToCheck), axis=1)]
+                newPoint_extrapolated = extrapolate_points_to_ellipsoid(newPoint, ellipsoid_axis_normalised1,
+                                                                        ellipsoid_axis_normalised2,
+                                                                        ellipsoid_axis_normalised3)
+                geo.Cells[nodeInTet].Y[
+                    np.all(np.isin(geo.Cells[nodeInTet].T, tetToCheck), axis=1)] = newPoint_extrapolated
+
+    for tetToCheck in bottomsTs:
+        for nodeInTet in tetToCheck:
+            if (nodeInTet not in geo.XgTop and geo.Cells[nodeInTet] is not None and
+                    geo.Cells[nodeInTet].Y is not None):
+                newPoint = geo.Cells[nodeInTet].Y[
+                    np.all(np.isin(geo.Cells[nodeInTet].T, tetToCheck), axis=1)]
+                newPoint_extrapolated = extrapolate_points_to_ellipsoid(newPoint, lumen_axis_normalised1,
+                                                                        lumen_axis_normalised2,
+                                                                        lumen_axis_normalised3)
+                geo.Cells[nodeInTet].Y[
+                    np.all(np.isin(geo.Cells[nodeInTet].T, tetToCheck), axis=1)] = newPoint_extrapolated
+
+    # Recalculating face centres here based on the previous changes
+    geo.rebuild(geo.copy(), c_set)
+    geo.build_global_ids()
+    geo.update_measures()
+    for cell in geo.Cells:
+        cell.Area0 = c_set.cell_A0
+        cell.Vol0 = c_set.cell_V0
+    geo.Cells[0].Area0 = c_set.lumen_V0 * (c_set.cell_A0 / c_set.cell_V0)
+    geo.Cells[0].Vol0 = c_set.lumen_V0
+    # Calculate the mean volume excluding the first cell
+    meanVolume = np.mean([cell.Vol for cell in geo.Cells[1:c_set.TotalCells]])
+    print(f'Average Cell Volume: {meanVolume}')
+    # Calculate the standard deviation of volumes excluding the first cell
+    stdVolume = np.std([cell.Vol for cell in geo.Cells[1:c_set.TotalCells]])
+    print(f'Standard Deviation of Cell Volumes: {stdVolume}')
+    # Display the volume of the first cell
+    firstCellVolume = geo.Cells[0].Vol
+    print(f'Volume of Lumen: {firstCellVolume}')
+    # Calculate the sum of volumes excluding the first cell
+    sumVolumes = np.sum([cell.Vol for cell in geo.Cells[1:c_set.TotalCells]])
+    print(f'Tissue Volume: {sumVolumes}')
+
+    return geo
 
 
 class VertexModel:
@@ -609,7 +676,7 @@ class VertexModel:
 
         if self.set.InputGeo == 'Bubbles_Cyst':
             # Extrapolate Face centres and Ys to the ellipsoid
-            self.extrapolate_ys_faces_ellipsoid()
+            self.geo = extrapolate_ys_faces_ellipsoid(self.geo, self.set)
 
         # Define upper and lower area threshold for remodelling
         allFaces = np.concatenate([cell.Faces for cell in self.geo.Cells])
@@ -681,72 +748,6 @@ class VertexModel:
             Xg = Xg[Xg[:, 2] > np.mean(self.X[:, 2]), :]
             self.geo.XgID = np.arange(self.X.shape[0], self.X.shape[0] + Xg.shape[0] + 2)
             self.X = np.concatenate((self.X, Xg, [np.mean(self.X[:, 0]), np.mean(self.X[:, 1]), -50]), axis=0)
-
-    def extrapolate_ys_faces_ellipsoid(self):
-        # Original axis values
-        Ys_top = np.concatenate([cell.Y for cell in self.geo.Cells[1:self.set.TotalCells]])
-
-        a, b, c, paramsOptimized_top = fitEllipsoidToPoints(Ys_top)
-        a, b, c, paramsOptimized_bottom = fitEllipsoidToPoints(self.geo.Cells[0].Y)
-        # Normalised based on those
-        ellipsoid_axis_normalised1 = self.set.ellipsoid_axis1 / paramsOptimized_top[0]
-        ellipsoid_axis_normalised2 = self.set.ellipsoid_axis2 / paramsOptimized_top[1]
-        ellipsoid_axis_normalised3 = self.set.ellipsoid_axis3 / paramsOptimized_top[2]
-        lumen_axis_normalised1 = self.set.lumen_axis1 / paramsOptimized_bottom[0]
-        lumen_axis_normalised2 = self.set.lumen_axis2 / paramsOptimized_bottom[1]
-        lumen_axis_normalised3 = self.set.lumen_axis3 / paramsOptimized_bottom[2]
-        # Extrapolate top layer as the outer ellipsoid, the bottom layer as
-        # the lumen, and lateral is rebuilt.
-        allTs = np.unique(np.sort(np.concatenate([cell.T for cell in self.geo.Cells[:self.set.TotalCells]]), axis=1),
-                          axis=0)
-        topTs = allTs[np.any(np.isin(allTs, self.geo.XgTop), axis=1)]
-        bottomsTs = allTs[np.any(np.isin(allTs, self.geo.XgBottom), axis=1)]
-        # Changes vertices of other cells
-        for tetToCheck in topTs:
-            for nodeInTet in tetToCheck:
-                if (nodeInTet not in self.geo.XgTop and self.geo.Cells[nodeInTet] is not None and
-                        self.geo.Cells[nodeInTet].Y is not None):
-                    newPoint = self.geo.Cells[nodeInTet].Y[
-                        np.all(np.isin(self.geo.Cells[nodeInTet].T, tetToCheck), axis=1)]
-                    newPoint_extrapolated = extrapolate_points_to_ellipsoid(newPoint, ellipsoid_axis_normalised1,
-                                                                            ellipsoid_axis_normalised2,
-                                                                            ellipsoid_axis_normalised3)
-                    self.geo.Cells[nodeInTet].Y[
-                        np.all(np.isin(self.geo.Cells[nodeInTet].T, tetToCheck), axis=1)] = newPoint_extrapolated
-
-        for tetToCheck in bottomsTs:
-            for nodeInTet in tetToCheck:
-                if (nodeInTet not in self.geo.XgTop and self.geo.Cells[nodeInTet] is not None and
-                        self.geo.Cells[nodeInTet].Y is not None):
-                    newPoint = self.geo.Cells[nodeInTet].Y[
-                        np.all(np.isin(self.geo.Cells[nodeInTet].T, tetToCheck), axis=1)]
-                    newPoint_extrapolated = extrapolate_points_to_ellipsoid(newPoint, lumen_axis_normalised1,
-                                                                            lumen_axis_normalised2,
-                                                                            lumen_axis_normalised3)
-                    self.geo.Cells[nodeInTet].Y[
-                        np.all(np.isin(self.geo.Cells[nodeInTet].T, tetToCheck), axis=1)] = newPoint_extrapolated
-
-        # Recalculating face centres here based on the previous changes
-        self.geo.rebuild(self.geo.copy(), self.set)
-        self.geo.build_global_ids()
-        self.geo.update_measures()
-        for cell in self.geo.Cells:
-            cell.Area0 = self.set.cell_A0
-            cell.Vol0 = self.set.cell_V0
-        self.geo.Cells[0].Area0 = self.set.lumen_V0 * (self.set.cell_A0 / self.set.cell_V0)
-        self.geo.Cells[0].Vol0 = self.set.lumen_V0
-        # Calculate the mean volume excluding the first cell
-        meanVolume = np.mean([cell.Vol for cell in self.geo.Cells[1:self.set.TotalCells]])
-        print(f'Average Cell Volume: {meanVolume}')
-        # Calculate the standard deviation of volumes excluding the first cell
-        stdVolume = np.std([cell.Vol for cell in self.geo.Cells[1:self.set.TotalCells]])
-        print(f'Standard Deviation of Cell Volumes: {stdVolume}')
-        # Display the volume of the first cell
-        firstCellVolume = self.geo.Cells[0].Vol
-        print(f'Volume of Lumen: {firstCellVolume}')
-        # Calculate the sum of volumes excluding the first cell
-        sumVolumes = np.sum([cell.Vol for cell in self.geo.Cells[1:self.set.TotalCells]])
-        print(f'Tissue Volume: {sumVolumes}')
 
     def IterateOverTime(self):
         # Create VTK files for initial state

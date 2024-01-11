@@ -1,18 +1,16 @@
 import numpy as np
 
 from Tests.tests import Tests, load_data, assert_matrix, assert_array1D
+from src.pyVertexModel.vertexModel import extrapolate_ys_faces_ellipsoid
 
 
 def check_if_cells_are_the_same(geo_expected, geo_test):
-    # Put together all the volumes and areas
-    vol_test = [geo_test.Cells[i].Vol for i in range(geo_test.nCells)]
-    vol_expected = [geo_expected.Cells[i].Vol for i in range(geo_expected.nCells)]
-    area_test = [geo_test.Cells[i].Area for i in range(geo_test.nCells)]
-    area_expected = [geo_expected.Cells[i].Area for i in range(geo_expected.nCells)]
-
-    # Check if the volumes and areas are the same
-    assert_matrix(vol_test, vol_expected)
-    assert_matrix(area_test, area_expected)
+    """
+    Check if the cells are the same
+    :param geo_expected:
+    :param geo_test:
+    :return:
+    """
 
     # Check if numY and numF are the same
     np.testing.assert_almost_equal(geo_test.numY, geo_expected.numY)
@@ -23,6 +21,17 @@ def check_if_cells_are_the_same(geo_expected, geo_test):
 
     # Check if the Ys are the same
     assert_matrix(Y_test, Y_expected)
+
+    # Put together all the volumes and areas
+    vol_test = [geo_test.Cells[i].Vol for i in range(geo_test.nCells)]
+    vol_expected = [geo_expected.Cells[i].Vol for i in range(geo_expected.nCells)]
+    area_test = [geo_test.Cells[i].Area for i in range(geo_test.nCells)]
+    area_expected = [geo_expected.Cells[i].Area for i in range(geo_expected.nCells)]
+
+    # Check if the volumes and areas are the same
+    assert_matrix(vol_test, vol_expected)
+    assert_matrix(area_test, area_expected)
+
     # Check if the faces have the same global ids and the same centres
     for i in range(geo_test.nCells):
         for j in range(len(geo_test.Cells[i].Faces)):
@@ -120,4 +129,15 @@ class TestGeo(Tests):
         geo_test.build_cells(set_test, x, twg)
 
         # Check if none of the measurements has changed
+        check_if_cells_are_the_same(geo_expected, geo_test)
+
+        set_test.TotalCells = 32
+
+        # Extrapolating ys
+        geo_test = extrapolate_ys_faces_ellipsoid(geo_expected, set_test)
+
+        # Load data
+        geo_expected, _, _ = load_data('geo_cyst_expected_extrapolatedYs.mat')
+
+        # Check if cells are extrapolated correctly
         check_if_cells_are_the_same(geo_expected, geo_test)
