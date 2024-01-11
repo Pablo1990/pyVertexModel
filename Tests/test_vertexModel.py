@@ -37,29 +37,29 @@ class TestVertexModel(Tests):
         X_test, XgID_test, XgIDBB, nCells = generate_first_ghost_nodes(X)
 
         X_expected = np.array([
-                [-1.0, -1.0, 0.0],
-                [-1.0, 0.0, 0.0],
-                [-1.0, 1.0, 0.0],
-                [0.0, -1.0, 0.0],
-                [0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0],
-                [1.0, -1.0, 0.0],
-                [1.0, 0.0, 0.0],
-                [1.0, 1.0, 0.0],
-                [-5.0, 6.12323399573677e-16, 3.06161699786838e-16],
-                [-3.53553390593274, 4.32978028117747e-16, -3.53553390593274],
-                [-3.53553390593274, 4.32978028117747e-16, 3.53553390593274],
-                [-9.18485099360515e-16, -5.0, 3.06161699786838e-16],
-                [-6.49467042176620e-16, -3.53553390593274, -3.53553390593274],
-                [-6.49467042176620e-16, -3.53553390593274, 3.53553390593274],
-                [-6.12323399573677e-16, 7.49879891330929e-32, -5.0],
-                [0.0, 0.0, 5.0],
-                [2.16489014058873e-16, 3.53553390593274, 3.53553390593274],
-                [2.16489014058873e-16, 3.53553390593274, -3.53553390593274],
-                [3.06161699786838e-16, 5.0, 3.06161699786838e-16],
-                [3.53553390593274, -8.65956056235493e-16, 3.53553390593274],
-                [3.53553390593274, -8.65956056235493e-16, -3.53553390593274],
-                [5.0, -1.22464679914735e-15, 3.06161699786838e-16]])
+            [-1.0, -1.0, 0.0],
+            [-1.0, 0.0, 0.0],
+            [-1.0, 1.0, 0.0],
+            [0.0, -1.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [1.0, -1.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [-5.0, 6.12323399573677e-16, 3.06161699786838e-16],
+            [-3.53553390593274, 4.32978028117747e-16, -3.53553390593274],
+            [-3.53553390593274, 4.32978028117747e-16, 3.53553390593274],
+            [-9.18485099360515e-16, -5.0, 3.06161699786838e-16],
+            [-6.49467042176620e-16, -3.53553390593274, -3.53553390593274],
+            [-6.49467042176620e-16, -3.53553390593274, 3.53553390593274],
+            [-6.12323399573677e-16, 7.49879891330929e-32, -5.0],
+            [0.0, 0.0, 5.0],
+            [2.16489014058873e-16, 3.53553390593274, 3.53553390593274],
+            [2.16489014058873e-16, 3.53553390593274, -3.53553390593274],
+            [3.06161699786838e-16, 5.0, 3.06161699786838e-16],
+            [3.53553390593274, -8.65956056235493e-16, 3.53553390593274],
+            [3.53553390593274, -8.65956056235493e-16, -3.53553390593274],
+            [5.0, -1.22464679914735e-15, 3.06161699786838e-16]])
 
         assert_matrix(X_expected, X_test)
 
@@ -209,9 +209,45 @@ class TestVertexModel(Tests):
         # Load data
         geo_expected, set_test, mat_info = load_data('initialize_cells_cyst_expected.mat')
 
+        set_test.InputGeo = 'Bubbles_Cyst'
+
         # Test if initialize geometry function does not change anything
-        vModel_test = VertexModel(mat_info)
+        vModel_test = VertexModel(set_test)
 
         # Check if the cells are initialized correctly
         check_if_cells_are_the_same(geo_expected, vModel_test.geo)
 
+    def test_generate_Xs(self):
+        """
+        Test the generate_Xs function.
+        :return:
+        """
+
+        # Load data
+        geo_expected, set_test, mat_info = load_data('initialize_cells_cyst_expected.mat')
+
+        set_test.InputGeo = 'Bubbles_Cyst'
+
+        # Test if initialize geometry function does not change anything
+        vModel_test = VertexModel(set_test)
+        vModel_test.generate_Xs()
+
+        # Check if the cells are initialized correctly
+        assert_matrix(vModel_test.X, mat_info['X'])
+
+    def test_build_topo(self):
+        """
+        Test the build_topo function.
+        :return:
+        """
+
+        # Load data
+        geo_expected, set_test, mat_info = load_data('initialize_cells_cyst_expected.mat')
+
+        set_test.InputGeo = 'Bubbles_Cyst'
+
+        # Test if initialize geometry function does not change anything
+        X, X_IDs = build_topo(set_test)
+
+        # Check if the cells are initialized correctly
+        assert_matrix(X, mat_info['X'])

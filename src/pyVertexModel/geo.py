@@ -2,10 +2,8 @@ import os
 
 import numpy as np
 import vtk
-import open3d as o3d
 
 from src.pyVertexModel import cell, face
-
 
 
 def edgeValence(Geo, nodesEdge):
@@ -474,7 +472,7 @@ class Geo:
 
                 self.Cells[cc].Faces[j] = face.Face()
                 self.Cells[cc].Faces[j].build_face(cc, cj, face_ids, self.nCells, self.Cells[cc], self.XgID, Set,
-                                                  self.XgTop, self.XgBottom, oldFace)
+                                                   self.XgTop, self.XgBottom, oldFace)
 
                 woundEdgeTris = []
                 for tris_sharedCells in [tri.SharedByCells for tri in self.Cells[cc].Faces[j].Tris]:
@@ -728,12 +726,10 @@ class Geo:
             # ply_writer.SetInputData(vtk_cells[-1])
             # ply_writer.Write()
 
-            #mesh = o3d.io.read_triangle_mesh(name_out.replace(file_extension, '.ply'))
-            #mesh.compute_vertex_normals()
+            # mesh = o3d.io.read_triangle_mesh(name_out.replace(file_extension, '.ply'))
+            # mesh.compute_vertex_normals()
 
             # Visualize the mesh
-            #o3d.visualization.draw_geometries([mesh])
+            # o3d.visualization.draw_geometries([mesh])
 
         return vtk_cells
-
-

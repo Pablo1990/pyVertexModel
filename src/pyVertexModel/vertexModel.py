@@ -126,7 +126,7 @@ def generate_first_ghost_nodes(X):
     return X, XgID, XgIDBB, nCells
 
 
-def build_topo(nx, ny, nz, c_set, columnar_cells=False):
+def build_topo(c_set, nx=None, ny=None, nz=None, columnar_cells=False):
     """
     This function builds the topology of the mesh.
     :param nx:  Number of nodes in x direction
@@ -169,15 +169,21 @@ def build_topo(nx, ny, nz, c_set, columnar_cells=False):
 
 class VertexModel:
 
-    def __init__(self, mat_file_set=None):
+    def __init__(self, c_set=None):
 
+        self.numStep = None
+        self.backupVars = None
+        self.Geo_n = None
+        self.Geo_0 = None
+        self.tr = None
+        self.t = None
         self.X = None
         self.didNotConverge = False
         self.geo = Geo()
 
         # Set definition
-        if mat_file_set is not None:
-            self.set = Set(mat_file_set)
+        if c_set is not None:
+            self.set = c_set
         else:
             # TODO Create a menu to select the set
             self.set = Set()
@@ -185,10 +191,18 @@ class VertexModel:
             self.set.update_derived_parameters()
 
         # Degrees of freedom definition
-        self.Dofs = degreesOfFreedom.DegreesOfFreedom(None)
+        self.Dofs = degreesOfFreedom.DegreesOfFreedom()
         # self.Set = WoundDefault(self.Set)
-        self.InitiateOutputFolder()
 
+        self.relaxingNu = False
+        self.EnergiesPerTimeStep = []
+
+    def initialize(self):
+        """
+        Initialize the model
+        :return:
+        """
+        self.InitiateOutputFolder()
         if "Bubbles" in self.set.InputGeo:
             self.InitializeGeometry_Bubbles()
         elif self.set.InputGeo == 'Voronoi':
@@ -209,33 +223,27 @@ class VertexModel:
         else:
             self.Dofs.get_dofs(self.geo, self.set)
         self.geo.Remodelling = False
-
         self.t = 0
         self.tr = 0
         self.Geo_0 = copy.deepcopy(self.geo)
-
         # Removing info of unused features from Geo_0
         for cell in self.Geo_0.Cells:
             cell.Vol = None
             cell.Vol0 = None
             cell.Area = None
             cell.Area0 = None
-
         self.Geo_n = copy.deepcopy(self.geo)
         for cell in self.Geo_n.Cells:
             cell.Vol = None
             cell.Vol0 = None
             cell.Area = None
             cell.Area0 = None
-
         self.backupVars = {
             'Geo_b': self.geo,
             'tr_b': self.tr,
             'Dofs': self.Dofs
         }
         self.numStep = 1
-        self.relaxingNu = False
-        self.EnergiesPerTimeStep = []
 
     def brownian_motion(self, scale):
         """
@@ -452,34 +460,7 @@ class VertexModel:
 
     def InitializeGeometry_Bubbles(self):
         # Build nodal mesh
-        self.X, X_IDs = build_topo(self.geo.nx, self.geo.ny, self.geo.nz, self.set)
-        self.geo.nCells = self.X.shape[0]
-
-        # Centre Nodal position at (0,0)
-        self.X[:, 0] = self.X[:, 0] - np.mean(self.X[:, 0])
-        self.X[:, 1] = self.X[:, 1] - np.mean(self.X[:, 1])
-        self.X[:, 2] = self.X[:, 2] - np.mean(self.X[:, 2])
-
-        if self.set.InputGeo == 'Bubbles_Cyst':
-            a, b, c, paramsOptimized = fitEllipsoidToPoints(self.X)
-
-            ellipsoid_axis_normalised1 = mean([self.set.ellipsoid_axis1, self.set.lumen_axis1]) / paramsOptimized[0]
-            ellipsoid_axis_normalised2 = mean([self.set.ellipsoid_axis2, self.set.lumen_axis2]) / paramsOptimized[1]
-            ellipsoid_axis_normalised3 = mean([self.set.ellipsoid_axis3, self.set.lumen_axis3]) / paramsOptimized[2]
-
-            # Extrapolate Xs
-            self.X = extrapolate_points_to_ellipsoid(self.X, ellipsoid_axis_normalised1, ellipsoid_axis_normalised2,
-                                                     ellipsoid_axis_normalised3)
-
-        # Perform Delaunay
-        self.geo.XgID, self.X = self.SeedWithBoundingBox(self.X, self.set.s)
-
-        if self.set.Substrate == 1:
-            Xg = self.X[self.geo.XgID, :]
-            self.X = np.delete(self.X, self.geo.XgID, 0)
-            Xg = Xg[Xg[:, 2] > np.mean(self.X[:, 2]), :]
-            self.geo.XgID = np.arange(self.X.shape[0], self.X.shape[0] + Xg.shape[0] + 2)
-            self.X = np.concatenate((self.X, Xg, [np.mean(self.X[:, 0]), np.mean(self.X[:, 1]), -50]), axis=0)
+        self.generate_Xs(self.geo.nx, self.geo.ny, self.geo.nz)
 
         # This code is to match matlab's output and python's
         N = 3  # The dimensions of our points
@@ -550,6 +531,36 @@ class VertexModel:
         self.geo.AvgEdgeLength_Lateral = np.mean(edgeLengths_Lateral)
         self.set.BarrierTri0 = self.set.BarrierTri0 / 10
         self.set.lmin0 = self.set.lmin0 * 10
+
+    def generate_Xs(self, nx=None, ny=None, nz=None):
+        """
+        Generate the nodal positions of the mesh based on the input geometry
+        :return:
+        """
+        self.X, X_IDs = build_topo(self.set, nx, ny, nz)
+        self.geo.nCells = self.X.shape[0]
+        # Centre Nodal position at (0,0)
+        self.X[:, 0] = self.X[:, 0] - np.mean(self.X[:, 0])
+        self.X[:, 1] = self.X[:, 1] - np.mean(self.X[:, 1])
+        self.X[:, 2] = self.X[:, 2] - np.mean(self.X[:, 2])
+        if self.set.InputGeo == 'Bubbles_Cyst':
+            a, b, c, paramsOptimized = fitEllipsoidToPoints(self.X)
+
+            ellipsoid_axis_normalised1 = mean([self.set.ellipsoid_axis1, self.set.lumen_axis1]) / paramsOptimized[0]
+            ellipsoid_axis_normalised2 = mean([self.set.ellipsoid_axis2, self.set.lumen_axis2]) / paramsOptimized[1]
+            ellipsoid_axis_normalised3 = mean([self.set.ellipsoid_axis3, self.set.lumen_axis3]) / paramsOptimized[2]
+
+            # Extrapolate Xs
+            self.X = extrapolate_points_to_ellipsoid(self.X, ellipsoid_axis_normalised1, ellipsoid_axis_normalised2,
+                                                     ellipsoid_axis_normalised3)
+        # Perform Delaunay
+        self.geo.XgID, self.X = self.SeedWithBoundingBox(self.X, self.set.s)
+        if self.set.Substrate == 1:
+            Xg = self.X[self.geo.XgID, :]
+            self.X = np.delete(self.X, self.geo.XgID, 0)
+            Xg = Xg[Xg[:, 2] > np.mean(self.X[:, 2]), :]
+            self.geo.XgID = np.arange(self.X.shape[0], self.X.shape[0] + Xg.shape[0] + 2)
+            self.X = np.concatenate((self.X, Xg, [np.mean(self.X[:, 0]), np.mean(self.X[:, 1]), -50]), axis=0)
 
     def extrapolate_ys_faces_ellipsoid(self):
         # Original axis values
