@@ -339,12 +339,15 @@ class TestVertexModel(Tests):
 
         s = mat_info['s'][0][0]
         X_input = mat_info['X']
-        XgID = mat_info['XgID'][0]
+        XgID = mat_info['XgID'][0] - 1
+        nCells = mat_info['nCells'][0][0]
+        XgIDBB = mat_info['XgIDBB'][0] - 1
 
         _, _, delaunay = load_data('delaunay_output_cyst.mat')
 
         # Test if initialize geometry function does not change anything
-        X_test = delaunay_compute_entities(np.array(delaunay['Twg'], dtype=int), X_input, np.array(XgID, dtype=int), s)
+        X_test, _ = delaunay_compute_entities(np.array(delaunay['Twg'], dtype=int)-1, X_input, np.array(XgID, dtype=int),
+                                           XgIDBB, nCells, s)
 
         # Check if the cells are initialized correctly
         assert_matrix(X_test, mat_info_expected['X'])

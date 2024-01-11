@@ -240,13 +240,13 @@ def SeedNodeTri(X, XgID, Tri, h):
     return X, XgID
 
 
-def delaunay_compute_entities(tris, X, XgID, s):
+def delaunay_compute_entities(tris, X, XgID, XgIDBB, nCells, s):
     # Initialize variables
     Side = np.array([[0, 1, 2], [0, 1, 3], [1, 2, 3], [0, 2, 3]])
-    Edges = np.array([[0, 1], [1, 2], [2, 0], [0, 3], [1, 3], [2, 3]])
+    Edges = np.array([[0, 1], [1, 2], [0, 2], [0, 3], [1, 3], [2, 3]])
     Vol = np.zeros(tris.shape[0])
-    AreaFaces = np.zeros((tris.shape[0], 4))
-    LengthEdges = np.zeros((tris.shape[0], 6))
+    AreaFaces = np.zeros((tris.shape[0]*3, 4))
+    LengthEdges = np.zeros((tris.shape[0]*3, 6))
     Arc = 0
     Lnc = 0
 
@@ -263,6 +263,7 @@ def delaunay_compute_entities(tris, X, XgID, s):
                 p1, p2 = X[tris[i, Edges[j]]]
                 LengthEdges[i, j] = np.linalg.norm(p1 - p2)
                 Lnc += 1
+
     # Seed nodes in big entities (based on characteristic Length h)
     for i in range(tris.shape[0]):
         for j in range(4):
@@ -278,7 +279,11 @@ def delaunay_compute_entities(tris, X, XgID, s):
     for i in range(len(Vol)):
         if np.sum(np.isin(tris[i], XgID)) > 0:
             X, XgID = SeedNodeTet(X, XgID, tris[i], s)
-    return X
+
+    X = np.delete(X, XgIDBB, axis=0)
+    XgID = np.arange(nCells, X.shape[0])
+
+    return X, XgID
 
 
 class VertexModel:
@@ -885,10 +890,7 @@ class VertexModel:
         Tri = Delaunay(X)
 
         # first Delaunay with ghost nodes
-        X = delaunay_compute_entities(Tri.simplices, X, XgID, s)
-
-        X = np.delete(X, XgIDBB, axis=0)
-        XgID = np.arange(nCells, X.shape[0])
+        X, XgID = delaunay_compute_entities(Tri.simplices, X, XgID, s)
         return XgID, X
 
     def check_integrity(self):
