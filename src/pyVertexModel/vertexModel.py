@@ -1,6 +1,7 @@
 import copy
 import math
 import os
+import statistics
 
 import numpy as np
 from PIL.Image import Image
@@ -99,19 +100,28 @@ def extrapolate_points_to_ellipsoid(points, ellipsoid_axis_normalised1, ellipsoi
 def generate_first_ghost_nodes(X):
     # Bounding Box 1
     nCells = X.shape[0]
-    r0 = np.mean(X, axis=0)
+    r0 = np.average(X, axis=0)
+    r0[0] = statistics.mean(X[:, 0])
+    r0[1] = statistics.mean(X[:, 1])
+    r0[2] = statistics.mean(X[:, 2])
+
     r = 5 * np.max(np.abs(X - r0))
     # Define bounding nodes: bounding sphere
     theta = np.linspace(0, 2 * np.pi, 5)
     phi = np.linspace(0, np.pi, 5)
     theta, phi = np.meshgrid(theta, phi, indexing='ij')  # Ensure the order matches MATLAB
+    # Phi and Theta should be transpose as it is in Matlab
+    phi = phi.T
+    theta = theta.T
+
+    # Convert to Cartesian coordinates
     x = r * np.sin(phi) * np.cos(theta)
     y = r * np.sin(phi) * np.sin(theta)
     z = r * np.cos(phi)
     # Reshape to column vectors, ensuring the same order as MATLAB
-    x = x.flatten('C')
-    y = y.flatten('C')
-    z = z.flatten('C')
+    x = x.flatten('F')
+    y = y.flatten('F')
+    z = z.flatten('F')
     # Offset the points by r0 and combine into a single array
     Xg = np.column_stack((x, y, z)) + r0
     # Find unique values considering the tolerance
@@ -165,6 +175,110 @@ def build_topo(c_set, nx=None, ny=None, nz=None, columnar_cells=False):
         c_set.TotalCells = X.shape[0]
 
     return X, X_Ids
+
+
+def AreTri(p1, p2, p3):
+    return 0.5 * np.linalg.norm(np.cross(p2 - p1, p3 - p1))
+
+
+def CheckReplicateedNodes(X, nX, h):
+    ToBeRemoved = np.zeros(nX.shape[0], dtype=bool)
+    for jj in range(nX.shape[0]):
+        m = np.linalg.norm(X - nX[jj], axis=1)
+        m = np.min(m)
+        if m < 1e-2 * h:
+            ToBeRemoved[jj] = True
+    nX = nX[~ToBeRemoved]
+    return nX
+
+
+def SeedNodeTet(X, XgID, Twgi, h):
+    XTet = X[Twgi, :]
+    Center = np.mean(XTet, axis=0)
+    nX = np.zeros((4, 3))
+    for i in range(4):
+        vc = Center - XTet[i, :]
+        dis = np.linalg.norm(vc)
+        dir = vc / dis
+        offset = h * dir
+        if dis > np.linalg.norm(offset):
+            nX[i, :] = XTet[i, :] + offset
+        else:
+            nX[i, :] = XTet[i, :] + vc
+
+    mask = np.isin(Twgi, XgID)
+    nX = nX[~mask, :]
+    nX = np.unique(nX, axis=0)
+    nX = CheckReplicateedNodes(X, nX, h)
+    nXgID = np.arange(X.shape[0], X.shape[0] + nX.shape[0])
+    X = np.vstack((X, nX))
+    XgID = np.concatenate((XgID, nXgID))
+    return X, XgID
+
+
+def SeedNodeTri(X, XgID, Tri, h):
+    XTri = X[Tri, :]
+    Center = np.mean(XTri, axis=0)
+    nX = np.zeros((3, 3))
+    for i in range(3):
+        vc = Center - XTri[i, :]
+        dis = np.linalg.norm(vc)
+        dir = vc / dis
+        offset = h * dir
+        if dis > np.linalg.norm(offset):
+            nX[i, :] = XTri[i, :] + offset
+        else:
+            nX[i, :] = XTri[i, :] + vc
+
+    mask = np.isin(Tri, XgID)
+    nX = nX[~mask, :]
+    nX = np.unique(nX, axis=0)
+    nX = CheckReplicateedNodes(X, nX, h)
+    nXgID = np.arange(X.shape[0], X.shape[0] + nX.shape[0])
+    X = np.vstack((X, nX))
+    XgID = np.concatenate((XgID, nXgID))
+    return X, XgID
+
+
+def delaunay_compute_entities(tris, X, XgID, s):
+    # Initialize variables
+    Side = np.array([[0, 1, 2], [0, 1, 3], [1, 2, 3], [0, 2, 3]])
+    Edges = np.array([[0, 1], [1, 2], [2, 0], [0, 3], [1, 3], [2, 3]])
+    Vol = np.zeros(tris.shape[0])
+    AreaFaces = np.zeros((tris.shape[0], 4))
+    LengthEdges = np.zeros((tris.shape[0], 6))
+    Arc = 0
+    Lnc = 0
+
+    # Compute volume, area and length of each tetrahedron
+    for i in range(tris.shape[0]):
+        for j in range(4):
+            if np.sum(np.isin(tris[i, Side[j]], XgID)) == 0:
+                p1, p2, p3 = X[tris[i, Side[j]]]
+                AreaFaces[i, j] = AreTri(p1, p2, p3)
+                Arc += 1
+
+        for j in range(6):
+            if np.sum(np.isin(tris[i, Edges[j]], XgID)) == 0:
+                p1, p2 = X[tris[i, Edges[j]]]
+                LengthEdges[i, j] = np.linalg.norm(p1 - p2)
+                Lnc += 1
+    # Seed nodes in big entities (based on characteristic Length h)
+    for i in range(tris.shape[0]):
+        for j in range(4):
+            if np.sum(np.isin(tris[i, Side[j]], XgID)) == 0 and AreaFaces[i, j] > s ** 2:
+                X, XgID = SeedNodeTri(X, XgID, tris[i, Side[j]], s)
+
+        for j in range(6):
+            if np.sum(np.isin(tris[i, Edges[j]], XgID)) == 0 and LengthEdges[i, j] > 2 * s:
+                X, XgID = SeedNodeTet(X, XgID, tris[i], s)
+                break
+
+    # Seed on ghost tetrahedra
+    for i in range(len(Vol)):
+        if np.sum(np.isin(tris[i], XgID)) > 0:
+            X, XgID = SeedNodeTet(X, XgID, tris[i], s)
+    return X
 
 
 class VertexModel:
@@ -766,110 +880,16 @@ class VertexModel:
 
         X, XgID, XgIDBB, nCells = generate_first_ghost_nodes(X)
 
-        # first Delaunay with ghost nodes
         N = 3  # The dimensions of our points
         options = 'Qt Qbb Qc' if N <= 3 else 'Qt Qbb Qc Qx'  # Set the QHull options
-        Tri = Delaunay(X, qhull_options=options)
+        Tri = Delaunay(X)
 
-        Side = np.array([[0, 1, 2], [0, 1, 3], [1, 2, 3], [0, 2, 3]])
-        Edges = np.array([[0, 1], [1, 2], [2, 0], [0, 3], [1, 3], [2, 3]])
-        Vol = np.zeros(Tri.simplices.shape[0])
-        AreaFaces = np.zeros((Tri.simplices.shape[0], 4))
-        LengthEdges = np.zeros((Tri.simplices.shape[0], 6))
-        Arc = 0
-        Lnc = 0
-
-        for i in range(Tri.simplices.shape[0]):
-            for j in range(4):
-                if np.sum(np.isin(Tri.simplices[i, Side[j]], XgID)) == 0:
-                    p1, p2, p3 = X[Tri.simplices[i, Side[j]]]
-                    AreaFaces[i, j] = self.AreTri(p1, p2, p3)
-                    Arc += 1
-
-            for j in range(6):
-                if np.sum(np.isin(Tri.simplices[i, Edges[j]], XgID)) == 0:
-                    p1, p2 = X[Tri.simplices[i, Edges[j]]]
-                    LengthEdges[i, j] = np.linalg.norm(p1 - p2)
-                    Lnc += 1
-
-        for i in range(Tri.simplices.shape[0]):
-            for j in range(4):
-                if np.sum(np.isin(Tri.simplices[i, Side[j]], XgID)) == 0 and AreaFaces[i, j] > s ** 2:
-                    p1, p2, p3 = X[Tri.simplices[i, Side[j]]]
-                    X, XgID = self.SeedNodeTri(X, XgID, np.array([p1, p2, p3]), s)
-
-            for j in range(6):
-                if np.sum(np.isin(Tri.simplices[i, Edges[j]], XgID)) == 0 and LengthEdges[i, j] > 2 * s:
-                    p1, p2 = X[Tri.simplices[i, Edges[j]]]
-                    X, XgID = self.SeedNodeTet(X, XgID, Tri.simplices[i], s)
-                    break
-
-        for i in range(len(Vol)):
-            if np.sum(np.isin(Tri.simplices[i], XgID)) > 0:
-                X, XgID = self.SeedNodeTet(X, XgID, Tri.simplices[i], s)
+        # first Delaunay with ghost nodes
+        X = delaunay_compute_entities(Tri.simplices, X, XgID, s)
 
         X = np.delete(X, XgIDBB, axis=0)
         XgID = np.arange(nCells, X.shape[0])
         return XgID, X
-
-    def AreTri(self, p1, p2, p3):
-        return 0.5 * np.linalg.norm(np.cross(p2 - p1, p3 - p1))
-
-    def SeedNodeTet(self, X, XgID, Twgi, h):
-        XTet = X[Twgi, :]
-        Center = np.mean(XTet, axis=0)
-        nX = np.zeros((4, 3))
-        for i in range(4):
-            vc = Center - XTet[i, :]
-            dis = np.linalg.norm(vc)
-            dir = vc / dis
-            offset = h * dir
-            if dis > np.linalg.norm(offset):
-                nX[i, :] = XTet[i, :] + offset
-            else:
-                nX[i, :] = XTet[i, :] + vc
-
-        mask = np.isin(Twgi, XgID)
-        nX = nX[~mask, :]
-        nX = np.unique(nX, axis=0)
-        nX = self.CheckReplicateedNodes(X, nX, h)
-        nXgID = np.arange(X.shape[0], X.shape[0] + nX.shape[0])
-        X = np.vstack((X, nX))
-        XgID = np.concatenate((XgID, nXgID))
-        return X, XgID
-
-    def CheckReplicateedNodes(self, X, nX, h):
-        ToBeRemoved = np.zeros(nX.shape[0], dtype=bool)
-        for jj in range(nX.shape[0]):
-            m = np.linalg.norm(X - nX[jj], axis=1)
-            m = np.min(m)
-            if m < 1e-2 * h:
-                ToBeRemoved[jj] = True
-        nX = nX[~ToBeRemoved]
-        return nX
-
-    def SeedNodeTri(self, X, XgID, Tri, h):
-        XTri = X[Tri, :]
-        Center = np.mean(XTri, axis=0)
-        nX = np.zeros((3, 3))
-        for i in range(3):
-            vc = Center - XTri[i, :]
-            dis = np.linalg.norm(vc)
-            dir = vc / dis
-            offset = h * dir
-            if dis > np.linalg.norm(offset):
-                nX[i, :] = XTri[i, :] + offset
-            else:
-                nX[i, :] = XTri[i, :] + vc
-
-        mask = np.isin(Tri, XgID)
-        nX = nX[~mask, :]
-        nX = np.unique(nX, axis=0)
-        nX = self.CheckReplicateedNodes(X, nX, h)
-        nXgID = np.arange(X.shape[0], X.shape[0] + nX.shape[0])
-        X = np.vstack((X, nX))
-        XgID = np.concatenate((XgID, nXgID))
-        return X, XgID
 
     def check_integrity(self):
         """
