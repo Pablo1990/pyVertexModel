@@ -29,8 +29,8 @@ def check_if_cells_are_the_same(geo_expected, geo_test):
     area_expected = [geo_expected.Cells[i].Area for i in range(geo_expected.nCells)]
 
     # Check if the volumes and areas are the same
-    assert_matrix(vol_test, vol_expected)
-    assert_matrix(area_test, area_expected)
+    assert_array1D(vol_test, vol_expected)
+    assert_array1D(area_test, area_expected)
 
     # Check if the faces have the same global ids and the same centres
     for i in range(geo_test.nCells):
