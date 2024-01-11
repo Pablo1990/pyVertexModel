@@ -1,4 +1,3 @@
-import copy
 import math
 import os
 import statistics
@@ -154,8 +153,8 @@ def build_topo(c_set, nx=None, ny=None, nz=None, columnar_cells=False):
             x = np.arange(nx)
             y = np.arange(ny)
             x, y = np.meshgrid(x, y, indexing='ij')
-            x = x.flatten('C')
-            y = y.flatten('C')
+            x = x.flatten('F')
+            y = y.flatten('F')
             z = np.ones_like(x) * numZ
             X = np.vstack((X, np.column_stack((x, y, z))))
 
@@ -411,14 +410,14 @@ class VertexModel:
         self.geo.Remodelling = False
         self.t = 0
         self.tr = 0
-        self.Geo_0 = copy.deepcopy(self.geo)
+        self.Geo_0 = self.geo.copy()
         # Removing info of unused features from Geo_0
         for cell in self.Geo_0.Cells:
             cell.Vol = None
             cell.Vol0 = None
             cell.Area = None
             cell.Area0 = None
-        self.Geo_n = copy.deepcopy(self.geo)
+        self.Geo_n = self.geo.copy()
         for cell in self.Geo_n.Cells:
             cell.Vol = None
             cell.Vol0 = None
@@ -786,7 +785,7 @@ class VertexModel:
         self.geo = self.backupVars['Geo_b']
         self.tr = self.backupVars['tr_b']
         self.Dofs = self.backupVars['Dofs']
-        self.Geo_n = copy.deepcopy(self.geo)
+        self.Geo_n = self.geo.copy()
         self.relaxingNu = False
         if self.set.iter == self.set.MaxIter0:
             self.set.MaxIter = self.set.MaxIter0 * 1.1
