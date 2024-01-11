@@ -87,7 +87,7 @@ class Set:
             self.MaxIter = 30
             self.Parallel = False
             self.Sparse = False
-            self.lastTConverged = 0
+            self.last_t_converged = 0
             # ================= Boundary Condition and loading selfting ===========
             self.BC = None
             self.VFixd = -math.inf

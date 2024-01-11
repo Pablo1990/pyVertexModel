@@ -795,7 +795,7 @@ class VertexModel:
                 self.set.MaxIter = self.set.MaxIter0
                 self.set.nu = self.set.nu0
                 self.set.dt = self.set.dt / 2
-                self.t = self.set.lastTConverged + self.set.dt
+                self.t = self.set.last_t_converged + self.set.dt
             else:
                 self.didNotConverge = True
 
