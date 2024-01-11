@@ -352,6 +352,26 @@ def extrapolate_ys_faces_ellipsoid(geo, c_set):
     return geo
 
 
+def SeedWithBoundingBox(X, s):
+    """
+    This function seeds nodes in desired entities (edges, faces and tetrahedrons) while cell-centers are bounded
+    by ghost nodes.
+    :param X:
+    :param s:
+    :return:
+    """
+
+    X, XgID, XgIDBB, nCells = generate_first_ghost_nodes(X)
+
+    N = 3  # The dimensions of our points
+    options = 'Qt Qbb Qc' if N <= 3 else 'Qt Qbb Qc Qx'  # Set the QHull options
+    Tri = Delaunay(X)
+
+    # first Delaunay with ghost nodes
+    X, XgID = delaunay_compute_entities(Tri.simplices, X, XgID, XgIDBB, nCells, s)
+    return XgID, X
+
+
 class VertexModel:
 
     def __init__(self, c_set=None):
@@ -740,7 +760,7 @@ class VertexModel:
             self.X = extrapolate_points_to_ellipsoid(self.X, ellipsoid_axis_normalised1, ellipsoid_axis_normalised2,
                                                      ellipsoid_axis_normalised3)
         # Perform Delaunay
-        self.geo.XgID, self.X = self.SeedWithBoundingBox(self.X, self.set.s)
+        self.geo.XgID, self.X = SeedWithBoundingBox(self.X, self.set.s)
         if self.set.Substrate == 1:
             Xg = self.X[self.geo.XgID, :]
             self.X = np.delete(self.X, self.geo.XgID, 0)
@@ -873,25 +893,6 @@ class VertexModel:
         else:
             self.set.nu = np.max([self.set.nu / 2, self.set.nu0])
             self.relaxingNu = True
-
-    def SeedWithBoundingBox(self, X, s):
-        """
-        This function seeds nodes in desired entities (edges, faces and tetrahedrons) while cell-centers are bounded
-        by ghost nodes.
-        :param X:
-        :param s:
-        :return:
-        """
-
-        X, XgID, XgIDBB, nCells = generate_first_ghost_nodes(X)
-
-        N = 3  # The dimensions of our points
-        options = 'Qt Qbb Qc' if N <= 3 else 'Qt Qbb Qc Qx'  # Set the QHull options
-        Tri = Delaunay(X)
-
-        # first Delaunay with ghost nodes
-        X, XgID = delaunay_compute_entities(Tri.simplices, X, XgID, XgIDBB, nCells, s)
-        return XgID, X
 
     def check_integrity(self):
         """

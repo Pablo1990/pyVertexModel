@@ -80,7 +80,7 @@ class TestVertexModel(Tests):
 
         # Test if initialize geometry function does not change anything
         vModel_test = VertexModel(set_test)
-        XgID_expected, X_test = vModel_test.SeedWithBoundingBox(X_input, set_test.s)
+        XgID_expected, X_test = SeedWithBoundingBox(X_input, set_test.s)
 
         # Check if the cells are initialized correctly
         assert_matrix(X_test, mat_info_expected['X'])
