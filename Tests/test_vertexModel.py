@@ -3,7 +3,7 @@ import pandas as pd
 from scipy.spatial import Delaunay
 
 from Tests.test_geo import check_if_cells_are_the_same
-from Tests.tests import Tests, assert_array1D, assert_matrix, load_data
+from Tests.tests import Tests, assert_matrix, load_data
 from src.pyVertexModel.vertexModel import VertexModel, generate_first_ghost_nodes, build_topo, delaunay_compute_entities
 
 
@@ -134,7 +134,7 @@ class TestVertexModel(Tests):
         Twg_final_sorted = df_sorted.to_numpy()
 
         # Compare with expected
-        assert_matrix(Twg_final_sorted+1, mat_info['tets'])
+        assert_matrix(Twg_final_sorted + 1, mat_info['tets'])
 
     def test_delaunay_compute_entities(self):
         """
@@ -155,8 +155,9 @@ class TestVertexModel(Tests):
         _, _, delaunay = load_data('delaunay_output_cyst.mat')
 
         # Test if initialize geometry function does not change anything
-        X_test, _ = delaunay_compute_entities(np.array(delaunay['Twg'], dtype=int)-1, X_input, np.array(XgID, dtype=int),
-                                           XgIDBB, nCells, s)
+        X_test, _ = delaunay_compute_entities(np.array(delaunay['Twg'], dtype=int) - 1, X_input,
+                                              np.array(XgID, dtype=int),
+                                              XgIDBB, nCells, s)
 
         # Check if the cells are initialized correctly
         assert_matrix(X_test, mat_info_expected['X'])

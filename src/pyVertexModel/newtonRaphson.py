@@ -1,6 +1,5 @@
 import numpy as np
 
-from src.pyVertexModel.Kg import kg_functions
 from src.pyVertexModel.Kg.kgContractility import KgContractility
 from src.pyVertexModel.Kg.kgSubstrate import KgSubstrate
 from src.pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
@@ -8,7 +7,6 @@ from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
 from src.pyVertexModel.Kg.kgTriEnergyBarrier import KgTriEnergyBarrier
 from src.pyVertexModel.Kg.kgViscosity import KgViscosity
 from src.pyVertexModel.Kg.kgVolume import KgVolume
-from src.pyVertexModel.geo import Geo
 
 
 def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
@@ -48,7 +46,7 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
 
     while (gr > Set.tol or dyr > Set.tol) and Set.iter < Set.MaxIter:
         Energy, K, dyr, g, gr, ig, auxgr, dy = newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof, dy,
-                                                         g, gr0, ig, numStep, t)
+                                                                        g, gr0, ig, numStep, t)
 
     return Geo, g, K, Energy, Set, gr, dyr, dy
 
@@ -179,7 +177,7 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set):
 
     # # TODO: Plane Elasticity
     # if Set.InPlaneElasticity:
-    #     gt, Kt, EBulk = KgBulk(Geo_0, Geo, Set)
+    #     gt, Kt, EBulk = KgBulk(geo_0, Geo, Set)
     #     K += Kt
     #     g += gt
     #     E += EBulk
@@ -243,7 +241,7 @@ def gGlobal(Geo_0, Geo_n, Geo, Set):
 
     # # TODO: Plane Elasticity
     # if Set.InPlaneElasticity:
-    #     gt, Kt, EBulk = KgBulk(Geo_0, Geo, Set)
+    #     gt, Kt, EBulk = KgBulk(geo_0, Geo, Set)
     #     K += Kt
     #     g += gt
     #     E += EBulk

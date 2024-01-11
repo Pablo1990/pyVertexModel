@@ -63,8 +63,8 @@ class KgTriAREnergyBarrier(Kg):
                                                [(w3 - w1) * identity, (w2 - w3) * identity, (w1 - w2) * identity]])
 
                             Ks_c = Ks + 4 * (np.dot(g1, g1.T) +
-                                         np.dot(g2, g2.T) +
-                                         np.dot(g3, g3.T))
+                                             np.dot(g2, g2.T) +
+                                             np.dot(g3, g3.T))
                             self.assemble_k(Ks_c[:, :] * fact, nY_original)
 
                         energy_c = energy_c + fact / 2 * (w1 ** 2 + w2 ** 2 + w3 ** 2)

@@ -702,7 +702,7 @@ class Geo:
         file_extension = '.vtk'  # File extension
 
         # Creating a new subdirect
-        #             self.geo.create_vtk_cell(self.Geo_0, self.set, self.numStep)ory for cells data
+        #             self.geo.create_vtk_cell(self.geo_0, self.set, self.numStep)ory for cells data
         new_sub_folder = os.path.join(os.getcwd(), str0, 'Cells')
         if not os.path.exists(new_sub_folder):
             os.makedirs(new_sub_folder)

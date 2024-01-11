@@ -32,5 +32,5 @@ class KgViscosity(Kg):
                 if len(Face.Centre) == 3 and len(Face_n.Centre) == 3:
                     dY[np.array(Face.globalIds, dtype=int), :] = (Face.Centre - Face_n.Centre)
 
-            #dY[np.array(Cell.cglobalIds, dtype=int), :] = (Cell.X - Cell_n.X)
+            # dY[np.array(Cell.cglobalIds, dtype=int), :] = (Cell.X - Cell_n.X)
         self.g[:] = (Set.nu / Set.dt) * dY.flatten('C')

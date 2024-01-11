@@ -42,5 +42,3 @@ class TestCell(Tests):
 
         # Check if the cells are the same
         check_if_cells_are_the_same(geo_expected, geo_test)
-
-

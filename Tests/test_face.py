@@ -30,8 +30,6 @@ class TestFace(Tests):
                                                                 geo_test.XgTop,
                                                                 geo_test.XgBottom)
                 # check if the interface type is the same on each cell
-                np.testing.assert_equal(get_key(geo_test.Cells[i].Faces[j].InterfaceType_allValues, geo_test.Cells[i].Faces[j].InterfaceType),
+                np.testing.assert_equal(get_key(geo_test.Cells[i].Faces[j].InterfaceType_allValues,
+                                                geo_test.Cells[i].Faces[j].InterfaceType),
                                         geo_expected.Cells[i].Faces[j].InterfaceType)
-
-
-

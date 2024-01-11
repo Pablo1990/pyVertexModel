@@ -2,9 +2,9 @@ import copy
 
 import numpy as np
 import vtk
+from sklearn.decomposition import PCA
 
 from src.pyVertexModel import face
-from sklearn.decomposition import PCA
 
 
 def compute_2D_circularity(area, perimeter):

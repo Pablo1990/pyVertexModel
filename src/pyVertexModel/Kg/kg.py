@@ -49,7 +49,8 @@ class Kg:
         idofg = np.zeros(len(n_y) * self.dim, dtype=int)
 
         for index in range(len(n_y)):
-            idofg[(index * self.dim): ((index + 1) * self.dim)] = np.arange(n_y[index] * self.dim, (n_y[index] + 1) * self.dim)
+            idofg[(index * self.dim): ((index + 1) * self.dim)] = np.arange(n_y[index] * self.dim,
+                                                                            (n_y[index] + 1) * self.dim)
 
         indices = np.meshgrid(idofg, idofg)
         self.K[indices[0], indices[1]] += k_e

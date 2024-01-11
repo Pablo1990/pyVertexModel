@@ -45,7 +45,7 @@ class KgSubstrate(Kg):
                         ge = self.assemble_g(ge, g_current, currentGlobalID)
 
                         # TODO: Save contractile forces (g) to output
-                        #Geo.Cells[c].substrate_g[currentVertex] = g_current[2]
+                        # Geo.Cells[c].substrate_g[currentVertex] = g_current[2]
 
                         if calculate_K:
                             # Calculate Jacobian

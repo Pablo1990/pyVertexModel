@@ -58,7 +58,7 @@ class Face:
 
         # Move centre to the mean of the edge centres
         self.Centre = np.mean(np.concatenate(Cell.Y[[tri.Edge for tri in self.Tris], :]), axis=0)
-        #self.Centre = np.mean(Cell.Y[self.Tris.Edge], :], axis=0)
+        # self.Centre = np.mean(Cell.Y[self.Tris.Edge], :], axis=0)
 
         self.Area, _ = self.compute_face_area(Cell.Y)
         self.Area0 = self.Area

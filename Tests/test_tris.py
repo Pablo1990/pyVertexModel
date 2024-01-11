@@ -1,5 +1,3 @@
-from unittest import TestCase
-
 import numpy as np
 
 from Tests.tests import load_data, Tests, assert_array1D
@@ -26,4 +24,4 @@ class TestTris(Tests):
                                            geo_expected.Cells[i].Faces[0].Tris[0].AspectRatio)
 
             assert_array1D(geo_test.Cells[i].Faces[0].Tris[0].LengthsToCentre,
-                                geo_expected.Cells[i].Faces[0].Tris[0].LengthsToCentre)
+                           geo_expected.Cells[i].Faces[0].Tris[0].LengthsToCentre)

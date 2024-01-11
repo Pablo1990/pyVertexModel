@@ -13,6 +13,7 @@ class Remodelling:
     """
     Class that contains the information of the remodelling process.
     """
+
     def __init__(self, Geo, Geo_n, Geo_0, Set, Dofs):
         """
 
@@ -68,11 +69,11 @@ class Remodelling:
 
                 if sum(np.isin(nonDeadCells, oldTets.flatten())) > 2:
                     [Geo_0, Geo_n, Geo, Dofs, Set, newYgIds, hasConverged[numPair], Tnew] = FlipNM(nodesPair,
-                                                                                                 cellToIntercalateWith,
-                                                                                                 oldTets, oldYs,
-                                                                                                 Geo_0, Geo_n, Geo,
-                                                                                                 Dofs, Set,
-                                                                                                 newYgIds)
+                                                                                                   cellToIntercalateWith,
+                                                                                                   oldTets, oldYs,
+                                                                                                   Geo_0, Geo_n, Geo,
+                                                                                                   Dofs, Set,
+                                                                                                   newYgIds)
 
                     allTnew = np.vstack((allTnew, Tnew))
 
@@ -85,15 +86,15 @@ class Remodelling:
                     break
 
             if hasConverged[numPair]:
-                #PostProcessingVTK(Geo, Geo_0, Set, Set.iIncr + 1)
+                # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr + 1)
                 gNodeNeighbours = [get_node_neighbours(Geo, segmentFeatures[numRow, 1]) for numRow in
                                    range(segmentFeatures.shape[0])]
                 gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
                 cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, Geo.XgID)]
-                #numClose = 0.5
-                #Geo, Geo_n = moveVerticesCloserToRefPoint(Geo, Geo_n, numClose, cellNodesShared, cellToSplitFrom,
+                # numClose = 0.5
+                # Geo, geo_n = moveVerticesCloserToRefPoint(Geo, geo_n, numClose, cellNodesShared, cellToSplitFrom,
                 #                                          ghostNode, Tnew, Set)
-                #PostProcessingVTK(Geo, Geo_0, Set, Set.iIncr + 1)
+                # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr + 1)
 
                 Dofs = DegreesOfFreedom.get_dofs(Geo, self.Set)
                 Geo = Dofs.get_remodel_dofs(allTnew, Geo)
@@ -119,7 +120,7 @@ class Remodelling:
                 Geo.log = f'{Geo.log} =>> Full-Flip rejected: did not converge2\n'
 
             # TODO: CREATE VTK FILES OR ALTERNATIVE
-            #PostProcessingVTK(Geo, Geo_0, Set, Set.iIncr + 1)
+            # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr + 1)
 
             checkedYgIds.extend([[feature[0], feature[1]] for feature in segmentFeatures])
 
@@ -282,17 +283,18 @@ class Remodelling:
                 if np.any(edge_lengths_top > 0):
                     avg_edge_length = np.median(edge_lengths_top[edge_lengths_top > 0])
                     edges_to_intercalate_top = (edge_lengths_top < avg_edge_length - (
-                                set.remodel_stiffness * avg_edge_length)) & (edge_lengths_top > 0)
-                    segment_features.append(self.add_edge_to_intercalate(self.Geo, num_cell, pd.DataFrame(), edge_lengths_top,
-                                                                    edges_to_intercalate_top, self.Geo.xg_top[0]))
+                            set.remodel_stiffness * avg_edge_length)) & (edge_lengths_top > 0)
+                    segment_features.append(
+                        self.add_edge_to_intercalate(self.Geo, num_cell, pd.DataFrame(), edge_lengths_top,
+                                                     edges_to_intercalate_top, self.Geo.xg_top[0]))
 
                 if np.any(edge_lengths_bottom > 0):
                     avg_edge_length = np.median(edge_lengths_bottom[edge_lengths_bottom > 0])
                     edges_to_intercalate_bottom = (edge_lengths_bottom < avg_edge_length - (
-                                set.remodel_stiffness * avg_edge_length)) & (edge_lengths_bottom > 0)
+                            set.remodel_stiffness * avg_edge_length)) & (edge_lengths_bottom > 0)
                     segment_features.append(
                         self.add_edge_to_intercalate(self.Geo, num_cell, pd.DataFrame(), edge_lengths_bottom,
-                                                edges_to_intercalate_bottom, self.Geo.xg_bottom[0]))
+                                                     edges_to_intercalate_bottom, self.Geo.xg_bottom[0]))
 
         # Filter segment features
         segment_features = [f for f in segment_features if f is not None]
@@ -308,5 +310,3 @@ class Remodelling:
                 segment_features_filtered.append(segment_feature)
 
         return segment_features_filtered
-
-

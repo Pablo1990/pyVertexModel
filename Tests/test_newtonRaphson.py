@@ -1,5 +1,3 @@
-from unittest import TestCase
-
 import numpy as np
 
 from Tests.tests import load_data, Tests, assert_array1D, assert_matrix
@@ -14,8 +12,8 @@ class TestNewtonRaphson(Tests):
     def test_newton_raphson_iteration(self):
         geo_test, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
 
-        geo_n_test = Geo(mat_info['Geo_n'])
-        geo_0_test = Geo(mat_info['Geo_0'])
+        geo_n_test = Geo(mat_info['geo_n'])
+        geo_0_test = Geo(mat_info['geo_0'])
         dofs_test = DegreesOfFreedom(mat_info['Dofs'])
         g_test = mat_info['g'][:, 0]
         set_test = Set(mat_info['Set'])
@@ -51,8 +49,8 @@ class TestNewtonRaphson(Tests):
     def test_newton_raphson(self):
         geo_test, set_test, mat_info = load_data('Newton_Raphson_3x3_stretch.mat')
         geo_expected, set_expected, mat_info_expected = load_data('Newton_Raphson_3x3_stretch_expected.mat')
-        geo_n_test = Geo(mat_info['Geo_n'])
-        geo_0_test = Geo(mat_info['Geo_0'])
+        geo_n_test = Geo(mat_info['geo_n'])
+        geo_0_test = Geo(mat_info['geo_0'])
         dofs_test = DegreesOfFreedom(mat_info['Dofs'])
         k_test = mat_info['K']
         g_test = mat_info['g'][:, 0]
@@ -84,8 +82,8 @@ class TestNewtonRaphson(Tests):
         geo_test, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
         geo_expected, _, _ = load_data('Geo_var_3x3_stretch.mat')
 
-        geo_n_test = Geo(mat_info['Geo_n'])
-        geo_0_test = Geo(mat_info['Geo_0'])
+        geo_n_test = Geo(mat_info['geo_n'])
+        geo_0_test = Geo(mat_info['geo_0'])
         dofs_test = DegreesOfFreedom(mat_info['Dofs'])
         g_test = mat_info['g'][:, 0]
         dy_test = mat_info['dy'][:, 0]

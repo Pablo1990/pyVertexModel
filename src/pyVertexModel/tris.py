@@ -49,4 +49,3 @@ class Tris:
                            np.linalg.norm(Ys[self.Edge[1], :] - face_centre)]
         AspectRatio = compute_tri_aspect_ratio([EdgeLength] + LengthsToCentre)
         return EdgeLength, LengthsToCentre, AspectRatio
-

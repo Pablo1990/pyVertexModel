@@ -244,8 +244,8 @@ def delaunay_compute_entities(tris, X, XgID, XgIDBB, nCells, s):
     Side = np.array([[0, 1, 2], [0, 1, 3], [1, 2, 3], [0, 2, 3]])
     Edges = np.array([[0, 1], [1, 2], [0, 2], [0, 3], [1, 3], [2, 3]])
     Vol = np.zeros(tris.shape[0])
-    AreaFaces = np.zeros((tris.shape[0]*3, 4))
-    LengthEdges = np.zeros((tris.shape[0]*3, 6))
+    AreaFaces = np.zeros((tris.shape[0] * 3, 4))
+    LengthEdges = np.zeros((tris.shape[0] * 3, 6))
     Arc = 0
     Lnc = 0
 
@@ -286,11 +286,18 @@ def delaunay_compute_entities(tris, X, XgID, XgIDBB, nCells, s):
 
 
 def extrapolate_ys_faces_ellipsoid(geo, c_set):
+    """
+    Extrapolate the vertices of the cells to the ellipsoid
+    :param geo:
+    :param c_set:
+    :return:
+    """
     # Original axis values
     Ys_top = np.concatenate([cell.Y for cell in geo.Cells[1:c_set.TotalCells]])
 
     a, b, c, paramsOptimized_top = fitEllipsoidToPoints(Ys_top)
     a, b, c, paramsOptimized_bottom = fitEllipsoidToPoints(geo.Cells[0].Y)
+
     # Normalised based on those
     ellipsoid_axis_normalised1 = c_set.ellipsoid_axis1 / paramsOptimized_top[0]
     ellipsoid_axis_normalised2 = c_set.ellipsoid_axis2 / paramsOptimized_top[1]
@@ -298,10 +305,12 @@ def extrapolate_ys_faces_ellipsoid(geo, c_set):
     lumen_axis_normalised1 = c_set.lumen_axis1 / paramsOptimized_bottom[0]
     lumen_axis_normalised2 = c_set.lumen_axis2 / paramsOptimized_bottom[1]
     lumen_axis_normalised3 = c_set.lumen_axis3 / paramsOptimized_bottom[2]
+
     # Extrapolate top layer as the outer ellipsoid, the bottom layer as the lumen, and lateral is rebuilt.
     allTs = np.unique(np.sort(np.concatenate([cell.T for cell in geo.Cells[:c_set.TotalCells]]), axis=1), axis=0)
     topTs = allTs[np.any(np.isin(allTs, geo.XgTop), axis=1)]
     bottomsTs = allTs[np.any(np.isin(allTs, geo.XgBottom), axis=1)]
+
     # Changes vertices of other cells
     for tetToCheck in topTs:
         for nodeInTet in tetToCheck:
@@ -336,6 +345,7 @@ def extrapolate_ys_faces_ellipsoid(geo, c_set):
         cell.Vol0 = c_set.cell_V0
     geo.Cells[0].Area0 = c_set.lumen_V0 * (c_set.cell_A0 / c_set.cell_V0)
     geo.Cells[0].Vol0 = c_set.lumen_V0
+
     # Calculate the mean volume excluding the first cell
     meanVolume = np.mean([cell.Vol for cell in geo.Cells[1:c_set.TotalCells]])
     print(f'Average Cell Volume: {meanVolume}')
@@ -378,8 +388,8 @@ class VertexModel:
 
         self.numStep = None
         self.backupVars = None
-        self.Geo_n = None
-        self.Geo_0 = None
+        self.geo_n = None
+        self.geo_0 = None
         self.tr = None
         self.t = None
         self.X = None
@@ -430,15 +440,15 @@ class VertexModel:
         self.geo.Remodelling = False
         self.t = 0
         self.tr = 0
-        self.Geo_0 = self.geo.copy()
-        # Removing info of unused features from Geo_0
-        for cell in self.Geo_0.Cells:
+        self.geo_0 = self.geo.copy()
+        # Removing info of unused features from geo_0
+        for cell in self.geo_0.Cells:
             cell.Vol = None
             cell.Vol0 = None
             cell.Area = None
             cell.Area0 = None
-        self.Geo_n = self.geo.copy()
-        for cell in self.Geo_n.Cells:
+        self.geo_n = self.geo.copy()
+        for cell in self.geo_n.Cells:
             cell.Vol = None
             cell.Vol0 = None
             cell.Area = None
@@ -770,7 +780,7 @@ class VertexModel:
 
     def IterateOverTime(self):
         # Create VTK files for initial state
-        self.geo.create_vtk_cell(self.Geo_0, self.set, 0)
+        self.geo.create_vtk_cell(self.geo_0, self.set, 0)
 
         while self.t <= self.set.tend and not self.didNotConverge:
             self.set.currentT = self.t
@@ -784,8 +794,8 @@ class VertexModel:
                 # up-to-date
                 self.geo.update_measures()
 
-            g, K, __ = newtonRaphson.KgGlobal(self.Geo_0, self.Geo_n, self.geo, self.set)
-            self.geo, g, __, __, self.set, gr, dyr, dy = newtonRaphson.newton_raphson(self.Geo_0, self.Geo_n, self.geo,
+            g, K, __ = newtonRaphson.KgGlobal(self.geo_0, self.geo_n, self.geo, self.set)
+            self.geo, g, __, __, self.set, gr, dyr, dy = newtonRaphson.newton_raphson(self.geo_0, self.geo_n, self.geo,
                                                                                       self.Dofs, self.set, K, g,
                                                                                       self.numStep, self.t)
             self.post_newton_raphson(dy, dyr, g, gr)
@@ -805,7 +815,7 @@ class VertexModel:
         self.geo = self.backupVars['Geo_b']
         self.tr = self.backupVars['tr_b']
         self.Dofs = self.backupVars['Dofs']
-        self.Geo_n = self.geo.copy()
+        self.geo_n = self.geo.copy()
         self.relaxingNu = False
         if self.set.iter == self.set.MaxIter0:
             self.set.MaxIter = self.set.MaxIter0 * 1.1
@@ -822,18 +832,18 @@ class VertexModel:
     def iteration_converged(self):
         if self.set.nu / self.set.nu0 == 1:
             # STEP has converged
-            print(f"\n STEP {str(self.set.i_incr)} has converged ...\n")
+            print(f"\n STEP {str(self.set.Nincr)} has converged ...\n")
 
             # REMODELLING
             if self.set.Remodelling and abs(self.t - self.tr) >= self.set.RemodelingFrequency:
-                Remodelling(self.geo, self.Geo_n, self.Geo_0, self.set, self.Dofs)
+                Remodelling(self.geo, self.geo_n, self.geo_0, self.set, self.Dofs)
                 self.tr = self.t
 
             # Append Energies
             # energies_per_time_step.append(energies)
 
             # Build X From Y
-            self.geo.build_x_from_y(self.Geo_n)
+            self.geo.build_x_from_y(self.geo_n)
 
             # Update last time converged
             self.set.last_t_converged = self.t
@@ -861,7 +871,7 @@ class VertexModel:
             self.check_integrity()
 
             # Post Processing and Saving Data
-            self.geo.create_vtk_cell(self.Geo_0, self.set, self.numStep)
+            self.geo.create_vtk_cell(self.geo_0, self.set, self.numStep)
 
             # TODO: Update Contractility Value and Edge Length
             # for num_cell in range(len(self.geo.Cells)):
@@ -884,11 +894,11 @@ class VertexModel:
             self.set.MaxIter = self.set.MaxIter0
             self.numStep = self.numStep + 1
             self.backupVars = {
-                'Geo_b': self.geo,
+                'Geo_b': self.geo.copy(),
                 'tr_b': self.tr,
                 'Dofs': self.Dofs
             }
-            self.Geo_n = self.geo
+            self.geo_n = self.geo.copy()
             self.relaxingNu = False
         else:
             self.set.nu = np.max([self.set.nu / 2, self.set.nu0])

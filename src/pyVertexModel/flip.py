@@ -1,6 +1,7 @@
+from itertools import combinations
+
 import networkx as nx
 import numpy as np
-from itertools import combinations
 from scipy.spatial import Delaunay
 
 from src.pyVertexModel.geo import edgeValenceT
@@ -22,12 +23,12 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, newYgIds, Set, flipN
 
     Geo.add_and_rebuild_cells(oldTets, Tnew, Ynew, Set, 1)
     Geo_n = Geo.copy()
-    # Geo_0 = add_and_rebuild_cells(Geo_0, oldTets, Tnew, Ynew, Set, 0)
-    # PostProcessingVTK(Geo, Geo_0, Set, Set.iIncr+1)
-    # PostProcessingVTK(Geo_0, Geo_0, Set, Set.iIncr+2)
+    # geo_0 = add_and_rebuild_cells(geo_0, oldTets, Tnew, Ynew, Set, 0)
+    # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr+1)
+    # PostProcessingVTK(geo_0, geo_0, Set, Set.iIncr+2)
 
     if check_tris(Geo):  # && ~CheckConvexity(Tnew,Geo_backup)
-        # PostProcessingVTK(Geo, Geo_0, Set, Set.iIncr+1)
+        # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr+1)
         if Set['NeedToConverge']:
             Dofs.get_dofs(Geo, Set)
             Dofs, Geo = get_remodel_dofs(Tnew, Dofs, Geo)
@@ -62,7 +63,7 @@ def FlipNM(segmentToChange, cellToIntercalateWith, oldTets, oldYs, Geo_0, Geo_n,
 
     if len(Tnew) != 0:
         [Geo_0, Geo_n, Geo, Dofs, newYgIds, hasConverged] = post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs,
-                                                                   newYgIds, Set, flipName, segmentToChange)
+                                                                      newYgIds, Set, flipName, segmentToChange)
 
     return Geo_0, Geo_n, Geo, Dofs, Set, newYgIds, hasConverged, Tnew
 
