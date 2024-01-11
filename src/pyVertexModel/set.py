@@ -6,9 +6,7 @@ import numpy as np
 
 class Set:
     def __init__(self, mat_file=None):
-        self.dt0 = None
         self.iter = None
-        self.MaxIter0 = None
         self.ablation = False
         self.lumen_V0 = None
         self.cell_V0 = None
