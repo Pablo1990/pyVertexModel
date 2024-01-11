@@ -890,7 +890,7 @@ class VertexModel:
         Tri = Delaunay(X)
 
         # first Delaunay with ghost nodes
-        X, XgID = delaunay_compute_entities(Tri.simplices, X, XgID, s)
+        X, XgID = delaunay_compute_entities(Tri.simplices, X, XgID, XgIDBB, nCells, s)
         return XgID, X
 
     def check_integrity(self):
