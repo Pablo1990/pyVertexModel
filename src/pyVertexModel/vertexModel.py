@@ -543,6 +543,7 @@ class VertexModel:
         self.X[:, 0] = self.X[:, 0] - np.mean(self.X[:, 0])
         self.X[:, 1] = self.X[:, 1] - np.mean(self.X[:, 1])
         self.X[:, 2] = self.X[:, 2] - np.mean(self.X[:, 2])
+
         if self.set.InputGeo == 'Bubbles_Cyst':
             a, b, c, paramsOptimized = fitEllipsoidToPoints(self.X)
 

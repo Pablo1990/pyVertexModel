@@ -16,7 +16,11 @@ def load_data(file_name, return_geo=True):
         mat_info = scipy.io.loadmat('data/%s' % file_name)
 
     if return_geo:
-        geo_test = Geo(mat_info['Geo'])
+        if 'Geo' in mat_info.keys():
+            geo_test = Geo(mat_info['Geo'])
+        else:
+            geo_test = None
+
         if 'Set' in mat_info.keys():
             set_test = Set(mat_info['Set'])
         else:

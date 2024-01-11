@@ -210,6 +210,7 @@ class TestVertexModel(Tests):
         geo_expected, set_test, mat_info = load_data('initialize_cells_cyst_expected.mat')
 
         set_test.InputGeo = 'Bubbles_Cyst'
+        set_test.TotalCells = 30
 
         # Test if initialize geometry function does not change anything
         vModel_test = VertexModel(set_test)
@@ -227,6 +228,7 @@ class TestVertexModel(Tests):
         geo_expected, set_test, mat_info = load_data('initialize_cells_cyst_expected.mat')
 
         set_test.InputGeo = 'Bubbles_Cyst'
+        set_test.TotalCells = 30
 
         # Test if initialize geometry function does not change anything
         vModel_test = VertexModel(set_test)
@@ -242,12 +244,33 @@ class TestVertexModel(Tests):
         """
 
         # Load data
-        geo_expected, set_test, mat_info = load_data('initialize_cells_cyst_expected.mat')
+        _, set_test, mat_info = load_data('build_topo_expected.mat')
 
         set_test.InputGeo = 'Bubbles_Cyst'
+        set_test.TotalCells = 30
 
         # Test if initialize geometry function does not change anything
         X, X_IDs = build_topo(set_test)
 
         # Check if the cells are initialized correctly
         assert_matrix(X, mat_info['X'])
+
+    def test_seed_with_bounding_box(self):
+        """
+        Test the seed_with_bounding_box function.
+        :return:
+        """
+
+        # Load data
+        _, set_test, mat_info = load_data('seed_with_bbox_input.mat')
+        _, _, mat_info_expected = load_data('seed_with_bbox_expected.mat')
+
+        set_test.InputGeo = 'Bubbles_Cyst'
+        X_input = mat_info['X']
+
+        # Test if initialize geometry function does not change anything
+        vModel_test = VertexModel(set_test)
+        XgID_expected, X_test = vModel_test.SeedWithBoundingBox(X_input, set_test.s)
+
+        # Check if the cells are initialized correctly
+        assert_matrix(X_test, mat_info_expected['X'])
