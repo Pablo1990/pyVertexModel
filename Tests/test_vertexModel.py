@@ -5,6 +5,7 @@ from scipy.spatial import Delaunay
 from Tests.test_geo import check_if_cells_are_the_same
 from Tests.tests import Tests, assert_matrix, load_data
 from src.pyVertexModel.degreesOfFreedom import DegreesOfFreedom
+from src.pyVertexModel.newtonRaphson import newton_raphson
 from src.pyVertexModel.vertexModel import VertexModel, generate_first_ghost_nodes, build_topo, \
     delaunay_compute_entities, SeedWithBoundingBox
 
@@ -200,3 +201,21 @@ class TestVertexModel(Tests):
         # Check if the cells are initialized correctly
         np.testing.assert_equal(v_model_test.geo.Cells[0].Y[0, 0], np.Inf)
         np.testing.assert_equal(v_model_test.geo.Cells[0].Faces[0].Centre[0], np.Inf)
+
+    def test_newton_raphson_cyst(self):
+        """
+        Test the newton_raphson function with the cyst input.
+        :return:
+        """
+        # Load data
+        geo_test, set_test, mat_info = load_data('Geo_var_cyst.mat')
+
+        # Test if initialize geometry function does not change anything
+        v_model_test = VertexModel(set_test)
+        v_model_test.geo = geo_test.copy()
+        v_model_test.geo_0 = geo_test.copy()
+        v_model_test.geo_n = geo_test.copy()
+
+        newton_raphson(geo_test.copy(), geo_test.copy(), geo_test.copy(), DegreesOfFreedom(mat_info['Dofs']).copy(),
+                       set_test, mat_info['K'], mat_info['g'][:, 0], 0, 0)
+
