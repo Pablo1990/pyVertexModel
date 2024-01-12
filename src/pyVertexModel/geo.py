@@ -450,11 +450,6 @@ class Geo:
 
         for cc in aliveCells + debrisCells:
             Cell = self.Cells[cc]
-
-            for numT in range(len(Cell.T)):
-                tet = Cell.T[numT]
-                Cell.T[numT] = tet
-
             Neigh_nodes = np.unique(Cell.T)
             Neigh_nodes = Neigh_nodes[Neigh_nodes != cc]
 
@@ -467,6 +462,11 @@ class Geo:
 
                 if oldFaceExists:
                     oldFace = [c_face for c_face in oldGeo.Cells[cc].Faces if np.all(c_face.ij == ij)][0]
+
+                    # Check if the last of the old faces Tris' edge goes beyond the number of Ys
+                    all_tris = [max(tri.edge) for tri in oldFace.Tris]
+                    if max(all_tris) >= Cell.Y.shape[0]:
+                        oldFace = None
                 else:
                     oldFace = None
 
@@ -481,8 +481,8 @@ class Geo:
                 if any(woundEdgeTris) and not oldFaceExists:
                     for woundTriID in [i for i, x in enumerate(woundEdgeTris) if x]:
                         woundTri = self.Cells[cc].Faces[j].Tris[woundTriID]
-                        allTris = [tri for c_face in oldGeo.Cells[cc].Faces for tri in c_face.Tris]
-                        matchingTris = [tri for tri in allTris if
+                        all_tris = [tri for c_face in oldGeo.Cells[cc].Faces for tri in c_face.Tris]
+                        matchingTris = [tri for tri in all_tris if
                                         set(tri.SharedByCells).intersection(set(woundTri.SharedByCells))]
 
                         meanDistanceToTris = []

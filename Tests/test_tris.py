@@ -25,3 +25,6 @@ class TestTris(Tests):
 
             assert_array1D(geo_test.Cells[i].Faces[0].Tris[0].LengthsToCentre,
                            geo_expected.Cells[i].Faces[0].Tris[0].LengthsToCentre)
+
+    def test_build_edges(self):
+        pass

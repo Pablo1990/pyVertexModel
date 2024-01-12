@@ -1,12 +1,16 @@
 import numpy as np
 
-from Tests.tests import Tests, load_data
-from src.pyVertexModel.face import get_key
+from Tests.tests import Tests, load_data, assert_matrix
+from src.pyVertexModel.face import get_key, Face
 
 
 class TestFace(Tests):
 
     def test_compute_face_area(self):
+        """
+
+        :return:
+        """
         geo_test, _, _ = load_data('Geo_var_3x3_stretch.mat')
         geo_expected, _, _ = load_data('Geo_var_3x3_stretch.mat')
 
@@ -19,6 +23,10 @@ class TestFace(Tests):
             np.testing.assert_almost_equal(geo_test.Cells[i].Faces[0].Area, geo_expected.Cells[i].Faces[0].Area)
 
     def test_build_interface_type(self):
+        """
+
+        :return:
+        """
         geo_test, _, _ = load_data('Geo_var_3x3_stretch.mat')
         geo_expected, _, _ = load_data('Geo_var_3x3_stretch.mat')
 
@@ -33,3 +41,33 @@ class TestFace(Tests):
                 np.testing.assert_equal(get_key(geo_test.Cells[i].Faces[j].InterfaceType_allValues,
                                                 geo_test.Cells[i].Faces[j].InterfaceType),
                                         geo_expected.Cells[i].Faces[j].InterfaceType)
+
+    def test_build_face(self):
+        """
+
+        :return:
+        """
+        geo_test, set_test, mat_info = load_data('build_face_cyst.mat')
+        _, _, mat_info_expected = load_data('build_face_cyst_expected.mat')
+
+        c = mat_info['c'][0][0] - 1
+        j = mat_info['cj'][0][0] - 1
+
+        # Build the face
+        face_test = geo_test.Cells[c].Faces[j].build_face(c,
+                                                          j,
+                                                          mat_info['face_ids'],
+                                                          geo_test.nCells,
+                                                          geo_test.Cells[c],
+                                                          geo_test.XgID,
+                                                          set_test,
+                                                          geo_test.XgTop,
+                                                          geo_test.XgBottom)
+
+        face_expected = Face(mat_info_expected['Face'])
+
+        # Check if the face is built correctly
+        assert_matrix(face_test.Centre, face_expected.Centre)
+        assert_matrix(face_test.Area, face_expected.Area)
+        assert_matrix(face_test.Area0, face_expected.Area0)
+        assert_matrix(face_test.InterfaceType, face_expected.InterfaceType)

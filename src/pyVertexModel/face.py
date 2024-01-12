@@ -19,7 +19,7 @@ class Face:
         self.Aspect_Ratio = None
         self.Perimeter = None
         self.Tris = []
-        if mat_file is None:
+        if mat_file is None or mat_file[0].shape[0] == 0:
             self.InterfaceType = None
             self.ij = None
             self.globalIds = None

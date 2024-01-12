@@ -10,7 +10,7 @@ def compute_tri_aspect_ratio(side_lengths):
 
 class Tris:
     def __init__(self, mat_file=None):
-        if mat_file is None:
+        if mat_file is None or mat_file[0].shape[0] == 0:
             self.Edge = []
             self.SharedByCells = []
             self.EdgeLength = []
