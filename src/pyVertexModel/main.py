@@ -2,4 +2,4 @@ from src.pyVertexModel.vertexModel import VertexModel
 
 vModel = VertexModel()
 vModel.initialize()
-vModel.IterateOverTime()
+vModel.iterate_over_time()

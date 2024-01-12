@@ -464,7 +464,7 @@ class Geo:
                     oldFace = [c_face for c_face in oldGeo.Cells[cc].Faces if np.all(c_face.ij == ij)][0]
 
                     # Check if the last of the old faces Tris' edge goes beyond the number of Ys
-                    all_tris = [max(tri.edge) for tri in oldFace.Tris]
+                    all_tris = [max(tri.Edge) for tri in oldFace.Tris]
                     if max(all_tris) >= Cell.Y.shape[0]:
                         oldFace = None
                 else:

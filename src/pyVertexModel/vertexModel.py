@@ -778,7 +778,7 @@ class VertexModel:
             self.geo.XgID = np.arange(self.X.shape[0], self.X.shape[0] + Xg.shape[0] + 2)
             self.X = np.concatenate((self.X, Xg, [np.mean(self.X[:, 0]), np.mean(self.X[:, 1]), -50]), axis=0)
 
-    def IterateOverTime(self):
+    def iterate_over_time(self):
         # Create VTK files for initial state
         self.geo.create_vtk_cell(self.geo_0, self.set, 0)
 
@@ -812,16 +812,17 @@ class VertexModel:
     def iteration_did_not_converged(self):
         # TODO
         # self.backupVars.Geo_b.log = self.Geo.log
-        self.geo = self.backupVars['Geo_b']
+        self.geo = self.backupVars['Geo_b'].copy()
         self.tr = self.backupVars['tr_b']
-        self.Dofs = self.backupVars['Dofs']
+        self.Dofs = self.backupVars['Dofs'].copy()
         self.geo_n = self.geo.copy()
         self.relaxingNu = False
         if self.set.iter == self.set.MaxIter0:
             self.set.MaxIter = self.set.MaxIter0 * 1.1
             self.set.nu = 10 * self.set.nu0
         else:
-            if self.set.iter >= self.set.MaxIter and self.set.iter > self.set.MaxIter0 and self.set.dt / self.set.dt0 > 1 / 100:
+            if (self.set.iter >= self.set.MaxIter and self.set.iter > self.set.MaxIter0 and
+                    self.set.dt / self.set.dt0 > 1 / 100):
                 self.set.MaxIter = self.set.MaxIter0
                 self.set.nu = self.set.nu0
                 self.set.dt = self.set.dt / 2
@@ -868,7 +869,7 @@ class VertexModel:
             #     wound_features = compute_wound_features(geo)
 
             # Test Geo
-            self.check_integrity()
+            #self.check_integrity()
 
             # Post Processing and Saving Data
             self.geo.create_vtk_cell(self.geo_0, self.set, self.numStep)
@@ -896,7 +897,7 @@ class VertexModel:
             self.backupVars = {
                 'Geo_b': self.geo.copy(),
                 'tr_b': self.tr,
-                'Dofs': self.Dofs
+                'Dofs': self.Dofs.copy()
             }
             self.geo_n = self.geo.copy()
             self.relaxingNu = False

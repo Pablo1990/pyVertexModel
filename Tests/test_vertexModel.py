@@ -4,7 +4,9 @@ from scipy.spatial import Delaunay
 
 from Tests.test_geo import check_if_cells_are_the_same
 from Tests.tests import Tests, assert_matrix, load_data
-from src.pyVertexModel.vertexModel import VertexModel, generate_first_ghost_nodes, build_topo, delaunay_compute_entities
+from src.pyVertexModel.degreesOfFreedom import DegreesOfFreedom
+from src.pyVertexModel.vertexModel import VertexModel, generate_first_ghost_nodes, build_topo, \
+    delaunay_compute_entities, SeedWithBoundingBox
 
 
 class TestVertexModel(Tests):
@@ -161,3 +163,40 @@ class TestVertexModel(Tests):
 
         # Check if the cells are initialized correctly
         assert_matrix(X_test, mat_info_expected['X'])
+
+    def test_iteration_did_not_converged(self):
+        """
+        Test the iteration_did_not_converged function.
+        :return:
+        """
+
+        # Load data
+        geo_test, set_test, mat_info = load_data('Geo_var_cyst.mat')
+        geo_original, _, mat_info_original = load_data('Geo_var_cyst.mat')
+
+        # Test if initialize geometry function does not change anything
+        v_model_test = VertexModel(set_test)
+        v_model_test.backupVars = {
+            'Geo_b': geo_test,
+            'tr_b': 0,
+            'Dofs': DegreesOfFreedom(mat_info['Dofs']).copy(),
+        }
+        v_model_test.set.iter = 1000000
+        v_model_test.set.MaxIter0 = v_model_test.set.iter
+
+        v_model_test.geo = geo_test.copy()
+
+        geo_test.Cells[0].Y[0, 0] = np.Inf
+        geo_test.Cells[0].Faces[0].Centre[0] = np.Inf
+
+        # Check if the cells are initialized correctly
+        check_if_cells_are_the_same(geo_original, v_model_test.geo)
+
+        v_model_test.iteration_did_not_converged()
+
+        geo_test.Cells[0].Y[0, 0] = -np.Inf
+        geo_test.Cells[0].Faces[0].Centre[0] = -np.Inf
+
+        # Check if the cells are initialized correctly
+        np.testing.assert_equal(v_model_test.geo.Cells[0].Y[0, 0], np.Inf)
+        np.testing.assert_equal(v_model_test.geo.Cells[0].Faces[0].Centre[0], np.Inf)

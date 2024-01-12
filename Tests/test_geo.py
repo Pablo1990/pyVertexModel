@@ -34,7 +34,6 @@ def check_if_cells_are_the_same(geo_expected, geo_test):
 
     # Check if the faces have the same global ids and the same centres
     for i in range(geo_test.nCells):
-        print(i)
         # Put together all the faces' centres
         centres_test = np.concatenate([geo_test.Cells[i].Faces[j].Centre for j in range(len(geo_test.Cells[i].Faces))])
         centres_expected = np.concatenate([geo_expected.Cells[i].Faces[j].Centre for j in range(len(geo_expected.Cells[i].Faces))])

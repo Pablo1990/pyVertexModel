@@ -165,3 +165,16 @@ class DegreesOfFreedom:
                     if FixP[gn] == face.globalIds:
                         face.Centre[1] = face.Centre[1] + Set.dx / (
                                 (Set.TStopBC - Set.TStartBC) / Set.dt)
+
+    def copy(self):
+        """
+        Copy the degrees of freedom.
+        :return:
+        """
+        dof_copy = DegreesOfFreedom()
+        dof_copy.Free = self.Free.copy()
+        dof_copy.Fix = self.Fix.copy()
+        dof_copy.FixP = self.FixP.copy()
+        dof_copy.FixC = self.FixC.copy()
+
+        return dof_copy
