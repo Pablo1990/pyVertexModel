@@ -99,6 +99,24 @@ class TestNewtonRaphson(Tests):
             for j in range(len(geo_test.Cells[i].Faces)):
                 assert_array1D(geo_test.Cells[i].Faces[j].Centre, geo_expected.Cells[i].Faces[j].Centre)
 
+    def test_line_search_cyst(self):
+        """
+        Test the line_search function with the cyst input.
+        :return:
+        """
+        # Load data
+        geo_test, set_test, mat_info = load_data('line_search_cyst.mat')
+
+        geo_n_test = Geo(mat_info['Geo_n'])
+        geo_0_test = Geo(mat_info['Geo_0'])
+        dofs_test = DegreesOfFreedom(mat_info['Dofs']).copy()
+        g_test = mat_info['g'][:, 0]
+        dy_test = mat_info['dy']
+        set_test = Set(mat_info['Set'])
+        alpha = line_search(geo_0_test, geo_n_test, geo_test, dofs_test, set_test, g_test, dy_test)
+
+        np.testing.assert_almost_equal(alpha, mat_info['alpha'][0][0])
+
     def test_ml_divide(self):
         geo_test, _, _ = load_data('Newton_Raphson_3x3_stretch.mat')
         _, _, mat_info_expected = load_data('Newton_Raphson_ml_divide_3x3_stretch_expected.mat', False)
