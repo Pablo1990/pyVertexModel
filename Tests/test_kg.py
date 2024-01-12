@@ -15,8 +15,8 @@ from src.pyVertexModel.newtonRaphson import KgGlobal
 
 def test_kg_global_filename(filename):
     geo_test, set_test, mat_info = load_data(filename)
-    geo_n_test = Geo(mat_info['geo_n'])
-    geo_0_test = Geo(mat_info['geo_0'])
+    geo_n_test = Geo(mat_info['Geo_n'])
+    geo_0_test = Geo(mat_info['Geo_0'])
     # Compute the global K, and g
     g, K, E = KgGlobal(geo_0_test, geo_n_test, geo_test, set_test)
     # Get the expected results from the mat file
@@ -61,7 +61,7 @@ def kg_surface_area_filename(filename, filename_expected):
 def test_kg_viscosity_filename(filename, filename_expected):
     geo_test, set_test, mat_info = load_data(filename)
     _, _, mat_expected = load_data(filename_expected, False)
-    geo_n_test = Geo(mat_info['geo_n'])
+    geo_n_test = Geo(mat_info['Geo_n'])
     kg = KgViscosity(geo_test)
     kg.compute_work(geo_test, set_test, geo_n_test)
     assert_k_g_energy('EN', 'gf_full', 'Kf_full', kg, mat_expected)
@@ -173,8 +173,8 @@ class Test(Tests):
     def test_KgGlobal(self):
         geo_test, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
         _, _, mat_expected = load_data('Geo_var_3x3_stretch_expectedResults.mat', False)
-        geo_n_test = Geo(mat_info['geo_n'])
-        geo_0_test = Geo(mat_info['geo_0'])
+        geo_n_test = Geo(mat_info['Geo_n'])
+        geo_0_test = Geo(mat_info['Geo_0'])
 
         g, K, E = KgGlobal(geo_0_test, geo_n_test, geo_test, set_test)
 
