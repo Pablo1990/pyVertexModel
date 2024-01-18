@@ -6,6 +6,7 @@ import numpy as np
 
 class Set:
     def __init__(self, mat_file=None):
+        self.i_incr = None
         self.iter = None
         self.ablation = False
         self.lumen_V0 = None

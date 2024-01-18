@@ -833,7 +833,7 @@ class VertexModel:
     def iteration_converged(self):
         if self.set.nu / self.set.nu0 == 1:
             # STEP has converged
-            print(f"\n STEP {str(self.set.Nincr)} has converged ...\n")
+            print(f"\n STEP {str(self.set.i_incr)} has converged ...\n")
 
             # REMODELLING
             if self.set.Remodelling and abs(self.t - self.tr) >= self.set.RemodelingFrequency:
