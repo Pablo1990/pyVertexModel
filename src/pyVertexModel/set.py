@@ -179,8 +179,7 @@ class Set:
         self.InputGeo = 'Bubbles_Cyst'
         self.CellHeight = 15
         self.OutputFolder = 'Result/Cyst'
-
-
+        self.lambdaR = 0
 
     def NoBulk_110(self):
         self.InputGeo = 'VertexModelTime'
