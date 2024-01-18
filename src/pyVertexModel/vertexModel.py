@@ -678,9 +678,9 @@ class VertexModel:
         self.generate_Xs(self.geo.nx, self.geo.ny, self.geo.nz)
 
         # This code is to match matlab's output and python's
-        N = 3  # The dimensions of our points
-        options = 'Qt Qbb Qc' if N <= 3 else 'Qt Qbb Qc Qx'  # Set the QHull options
-        Twg = Delaunay(self.X, qhull_options=options).simplices
+        #N = 3  # The dimensions of our points
+        #options = 'Qt Qbb Qc' if N <= 3 else 'Qt Qbb Qc Qx'  # Set the QHull options
+        Twg = Delaunay(self.X).simplices
 
         # Remove tetrahedras formed only by ghost nodes
         Twg = Twg[~np.all(np.isin(Twg, self.geo.XgID), axis=1)]
