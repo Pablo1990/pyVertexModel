@@ -45,7 +45,7 @@ def test_kg_tri_filename(filename, filename_expected):
 
 def assert_k_g_energy(energy_var_name, g_var_name, k_var_name, kg, mat_expected):
     assert_array1D(mat_expected[g_var_name][:, 0], kg.g)
-    np.testing.assert_almost_equal(kg.energy, mat_expected[energy_var_name][0][0], 3)
+    np.testing.assert_allclose(kg.energy, mat_expected[energy_var_name][0][0])
     K_expected = mat_expected[k_var_name]
     assert_matrix(K_expected, kg.K)
 
