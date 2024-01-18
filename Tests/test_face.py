@@ -53,21 +53,23 @@ class TestFace(Tests):
         c = mat_info['c'][0][0] - 1
         j = mat_info['cj'][0][0] - 1
 
+        set_test.InputGeo = 'Bubbles_Cyst'
+
         # Build the face
-        face_test = geo_test.Cells[c].Faces[j].build_face(c,
-                                                          j,
-                                                          mat_info['face_ids'],
-                                                          geo_test.nCells,
-                                                          geo_test.Cells[c],
-                                                          geo_test.XgID,
-                                                          set_test,
-                                                          geo_test.XgTop,
-                                                          geo_test.XgBottom)
+        geo_test.Cells[c].Faces[j].build_face(c,
+                                              j,
+                                              np.concatenate(mat_info['face_ids']),
+                                              geo_test.nCells,
+                                              geo_test.Cells[c],
+                                              geo_test.XgID,
+                                              set_test,
+                                              geo_test.XgTop,
+                                              geo_test.XgBottom)
 
         face_expected = Face(mat_info_expected['Face'])
 
         # Check if the face is built correctly
-        assert_matrix(face_test.Centre, face_expected.Centre)
-        assert_matrix(face_test.Area, face_expected.Area)
-        assert_matrix(face_test.Area0, face_expected.Area0)
-        assert_matrix(face_test.InterfaceType, face_expected.InterfaceType)
+        assert_matrix(geo_test.Cells[c].Faces[j].Centre, face_expected.Centre)
+        assert_matrix(geo_test.Cells[c].Faces[j].Area, face_expected.Area)
+        assert_matrix(geo_test.Cells[c].Faces[j].Area0, face_expected.Area0)
+        assert_matrix(geo_test.Cells[c].Faces[j].InterfaceType, face_expected.InterfaceType)

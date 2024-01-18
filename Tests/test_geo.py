@@ -42,7 +42,7 @@ def check_if_cells_are_the_same(geo_expected, geo_test):
         assert_array1D(centres_test, centres_expected)
 
         for j in range(len(geo_test.Cells[i].Faces)):
-            np.testing.assert_almost_equal(geo_test.Cells[i].Faces[j].globalIds,
+            np.testing.assert_equal(geo_test.Cells[i].Faces[j].globalIds,
                                            geo_expected.Cells[i].Faces[j].globalIds)
 
 
