@@ -712,7 +712,7 @@ class Geo:
 
         for c in [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]:
             writer = vtk.vtkPolyDataWriter()
-            name_out = os.path.join(new_sub_folder, f'Cell_{c:04d}_t{step:04d}{file_extension}')
+            name_out = os.path.join(new_sub_folder, f'Cell.{c:04d}.{step:04d}{file_extension}')
             writer.SetFileName(name_out)
             vtk_cells.append(self.Cells[c].create_vtk(geo_0, set, step))
 
