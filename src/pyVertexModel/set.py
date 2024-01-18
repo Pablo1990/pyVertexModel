@@ -2,6 +2,7 @@ import math
 from datetime import datetime
 
 import numpy as np
+import scipy
 
 
 class Set:
@@ -107,11 +108,14 @@ class Set:
             self.SaveSetting = False
             self.log = 'log.txt'
         else:
-            for param in mat_file.dtype.fields:
-                if len(mat_file[param][0][0]) == 0:
-                    setattr(self, param, None)
-                else:
-                    setattr(self, param, mat_file[param][0][0][0][0])
+            self.read_mat_file(mat_file)
+
+    def read_mat_file(self, mat_file):
+        for param in mat_file.dtype.fields:
+            if len(mat_file[param][0][0]) == 0:
+                setattr(self, param, None)
+            else:
+                setattr(self, param, mat_file[param][0][0][0][0])
 
     def define_if_not_defined(self, param, value):
         """
@@ -170,46 +174,13 @@ class Set:
         self.VTK = False
 
     def cyst(self):
+        mat_info = scipy.io.loadmat('Tests/data/Geo_var_cyst.mat')
+        self.read_mat_file(mat_info['Set'])
         self.InputGeo = 'Bubbles_Cyst'
-        self.ellipsoid_axis1 = 33 / 2
-        self.ellipsoid_axis2 = 31 / 2
-        self.ellipsoid_axis3 = 23 / 2
-        self.lumen_axis1 = 23 / 2
-        self.lumen_axis2 = 20 / 2
-        self.lumen_axis3 = 12 / 2
-        self.cell_V0 = 440.0
-        self.cell_A0 = 328.0
-        self.lumen_V0 = 4308.0
-        self.TotalCells = 30
-        self.s = 1.5 * 10
-        self.f = 0.5 * 10
-        self.ablation = False
-        self.InPlaneElasticity = False
-        self.nu = 1
-        self.nu_LP_Initial = self.nu
-        self.nu0 = self.nu
-        self.Nincr = 61 * 2
+        self.CellHeight = 15
+        self.OutputFolder = 'Result/Cyst'
 
-        self.lambdaB = 1
-        self.lambdaR = 0.3
 
-        self.lambdaV = 400.0
-
-        self.Substrate = 0
-        self.kSubstrate = 0
-
-        self.cLineTension = 0.1
-
-        self.lambdaS1 = 8
-        self.lambdaS2 = 0.01 * self.lambdaS1
-        self.lambdaS3 = self.lambdaS2
-        self.lambdaS4 = self.lambdaS2
-
-        self.brownian_motion = 0.05
-
-        self.Remodelling = 1
-        self.RemodelStiffness = 0.1
-        self.VTK = True
 
     def NoBulk_110(self):
         self.InputGeo = 'VertexModelTime'
