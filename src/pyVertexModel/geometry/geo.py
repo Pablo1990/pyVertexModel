@@ -119,7 +119,7 @@ class Geo:
         """
         self.Cells = []
         self.Remodelling = False
-        self.non_dead_cells = []
+        self.non_dead_cells = None
         self.BorderCells = []
         self.BorderGhostNodes = []
 

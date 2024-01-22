@@ -12,6 +12,23 @@ from src.pyVertexModel.algorithm.newtonRaphson import newton_raphson, KgGlobal
 logger = logging.getLogger("pyVertexModel")
 
 
+def get_faces_from_node(geo, nodes):
+    """
+    Get the faces from a node.
+    :param nodes:
+    :return:
+    """
+    faces = []
+    for cell in [c for c in geo.Cells if c.AliveStatus is not None]:
+        for face in cell.Faces:
+            if all(node in face.ij for node in nodes):
+                faces.append(face)
+
+    faces_tris = [tri for face in faces for tri in face.Tris]
+
+    return faces, faces_tris
+
+
 class Remodelling:
     """
     Class that contains the information of the remodelling process.
@@ -32,7 +49,7 @@ class Remodelling:
         self.Geo_n = Geo_n
         self.Geo_0 = Geo_0
 
-    def remodelling(self):
+    def remodel_mesh(self):
         """
         Remodel the mesh.
         :return:
@@ -40,7 +57,10 @@ class Remodelling:
         self.Geo.AssemblegIds = []
         newYgIds = []
         checkedYgIds = []
+
+        # Get edges to remodel
         segmentFeatures_all = self.get_tris_to_remodel_ordered()
+
         nonDeadCells = [c_cell.ID for c_cell in self.Geo.Cells if c_cell.AliveStatus is not None]
 
         while segmentFeatures_all:
@@ -133,22 +153,6 @@ class Remodelling:
                         rowsToRemove.append(numRow)
             segmentFeatures_all = [feature for i, feature in enumerate(segmentFeatures_all) if i not in rowsToRemove]
 
-    def get_faces_from_node(geo, nodes):
-        """
-        Get the faces from a node.
-        :param nodes:
-        :return:
-        """
-        faces = []
-        for cell in [c for c in geo.cells if c.alive_status is not None]:
-            for face in cell.faces:
-                if all(node in face.ij for node in nodes):
-                    faces.append(face)
-
-        faces_tris = [tri for face in faces for tri in face.tris]
-
-        return faces, faces_tris
-
     def add_edge_to_intercalate(self, geo, num_cell, segment_features, edge_lengths_top, edges_to_intercalate_top,
                                 ghost_node_id):
         """
@@ -174,13 +178,13 @@ class Remodelling:
                 shared_neighbours_c = shared_neighbours[~np.isin(shared_neighbours, geo.xg_id)]
                 shared_neighbours_c = shared_neighbours_c[shared_neighbours_c != neighbour_to_num_cell]
 
-                if any([geo.cells[neighbour].alive_status == 1 for neighbour in shared_neighbours_c]):
+                if any([geo.cells[neighbour].AliveStatus == 1 for neighbour in shared_neighbours_c]):
                     cell_to_intercalate = [neighbour for neighbour in shared_neighbours_c if
-                                           geo.cells[neighbour].alive_status == 1]
+                                           geo.cells[neighbour].AliveStatus == 1]
                 else:
                     continue
 
-                c_face = self.get_faces_from_node(geo, [num_cell, node_pair_g])[0]
+                c_face = get_faces_from_node(geo, [num_cell, node_pair_g])[0]
                 num_shared_neighbours = len(shared_neighbours)
                 face_global_id = c_face.global_ids
                 cell_to_split_from = neighbour_to_num_cell
@@ -210,7 +214,7 @@ class Remodelling:
         """
         geop = geo.copy()  # Assuming there is a method to copy the Geo object
         logger.info('=====>> Solving Local Problem....')
-        geo.remodelling = True
+        geo.remodel_mesh = True
         increase_eta = True
         original_nu = set.nu
 
@@ -248,7 +252,7 @@ class Remodelling:
                     did_not_converge = False
                     set.max_iter = set.max_iter0
                     set.nu = original_nu
-                    geo.remodelling = False
+                    geo.remodel_mesh = False
                     break
                 else:
                     set.nu = max(set.nu / 2, set.nu0)
@@ -260,31 +264,28 @@ class Remodelling:
         Obtain the edges that are going to be remodeled.
         :return:
         """
-        # nonDeadCells = [Geo.Cells(~cellfun(@isempty, {Geo.Cells.AliveStatus})).ID];
-        non_dead_cells = [c_cell.id for c_cell in self.Geo.cells if c_cell.alive_status is not None]
-
-        segment_features = []
-        for num_cell in non_dead_cells:
-            c_cell = self.Geo.cells[num_cell]
-            if c_cell.alive_status and num_cell not in self.Geo.border_cells:
-                current_faces = self.get_faces_from_node(self.Geo, num_cell)
-                edge_lengths_top = np.zeros(len(self.Geo.cells))
-                edge_lengths_bottom = np.zeros(len(self.Geo.cells))
+        segment_features = None
+        for num_cell in self.Geo.non_dead_cells:
+            c_cell = self.Geo.Cells[num_cell]
+            if c_cell.AliveStatus and num_cell not in self.Geo.BorderCells:
+                current_faces, _ = get_faces_from_node(self.Geo, [num_cell])
+                edge_lengths_top = np.zeros(len(self.Geo.Cells))
+                edge_lengths_bottom = np.zeros(len(self.Geo.Cells))
 
                 for c_face in current_faces:
-                    for current_tri in c_face.tris:
-                        if len(current_tri.shared_by_cells) > 1:
-                            shared_cells = [c for c in current_tri.shared_by_cells if c != num_cell]
+                    for current_tri in c_face.Tris:
+                        if len(current_tri.SharedByCells) > 1:
+                            shared_cells = [c for c in current_tri.SharedByCells if c != num_cell]
                             for num_shared_cell in shared_cells:
-                                if c_face.interface_type == 1:
+                                if c_face.InterfaceType == 1:
                                     edge_lengths_top[num_shared_cell] += current_tri.edge_length / c_face.area
-                                elif c_face.interface_type == 3:
+                                elif c_face.InterfaceType == 3:
                                     edge_lengths_bottom[num_shared_cell] += current_tri.edge_length / c_face.area
 
                 if np.any(edge_lengths_top > 0):
                     avg_edge_length = np.median(edge_lengths_top[edge_lengths_top > 0])
                     edges_to_intercalate_top = (edge_lengths_top < avg_edge_length - (
-                            set.remodel_stiffness * avg_edge_length)) & (edge_lengths_top > 0)
+                            self.Set.remodel_stiffness * avg_edge_length)) & (edge_lengths_top > 0)
                     segment_features.append(
                         self.add_edge_to_intercalate(self.Geo, num_cell, pd.DataFrame(), edge_lengths_top,
                                                      edges_to_intercalate_top, self.Geo.xg_top[0]))
@@ -292,22 +293,24 @@ class Remodelling:
                 if np.any(edge_lengths_bottom > 0):
                     avg_edge_length = np.median(edge_lengths_bottom[edge_lengths_bottom > 0])
                     edges_to_intercalate_bottom = (edge_lengths_bottom < avg_edge_length - (
-                            set.remodel_stiffness * avg_edge_length)) & (edge_lengths_bottom > 0)
+                            self.Set.remodel_stiffness * avg_edge_length)) & (edge_lengths_bottom > 0)
                     segment_features.append(
                         self.add_edge_to_intercalate(self.Geo, num_cell, pd.DataFrame(), edge_lengths_bottom,
                                                      edges_to_intercalate_bottom, self.Geo.xg_bottom[0]))
 
+        segment_features_filtered = None
+
         # Filter segment features
-        segment_features = [f for f in segment_features if f is not None]
-        segment_features_filtered = []
+        if segment_features is not None:
+            segment_features = [f for f in segment_features if f is not None]
 
-        for segment_feature in segment_features:
-            g_node_neighbours = [get_node_neighbours(self.Geo, row[2]) for row in segment_feature.itertuples()]
-            g_nodes_neighbours_shared = np.unique(np.concatenate(g_node_neighbours))
-            cell_nodes_shared = g_nodes_neighbours_shared[~np.isin(g_nodes_neighbours_shared, self.Geo.xg_id)]
+            for segment_feature in segment_features:
+                g_node_neighbours = [get_node_neighbours(self.Geo, row[2]) for row in segment_feature.itertuples()]
+                g_nodes_neighbours_shared = np.unique(np.concatenate(g_node_neighbours))
+                cell_nodes_shared = g_nodes_neighbours_shared[~np.isin(g_nodes_neighbours_shared, self.Geo.xg_id)]
 
-            if sum([self.Geo.cells[node].alive_status == 0 for node in cell_nodes_shared]) < 2 and len(
-                    cell_nodes_shared) > 3 and len(np.unique(segment_feature['cell_to_split_from'])) == 1:
-                segment_features_filtered.append(segment_feature)
+                if sum([self.Geo.cells[node].AliveStatus == 0 for node in cell_nodes_shared]) < 2 and len(
+                        cell_nodes_shared) > 3 and len(np.unique(segment_feature['cell_to_split_from'])) == 1:
+                    segment_features_filtered.append(segment_feature)
 
         return segment_features_filtered

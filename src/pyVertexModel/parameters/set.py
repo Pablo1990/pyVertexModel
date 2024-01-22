@@ -198,6 +198,7 @@ class Set:
         self.CellHeight = 15
         self.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/Cyst')
         self.lambdaR = 0
+        self.Remodelling = True
 
     def NoBulk_110(self):
         self.InputGeo = 'VertexModelTime'

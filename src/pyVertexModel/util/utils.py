@@ -13,7 +13,6 @@ def save_state(obj, filename):
         for attr in dir(obj):
             # If the attribute is not a method, save it
             if not callable(getattr(obj, attr)) and not attr.startswith("__"):
-                print(attr)
                 pickle.dump({attr: getattr(obj, attr)}, f)
 
 

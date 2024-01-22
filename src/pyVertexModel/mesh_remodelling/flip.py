@@ -34,7 +34,7 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, newYgIds, Set, flipN
         # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr+1)
         if Set['NeedToConverge']:
             Dofs.get_dofs(Geo, Set)
-            Dofs, Geo = get_remodel_dofs(Tnew, Dofs, Geo)
+            Dofs, Geo = Dofs.get_remodel_dofs(Tnew, Dofs, Geo)
             Geo, Set, DidNotConverge = solve_remodeling_step(Geo_0, Geo_n, Geo, Dofs, Set)
             if DidNotConverge:
                 Geo = Geo_backup

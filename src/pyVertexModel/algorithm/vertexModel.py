@@ -791,6 +791,9 @@ class VertexModel:
         # Create VTK files for initial state
         self.geo.create_vtk_cell(self.geo_0, self.set, 0)
 
+        remodel_obj = Remodelling(self.geo, self.geo_n, self.geo_0, self.set, self.Dofs)
+        remodel_obj.remodel_mesh()
+
         while self.t <= self.set.tend and not self.didNotConverge:
             self.set.currentT = self.t
             logger.info("Time: " + str(self.t))
@@ -846,7 +849,8 @@ class VertexModel:
 
             # REMODELLING
             if self.set.Remodelling and abs(self.t - self.tr) >= self.set.RemodelingFrequency:
-                Remodelling(self.geo, self.geo_n, self.geo_0, self.set, self.Dofs)
+                remodel_obj = Remodelling(self.geo, self.geo_n, self.geo_0, self.set, self.Dofs)
+                remodel_obj.remodel_mesh()
                 self.tr = self.t
 
             # Append Energies
