@@ -37,7 +37,7 @@ class Remodelling:
         self.Geo.AssemblegIds = []
         newYgIds = []
         checkedYgIds = []
-        segmentFeatures_all = self.GetTrisToRemodelOrdered()
+        segmentFeatures_all = self.get_tris_to_remodel_ordered()
         nonDeadCells = [c_cell.ID for c_cell in self.Geo.Cells if c_cell.AliveStatus is not None]
 
         while segmentFeatures_all:
@@ -254,7 +254,7 @@ class Remodelling:
 
         return geo, set, did_not_converge
 
-    def GetTrisToRemodelOrdered(self):
+    def get_tris_to_remodel_ordered(self):
         """
         Obtain the edges that are going to be remodeled.
         :return:

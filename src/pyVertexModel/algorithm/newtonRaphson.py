@@ -41,7 +41,7 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
 
     # TODO: LOG
     # Geo.log = f"{Geo.log} Step: {numStep}, Iter: 0 ||gr||= {gr} ||dyr||= {dyr} dt/dt0={Set.dt / Set.dt0:.3g}\n"
-    logger.info(f"Step: {numStep}, Iter: 0 ||gr||= {gr} ||dyr||= {dyr} dt/dt0={Set.dt / Set.dt0:.3g}\n")
+    logger.info(f"Step: {numStep}, Iter: 0 ||gr||= {gr} ||dyr||= {dyr} dt/dt0={Set.dt / Set.dt0:.3g}")
 
     Set.iter = 1
     auxgr = np.zeros(3, dtype=np.float64)
@@ -85,7 +85,7 @@ def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g
     dyr = np.linalg.norm(dy[dof, 0])
     gr = np.linalg.norm(g[dof])
     logger.info(f"Step: {numStep}, Iter: {Set.iter}, Time: {t} ||gr||= {gr:.3e} ||dyr||= {dyr:.3e} alpha= {alpha:.3e}"
-                f" nu/nu0={Set.nu / Set.nu0:.3g}\n")
+                f" nu/nu0={Set.nu / Set.nu0:.3g}")
     Set.iter += 1
 
     # Checking if the three previous steps are very similar. Thus, the solution is not converging
