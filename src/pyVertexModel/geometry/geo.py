@@ -1,10 +1,12 @@
+import logging
 import os
 
 import numpy as np
 import vtk
 
-from src import PROJECT_DIRECTORY
 from src.pyVertexModel.geometry import face, cell
+
+logger = logging.getLogger("pyVertexModel")
 
 
 def edgeValence(Geo, nodesEdge):
@@ -296,7 +298,7 @@ class Geo:
         :return:
         """
         if self.Cells[self.nCells - 1].Vol is None:
-            print('Wont update measures with this Geo')
+            logger.error('Wont update measures with this Geo')
 
         if ids is None:
             ids = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1]
@@ -704,7 +706,7 @@ class Geo:
 
         # Creating a new subdirect
         #             self.geo.create_vtk_cell(self.geo_0, self.set, self.numStep)ory for cells data
-        new_sub_folder = os.path.join(PROJECT_DIRECTORY, str0, 'Cells')
+        new_sub_folder = os.path.join(str0, 'Cells')
         if not os.path.exists(new_sub_folder):
             os.makedirs(new_sub_folder)
 

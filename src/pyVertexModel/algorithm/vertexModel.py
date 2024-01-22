@@ -1,3 +1,4 @@
+import logging
 import math
 import os
 import statistics
@@ -15,6 +16,8 @@ from src.pyVertexModel.algorithm import newtonRaphson
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
 from src.pyVertexModel.parameters.set import Set
+
+logger = logging.getLogger("pyVertexModel")
 
 
 def generate_points_in_sphere(total_cells):
@@ -349,16 +352,16 @@ def extrapolate_ys_faces_ellipsoid(geo, c_set):
 
     # Calculate the mean volume excluding the first cell
     meanVolume = np.mean([cell.Vol for cell in geo.Cells[1:c_set.TotalCells]])
-    print(f'Average Cell Volume: {meanVolume}')
+    logger.info(f'Average Cell Volume: {meanVolume}')
     # Calculate the standard deviation of volumes excluding the first cell
     stdVolume = np.std([cell.Vol for cell in geo.Cells[1:c_set.TotalCells]])
-    print(f'Standard Deviation of Cell Volumes: {stdVolume}')
+    logger.info(f'Standard Deviation of Cell Volumes: {stdVolume}')
     # Display the volume of the first cell
     firstCellVolume = geo.Cells[0].Vol
-    print(f'Volume of Lumen: {firstCellVolume}')
+    logger.info(f'Volume of Lumen: {firstCellVolume}')
     # Calculate the sum of volumes excluding the first cell
     sumVolumes = np.sum([cell.Vol for cell in geo.Cells[1:c_set.TotalCells]])
-    print(f'Tissue Volume: {sumVolumes}')
+    logger.info(f'Tissue Volume: {sumVolumes}')
 
     return geo
 
@@ -405,6 +408,8 @@ class VertexModel:
             self.set = Set()
             self.set.cyst()
             self.set.update_derived_parameters()
+
+        self.set.redirect_output()
 
         # Degrees of freedom definition
         self.Dofs = degreesOfFreedom.DegreesOfFreedom()
@@ -679,8 +684,8 @@ class VertexModel:
         self.generate_Xs(self.geo.nx, self.geo.ny, self.geo.nz)
 
         # This code is to match matlab's output and python's
-        #N = 3  # The dimensions of our points
-        #options = 'Qt Qbb Qc' if N <= 3 else 'Qt Qbb Qc Qx'  # Set the QHull options
+        # N = 3  # The dimensions of our points
+        # options = 'Qt Qbb Qc' if N <= 3 else 'Qt Qbb Qc Qx'  # Set the QHull options
         Twg = Delaunay(self.X).simplices
 
         # Remove tetrahedras formed only by ghost nodes
@@ -785,7 +790,7 @@ class VertexModel:
 
         while self.t <= self.set.tend and not self.didNotConverge:
             self.set.currentT = self.t
-            print("Time: " + str(self.t))
+            logger.info("Time: " + str(self.t))
 
             if not self.relaxingNu:
                 self.set.i_incr = self.numStep
@@ -834,7 +839,7 @@ class VertexModel:
     def iteration_converged(self):
         if self.set.nu / self.set.nu0 == 1:
             # STEP has converged
-            print(f"\n STEP {str(self.set.i_incr)} has converged ...\n")
+            logger.info(f"\n STEP {str(self.set.i_incr)} has converged ...\n")
 
             # REMODELLING
             if self.set.Remodelling and abs(self.t - self.tr) >= self.set.RemodelingFrequency:
@@ -870,7 +875,7 @@ class VertexModel:
             #     wound_features = compute_wound_features(geo)
 
             # Test Geo
-            #self.check_integrity()
+            # self.check_integrity()
 
             # Post Processing and Saving Data
             self.geo.create_vtk_cell(self.geo_0, self.set, self.numStep)

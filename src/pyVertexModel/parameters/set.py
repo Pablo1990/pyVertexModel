@@ -1,11 +1,15 @@
+import logging
 import math
 import os
+import sys
 from datetime import datetime
 
 import numpy as np
 import scipy
 
 from src import PROJECT_DIRECTORY
+
+logger = logging.getLogger("pyVertexModel")
 
 
 class Set:
@@ -109,9 +113,17 @@ class Set:
             self.VTK_iter = False
             self.SaveWorkspace = False
             self.SaveSetting = False
-            self.log = 'log.txt'
         else:
             self.read_mat_file(mat_file)
+
+    def redirect_output(self):
+        os.makedirs(self.OutputFolder, exist_ok=True)
+        handler = logging.FileHandler(os.path.join(self.OutputFolder, 'log.out'))
+        handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        logger.propagate = True
 
     def read_mat_file(self, mat_file):
         for param in mat_file.dtype.fields:
@@ -128,6 +140,8 @@ class Set:
         :return:
         """
         if not hasattr(self, param):
+            setattr(self, param, value)
+        elif self.__dict__[param] is None:
             setattr(self, param, value)
 
     def update_derived_parameters(self):
@@ -181,7 +195,7 @@ class Set:
         self.read_mat_file(mat_info['Set'])
         self.InputGeo = 'Bubbles_Cyst'
         self.CellHeight = 15
-        self.OutputFolder = 'Result/Cyst'
+        self.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/Cyst')
         self.lambdaR = 0
 
     def NoBulk_110(self):
