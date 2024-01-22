@@ -16,6 +16,7 @@ from src.pyVertexModel.algorithm import newtonRaphson
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
 from src.pyVertexModel.parameters.set import Set
+from src.pyVertexModel.util.utils import save_state
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -466,6 +467,8 @@ class VertexModel:
         }
         self.numStep = 1
 
+        save_state(self, os.path.join(self.set.OutputFolder, 'data_step_0.pkl'))
+
     def brownian_motion(self, scale):
         """
         Applies Brownian motion to the vertices of cells in the Geo structure.
@@ -876,6 +879,9 @@ class VertexModel:
 
             # Test Geo
             # self.check_integrity()
+
+            # Save Data of the current step
+            save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
 
             # Post Processing and Saving Data
             self.geo.create_vtk_cell(self.geo_0, self.set, self.numStep)
