@@ -3,7 +3,7 @@ import os
 import numpy as np
 import vtk
 
-from src.pyVertexModel import cell, face
+from src.pyVertexModel.geometry import face, cell
 
 
 def edgeValence(Geo, nodesEdge):

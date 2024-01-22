@@ -4,8 +4,8 @@ from os.path import exists
 import numpy as np
 import scipy
 
-from src.pyVertexModel.geo import Geo
-from src.pyVertexModel.set import Set
+from src.pyVertexModel.geometry.geo import Geo
+from src.pyVertexModel.parameters.set import Set
 
 
 def load_data(file_name, return_geo=True):

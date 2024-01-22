@@ -4,7 +4,7 @@ import networkx as nx
 import numpy as np
 from scipy.spatial import Delaunay
 
-from src.pyVertexModel.geo import edgeValenceT
+from src.pyVertexModel.geometry.geo import edgeValenceT
 
 
 def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, newYgIds, Set, flipName, segmentToChange):

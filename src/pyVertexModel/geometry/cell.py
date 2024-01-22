@@ -4,7 +4,7 @@ import numpy as np
 import vtk
 from sklearn.decomposition import PCA
 
-from src.pyVertexModel import face
+from src.pyVertexModel.geometry import face
 
 
 def compute_2D_circularity(area, perimeter):

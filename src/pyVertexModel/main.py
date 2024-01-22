@@ -1,4 +1,4 @@
-from src.pyVertexModel.vertexModel import VertexModel
+from src.pyVertexModel.algorithm.vertexModel import VertexModel
 
 vModel = VertexModel()
 vModel.initialize()

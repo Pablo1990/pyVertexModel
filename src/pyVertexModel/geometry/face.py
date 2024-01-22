@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.pyVertexModel import tris
+from src.pyVertexModel.geometry import tris
 
 
 def get_key(dictionary, target_value):

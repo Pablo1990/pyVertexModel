@@ -174,7 +174,7 @@ class Set:
         self.VTK = False
 
     def cyst(self):
-        mat_info = scipy.io.loadmat('Tests/data/Geo_var_cyst.mat')
+        mat_info = scipy.io.loadmat('/Tests/data/Geo_var_cyst.mat')
         self.read_mat_file(mat_info['Set'])
         self.InputGeo = 'Bubbles_Cyst'
         self.CellHeight = 15

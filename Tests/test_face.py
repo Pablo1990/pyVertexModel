@@ -1,7 +1,7 @@
 import numpy as np
 
 from Tests.tests import Tests, load_data, assert_matrix
-from src.pyVertexModel.face import get_key, Face
+from src.pyVertexModel.geometry.face import get_key, Face
 
 
 class TestFace(Tests):
