@@ -1,4 +1,5 @@
 import copy
+import logging
 
 import numpy as np
 import pandas as pd
@@ -7,6 +8,8 @@ from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 from src.pyVertexModel.mesh_remodelling.flip import FlipNM
 from src.pyVertexModel.geometry.geo import edgeValence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.algorithm.newtonRaphson import newton_raphson, KgGlobal
+
+logger = logging.getLogger("pyVertexModel")
 
 
 class Remodelling:
@@ -41,10 +44,10 @@ class Remodelling:
         nonDeadCells = [c_cell.ID for c_cell in self.Geo.Cells if c_cell.AliveStatus is not None]
 
         while segmentFeatures_all:
-            Geo_backup = copy.deepcopy(self.Geo)
-            Geo_n_backup = copy.deepcopy(self.Geo_n)
-            Geo_0_backup = copy.deepcopy(self.Geo_0)
-            Dofs_backup = copy.deepcopy(self.Dofs)
+            Geo_backup = self.Geo.copy()
+            Geo_n_backup = self.Geo_n.copy()
+            Geo_0_backup = self.Geo_0.copy()
+            Dofs_backup = self.Dofs.copy()
 
             segmentFeatures = segmentFeatures_all[0]
             segmentFeatures = segmentFeatures[np.unique(segmentFeatures[:, :2], axis=0, return_index=True)[1]]
@@ -100,24 +103,22 @@ class Remodelling:
                 Geo = Dofs.get_remodel_dofs(allTnew, Geo)
                 Geo, Set, DidNotConverge = self.solve_remodeling_step(Geo_0, Geo_n, Geo, Dofs, Set)
                 if DidNotConverge:
-                    Geo_backup.log = Geo.log
                     Geo = Geo_backup
                     Geo_n = Geo_n_backup
                     Dofs = Dofs_backup
                     Geo_0 = Geo_0_backup
-                    Geo.log = f'{Geo.log} =>> Full-Flip rejected: did not converge1\n'
+                    logger.info(f'=>> Full-Flip rejected: did not converge1')
                 else:
                     newYgIds = np.unique(np.concatenate((newYgIds, Geo.AssemblegIds)))
                     Geo.update_measures()
                     hasConverged = 1
             else:
                 # Go back to initial state
-                Geo_backup.log = Geo.log
-                Geo = copy.deepcopy(Geo_backup)
-                Geo_n = copy.deepcopy(Geo_n_backup)
-                Dofs = copy.deepcopy(Dofs_backup)
-                Geo_0 = copy.deepcopy(Geo_0_backup)
-                Geo.log = f'{Geo.log} =>> Full-Flip rejected: did not converge2\n'
+                Geo = Geo_backup.copy()
+                Geo_n = Geo_n_backup.copy()
+                Dofs = Dofs_backup.copy()
+                Geo_0 = Geo_0_backup.copy()
+                logger.info('=>> Full-Flip rejected: did not converge2')
 
             # TODO: CREATE VTK FILES OR ALTERNATIVE
             # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr + 1)
@@ -208,7 +209,7 @@ class Remodelling:
         Set.lambda_LP.
         """
         geop = geo.copy()  # Assuming there is a method to copy the Geo object
-        geo.log += "\n =====>> Solving Local Problem....\n"
+        logger.info('=====>> Solving Local Problem....')
         geo.remodelling = True
         increase_eta = True
         original_nu = set.nu
@@ -224,26 +225,26 @@ class Remodelling:
             dy = np.zeros((geo.numF + geo.numY + geo.n_cells) * 3)
             dyr = np.linalg.norm(dy[dofs.remodel])
             gr = np.linalg.norm(g[dofs.remodel])
-            geo.log += f"\n Local Problem ->Iter: 0, ||gr||= {gr:.3e} ||dyr||= {dyr:.3e}  nu/nu0={set.nu / set.nu0:.3e}  dt/dt0={set.dt / set.dt0:.3g} \n"
+            logger.info(f'Local Problem ->Iter: 0, ||gr||= {gr:.3e} ||dyr||= {dyr:.3e}  nu/nu0={set.nu / set.nu0:.3e}  dt/dt0={set.dt / set.dt0:.3g}')
 
             geo, g, k, energy, set, gr, dyr, dy = newton_raphson(geo_0, geo_n, geo, dofs, set, k, g, -1, -1)
 
             if increase_eta and (gr > set.tol or dyr > set.tol):
                 geo = geop.copy()
-                geo.log += "\n Convergence was not achieved ...\n"
-                geo.log += "\n First strategy ---> Restart iterating while higher viscosity... \n"
+                logger.info("Convergence was not achieved ...")
+                logger.info('First strategy ---> Restart iterating while higher viscosity...')
                 set.nu *= 10
                 set.max_iter = set.max_iter0 * 4
                 increase_eta = False
             elif gr > set.tol or dyr > set.tol or np.any(np.isnan(g[dofs.free])) or np.any(np.isnan(dy[dofs.free])):
-                geo.log += f"\n Local Problem did not converge after {set.iter} iterations.\n"
+                logger.info(f'Local Problem did not converge after {set.iter} iterations.')
                 did_not_converge = True
                 set.max_iter = set.max_iter0
                 set.nu = original_nu
                 break
             else:
                 if set.nu / set.nu0 == 1:
-                    geo.log += f"\n =====>> Local Problem converged in {set.iter} iterations.\n"
+                    logger.info(f'=====>> Local Problem converged in {set.iter} iterations.')
                     did_not_converge = False
                     set.max_iter = set.max_iter0
                     set.nu = original_nu

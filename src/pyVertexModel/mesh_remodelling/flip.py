@@ -1,3 +1,4 @@
+import logging
 from itertools import combinations
 
 import networkx as nx
@@ -5,6 +6,8 @@ import numpy as np
 from scipy.spatial import Delaunay
 
 from src.pyVertexModel.geometry.geo import edgeValenceT
+
+logger = logging.getLogger("pyVertexModel")
 
 
 def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, newYgIds, Set, flipName, segmentToChange):
@@ -19,7 +22,7 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, newYgIds, Set, flipN
     Geo_0_backup = Geo_0.copy()
     Dofs_backup = Dofs.copy()
 
-    Geo['log'] += f"{flipName}-Flip: {segmentToChange[0]} {segmentToChange[1]}.\n"
+    logger.info(f"{flipName}-Flip: {segmentToChange[0]} {segmentToChange[1]}.")
 
     Geo.add_and_rebuild_cells(oldTets, Tnew, Ynew, Set, 1)
     Geo_n = Geo.copy()
@@ -38,7 +41,7 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, newYgIds, Set, flipN
                 Geo_n = Geo_n_backup
                 Geo_0 = Geo_0_backup
                 Dofs = Dofs_backup
-                Geo['log'] += f"{flipName}-Flip rejected: did not converge\n"
+                logger.info(f"{flipName}-Flip rejected: did not converge")
                 return Geo_0, Geo_n, Geo, Dofs, newYgIds, hasConverged
             Geo.update_measures()
 
@@ -50,7 +53,7 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, newYgIds, Set, flipN
         Geo_n = Geo_n_backup
         Dofs = Dofs_backup
         Geo_0 = Geo_0_backup
-        Geo['log'] += f"{flipName}-Flip rejected: is not compatible\n"
+        logger.info(f"{flipName}-Flip rejected: is not compatible")
         return Geo_0, Geo_n, Geo, Dofs, newYgIds, hasConverged
 
     return Geo_0, Geo_n, Geo, Dofs, newYgIds, hasConverged
