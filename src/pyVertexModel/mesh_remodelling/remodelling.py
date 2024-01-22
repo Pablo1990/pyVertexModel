@@ -264,7 +264,7 @@ class Remodelling:
         Obtain the edges that are going to be remodeled.
         :return:
         """
-        segment_features = None
+        segment_features = []
         for num_cell in self.Geo.non_dead_cells:
             c_cell = self.Geo.Cells[num_cell]
             if c_cell.AliveStatus and num_cell not in self.Geo.BorderCells:
@@ -277,26 +277,13 @@ class Remodelling:
                         if len(current_tri.SharedByCells) > 1:
                             shared_cells = [c for c in current_tri.SharedByCells if c != num_cell]
                             for num_shared_cell in shared_cells:
-                                if c_face.InterfaceType == 1:
-                                    edge_lengths_top[num_shared_cell] += current_tri.edge_length / c_face.area
-                                elif c_face.InterfaceType == 3:
-                                    edge_lengths_bottom[num_shared_cell] += current_tri.edge_length / c_face.area
+                                if c_face.InterfaceType == 0 or c_face.InterfaceType == 'Top':
+                                    edge_lengths_top[num_shared_cell] += current_tri.EdgeLength / c_face.Area
+                                elif c_face.InterfaceType == 2 or c_face.InterfaceType == 'Bottom':
+                                    edge_lengths_bottom[num_shared_cell] += current_tri.EdgeLength / c_face.Area
 
-                if np.any(edge_lengths_top > 0):
-                    avg_edge_length = np.median(edge_lengths_top[edge_lengths_top > 0])
-                    edges_to_intercalate_top = (edge_lengths_top < avg_edge_length - (
-                            self.Set.remodel_stiffness * avg_edge_length)) & (edge_lengths_top > 0)
-                    segment_features.append(
-                        self.add_edge_to_intercalate(self.Geo, num_cell, pd.DataFrame(), edge_lengths_top,
-                                                     edges_to_intercalate_top, self.Geo.xg_top[0]))
-
-                if np.any(edge_lengths_bottom > 0):
-                    avg_edge_length = np.median(edge_lengths_bottom[edge_lengths_bottom > 0])
-                    edges_to_intercalate_bottom = (edge_lengths_bottom < avg_edge_length - (
-                            self.Set.remodel_stiffness * avg_edge_length)) & (edge_lengths_bottom > 0)
-                    segment_features.append(
-                        self.add_edge_to_intercalate(self.Geo, num_cell, pd.DataFrame(), edge_lengths_bottom,
-                                                     edges_to_intercalate_bottom, self.Geo.xg_bottom[0]))
+                self.check_edges_to_intercalate(edge_lengths_top, num_cell, segment_features, self.Geo.XgTop[0])
+                self.check_edges_to_intercalate(edge_lengths_bottom, num_cell, segment_features, self.Geo.XgBottom[0])
 
         segment_features_filtered = None
 
@@ -314,3 +301,12 @@ class Remodelling:
                     segment_features_filtered.append(segment_feature)
 
         return segment_features_filtered
+
+    def check_edges_to_intercalate(self, edge_lengths, num_cell, segment_features, ghost_node_id):
+        if np.any(edge_lengths > 0):
+            avg_edge_length = np.median(edge_lengths[edge_lengths > 0])
+            edges_to_intercalate = (edge_lengths < avg_edge_length - (
+                    self.Set.RemodelStiffness * avg_edge_length)) & (edge_lengths > 0)
+            segment_features.append(
+                self.add_edge_to_intercalate(self.Geo, num_cell, pd.DataFrame(), edge_lengths,
+                                             edges_to_intercalate, ghost_node_id))

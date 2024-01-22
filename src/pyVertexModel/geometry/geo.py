@@ -86,14 +86,15 @@ def get_node_neighbours_per_domain(geo, node, node_of_domain, main_node=None):
     :return:
     """
 
-    all_node_tets = np.vstack([cell.t for cell in geo.cells if cell.id == node])
+    all_node_tets = np.vstack([cell.T for cell in geo.Cells if cell.ID == node])
 
-    if np.isin(node_of_domain, geo.xg_bottom).any():
+    if np.isin(node_of_domain, geo.XgBottom).any():
         xg_domain = geo.xg_bottom
-    elif np.isin(node_of_domain, geo.xg_top).any():
-        xg_domain = geo.xg_top
+    elif np.isin(node_of_domain, geo.XgTop).any():
+        xg_domain = geo.XgTop
     else:
-        xg_domain = geo.xg_lateral
+        logger.error('Node of domain not found in XgBottom or XgTop')
+        xg_domain = []
 
     all_node_tets = all_node_tets[np.isin(all_node_tets, xg_domain).any(axis=1)]
 
