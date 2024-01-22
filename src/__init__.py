@@ -1,5 +1,6 @@
 import logging
 import os
+import warnings
 
 PROJECT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -17,3 +18,11 @@ logger.addHandler(console_handler)
 logger.setLevel(logging.DEBUG)
 logger.propagate = False
 
+
+# Function to handle warnings
+def warning_handler(message, category, filename, lineno, file=None, line=None):
+    logger.warning(f'{filename}:{lineno}: {category.__name__}: {message}')
+
+
+# Set the warnings' showwarning function to the handler
+warnings.showwarning = warning_handler
