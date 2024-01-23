@@ -130,14 +130,14 @@ def YFlip23(Ys, Ts, YsToChange, Geo):
     n3 = Ts[YsToChange[0]][np.isin(Ts[YsToChange[0]], Ts[YsToChange[1]])]
     n1 = Ts[YsToChange[0]][~np.isin(Ts[YsToChange[0]], n3)]
     n2 = Ts[YsToChange[1]][~np.isin(Ts[YsToChange[1]], n3)]
-    num = [1, 2, 3, 4]
+    num = np.array([1, 2, 3, 4])
     num = num[Ts[YsToChange[0]] == n1]
     if num == 2 or num == 4:
-        Tnew = np.array([[n3[0], n3[1], n2, n1],
+        Tnew = np.block([[n3[0], n3[1], n2, n1],
                          [n3[1], n3[2], n2, n1],
                          [n3[2], n3[0], n2, n1]])
     else:
-        Tnew = np.array([[n3[0], n3[1], n1, n2],
+        Tnew = np.block([[n3[0], n3[1], n1, n2],
                          [n3[1], n3[2], n1, n2],
                          [n3[2], n3[0], n1, n2]])
 
