@@ -28,5 +28,3 @@ def CheckYsAndFacesHaveNotChanged(Geo=None, newTets=None, Geo_new=None):
                 assert_(Geo_new.Cells(cellId).Faces(idWithGeo_new).Centre == face.Centre)
 
     return Geo_new
-
-    return Geo_new

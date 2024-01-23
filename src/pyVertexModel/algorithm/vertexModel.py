@@ -11,8 +11,8 @@ from scipy.spatial import Delaunay
 from scipy.spatial.distance import cdist
 from skimage.measure import regionprops
 
-from src.pyVertexModel.geometry import degreesOfFreedom
 from src.pyVertexModel.algorithm import newtonRaphson
+from src.pyVertexModel.geometry import degreesOfFreedom
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
 from src.pyVertexModel.parameters.set import Set

@@ -1,13 +1,12 @@
-import copy
 import logging
 
 import numpy as np
 import pandas as pd
 
-from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
-from src.pyVertexModel.mesh_remodelling.flip import FlipNM
-from src.pyVertexModel.geometry.geo import edgeValence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.algorithm.newtonRaphson import newton_raphson, KgGlobal
+from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
+from src.pyVertexModel.geometry.geo import edgeValence, get_node_neighbours_per_domain, get_node_neighbours
+from src.pyVertexModel.mesh_remodelling.flip import FlipNM
 
 logger = logging.getLogger("pyVertexModel")
 
