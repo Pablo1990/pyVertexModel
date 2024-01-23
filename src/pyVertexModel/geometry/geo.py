@@ -123,6 +123,7 @@ class Geo:
         self.non_dead_cells = None
         self.BorderCells = []
         self.BorderGhostNodes = []
+        self.RemovedDebrisCells = []
 
         if mat_file is None:
             self.numF = None
@@ -160,18 +161,13 @@ class Geo:
         :return:
         """
         new_geo = Geo()
-        new_geo.numF = self.numF
-        new_geo.numY = self.numY
-        new_geo.EdgeLengthAvg_0 = self.EdgeLengthAvg_0
-        new_geo.XgBottom = self.XgBottom
-        new_geo.XgTop = self.XgTop
-        new_geo.XgID = self.XgID
-        new_geo.nz = self.nz
-        new_geo.ny = self.ny
-        new_geo.nx = self.nx
-        new_geo.nCells = self.nCells
-        new_geo.BorderCells = self.BorderCells
-        new_geo.non_dead_cells = self.non_dead_cells
+
+        # Copy the attributes
+        for attr in self.__dict__:
+            if attr == 'Cells':
+                new_geo.Cells = []
+            else:
+                setattr(new_geo, attr, getattr(self, attr))
 
         for c_cell in self.Cells:
             new_geo.Cells.append(c_cell.copy())

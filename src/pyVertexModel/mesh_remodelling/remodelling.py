@@ -196,16 +196,15 @@ class Remodelling:
             hasConverged = True
 
             while hasConverged:
-                nodesPair = [cellNode, ghostNode]
+                nodesPair = np.array([cellNode, ghostNode])
 
                 valenceSegment, oldTets, oldYs = edgeValence(self.Geo, nodesPair)
 
                 if sum(np.isin(nonDeadCells, oldTets.flatten())) > 2:
-                    newYgIds, hasConverged, Tnew = FlipNM(nodesPair,
-                                                          cellToIntercalateWith,
-                                                          oldTets, oldYs,
-                                                          self,
-                                                          newYgIds)
+                    newYgIds, hasConverged, Tnew = self.FlipNM(nodesPair,
+                                                               cellToIntercalateWith,
+                                                               oldTets, oldYs,
+                                                               newYgIds)
 
                     allTnew = np.vstack((allTnew, Tnew))
 

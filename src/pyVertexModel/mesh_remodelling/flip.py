@@ -223,7 +223,7 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
 
     # Temporary remove 4-cell tetrahedra
     tets4_cells = get_4_fold_tets(Geo)
-    Geo.removeTetrahedra(tets4_cells)
+    Geo.remove_tetrahedra(tets4_cells)
     tets4_cells = np.unique(np.sort(tets4_cells, axis=1), axis=0)
     ghost_nodes_without_debris = np.setdiff1d(Geo.XgID, Geo.RemovedDebrisCells)
 
