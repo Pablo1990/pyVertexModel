@@ -78,6 +78,9 @@ def add_edge_to_intercalate(geo, num_cell, segment_features, edge_lengths_top, e
                     'neighbours_2': neighbours_2
                 }
                 segment_features = pd.concat([segment_features, pd.DataFrame([new_row])], ignore_index=True)
+            break
+
+    return segment_features
 
 
 def solve_remodeling_step(geo_0, geo_n, geo, dofs, set):
@@ -288,23 +291,30 @@ class Remodelling:
                                 elif c_face.InterfaceType == 2 or c_face.InterfaceType == 'Bottom':
                                     edge_lengths_bottom[num_shared_cell] += current_tri.EdgeLength / c_face.Area
 
-                self.check_edges_to_intercalate(edge_lengths_top, num_cell, segment_features, self.Geo.XgTop[0])
-                self.check_edges_to_intercalate(edge_lengths_bottom, num_cell, segment_features, self.Geo.XgBottom[0])
+                segment_features = self.check_edges_to_intercalate(edge_lengths_top, num_cell, segment_features,
+                                                                   self.Geo.XgTop[0])
+                segment_features = self.check_edges_to_intercalate(edge_lengths_bottom, num_cell, segment_features,
+                                                                   self.Geo.XgBottom[0])
 
         segment_features_filtered = pd.DataFrame()
 
         # Filter segment features
         if segment_features is not None:
-            segment_features = [f for f in segment_features if f is not None]
+            segment_features = segment_features.sort_values(by=['edge_length'], ascending=True)
 
-            for segment_feature in segment_features:
-                g_node_neighbours = [get_node_neighbours(self.Geo, row[2]) for row in segment_feature.itertuples()]
+            # Go through each segment feature
+            for index, segment_feature in segment_features.iterrows():
+                # Get the neighbours of the ghost node
+                g_node_neighbours = get_node_neighbours(self.Geo, segment_feature.node_pair_g)
                 g_nodes_neighbours_shared = np.unique(np.concatenate(g_node_neighbours))
-                cell_nodes_shared = g_nodes_neighbours_shared[~np.isin(g_nodes_neighbours_shared, self.Geo.xg_id)]
+                cell_nodes_shared = g_nodes_neighbours_shared[~np.isin(g_nodes_neighbours_shared, self.Geo.XgID)]
 
-                if sum([self.Geo.cells[node].AliveStatus == 0 for node in cell_nodes_shared]) < 2 and len(
-                        cell_nodes_shared) > 3 and len(np.unique(segment_feature['cell_to_split_from'])) == 1:
-                    segment_features_filtered.append(segment_feature)
+                # Check if the segment feature has less than 2 dead cells
+                if sum([self.Geo.Cells[node].AliveStatus == 0 for node in cell_nodes_shared]) < 2 and len(
+                        cell_nodes_shared) > 3 and len(np.unique(segment_feature.cell_to_split_from)) == 1:
+                    segment_features_filtered = pd.concat([segment_features_filtered,
+                                                           pd.DataFrame(segment_feature).transpose()],
+                                                          ignore_index=True)
 
         return segment_features_filtered
 
@@ -321,5 +331,8 @@ class Remodelling:
             avg_edge_length = np.median(edge_lengths[edge_lengths > 0])
             edges_to_intercalate = (edge_lengths < avg_edge_length - (
                     self.Set.RemodelStiffness * avg_edge_length)) & (edge_lengths > 0)
-            add_edge_to_intercalate(self.Geo, num_cell, segment_features, edge_lengths, edges_to_intercalate,
-                                    ghost_node_id)
+            segment_features = add_edge_to_intercalate(self.Geo, num_cell, segment_features, edge_lengths,
+                                                       edges_to_intercalate,
+                                                       ghost_node_id)
+
+        return segment_features

@@ -63,13 +63,13 @@ def get_node_neighbours(geo, node, main_node=None):
     """
 
     if main_node is not None:
-        all_node_tets = [tet for c_cell in geo.cells if c_cell.id == node for tet in c_cell.t]
+        all_node_tets = [tet for c_cell in geo.Cells if c_cell.ID == node for tet in c_cell.T]
         node_neighbours = set()
         for tet in all_node_tets:
             if any(n in tet for n in main_node):
                 node_neighbours.update(tet)
     else:
-        node_neighbours = set(tet for c_cell in geo.cells if c_cell.id == node for tet in c_cell.t)
+        node_neighbours = set(tuple(tet) for c_cell in geo.Cells if c_cell.ID == node for tet in c_cell.T)
 
     node_neighbours.discard(node)
 
