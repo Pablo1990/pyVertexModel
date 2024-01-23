@@ -237,11 +237,11 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
     boundaryNodes = np.unique(old_tets)
 
     # Step 2: Get edges that can be added when removing the other one
-    possibleEdges = np.array(list(combinations(boundaryNodes, 2)))
+    possibleEdges = np.vstack(list(combinations(boundaryNodes, 2)))
 
     # Step 3: Select the edge to add
-    edgeToConnect = [cell_to_intercalate_with, Xs_gToDisconnect]
-    possibleEdges = possibleEdges[~np.isin(possibleEdges, edgeToConnect, axis=1)]
+    edgeToConnect = np.block([np.array(cell_to_intercalate_with), Xs_gToDisconnect])
+    possibleEdges = possibleEdges[np.all(~np.isin(possibleEdges, edgeToConnect), axis=1)]
 
     # Step 4: Propagate the change to get the remaining tets
     # Create a tree of possibilities

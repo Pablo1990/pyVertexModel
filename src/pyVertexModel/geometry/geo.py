@@ -588,7 +588,7 @@ class Geo:
         oldYs = []
         for removingTet in removingTets:
             for numNode in removingTet:
-                idToRemove = np.isin(np.sort(self.Cells[numNode].T, axis=1), np.sort(removingTet), axis=1).all(axis=1)
+                idToRemove = np.all(np.isin(np.sort(self.Cells[numNode].T, axis=1), np.sort(removingTet)), axis=1)
                 self.Cells[numNode].T = self.Cells[numNode].T[~idToRemove]
                 if self.Cells[numNode].AliveStatus is not None:
                     oldYs.extend(self.Cells[numNode].Y[idToRemove])
