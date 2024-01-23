@@ -21,7 +21,7 @@ def edgeValence(Geo, nodesEdge):
 
     tetIds = np.isin(nodeTets1, nodeTets2).all(axis=1)
     sharedTets = nodeTets1[tetIds]
-    if not any(np.isin(nodesEdge, Geo.XgID)):
+    if Geo.Cells[nodesEdge[0]].Y is not None:
         sharedYs = Geo.Cells[nodesEdge[0]].Y[tetIds]
     else:
         sharedYs = []

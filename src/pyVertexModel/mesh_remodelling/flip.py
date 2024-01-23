@@ -113,7 +113,7 @@ def DoFlip23(Yo, Geo, n3):
     center2 = sum([Geo.Cells[n].X for n in n3]) / 3
 
     direction = np.zeros((3, 3))
-    n3.append(n3[0])
+    n3 = np.append(n3, n3[0])
     for numCoord in range(3):
         node1 = (Geo.Cells[n3[numCoord]].X + Geo.Cells[n3[numCoord + 1]].X) / 2
         direction[numCoord, :] = node1 - center2
