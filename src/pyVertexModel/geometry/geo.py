@@ -89,7 +89,7 @@ def get_node_neighbours_per_domain(geo, node, node_of_domain, main_node=None):
     all_node_tets = np.vstack([cell.T for cell in geo.Cells if cell.ID == node])
 
     if np.isin(node_of_domain, geo.XgBottom).any():
-        xg_domain = geo.xg_bottom
+        xg_domain = geo.XgBottom
     elif np.isin(node_of_domain, geo.XgTop).any():
         xg_domain = geo.XgTop
     else:
