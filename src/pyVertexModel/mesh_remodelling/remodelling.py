@@ -6,7 +6,7 @@ import pandas as pd
 from src.pyVertexModel.algorithm.newtonRaphson import newton_raphson, KgGlobal
 from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 from src.pyVertexModel.geometry.geo import edgeValence, get_node_neighbours_per_domain, get_node_neighbours
-from src.pyVertexModel.mesh_remodelling.flip import FlipNM
+from src.pyVertexModel.mesh_remodelling.flip import YFlipNM, post_flip
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -178,40 +178,34 @@ class Remodelling:
 
         nonDeadCells = [c_cell.ID for c_cell in self.Geo.Cells if c_cell.AliveStatus is not None]
 
-        while segmentFeatures_all:
+        while segmentFeatures_all.empty is False:
             Geo_backup = self.Geo.copy()
             Geo_n_backup = self.Geo_n.copy()
             Geo_0_backup = self.Geo_0.copy()
             Dofs_backup = self.Dofs.copy()
 
-            segmentFeatures = segmentFeatures_all[0]
-            segmentFeatures = segmentFeatures[np.unique(segmentFeatures[:, :2], axis=0, return_index=True)[1]]
-            segmentFeatures = segmentFeatures[segmentFeatures[:, 5].argsort()]
-            self.Set.NeedToConverge = 0
+            segmentFeatures = segmentFeatures_all.head(1)
             allTnew = []
             numPair = 0
 
-            cellNode = segmentFeatures[numPair, 0]
-            ghostNode = segmentFeatures[numPair, 1]
-            cellToIntercalateWith = segmentFeatures[numPair, 2]
-            cellToSplitFrom = segmentFeatures[numPair, 3]
+            cellNode = segmentFeatures.num_cell[0]
+            ghostNode = segmentFeatures.node_pair_g[0]
+            cellToIntercalateWith = segmentFeatures.cell_intercalate[0]
+            cellToSplitFrom = segmentFeatures.cell_to_split_from[0]
 
-            hasConverged = [1]
+            hasConverged = True
 
-            while hasConverged[numPair] == 1:
-                hasConverged[numPair] = 0
-
+            while hasConverged:
                 nodesPair = [cellNode, ghostNode]
 
                 valenceSegment, oldTets, oldYs = edgeValence(self.Geo, nodesPair)
 
                 if sum(np.isin(nonDeadCells, oldTets.flatten())) > 2:
-                    [Geo_0, Geo_n, Geo, Dofs, Set, newYgIds, hasConverged[numPair], Tnew] = FlipNM(nodesPair,
-                                                                                                   cellToIntercalateWith,
-                                                                                                   oldTets, oldYs,
-                                                                                                   Geo_0, Geo_n, Geo,
-                                                                                                   Dofs, Set,
-                                                                                                   newYgIds)
+                    newYgIds, hasConverged, Tnew = FlipNM(nodesPair,
+                                                          cellToIntercalateWith,
+                                                          oldTets, oldYs,
+                                                          self,
+                                                          newYgIds)
 
                     allTnew = np.vstack((allTnew, Tnew))
 
@@ -223,7 +217,7 @@ class Remodelling:
                 else:
                     break
 
-            if hasConverged[numPair]:
+            if hasConverged:
                 # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr + 1)
                 gNodeNeighbours = [get_node_neighbours(Geo, segmentFeatures[numRow, 1]) for numRow in
                                    range(segmentFeatures.shape[0])]
@@ -336,3 +330,16 @@ class Remodelling:
                                                        ghost_node_id)
 
         return segment_features
+
+    def FlipNM(self, segment_to_change, cell_to_intercalate_with, old_tets, old_ys, new_yg_ids):
+        hasConverged = False
+        flipName = 'N-M'
+        y_new, t_new = YFlipNM(old_tets, cell_to_intercalate_with, old_ys, segment_to_change, self.Geo, self.Set)
+
+        if len(t_new) != 0:
+            (self.Geo_0, self.Geo_n, self.Geo,
+             self.Dofs, new_yg_ids, hasConverged) = post_flip(t_new, y_new, old_tets,
+                                                              self.Geo, self.Geo_n, self.Geo_0, self.Dofs,
+                                                              new_yg_ids, self.Set, flipName, segment_to_change)
+
+        return new_yg_ids, hasConverged, t_new

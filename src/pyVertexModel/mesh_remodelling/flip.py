@@ -26,7 +26,7 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, newYgIds, Set, flipN
 
     Geo.add_and_rebuild_cells(oldTets, Tnew, Ynew, Set, 1)
     Geo_n = Geo.copy()
-    # geo_0 = add_and_rebuild_cells(geo_0, oldTets, Tnew, Ynew, Set, 0)
+    # geo_0 = add_and_rebuild_cells(geo_0, old_tets, Tnew, Ynew, Set, 0)
     # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr+1)
     # PostProcessingVTK(geo_0, geo_0, Set, Set.iIncr+2)
 
@@ -59,16 +59,7 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, newYgIds, Set, flipN
     return Geo_0, Geo_n, Geo, Dofs, newYgIds, hasConverged
 
 
-def FlipNM(segmentToChange, cellToIntercalateWith, oldTets, oldYs, Geo_0, Geo_n, Geo, Dofs, Set, newYgIds):
-    hasConverged = False
-    flipName = 'N-M'
-    [Ynew, Tnew] = YFlipNM(oldTets, cellToIntercalateWith, oldYs, segmentToChange, Geo, Set)
 
-    if len(Tnew) != 0:
-        [Geo_0, Geo_n, Geo, Dofs, newYgIds, hasConverged] = post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs,
-                                                                      newYgIds, Set, flipName, segmentToChange)
-
-    return Geo_0, Geo_n, Geo, Dofs, Set, newYgIds, hasConverged, Tnew
 
 
 def DoFlip32(Y, X12):
@@ -227,8 +218,8 @@ def get_4_fold_tets(Geo):
     return tets
 
 
-def YFlipNM(old_tets, cell_to_intercalate_with, oldYs, XsToDisconnect, Geo, Set):
-    Xs_gToDisconnect = XsToDisconnect[np.isin(XsToDisconnect, Geo.XgID)]
+def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, Set):
+    Xs_gToDisconnect = xs_to_disconnect[np.isin(xs_to_disconnect, Geo.XgID)]
 
     # Temporary remove 4-cell tetrahedra
     tets4_cells = get_4_fold_tets(Geo)
@@ -262,9 +253,9 @@ def YFlipNM(old_tets, cell_to_intercalate_with, oldYs, XsToDisconnect, Geo, Set)
     parentNode = 1
     arrayPos = 3
     endNode = 2
-    [_, Tnew, TRemoved, treeOfPossibilities] = YFlipNM_recursive(old_tets, TRemoved, Tnew, Ynew, oldYs, Geo,
+    [_, Tnew, TRemoved, treeOfPossibilities] = YFlipNM_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys, Geo,
                                                                  possibleEdges,
-                                                                 XsToDisconnect, treeOfPossibilities, parentNode,
+                                                                 xs_to_disconnect, treeOfPossibilities, parentNode,
                                                                  arrayPos)
 
     paths = treeOfPossibilities.all_simple_paths(parentNode, endNode)
