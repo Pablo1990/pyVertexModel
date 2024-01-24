@@ -193,6 +193,42 @@ def YFlipNM_recursive(TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, XsT
     return Ynew, Tnew, TRemoved, treeOfPossibilities, arrayPos
 
 
+def YFlipNM_non_recursive(TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, XsToDisconnect, treeOfPossibilities,
+                          parentNode, arrayPos):
+    stack = [(TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, XsToDisconnect, treeOfPossibilities, parentNode,
+              arrayPos)]
+
+    # TODO: RETHINK THE ALGORITHM
+    while stack:
+        TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, XsToDisconnect, treeOfPossibilities, parentNode, arrayPos = stack.pop()
+        endNode = 1
+        Told_original = TOld
+        if TOld.shape[0] == 3:
+            Ynew_c, Tnew_c = YFlip32(oldYs, TOld, [1, 2, 3], Geo)
+            TRemoved.insert(arrayPos, TOld)
+            Tnew.insert(arrayPos, Tnew_c)
+            Ynew.insert(arrayPos, Ynew_c)
+            treeOfPossibilities.add_edge(parentNode, arrayPos)
+            treeOfPossibilities.add_edge(arrayPos, endNode)
+            arrayPos += 1
+        else:
+            for numPair in range(possibleEdges.shape[0]):
+                valence, sharedTets, tetIds = edgeValenceT(Told_original, possibleEdges[numPair, :])
+                if valence == 2:
+                    Ynew_23, Tnew_23 = YFlip23(oldYs, Told_original, tetIds, Geo)
+                    TRemoved.insert(arrayPos, Told_original[tetIds, :])
+                    Tnew.insert(arrayPos, Tnew_23)
+                    Ynew.insert(arrayPos, Ynew_23)
+                    treeOfPossibilities.add_edge(parentNode, arrayPos)
+                    TOld = Told_original
+                    TOld = np.delete(TOld, tetIds, axis=0)
+                    TOld = np.vstack((TOld, Tnew_23))
+                    _, TOld_new, _ = edgeValenceT(TOld, XsToDisconnect)
+                    stack.append((TOld_new, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, XsToDisconnect,
+                                  treeOfPossibilities, arrayPos, arrayPos + 1))
+    return Ynew, Tnew, TRemoved, treeOfPossibilities, arrayPos
+
+
 def compute_tet_volume(tet, Geo):
     Xs = np.vstack([Geo.Cells[t].X for t in tet])
     newOrder = Delaunay(Xs).simplices
@@ -251,10 +287,15 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
     parentNode = 0
     arrayPos = 2
     endNode = 1
-    [_, Tnew, TRemoved, treeOfPossibilities] = YFlipNM_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys, Geo,
-                                                                 possibleEdges,
-                                                                 xs_to_disconnect, treeOfPossibilities, parentNode,
-                                                                 arrayPos)
+    # [_, Tnew, TRemoved, treeOfPossibilities] = YFlipNM_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys, Geo,
+    #                                                              possibleEdges,
+    #                                                              xs_to_disconnect, treeOfPossibilities, parentNode,
+    #                                                              arrayPos)
+
+    [_, Tnew, TRemoved, treeOfPossibilities] = YFlipNM_non_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys, Geo,
+                                                                     possibleEdges,
+                                                                     xs_to_disconnect, treeOfPossibilities, parentNode,
+                                                                     arrayPos)
 
     paths = treeOfPossibilities.all_simple_paths(parentNode, endNode)
     new_tets_tree = []
