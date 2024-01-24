@@ -152,14 +152,14 @@ def YFlip23(Ys, Ts, YsToChange, Geo):
 
 def YFlipNM_recursive(TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, XsToDisconnect, treeOfPossibilities,
                       parentNode, arrayPos):
-    endNode = 2
+    endNode = 1
 
     Told_original = TOld
     if TOld.shape[0] == 3:
         Ynew_c, Tnew_c = YFlip32(oldYs, TOld, [1, 2, 3], Geo)
-        TRemoved[arrayPos] = TOld
-        Tnew[arrayPos] = Tnew_c
-        Ynew[arrayPos] = Ynew_c
+        TRemoved.insert(arrayPos, TOld)
+        Tnew.insert(arrayPos, Tnew_c)
+        Ynew.insert(arrayPos, Ynew_c)
         treeOfPossibilities.add_edge(parentNode, arrayPos)
         treeOfPossibilities.add_edge(arrayPos, endNode)
         arrayPos += 1
@@ -173,13 +173,14 @@ def YFlipNM_recursive(TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, XsT
             if valence == 2:
                 Ynew_23, Tnew_23 = YFlip23(oldYs, Told_original, tetIds, Geo)
 
-                TRemoved[arrayPos] = Told_original[tetIds, :]
-                Tnew[arrayPos] = Tnew_23
-                Ynew[arrayPos] = Ynew_23
+                TRemoved.insert(arrayPos, Told_original[tetIds, :])
+                Tnew.insert(arrayPos, Tnew_23)
+                Ynew.insert(arrayPos, Ynew_23)
                 treeOfPossibilities.add_edge(parentNode, arrayPos)
 
                 TOld = Told_original
-                TOld[tetIds, :] = []
+                # Remove the row of tets that are associated to that edgeToDisconnect
+                TOld = np.delete(TOld, tetIds, axis=0)
                 TOld = np.vstack((TOld, Tnew_23))
 
                 # Update and get the tets that are associated to that edgeToDisconnect
@@ -247,12 +248,12 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
     # Create a tree of possibilities
     treeOfPossibilities = nx.DiGraph()
     treeOfPossibilities.add_node(2)
-    TRemoved = []
-    Tnew = []
-    Ynew = []
-    parentNode = 1
-    arrayPos = 3
-    endNode = 2
+    TRemoved = [None, None]
+    Tnew = [None, None]
+    Ynew = [None, None]
+    parentNode = 0
+    arrayPos = 2
+    endNode = 1
     [_, Tnew, TRemoved, treeOfPossibilities] = YFlipNM_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys, Geo,
                                                                  possibleEdges,
                                                                  xs_to_disconnect, treeOfPossibilities, parentNode,
