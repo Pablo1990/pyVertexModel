@@ -5,6 +5,7 @@ import numpy as np
 import vtk
 
 from src.pyVertexModel.geometry import face, cell
+from src.pyVertexModel.util.utils import ismember_rows
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -19,12 +20,14 @@ def edgeValence(Geo, nodesEdge):
     nodeTets1 = np.sort(Geo.Cells[nodesEdge[0]].T, axis=1)
     nodeTets2 = np.sort(Geo.Cells[nodesEdge[1]].T, axis=1)
 
-    tetIds = np.isin(nodeTets1, nodeTets2).all(axis=1)
+    tetIds, _ = ismember_rows(nodeTets1, nodeTets2)
     sharedTets = nodeTets1[tetIds]
-    if Geo.Cells[nodesEdge[0]].Y is not None:
+
+    sharedYs = []
+
+    if np.any(np.isin(nodesEdge, Geo.XgID)):
         sharedYs = Geo.Cells[nodesEdge[0]].Y[tetIds]
-    else:
-        sharedYs = []
+
     valence = sharedTets.shape[0]
 
     return valence, sharedTets, sharedYs

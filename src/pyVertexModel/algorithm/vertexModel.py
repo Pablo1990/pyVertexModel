@@ -380,7 +380,7 @@ def SeedWithBoundingBox(X, s):
 
     N = 3  # The dimensions of our points
     options = 'Qt Qbb Qc' if N <= 3 else 'Qt Qbb Qc Qx'  # Set the QHull options
-    Tri = Delaunay(X)
+    Tri = Delaunay(X, qhull_options=options)
 
     # first Delaunay with ghost nodes
     X, XgID = delaunay_compute_entities(Tri.simplices, X, XgID, XgIDBB, nCells, s)

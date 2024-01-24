@@ -59,9 +59,6 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, newYgIds, Set, flipN
     return Geo_0, Geo_n, Geo, Dofs, newYgIds, hasConverged
 
 
-
-
-
 def DoFlip32(Y, X12):
     min_length = np.min([np.linalg.norm(Y[0] - Y[1]), np.linalg.norm(Y[2] - Y[1]), np.linalg.norm(Y[0] - Y[2])])
     perpend = np.cross(Y[0] - Y[1], Y[2] - Y[1])
