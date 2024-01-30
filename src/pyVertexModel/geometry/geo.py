@@ -47,7 +47,7 @@ def edgeValenceT(tets, nodesEdge):
     nodeTets1 = np.sort(tets1, axis=1)
     nodeTets2 = np.sort(tets2, axis=1)
 
-    tetIds = np.isin(nodeTets1, nodeTets2).all(axis=1)
+    tetIds, _ = ismember_rows(nodeTets1, nodeTets2)
     sharedTets = nodeTets1[tetIds]
     valence = sharedTets.shape[0]
 

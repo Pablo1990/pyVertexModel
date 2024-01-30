@@ -248,66 +248,20 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
     possibleEdgesToRemove = list(combinations(possibleEdges, max_pairs_of_edges))
 
     # Step 5: For each combination of edges to remove, check if it is valid
-    # treeOfPossibilities = nx.DiGraph()
-    # treeOfPossibilities.add_node(2)
-    # TRemoved = [None, None]
-    # Tnew = [None, None]
-    # Ynew = [None, None]
-    # parentNode = 0
-    # arrayPos = 2
-    # endNode = 1
-    # [_, Tnew, TRemoved, treeOfPossibilities] = YFlipNM_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys, Geo,
-    #                                                              possibleEdges,
-    #                                                              xs_to_disconnect, treeOfPossibilities, parentNode,
-    #                                                              arrayPos)
+    treeOfPossibilities = nx.DiGraph()
+    treeOfPossibilities.add_node(2)
+    TRemoved = [None, None]
+    Tnew = [None, None]
+    Ynew = [None, None]
+    parentNode = 0
+    arrayPos = 2
+    endNode = 1
+    _, Tnew, TRemoved, treeOfPossibilities, _ = YFlipNM_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys, Geo,
+                                                                 possibleEdges,
+                                                                 xs_to_disconnect, treeOfPossibilities, parentNode,
+                                                                 arrayPos)
 
-    list_of_possible_tets = np.array([])
-    new_tets = np.array([])
-    new_ys = np.array([])
-    removed_tets = np.array([])
-    removed_ys = np.array([])
-
-    for combinations_edge_to_remove in possibleEdgesToRemove:
-        finished_combination = False
-        final_tets = old_tets
-        final_ys = old_ys
-        for edgeToRemove in combinations_edge_to_remove:
-            valence, sharedTets, tetIds = edgeValenceT(final_tets, edgeToRemove)
-
-            # The number of tets is 3, it is a 3-2 flip
-            if final_tets.shape[0] == 3:
-                # Perform the flip
-                Ynew_c, Tnew_c = YFlip32(final_ys, final_tets, [0, 1, 2], Geo)
-
-                new_tets, new_ys, removed_tets, removed_ys = add_new_info(Tnew_c, Ynew_c, final_tets, final_ys,
-                                                                          new_tets, new_ys, removed_tets, removed_ys,
-                                                                          [0, 1, 2])
-
-                final_tets, final_ys = update_test_ys(Tnew_c, Ynew_c, final_tets, final_ys, tetIds)
-
-                finished_combination = True
-                break
-            elif valence == 2:
-                # Valence == 2, a face can be removed.
-                Ynew_23, Tnew_23 = YFlip23(final_ys, final_tets, tetIds, Geo)
-
-                new_tets, new_ys, removed_tets, removed_ys = add_new_info(Tnew_23, Ynew_23, final_tets, final_ys,
-                                                                          new_tets, new_ys, removed_tets, removed_ys,
-                                                                          tetIds)
-
-                final_tets, final_ys = update_test_ys(Tnew_23, Ynew_23, final_tets, final_ys, tetIds)
-
-                # Valence should have decreased
-                _, final_tets, _ = edgeValenceT(final_tets, xs_to_disconnect)
-            else:
-                # if it is not valence == 2, the combination is not valid
-                break
-
-        # If the combination was valid, we add the final tets to the a list of possible tets
-        if finished_combination:
-            list_of_possible_tets = np.append(list_of_possible_tets, final_tets)
-            break
-
+    #YFlipNM_iterative(Geo, old_tets, old_ys, possibleEdgesToRemove, xs_to_disconnect)
 
     paths = treeOfPossibilities.all_simple_paths(parentNode, endNode)
     new_tets_tree = []
@@ -359,6 +313,54 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
                         cell_winning.append(np.sum(np.isin(new_tets, cell_to_intercalate_with)) / len(new_tets))
                     except Exception as ex:
                         pass  # handle exception here if necessary
+
+
+def YFlipNM_iterative(Geo, old_tets, old_ys, possibleEdgesToRemove, xs_to_disconnect):
+    list_of_possible_tets = np.array([])
+    for combinations_edge_to_remove in possibleEdgesToRemove:
+        new_tets = np.array([])
+        new_ys = np.array([])
+        removed_tets = np.array([])
+        removed_ys = np.array([])
+        finished_combination = False
+        final_tets = old_tets
+        final_ys = old_ys
+        for edgeToRemove in combinations_edge_to_remove:
+            valence, sharedTets, tetIds = edgeValenceT(final_tets, edgeToRemove)
+
+            # The number of tets is 3, it is a 3-2 flip
+            if final_tets.shape[0] == 3:
+                # Perform the flip
+                Ynew_c, Tnew_c = YFlip32(final_ys, final_tets, [0, 1, 2], Geo)
+
+                new_tets, new_ys, removed_tets, removed_ys = add_new_info(Tnew_c, Ynew_c, final_tets, final_ys,
+                                                                          new_tets, new_ys, removed_tets, removed_ys,
+                                                                          [0, 1, 2])
+
+                final_tets, final_ys = update_test_ys(Tnew_c, Ynew_c, final_tets, final_ys, tetIds)
+
+                finished_combination = True
+                break
+            elif valence == 2:
+                # Valence == 2, a face can be removed.
+                Ynew_23, Tnew_23 = YFlip23(final_ys, final_tets, tetIds, Geo)
+
+                new_tets, new_ys, removed_tets, removed_ys = add_new_info(Tnew_23, Ynew_23, final_tets, final_ys,
+                                                                          new_tets, new_ys, removed_tets, removed_ys,
+                                                                          tetIds)
+
+                final_tets, final_ys = update_test_ys(Tnew_23, Ynew_23, final_tets, final_ys, tetIds)
+
+                # Valence should have decreased
+                _, final_tets, _ = edgeValenceT(final_tets, xs_to_disconnect)
+            else:
+                # if it is not valence == 2, the combination is not valid
+                break
+
+        # If the combination was valid, we add the final tets to the a list of possible tets
+        if finished_combination:
+            list_of_possible_tets = np.append(list_of_possible_tets, final_tets)
+            break
 
 
 def add_new_info(Tnew_23, Ynew_23, final_tets, final_ys, new_tets, new_ys, removed_tets, removed_ys, tetIds):
