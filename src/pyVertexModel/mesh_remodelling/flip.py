@@ -217,10 +217,16 @@ def compute_tet_volume(tet, Geo):
 
 
 def get_4_fold_tets(Geo):
+    """
+    Get the tets that have 4-fold nodes without debris cells
+    :param Geo:
+    :return:
+    """
     allTets = np.vstack([cell.T for cell in Geo.Cells])
 
     ghostNodesWithoutDebris = np.setdiff1d(Geo.XgID, Geo.RemovedDebrisCells)
-    tets = allTets[~np.isin(allTets, ghostNodesWithoutDebris).all(axis=1)]
+
+    tets = allTets[np.all(~np.isin(allTets, ghostNodesWithoutDebris), axis=1)]
     tets = np.unique(tets, axis=0)
 
     return tets
@@ -316,7 +322,7 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
 
                     Geo_new = Geo.copy()
                     Geo_new.remove_tetrahedra(old_tets)
-                    Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), [], Set)
+                    Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), None, Set)
                     Geo_new.rebuild(Geo, Set)
                     new_tets_tree.append(new_tets)
                     vol_diff.append(abs(new_vol - old_vol) / old_vol)
