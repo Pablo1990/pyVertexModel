@@ -193,49 +193,6 @@ def YFlipNM_recursive(TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, XsT
     return Ynew, Tnew, TRemoved, treeOfPossibilities, arrayPos
 
 
-def YFlipNM_non_recursive(TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, XsToDisconnect, treeOfPossibilities,
-                          parentNode, arrayPos):
-    stack = [(TOld, parentNode, arrayPos)]
-    endNode = 1
-
-    while stack:
-        TOld, parentNode, arrayPos = stack.pop()
-        Told_original = TOld
-
-        if TOld.shape[0] == 3:
-            # Existing logic when TOld.shape[0] == 3
-            Ynew_c, Tnew_c = YFlip32(oldYs, TOld, [1, 2, 3], Geo)
-            TRemoved.insert(arrayPos, TOld)
-            Tnew.insert(arrayPos, Tnew_c)
-            Ynew.insert(arrayPos, Ynew_c)
-            treeOfPossibilities.add_edge(parentNode, arrayPos)
-            treeOfPossibilities.add_edge(arrayPos, endNode)
-            arrayPos += 1
-        else:
-            # Existing logic for the else case
-            for numPair in range(possibleEdges.shape[0]):
-                valence, sharedTets, tetIds = edgeValenceT(Told_original, possibleEdges[numPair, :])
-
-                if valence == 2:
-                    Ynew_23, Tnew_23 = YFlip23(oldYs, Told_original, tetIds, Geo)
-
-                    TRemoved.insert(arrayPos, Told_original[tetIds, :])
-                    Tnew.insert(arrayPos, Tnew_23)
-                    Ynew.insert(arrayPos, Ynew_23)
-                    treeOfPossibilities.add_edge(parentNode, arrayPos)
-
-                    TOld = Told_original
-                    TOld = np.delete(TOld, tetIds, axis=0)
-                    TOld = np.vstack((TOld, Tnew_23))
-
-                    _, TOld_new, _ = edgeValenceT(TOld, XsToDisconnect)
-
-                    # Instead of recursion, add new state to the stack
-                    stack.append((TOld_new, arrayPos, arrayPos + 1))
-
-    return Ynew, Tnew, TRemoved, treeOfPossibilities, arrayPos
-
-
 def compute_tet_volume(tet, Geo):
     Xs = np.vstack([Geo.Cells[t].X for t in tet])
     newOrder = Delaunay(Xs).simplices
@@ -290,59 +247,41 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
     # Get all the unique pair of nodes (edges) that can be removed from the mesh
     possibleEdgesToRemove = list(combinations(possibleEdges, max_pairs_of_edges))
 
-    for edgeToRemove in possibleEdgesToRemove:
-        # Make edgeToRemove with 2 columns
-        valence, sharedTets, tetIds = edgeValenceT(old_tets, edgeToRemove)
+    # Step 5: For each combination of edges to remove, check if it is valid
+    list_of_possible_tets = np.array([])
+    for combinations_edge_to_remove in possibleEdgesToRemove:
+        finished_combination = False
+        final_tets = old_tets
+        final_ys = old_ys
+        for edgeToRemove in combinations_edge_to_remove:
+            valence, sharedTets, tetIds = edgeValenceT(final_tets, edgeToRemove)
 
-        # Valence == 1, is an edge that can be removed.
-        # Valence == 2, a face can be removed.
-        if TOld.shape[0] == 3:
-            Ynew_c, Tnew_c = YFlip32(oldYs, TOld, [1, 2, 3], Geo)
-            TRemoved.insert(arrayPos, TOld)
-            Tnew.insert(arrayPos, Tnew_c)
-            Ynew.insert(arrayPos, Ynew_c)
-            treeOfPossibilities.add_edge(parentNode, arrayPos)
-            treeOfPossibilities.add_edge(arrayPos, endNode)
-        elif valence == 2:
-            Ynew_23, Tnew_23 = YFlip23(old_ys, old_tets, tetIds, Geo)
+            # The number of tets is 3, it is a 3-2 flip
+            if final_tets.shape[0] == 3:
+                # Perform the flip
+                Ynew_c, Tnew_c = YFlip32(final_ys, final_tets, [1, 2, 3], Geo)
 
-            TRemoved.insert(arrayPos, Told_original[tetIds, :])
-            Tnew.insert(arrayPos, Tnew_23)
-            Ynew.insert(arrayPos, Ynew_23)
-            treeOfPossibilities.add_edge(parentNode, arrayPos)
+                final_tets, final_ys = update_test_ys(Tnew_c, Ynew_c, final_tets, final_ys, tetIds)
 
-            TOld = Told_original
-            # Remove the row of tets that are associated to that edgeToDisconnect
-            TOld = np.delete(TOld, tetIds, axis=0)
-            TOld = np.vstack((TOld, Tnew_23))
+                finished_combination = True
+                break
+            elif valence == 2:
+                # Valence == 2, a face can be removed.
+                Ynew_23, Tnew_23 = YFlip23(final_ys, final_tets, tetIds, Geo)
 
-            # Update and get the tets that are associated to that edgeToDisconnect
-            # Valence should have decreased
-            _, TOld_new, _ = edgeValenceT(TOld, XsToDisconnect)
-        else:
-            # if it is not valence == 2, the combination is not valid
+                final_tets, final_ys = update_test_ys(Tnew_23, Ynew_23, final_tets, final_ys, tetIds)
+
+                # Valence should have decreased
+                _, final_tets, _ = edgeValenceT(final_tets, xs_to_disconnect)
+            else:
+                # if it is not valence == 2, the combination is not valid
+                break
+
+        # If the combination was valid, we add the final tets to the a list of possible tets
+        if finished_combination:
+            list_of_possible_tets = np.append(list_of_possible_tets, final_tets)
             break
 
-
-
-
-    treeOfPossibilities = nx.DiGraph()
-    treeOfPossibilities.add_node(2)
-    TRemoved = [None, None]
-    Tnew = [None, None]
-    Ynew = [None, None]
-    parentNode = 0
-    arrayPos = 2
-    endNode = 1
-    # [_, Tnew, TRemoved, treeOfPossibilities] = YFlipNM_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys, Geo,
-    #                                                              possibleEdges,
-    #                                                              xs_to_disconnect, treeOfPossibilities, parentNode,
-    #                                                              arrayPos)
-
-    [_, Tnew, TRemoved, treeOfPossibilities] = YFlipNM_non_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys, Geo,
-                                                                     possibleEdges,
-                                                                     xs_to_disconnect, treeOfPossibilities, parentNode,
-                                                                     arrayPos)
 
     paths = treeOfPossibilities.all_simple_paths(parentNode, endNode)
     new_tets_tree = []
@@ -394,3 +333,13 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
                         cell_winning.append(np.sum(np.isin(new_tets, cell_to_intercalate_with)) / len(new_tets))
                     except Exception as ex:
                         pass  # handle exception here if necessary
+
+
+def update_test_ys(Tnew_23, Ynew_23, final_tets, final_ys, tetIds):
+    # Update and get the tets that are associated to that edgeToDisconnect
+    final_tets = np.delete(final_tets, tetIds, axis=0)
+    final_tets = np.vstack((final_tets, Tnew_23))
+    # Update and get the Ys that are associated to that edgeToDisconnect
+    final_ys = np.delete(final_ys, tetIds, axis=0)
+    final_ys = np.vstack((final_ys, Ynew_23))
+    return final_tets, final_ys
