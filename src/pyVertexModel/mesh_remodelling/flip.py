@@ -127,7 +127,7 @@ def YFlip23(Ys, Ts, YsToChange, Geo):
     n3 = Ts[YsToChange[0]][np.isin(Ts[YsToChange[0]], Ts[YsToChange[1]])]
     n1 = Ts[YsToChange[0]][~np.isin(Ts[YsToChange[0]], n3)]
     n2 = Ts[YsToChange[1]][~np.isin(Ts[YsToChange[1]], n3)]
-    num = np.array([1, 2, 3, 4])
+    num = np.array([0, 1, 2, 3])
     num = num[Ts[YsToChange[0]] == n1]
     if num == 2 or num == 4:
         Tnew = np.block([[n3[0], n3[1], n2, n1],
@@ -197,9 +197,9 @@ def compute_tet_volume(tet, Geo):
     Xs = np.vstack([Geo.Cells[t].X for t in tet])
     newOrder = Delaunay(Xs).simplices
     Xs = Xs[newOrder, :]
-    y1 = Xs[1, :] - Xs[0, :]
-    y2 = Xs[2, :] - Xs[0, :]
-    y3 = Xs[3, :] - Xs[0, :]
+    y1 = Xs[0, :] - Xs[0, :]
+    y2 = Xs[1, :] - Xs[0, :]
+    y3 = Xs[2, :] - Xs[0, :]
 
     Ytri = np.array([y1, y2, y3])
     vol = np.linalg.det(Ytri) / 6
@@ -248,6 +248,8 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
     possibleEdgesToRemove = list(combinations(possibleEdges, max_pairs_of_edges))
 
     # Step 5: For each combination of edges to remove, check if it is valid
+    
+
     list_of_possible_tets = np.array([])
     for combinations_edge_to_remove in possibleEdgesToRemove:
         finished_combination = False
@@ -259,7 +261,7 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
             # The number of tets is 3, it is a 3-2 flip
             if final_tets.shape[0] == 3:
                 # Perform the flip
-                Ynew_c, Tnew_c = YFlip32(final_ys, final_tets, [1, 2, 3], Geo)
+                Ynew_c, Tnew_c = YFlip32(final_ys, final_tets, [0, 1, 2], Geo)
 
                 final_tets, final_ys = update_test_ys(Tnew_c, Ynew_c, final_tets, final_ys, tetIds)
 
@@ -336,6 +338,15 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
 
 
 def update_test_ys(Tnew_23, Ynew_23, final_tets, final_ys, tetIds):
+    """
+    Update the tets and ys after a 2-3 flip
+    :param Tnew_23:
+    :param Ynew_23:
+    :param final_tets:
+    :param final_ys:
+    :param tetIds:
+    :return:
+    """
     # Update and get the tets that are associated to that edgeToDisconnect
     final_tets = np.delete(final_tets, tetIds, axis=0)
     final_tets = np.vstack((final_tets, Tnew_23))
