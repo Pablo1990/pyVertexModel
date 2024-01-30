@@ -153,7 +153,7 @@ def YFlipNM_recursive(TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, XsT
 
     Told_original = TOld
     if TOld.shape[0] == 3:
-        Ynew_c, Tnew_c = YFlip32(oldYs, TOld, [1, 2, 3], Geo)
+        Ynew_c, Tnew_c = YFlip32(oldYs, TOld, [0, 1, 2], Geo)
         TRemoved.insert(arrayPos, TOld)
         Tnew.insert(arrayPos, Tnew_c)
         Ynew.insert(arrayPos, Ynew_c)
@@ -248,9 +248,25 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
     possibleEdgesToRemove = list(combinations(possibleEdges, max_pairs_of_edges))
 
     # Step 5: For each combination of edges to remove, check if it is valid
-    
+    # treeOfPossibilities = nx.DiGraph()
+    # treeOfPossibilities.add_node(2)
+    # TRemoved = [None, None]
+    # Tnew = [None, None]
+    # Ynew = [None, None]
+    # parentNode = 0
+    # arrayPos = 2
+    # endNode = 1
+    # [_, Tnew, TRemoved, treeOfPossibilities] = YFlipNM_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys, Geo,
+    #                                                              possibleEdges,
+    #                                                              xs_to_disconnect, treeOfPossibilities, parentNode,
+    #                                                              arrayPos)
 
     list_of_possible_tets = np.array([])
+    new_tets = np.array([])
+    new_ys = np.array([])
+    removed_tets = np.array([])
+    removed_ys = np.array([])
+
     for combinations_edge_to_remove in possibleEdgesToRemove:
         finished_combination = False
         final_tets = old_tets
@@ -263,6 +279,10 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
                 # Perform the flip
                 Ynew_c, Tnew_c = YFlip32(final_ys, final_tets, [0, 1, 2], Geo)
 
+                new_tets, new_ys, removed_tets, removed_ys = add_new_info(Tnew_c, Ynew_c, final_tets, final_ys,
+                                                                          new_tets, new_ys, removed_tets, removed_ys,
+                                                                          [0, 1, 2])
+
                 final_tets, final_ys = update_test_ys(Tnew_c, Ynew_c, final_tets, final_ys, tetIds)
 
                 finished_combination = True
@@ -270,6 +290,10 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
             elif valence == 2:
                 # Valence == 2, a face can be removed.
                 Ynew_23, Tnew_23 = YFlip23(final_ys, final_tets, tetIds, Geo)
+
+                new_tets, new_ys, removed_tets, removed_ys = add_new_info(Tnew_23, Ynew_23, final_tets, final_ys,
+                                                                          new_tets, new_ys, removed_tets, removed_ys,
+                                                                          tetIds)
 
                 final_tets, final_ys = update_test_ys(Tnew_23, Ynew_23, final_tets, final_ys, tetIds)
 
@@ -335,6 +359,14 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
                         cell_winning.append(np.sum(np.isin(new_tets, cell_to_intercalate_with)) / len(new_tets))
                     except Exception as ex:
                         pass  # handle exception here if necessary
+
+
+def add_new_info(Tnew_23, Ynew_23, final_tets, final_ys, new_tets, new_ys, removed_tets, removed_ys, tetIds):
+    new_tets = np.append(new_tets, Tnew_23)
+    new_ys = np.append(new_ys, Ynew_23)
+    removed_tets = np.append(removed_tets, final_tets[tetIds, :])
+    removed_ys = np.append(removed_ys, final_ys[tetIds, :])
+    return new_tets, new_ys, removed_tets, removed_ys
 
 
 def update_test_ys(Tnew_23, Ynew_23, final_tets, final_ys, tetIds):
