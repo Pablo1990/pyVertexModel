@@ -261,9 +261,7 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
                                                                  xs_to_disconnect, treeOfPossibilities, parentNode,
                                                                  arrayPos)
 
-    #YFlipNM_iterative(Geo, old_tets, old_ys, possibleEdgesToRemove, xs_to_disconnect)
-
-    paths = treeOfPossibilities.all_simple_paths(parentNode, endNode)
+    paths = list(nx.all_simple_paths(treeOfPossibilities, parentNode, endNode))
     new_tets_tree = []
     vol_diff = []
     cell_winning = []
