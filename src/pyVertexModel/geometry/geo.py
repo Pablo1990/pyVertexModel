@@ -614,15 +614,14 @@ class Geo:
         for newTet in newTets:
             if any(~np.isin(newTet, self.XgID)):
                 for numNode in newTet:
-                    if ~any(np.isin(newTet, self.XgID)) and np.isin(np.sort(newTet),
-                                                                    np.sort(self.Cells[numNode].T, axis=1)).all(axis=1):
+                    if ~any(np.isin(newTet, self.XgID)) and np.any(np.isin(self.Cells[numNode].T, newTet).all(axis=1)):
+                        np.isin(self.Cells[numNode].T, newTet).all(axis=1)
                         self.Cells[numNode].Y = self.Cells[numNode].Y[
                             ~np.isin(np.sort(self.Cells[numNode].T, axis=1), np.sort(newTet))]
                         self.Cells[numNode].T = self.Cells[numNode].T[
                             ~np.isin(np.sort(self.Cells[numNode].T, axis=1), np.sort(newTet))]
                     else:
-                        if len(self.Cells[numNode].T) == 0 or ~np.isin(np.sort(newTet), np.sort(self.Cells[numNode].T,
-                                                                                                axis=1)).all(axis=1):
+                        if len(self.Cells[numNode].T) == 0 or ~np.any(np.isin(self.Cells[numNode].T, newTet).all(axis=1)):
                             self.Cells[numNode].T = np.append(self.Cells[numNode].T, [newTet], axis=0)
                             if self.Cells[numNode].AliveStatus is not None and Set is not None:
                                 if Ynew:
@@ -649,23 +648,23 @@ class Geo:
             debrisCells = [-1]
 
         for numTet in range(Tnew.shape[0]):
-            mainNode_current = mainNodesToConnect[np.isin(mainNodesToConnect, Tnew[numTet, :])]
-            nGhostNodes_cTet = np.sum(np.isin(Tnew[numTet, :], self.XgID))
-            YnewlyComputed = cell.compute_Y(self, Tnew[numTet, :], self.Cells[mainNode_current[0]].X, Set)
+            mainNode_current = mainNodesToConnect[np.isin(mainNodesToConnect, Tnew[numTet])]
+            nGhostNodes_cTet = np.sum(np.isin(Tnew[numTet], self.XgID))
+            YnewlyComputed = cell.compute_y(self, Tnew[numTet], self.Cells[mainNode_current[0]].X, Set)
 
-            if any(np.isin(Tnew[numTet, :], debrisCells)):
+            if any(np.isin(Tnew[numTet], debrisCells)):
                 contributionOldYs = 1
             else:
                 contributionOldYs = Set.contributionOldYs
 
-            if all(~np.isin(Tnew[numTet, :], np.concatenate([self.XgBottom, self.XgTop]))):
+            if all(~np.isin(Tnew[numTet], np.concatenate([self.XgBottom, self.XgTop]))):
                 Ynew.append(YnewlyComputed)
             else:
-                tetsToUse = np.sum(np.isin(allTs, Tnew[numTet, :]), axis=1) > 2
+                tetsToUse = np.sum(np.isin(allTs, Tnew[numTet]), axis=1) > 2
 
-                if any(np.isin(Tnew[numTet, :], self.XgTop)):
+                if any(np.isin(Tnew[numTet], self.XgTop)):
                     tetsToUse = tetsToUse & np.any(np.isin(allTs, self.XgTop), axis=1)
-                elif any(np.isin(Tnew[numTet, :], self.XgBottom)):
+                elif any(np.isin(Tnew[numTet], self.XgBottom)):
                     tetsToUse = tetsToUse & np.any(np.isin(allTs, self.XgBottom), axis=1)
 
                 tetsToUse = tetsToUse & (nGhostNodes_allTs == nGhostNodes_cTet)
@@ -674,11 +673,11 @@ class Geo:
                     Ynew.append(contributionOldYs * np.mean(allYs[tetsToUse, :], axis=0) + (
                             1 - contributionOldYs) * YnewlyComputed)
                 else:
-                    tetsToUse = np.sum(np.isin(allTs, Tnew[numTet, :]), axis=1) > 1
+                    tetsToUse = np.sum(np.isin(allTs, Tnew[numTet]), axis=1) > 1
 
-                    if any(np.isin(Tnew[numTet, :], self.XgTop)):
+                    if any(np.isin(Tnew[numTet], self.XgTop)):
                         tetsToUse = tetsToUse & np.any(np.isin(allTs, self.XgTop), axis=1)
-                    elif any(np.isin(Tnew[numTet, :], self.XgBottom)):
+                    elif any(np.isin(Tnew[numTet], self.XgBottom)):
                         tetsToUse = tetsToUse & np.any(np.isin(allTs, self.XgBottom), axis=1)
 
                     tetsToUse = tetsToUse & (nGhostNodes_allTs == nGhostNodes_cTet)
