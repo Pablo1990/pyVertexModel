@@ -195,15 +195,24 @@ def YFlipNM_recursive(TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, XsT
 
 
 def compute_tet_volume(tet, Geo):
+    """
+    Compute the volume of a tetrahedron
+    :param tet:
+    :param Geo:
+    :return:
+    """
+    # Get the coordinates of the tetrahedron
     Xs = np.vstack([Geo.Cells[t].X for t in tet])
-    newOrder = Delaunay(Xs).simplices
-    Xs = Xs[newOrder, :]
-    y1 = Xs[0, :] - Xs[0, :]
-    y2 = Xs[1, :] - Xs[0, :]
-    y3 = Xs[2, :] - Xs[0, :]
 
+    # Vector from the first node to the other three
+    y1 = Xs[1, :] - Xs[0, :]
+    y2 = Xs[2, :] - Xs[0, :]
+    y3 = Xs[3, :] - Xs[0, :]
+
+    # Compute the volume
     Ytri = np.array([y1, y2, y3])
     vol = np.linalg.det(Ytri) / 6
+    
     return vol
 
 
