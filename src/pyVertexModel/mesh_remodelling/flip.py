@@ -6,6 +6,7 @@ import numpy as np
 from scipy.spatial import Delaunay
 
 from src.pyVertexModel.geometry.geo import edgeValenceT
+from src.pyVertexModel.util.utils import ismember_rows
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -265,14 +266,14 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
     new_tets_tree = []
     vol_diff = []
     cell_winning = []
-    for path in paths:
-        cPath = path[0]
+    for c_path in paths:
+        c_path = np.array(c_path)
         new_tets = np.vstack(old_tets)
 
-        for posPath in cPath[cPath > 2]:
+        for posPath in c_path[c_path > 1]:
             toAdd = Tnew[posPath]
             toRemove = TRemoved[posPath]
-            new_tets = new_tets[~np.all(np.sort(new_tets, axis=1) == np.sort(toRemove, axis=1), axis=1)]
+            new_tets = new_tets[~ismember_rows(new_tets, toRemove)[0]]
             new_tets = np.vstack((new_tets, toAdd))
 
             it_was_found = False
