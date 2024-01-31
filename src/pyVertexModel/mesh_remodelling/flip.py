@@ -315,20 +315,21 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
                     old_vol += vol
 
                 if abs(new_vol - old_vol) / old_vol <= 0.005:
-                    #try:
-                    if intercalation_flip:
-                        Xs_c = Xs[~np.isin(Xs, ghost_nodes_without_debris)]
-                        new_tets = np.append(new_tets, [Xs_c], axis=0)
+                    try:
+                        if intercalation_flip:
+                            Xs_c = Xs[~np.isin(Xs, ghost_nodes_without_debris)]
+                            new_tets = np.append(new_tets, [Xs_c], axis=0)
 
-                    Geo_new = Geo.copy()
-                    Geo_new.remove_tetrahedra(old_tets)
-                    Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), None, Set)
-                    Geo_new.rebuild(Geo, Set)
-                    new_tets_tree.append(new_tets)
-                    vol_diff.append(abs(new_vol - old_vol) / old_vol)
-                    cell_winning.append(np.sum(np.isin(new_tets, cell_to_intercalate_with)) / len(new_tets))
-                    #except Exception as ex:
-                    #    pass  # handle exception here if necessary
+                        Geo_new = Geo.copy()
+                        Geo_new.remove_tetrahedra(old_tets)
+                        Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), None, Set)
+                        Geo_new.rebuild(Geo, Set)
+                        new_tets_tree.append(new_tets)
+                        vol_diff.append(abs(new_vol - old_vol) / old_vol)
+                        cell_winning.append(np.sum(np.isin(new_tets, cell_to_intercalate_with)) / len(new_tets))
+                    except Exception as ex:
+                        logger.warning(f"Exception on flip remodelling: {ex}")
+                        pass  # handle exception here if necessary
 
     if len(new_tets_tree) > 0:
         #min_index = vol_diff.index(min(vol_diff))
