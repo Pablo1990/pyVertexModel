@@ -251,15 +251,18 @@ class Remodelling:
             # TODO: CREATE VTK FILES OR ALTERNATIVE
             # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr + 1)
 
-            checkedYgIds.extend([[feature[0], feature[1]] for feature in segmentFeatures])
+            # TODO: THIS IS WRONG!
+            checkedYgIds.extend([[feature.num_cell, feature.node_pair_g] for feature in segmentFeatures.itertuples()])
 
             rowsToRemove = []
-            if segmentFeatures_all:
-                for numRow in range(len(segmentFeatures_all)):
-                    cSegFea = segmentFeatures_all[numRow]
-                    if all([feature in checkedYgIds for feature in cSegFea[:2]]):
-                        rowsToRemove.append(numRow)
-            segmentFeatures_all = [feature for i, feature in enumerate(segmentFeatures_all) if i not in rowsToRemove]
+            if segmentFeatures_all.shape[0] > 0:
+                for numRow in segmentFeatures_all.itertuples():
+                    if np.all([np.isin(feature, checkedYgIds) for feature in [numRow.num_cell, numRow.node_pair_g]]):
+                        rowsToRemove.append(numRow.Index)
+
+            # Remove the rows that have been checked from segmentFeatures_all
+
+            segmentFeatures_all = segmentFeatures_all.drop(rowsToRemove)
 
     def get_tris_to_remodel_ordered(self):
         """
