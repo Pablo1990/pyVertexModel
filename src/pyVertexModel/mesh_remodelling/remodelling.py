@@ -184,14 +184,15 @@ class Remodelling:
             Geo_0_backup = self.Geo_0.copy()
             Dofs_backup = self.Dofs.copy()
 
-            segmentFeatures = segmentFeatures_all.head(1)
+            # Get the first segment feature
+            segmentFeatures = segmentFeatures_all.iloc[0]
             allTnew = []
             numPair = 0
 
-            cellNode = segmentFeatures.num_cell[0]
-            ghostNode = segmentFeatures.node_pair_g[0]
-            cellToIntercalateWith = segmentFeatures.cell_intercalate[0]
-            cellToSplitFrom = segmentFeatures.cell_to_split_from[0]
+            cellNode = segmentFeatures['num_cell']
+            ghostNode = segmentFeatures['node_pair_g']
+            cellToIntercalateWith = segmentFeatures['cell_intercalate']
+            cellToSplitFrom = segmentFeatures['cell_to_split_from']
 
             hasConverged = True
 
@@ -251,8 +252,8 @@ class Remodelling:
             # TODO: CREATE VTK FILES OR ALTERNATIVE
             # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr + 1)
 
-            # TODO: THIS IS WRONG!
-            checkedYgIds.extend([[feature.num_cell, feature.node_pair_g] for feature in segmentFeatures.itertuples()])
+            # Remove the segment feature that has been checked
+            checkedYgIds.extend([[segmentFeatures['num_cell'], segmentFeatures['node_pair_g']]])
 
             rowsToRemove = []
             if segmentFeatures_all.shape[0] > 0:
@@ -261,7 +262,6 @@ class Remodelling:
                         rowsToRemove.append(numRow.Index)
 
             # Remove the rows that have been checked from segmentFeatures_all
-
             segmentFeatures_all = segmentFeatures_all.drop(rowsToRemove)
 
     def get_tris_to_remodel_ordered(self):
