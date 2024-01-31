@@ -208,44 +208,44 @@ class Remodelling:
 
                     allTnew = np.vstack((allTnew, Tnew))
 
-                sharedNodesStill = get_node_neighbours_per_domain(Geo, cellNode, ghostNode, cellToSplitFrom)
+                sharedNodesStill = get_node_neighbours_per_domain(self.Geo, cellNode, ghostNode, cellToSplitFrom)
 
-                if any(np.isin(sharedNodesStill, Geo.XgID)):
-                    sharedNodesStill_g = sharedNodesStill[np.isin(sharedNodesStill, Geo.XgID)]
+                if any(np.isin(sharedNodesStill, self.Geo.XgID)):
+                    sharedNodesStill_g = sharedNodesStill[np.isin(sharedNodesStill, self.Geo.XgID)]
                     ghostNode = sharedNodesStill_g[0]
                 else:
                     break
 
             if hasConverged:
                 # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr + 1)
-                gNodeNeighbours = [get_node_neighbours(Geo, segmentFeatures[numRow, 1]) for numRow in
+                gNodeNeighbours = [get_node_neighbours(self.Geo, segmentFeatures[numRow, 1]) for numRow in
                                    range(segmentFeatures.shape[0])]
                 gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
-                cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, Geo.XgID)]
+                cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
                 # numClose = 0.5
                 # Geo, geo_n = moveVerticesCloserToRefPoint(Geo, geo_n, numClose, cellNodesShared, cellToSplitFrom,
                 #                                          ghostNode, Tnew, Set)
                 # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr + 1)
 
-                Dofs = DegreesOfFreedom.get_dofs(Geo, self.Set)
-                Geo = Dofs.get_remodel_dofs(allTnew, Geo)
-                Geo, Set, DidNotConverge = solve_remodeling_step(Geo_0, Geo_n, Geo, Dofs, Set)
+                self.Dofs = DegreesOfFreedom.get_dofs(self.Geo, self.Set)
+                self.Geo = self.Dofs.get_remodel_dofs(allTnew, self.Geo)
+                self.Geo, Set, DidNotConverge = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs, self.Set)
                 if DidNotConverge:
-                    Geo = Geo_backup
-                    Geo_n = Geo_n_backup
-                    Dofs = Dofs_backup
-                    Geo_0 = Geo_0_backup
+                    self.Geo = Geo_backup
+                    self.Geo_n = Geo_n_backup
+                    self.Dofs = Dofs_backup
+                    self.Geo_0 = Geo_0_backup
                     logger.info(f'=>> Full-Flip rejected: did not converge1')
                 else:
-                    newYgIds = np.unique(np.concatenate((newYgIds, Geo.AssemblegIds)))
-                    Geo.update_measures()
+                    newYgIds = np.unique(np.concatenate((newYgIds, self.Geo.AssemblegIds)))
+                    self.Geo.update_measures()
                     hasConverged = 1
             else:
                 # Go back to initial state
-                Geo = Geo_backup.copy()
-                Geo_n = Geo_n_backup.copy()
-                Dofs = Dofs_backup.copy()
-                Geo_0 = Geo_0_backup.copy()
+                self.Geo = Geo_backup.copy()
+                self.Geo_n = Geo_n_backup.copy()
+                self.Dofs = Dofs_backup.copy()
+                self.Geo_0 = Geo_0_backup.copy()
                 logger.info('=>> Full-Flip rejected: did not converge2')
 
             # TODO: CREATE VTK FILES OR ALTERNATIVE
