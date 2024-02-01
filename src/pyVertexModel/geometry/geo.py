@@ -473,7 +473,10 @@ class Geo:
                 else:
                     oldFace = None
 
-                self.Cells[cc].Faces[j] = face.Face()
+                if j >= len(Cell.Faces):
+                    self.Cells[cc].Faces.append(face.Face())
+                else:
+                    self.Cells[cc].Faces[j] = face.Face()
                 self.Cells[cc].Faces[j].build_face(cc, cj, face_ids, self.nCells, self.Cells[cc], self.XgID, Set,
                                                    self.XgTop, self.XgBottom, oldFace)
 

@@ -204,6 +204,10 @@ def compute_tet_volume(tet, Geo):
     # Get the coordinates of the tetrahedron
     Xs = np.vstack([Geo.Cells[t].X for t in tet])
 
+    # Get delaunay triangulation of the 4 nodes
+    tri = Delaunay(Xs)
+    Xs = Xs[tri.simplices[0], :]
+
     # Vector from the first node to the other three
     y1 = Xs[1, :] - Xs[0, :]
     y2 = Xs[2, :] - Xs[0, :]
@@ -211,7 +215,7 @@ def compute_tet_volume(tet, Geo):
 
     # Compute the volume
     Ytri = np.array([y1, y2, y3])
-    vol = np.linalg.det(Ytri) / 6
+    vol = abs(np.linalg.det(Ytri)) / 6
 
     return vol
 
@@ -265,7 +269,7 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
 
     # Step 3: Select the edge to add
     edgeToConnect = np.block([np.array(cell_to_intercalate_with), Xs_gToDisconnect])
-    possibleEdges = possibleEdges[np.all(~np.isin(possibleEdges, edgeToConnect), axis=1)]
+    possibleEdges = possibleEdges[~np.all(np.isin(possibleEdges, edgeToConnect), axis=1)]
 
     # Step 4: Propagate the change to get the remaining tets
     # Based on https://dl.acm.org/doi/pdf/10.1145/2629697
@@ -325,21 +329,21 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
                     old_vol += vol
 
                 if abs(new_vol - old_vol) / old_vol <= 0.005:
-                    try:
-                        if intercalation_flip:
-                            Xs_c = Xs[~np.isin(Xs, ghost_nodes_without_debris)]
-                            new_tets = np.append(new_tets, [Xs_c], axis=0)
+                    #try:
+                    if intercalation_flip:
+                        Xs_c = Xs[~np.isin(Xs, ghost_nodes_without_debris)]
+                        new_tets = np.append(new_tets, [Xs_c], axis=0)
 
-                        Geo_new = Geo.copy()
-                        Geo_new.remove_tetrahedra(old_tets)
-                        Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), None, Set)
-                        Geo_new.rebuild(Geo, Set)
-                        new_tets_tree.append(new_tets)
-                        vol_diff.append(abs(new_vol - old_vol) / old_vol)
-                        cell_winning.append(np.sum(np.isin(new_tets, cell_to_intercalate_with)) / len(new_tets))
-                    except Exception as ex:
-                        logger.warning(f"Exception on flip remodelling: {ex}")
-                        pass  # handle exception here if necessary
+                    Geo_new = Geo.copy()
+                    Geo_new.remove_tetrahedra(old_tets)
+                    Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), None, Set)
+                    Geo_new.rebuild(Geo, Set)
+                    new_tets_tree.append(new_tets)
+                    vol_diff.append(abs(new_vol - old_vol) / old_vol)
+                    cell_winning.append(np.sum(np.isin(new_tets, cell_to_intercalate_with)) / len(new_tets))
+                    # except Exception as ex:
+                    #     logger.warning(f"Exception on flip remodelling: {ex}")
+                    #     pass  # handle exception here if necessary
 
     if len(new_tets_tree) > 0:
         # min_index = vol_diff.index(min(vol_diff))
