@@ -2,6 +2,7 @@ import logging
 import math
 import os
 import statistics
+from itertools import combinations
 
 import numpy as np
 from numpy import mean
@@ -83,12 +84,41 @@ def build_quartets_of_neighs_2d(neighbours):
 
 
 def get_four_fold_vertices(img_neighbours):
+    """
+    Get the four-fold vertices of the cells.
+    :param img_neighbours:
+    :return:
+    """
     quartets = build_quartets_of_neighs_2d(img_neighbours)
     percQuartets = quartets.shape[0] / len(img_neighbours)
 
+    return percQuartets
+
 
 def build_triplets_of_neighs(neighbours):
-    
+    """
+    Build triplets of neighboring cells.
+
+    :param neighbours: A list of lists where each sublist represents the neighbors of a cell.
+    :return: A 2D numpy array where each row represents a triplet of neighboring cells.
+    """
+    triplets_of_neighs = []
+
+    for i in range(len(neighbours)):
+        neigh_cell = neighbours[i]
+        for j in range(len(neigh_cell)):
+            if neigh_cell[j] > i:
+                neigh_j = neighbours[neigh_cell[j]]
+                for k in range(len(neigh_j)):
+                    if neigh_j[k] > neigh_cell[j]:
+                        common_cell = list({i}.intersection(set(neigh_j), set(neighbours[neigh_j[k]])))
+                        if common_cell:
+                            triangle_seed = sorted([i, neigh_cell[j], neigh_j[k]])
+                            triplets_of_neighs.append(triangle_seed)
+
+    triplets_of_neighs = np.unique(np.sort(triplets_of_neighs, axis=1), axis=0)
+
+    return triplets_of_neighs
 
 
 def calculate_vertices(labelled_img, neighbours, ratio):
@@ -153,9 +183,54 @@ def calculate_vertices(labelled_img, neighbours, ratio):
     return vertices_info
 
 
-def boundary_of_cell(current_vertices, current_connected_cells):
-    # Please define this function
-    pass
+def boundary_of_cell(vertices_of_cell, neighbours=None):
+    """
+    Determine the order of vertices that form the boundary of a cell.
+
+    :param vertices_of_cell: A 2D array where each row represents the coordinates of a vertex.
+    :param neighbours: A 2D array where each row represents a pair of neighboring vertices.
+    :return: A 1D array representing the order of vertices.
+    """
+    # If neighbours are provided, try to order the vertices based on their neighbors
+    if neighbours is not None:
+        try:
+            initial_neighbours = neighbours.copy()
+            neighbours_order = neighbours[0, :].copy()
+            first_neighbour = neighbours[0, 0]
+            next_neighbour = neighbours[0, 1]
+            next_neighbour_prev = next_neighbour
+            neighbours = np.delete(neighbours, 0, axis=0)
+
+            # Loop until all neighbours are ordered
+            while neighbours.size > 0:
+                match_next_vertex = np.any(neighbours == next_neighbour, axis=1)
+
+                neighbours_order = np.vstack((neighbours_order, neighbours[match_next_vertex, :]))
+
+                next_neighbour = neighbours[match_next_vertex, :][0]
+                next_neighbour[next_neighbour == next_neighbour_prev] = 0
+                neighbours = np.delete(neighbours, match_next_vertex, axis=0)
+
+                next_neighbour_prev = next_neighbour
+
+            _, vert_order = np.where((neighbours_order == initial_neighbours[:, None]).all(-1))
+
+            new_vert_order = np.hstack((vert_order, np.vstack((vert_order[1:], vert_order[0]))))
+
+            return new_vert_order
+        except Exception as ex:
+            new_vert_order = []
+
+    # If ordering based on neighbours failed or no neighbours were provided,
+    # order the vertices based on their angular position relative to the centroid of the cell
+    imaginary_centroid_mean_vert = np.mean(vertices_of_cell, axis=0)
+    vector_for_ang_mean = vertices_of_cell - imaginary_centroid_mean_vert
+    th_mean = np.arctan2(vector_for_ang_mean[:, 1], vector_for_ang_mean[:, 0])
+    _, vert_order = np.sort(th_mean)
+
+    new_vert_order = np.hstack((vert_order, np.vstack((vert_order[1:], vert_order[0]))))
+
+    return new_vert_order
 
 
 def generate_points_in_sphere(total_cells):
