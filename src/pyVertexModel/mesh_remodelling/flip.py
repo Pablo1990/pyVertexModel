@@ -212,7 +212,7 @@ def compute_tet_volume(tet, Geo):
     # Compute the volume
     Ytri = np.array([y1, y2, y3])
     vol = np.linalg.det(Ytri) / 6
-    
+
     return vol
 
 
@@ -233,6 +233,16 @@ def get_4_fold_tets(Geo):
 
 
 def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, Set):
+    """
+
+    :param old_tets:
+    :param cell_to_intercalate_with:
+    :param old_ys:
+    :param xs_to_disconnect:
+    :param Geo:
+    :param Set:
+    :return:
+    """
     Xs_gToDisconnect = xs_to_disconnect[np.isin(xs_to_disconnect, Geo.XgID)]
 
     # Temporary remove 4-cell tetrahedra
@@ -273,9 +283,9 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
     arrayPos = 2
     endNode = 1
     _, Tnew, TRemoved, treeOfPossibilities, _ = YFlipNM_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys, Geo,
-                                                                 possibleEdges,
-                                                                 xs_to_disconnect, treeOfPossibilities, parentNode,
-                                                                 arrayPos)
+                                                                  possibleEdges,
+                                                                  xs_to_disconnect, treeOfPossibilities, parentNode,
+                                                                  arrayPos)
 
     paths = list(nx.all_simple_paths(treeOfPossibilities, parentNode, endNode))
     new_tets_tree = []
@@ -332,7 +342,7 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
                         pass  # handle exception here if necessary
 
     if len(new_tets_tree) > 0:
-        #min_index = vol_diff.index(min(vol_diff))
+        # min_index = vol_diff.index(min(vol_diff))
         max_index = cell_winning.index(max(cell_winning))
         Tnew = new_tets_tree[max_index]
     else:
@@ -341,7 +351,6 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
     Ynew = []
 
     return Tnew, Ynew
-
 
 
 def add_new_info(Tnew_23, Ynew_23, final_tets, final_ys, new_tets, new_ys, removed_tets, removed_ys, tetIds):
