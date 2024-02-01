@@ -4,12 +4,16 @@ import os
 import statistics
 
 import numpy as np
-from PIL.Image import Image
 from numpy import mean
 from scipy.optimize import minimize
 from scipy.spatial import Delaunay
 from scipy.spatial.distance import cdist
+from scipy.spatial.distance import pdist, squareform
+from skimage import io
 from skimage.measure import regionprops
+from skimage.measure import regionprops_table
+from skimage.morphology import dilation, square, disk
+from skimage.segmentation import find_boundaries
 
 from src.pyVertexModel.algorithm import newtonRaphson
 from src.pyVertexModel.geometry import degreesOfFreedom
@@ -19,6 +23,139 @@ from src.pyVertexModel.parameters.set import Set
 from src.pyVertexModel.util.utils import save_state
 
 logger = logging.getLogger("pyVertexModel")
+
+
+def calculate_neighbours(labelled_img, ratio_strel):
+    """
+    Calculate the neighbours of each cell
+    :param labelled_img:
+    :param ratio_strel:
+    :return:
+    """
+    se = disk(ratio_strel)
+
+    cells = np.sort(np.unique(labelled_img))
+    if np.sum(labelled_img == 0) > 0:
+        # Deleting cell 0 from range
+        cells = cells[1:]
+
+    img_neighbours = [None] * len(cells)
+
+    for idx, cell in enumerate(cells):
+        BW = find_boundaries(labelled_img == cell, mode='inner')
+        BW_dilate = dilation(BW, se)
+        neighs = np.unique(labelled_img[BW_dilate == 1])
+        img_neighbours[idx] = neighs[(neighs != 0) & (neighs != cell)]
+
+    return img_neighbours
+
+
+def build_quartets_of_neighs_2d(neighbours):
+    """
+    Build quartets of neighboring cells.
+
+    :param neighbours: A list of lists where each sublist represents the neighbors of a cell.
+    :return: A 2D numpy array where each row represents a quartet of neighboring cells.
+    """
+    quartets_of_neighs = []
+
+    for n_cell in range(len(neighbours)):
+        neigh_cell = neighbours[n_cell]
+        intercept_cells = [None] * len(neigh_cell)
+
+        for cell_j in range(len(neigh_cell)):
+            common_cells = list(set(neigh_cell).intersection(neighbours[neigh_cell[cell_j]]))
+            if len(common_cells) > 2:
+                intercept_cells[cell_j] = common_cells + [neigh_cell[cell_j], n_cell]
+
+        intercept_cells = [cell for cell in intercept_cells if cell is not None]
+
+        if intercept_cells:
+            for index_a in range(len(intercept_cells) - 1):
+                for index_b in range(index_a + 1, len(intercept_cells)):
+                    intersection_cells = list(set(intercept_cells[index_a]).intersection(intercept_cells[index_b]))
+                    if len(intersection_cells) >= 4:
+                        quartets_of_neighs.extend(list(combinations(intersection_cells, 4)))
+
+    quartets_of_neighs = np.unique(np.sort(quartets_of_neighs, axis=1), axis=0)
+
+    return quartets_of_neighs
+
+
+def get_four_fold_vertices(img_neighbours):
+    quartets = build_quartets_of_neighs_2d(img_neighbours)
+    percQuartets = quartets.shape[0] / len(img_neighbours)
+
+
+def build_triplets_of_neighs(neighbours):
+    
+
+
+def calculate_vertices(labelled_img, neighbours, ratio):
+    """
+    Calculate the vertices for each cell in a labeled image.
+
+    :param labelled_img: A 2D array representing a labeled image.
+    :param neighbours: A list of lists where each sublist represents the neighbors of a cell.
+    :param ratio: The radius of the disk used for morphological dilation.
+    :return: A dictionary containing the location of each vertex and the cells connected to each vertex.
+    """
+    se = disk(ratio)
+    neighbours_vertices = build_triplets_of_neighs(neighbours)
+    vertices = [None] * len(neighbours_vertices)
+
+    # Calculate the perimeter of each cell for efficiency
+    dilated_cells = [None] * np.max(labelled_img)
+
+    for i in range(np.max(labelled_img)):
+        BW = np.zeros_like(labelled_img)
+        BW[labelled_img == i] = 1
+        BW_dilated = dilation(find_boundaries(BW, mode='inner'), se)
+        dilated_cells[i] = BW_dilated
+
+    # The overlap between cells in the labeled image will be the vertices
+    border_img = np.zeros_like(labelled_img)
+    border_img[labelled_img > -1] = 1
+
+    for num_triplet in range(len(neighbours_vertices)):
+        BW1_dilate = dilated_cells[neighbours_vertices[num_triplet][0]]
+        BW2_dilate = dilated_cells[neighbours_vertices[num_triplet][1]]
+        BW3_dilate = dilated_cells[neighbours_vertices[num_triplet][2]]
+
+        row, col = np.where((BW1_dilate * BW2_dilate * BW3_dilate * border_img) == 1)
+
+        if len(row) > 1:
+            if round(np.mean(col)) not in col:
+                vertices[num_triplet] = [round(np.mean([row[col > np.mean(col)], col[col > np.mean(col)]]))]
+                vertices.append([round(np.mean([row[col < np.mean(col)], col[col < np.mean(col)]]))])
+            else:
+                vertices[num_triplet] = [round(np.mean([row, col]))]
+        else:
+            vertices[num_triplet] = [[row[0], col[0]]]
+
+    # Store vertices and remove artifacts
+    vertices_info = {'location': vertices, 'connectedCells': neighbours_vertices}
+
+    not_empty_cells = [bool(v) for v in vertices_info['location']]
+    if len(vertices_info['location'][0]) == 2:
+        vertices_info['location'] = [vertices_info['location'][i] for i in range(len(not_empty_cells)) if
+                                     not_empty_cells[i]]
+        vertices_info['connectedCells'] = [vertices_info['connectedCells'][i] for i in range(len(not_empty_cells)) if
+                                           not_empty_cells[i]]
+    else:
+        vertices_info['location'] = [vertices_info['location'][i] for i in range(len(not_empty_cells)) if
+                                     not_empty_cells[i]]
+        vertices_info['connectedCells'] = [vertices_info['connectedCells'][i] for i in range(len(not_empty_cells)) if
+                                           not_empty_cells[i]]
+
+    vertices_info['location'] = np.vstack(vertices_info['location'])
+
+    return vertices_info
+
+
+def boundary_of_cell(current_vertices, current_connected_cells):
+    # Please define this function
+    pass
 
 
 def generate_points_in_sphere(total_cells):
@@ -387,6 +524,89 @@ def SeedWithBoundingBox(X, s):
     return XgID, X
 
 
+def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
+    """
+    Build a 2D Voronoi diagram from an image
+    :param labelled_img:
+    :param watershed_img:
+    :param main_cells:
+    :return:
+    """
+    ratio = 2
+
+    labelled_img[watershed_img == 0] = 0
+
+    # Create a mask for the edges with ID 0
+    edge_mask = labelled_img == 0
+
+    # Get the closest labeled polygon for each edge pixel
+    closest_id = dilation(labelled_img, square(5))
+
+    filled_image = closest_id
+    filled_image[~edge_mask] = labelled_img[~edge_mask]
+
+    labelled_img = filled_image
+
+    img_neighbours = calculate_neighbours(labelled_img, ratio)
+
+    border_cells_and_main_cells = np.unique(np.concatenate(img_neighbours[main_cells]))
+    border_ghost_cells = np.setdiff1d(border_cells_and_main_cells, main_cells)
+    border_cells = np.intersect1d(main_cells, np.unique(np.concatenate(img_neighbours[border_ghost_cells])))
+
+    border_of_border_cells_and_main_cells = np.unique(np.concatenate(img_neighbours[border_cells_and_main_cells]))
+    labelled_img[~np.isin(labelled_img, np.arange(1, np.max(border_of_border_cells_and_main_cells) + 1))] = 0
+    img_neighbours = calculate_neighbours(labelled_img, ratio)
+
+    quartets = get_four_fold_vertices(img_neighbours)
+    face_centres = regionprops(labelled_img, 'centroid')
+    face_centres_vertices = np.fliplr(np.vstack([prop.centroid for prop in face_centres]))
+    for num_quartets in range(quartets.shape[0]):
+        current_centroids = face_centres_vertices[quartets[num_quartets, :], :]
+        distance_between_centroids = squareform(pdist(current_centroids))
+        max_distance = np.max(distance_between_centroids)
+        row, col = np.where(distance_between_centroids == max_distance)
+
+        current_neighs = img_neighbours[quartets[num_quartets, col[0]]]
+        current_neighs = current_neighs[current_neighs != quartets[num_quartets, row[0]]]
+        img_neighbours[quartets[num_quartets, col[0]]] = current_neighs
+
+        current_neighs = img_neighbours[quartets[num_quartets, row[0]]]
+        current_neighs = current_neighs[current_neighs != quartets[num_quartets, col[0]]]
+        img_neighbours[quartets[num_quartets, row[0]]] = current_neighs
+
+    vertices_info = calculate_vertices(labelled_img, img_neighbours, ratio)
+
+    total_cells = np.max(border_cells_and_main_cells)
+    vertices_info['PerCell'] = [None] * total_cells
+
+    for num_cell in range(np.max(main_cells)):
+        vertices_of_cell = np.where(np.any(np.isin(vertices_info['connectedCells'], num_cell), axis=1))
+        vertices_info['PerCell'][num_cell] = vertices_of_cell
+        current_vertices = vertices_info['location'][vertices_of_cell, :]
+        current_connected_cells = vertices_info['connectedCells'][vertices_of_cell, :].T
+        current_connected_cells[current_connected_cells == num_cell] = []
+        current_connected_cells = np.vstack([current_connected_cells[0::2], current_connected_cells[1::2]]).T
+        vertices_info['edges'][num_cell, 0] = vertices_of_cell[
+            boundary_of_cell(current_vertices, current_connected_cells)]
+        assert len(vertices_info['edges'][num_cell, 0]) == len(
+            img_neighbours[num_cell]), 'Error missing vertices of neighbours'
+
+    neighbours_network = []
+
+    for num_cell in range(np.max(main_cells)):
+        current_neighbours = np.array(img_neighbours[num_cell])
+        current_cell_neighbours = np.vstack(
+            [np.ones(len(current_neighbours), dtype=int) * num_cell, current_neighbours]).T
+
+        neighbours_network.extend(current_cell_neighbours)
+
+    triangles_connectivity = np.array(vertices_info['connectedCells'])
+    cell_edges = vertices_info['edges']
+    vertices_location = vertices_info['location']
+
+    return triangles_connectivity, neighbours_network, cell_edges, vertices_location, border_cells, border_of_border_cells_and_main_cells
+
+
 class VertexModel:
 
     def __init__(self, c_set=None):
@@ -407,7 +627,8 @@ class VertexModel:
         else:
             # TODO Create a menu to select the set
             self.set = Set()
-            self.set.cyst()
+            # self.set.cyst()
+            self.set.NoBulk_110()
             self.set.update_derived_parameters()
 
         self.set.redirect_output()
@@ -489,38 +710,34 @@ class VertexModel:
             _, corresponding_ids = np.where(np.all(np.sort(cell.T, axis=1)[:, None] == all_tets_unique, axis=2))
             cell.Y += displacements[corresponding_ids, :]
 
-    def Build2DVoronoiFromImage(self, param, param1, param2):
-        pass
-
     def InitializeGeometry_VertexModel2DTime(self):
-        selectedPlanes = [1, 100]
+        selectedPlanes = [0, 99]
         xInternal = np.arange(1, self.set.TotalCells + 1)
 
-        if not os.path.exists("input/LblImg_imageSequence.mat"):
-            imgStackLabelled = Image.load('input/LblImg_imageSequence.tif')
+        # Load the tif file from resources
+        imgStackLabelled = io.imread("src/pyVertexModel/resources/LblImg_imageSequence.tif")
 
-            # Reordering cells based on the centre of the image
-            img2DLabelled = imgStackLabelled[:, :, 1]
-            centroids = regionprops(img2DLabelled, 'Centroid')
-            centroids = np.round(np.vstack(centroids.Centroid))
-            imgDims = img2DLabelled.shape[0]
-            distanceToMiddle = cdist(np.array([[imgDims / 2, imgDims / 2]]), centroids)
-            sortedId = np.argsort(distanceToMiddle)
-            oldImg2DLabelled = imgStackLabelled.copy()
-            newCont = 1
-            for numCell in sortedId:
-                imgStackLabelled[oldImg2DLabelled == numCell] = newCont
-                newCont += 1
+        # Reordering cells based on the centre of the image
+        img2DLabelled = imgStackLabelled[0, :, :]
+        props = regionprops_table(img2DLabelled, properties=('centroid',))
 
-            # save('input/LblImg_imageSequence.mat', imgStackLabelled)
-        # else:
-        # imgStackLabelled = loadmat('input/LblImg_imageSequence.mat').imgStackLabelled
-        # img2DLabelled = imgStackLabelled[:, :, 0]
-        # imgDims = img2DLabelled.shape[0]
+        # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
+        # You can combine them into a single array like this:
+        centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
+        imgDims = img2DLabelled.shape[0]
+        distanceToMiddle = cdist(np.array([[imgDims / 2, imgDims / 2]]), centroids)
+        sortedId = np.argsort(distanceToMiddle)
+        oldImg2DLabelled = imgStackLabelled.copy()
+        newCont = 1
+        for numCell in sortedId:
+            imgStackLabelled[oldImg2DLabelled == numCell] = newCont
+            newCont += 1
 
-        ## Basic features
-        features2D = regionprops(img2DLabelled)
-        avgDiameter = np.mean([f.MajorAxisLength for f in features2D])
+        # Basic features
+        properties = regionprops(img2DLabelled)
+
+        # Extract major axis lengths
+        avgDiameter = np.mean([prop.major_axis_length for prop in properties])
         cellHeight = avgDiameter * self.set.CellHeight
 
         # Building the topology of each plane
@@ -531,11 +748,18 @@ class VertexModel:
         borderCells = {}
         borderOfborderCellsAndMainCells = {}
         for numPlane in selectedPlanes:
-            trianglesConnectivity[numPlane], neighboursNetwork[numPlane], cellEdges[numPlane], verticesOfCell_pos[
-                numPlane], borderCells[numPlane], borderOfborderCellsAndMainCells[
-                numPlane] = self.Build2DVoronoiFromImage(
-                imgStackLabelled[:, :, numPlane - 1], imgStackLabelled[:, :, numPlane - 1],
-                np.arange(1, Set.TotalCells + 1))
+            (triangles_connectivity, neighbours_network,
+             cell_edges, vertices_location, border_cells,
+             border_of_border_cells_and_main_cells) = build_2d_voronoi_from_image(imgStackLabelled[:, :, numPlane - 1],
+                                                                                  imgStackLabelled[:, :, numPlane - 1],
+                                                                                  range(self.set.TotalCells))
+
+            trianglesConnectivity[numPlane] = triangles_connectivity
+            neighboursNetwork[numPlane] = neighbours_network
+            cellEdges[numPlane] = cell_edges
+            verticesOfCell_pos[numPlane] = vertices_location
+            borderCells[numPlane] = border_cells
+            borderOfborderCellsAndMainCells[numPlane] = border_of_border_cells_and_main_cells
 
         # Select nodes from images
         img3DProperties = regionprops(imgStackLabelled)
@@ -790,9 +1014,6 @@ class VertexModel:
     def iterate_over_time(self):
         # Create VTK files for initial state
         self.geo.create_vtk_cell(self.geo_0, self.set, 0)
-
-        remodel_obj = Remodelling(self.geo, self.geo_n, self.geo_0, self.set, self.Dofs)
-        remodel_obj.remodel_mesh()
 
         while self.t <= self.set.tend and not self.didNotConverge:
             self.set.currentT = self.t
