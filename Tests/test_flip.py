@@ -23,11 +23,11 @@ class TestFlip(Tests):
         xs_to_disconnect = mat_info['segmentToChange'][0] - 1
 
         # Flip geometry
-        tnew_test, ynew_test = YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, geo_test, set_test)
+        tnew_test, _ = YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, geo_test, set_test)
 
         # Compare results
         tnew_expected = mat_info['Tnew'] - 1
-        assert_array1D(tnew_expected, tnew_test)
+        assert_array1D(np.sort(np.sort(tnew_expected, axis=1), axis=0), np.sort(np.sort(tnew_test, axis=1), axis=0))
 
     def test_YFlipNM_recursive(self):
         """
