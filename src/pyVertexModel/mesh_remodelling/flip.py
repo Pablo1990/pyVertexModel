@@ -302,7 +302,7 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
         for posPath in c_path[c_path > 1]:
             toAdd = Tnew[posPath]
             toRemove = TRemoved[posPath]
-            new_tets = new_tets[~ismember_rows(new_tets, toRemove)[0]]
+            new_tets = new_tets[~ismember_rows(np.sort(new_tets, 1), np.sort(toRemove, 1))[0]]
             new_tets = np.vstack((new_tets, toAdd))
 
         it_was_found = False
