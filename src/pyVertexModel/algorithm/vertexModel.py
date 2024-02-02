@@ -6,6 +6,7 @@ import statistics
 from itertools import combinations
 
 import numpy as np
+import matplotlib.pyplot as plt
 from numpy import mean
 from scipy.optimize import minimize
 from scipy.spatial import Delaunay
@@ -271,7 +272,7 @@ def generate_points_in_sphere(total_cells):
     return X, Y, Z, N_new
 
 
-def fitEllipsoidToPoints(points):
+def fit_ellipsoid_to_points(points):
     """
     Fit an ellipsoid to a set of points using the least-squares method
     :param points:
@@ -398,7 +399,7 @@ def AreTri(p1, p2, p3):
     return 0.5 * np.linalg.norm(np.cross(p2 - p1, p3 - p1))
 
 
-def CheckReplicateedNodes(X, nX, h):
+def check_replicateed_nodes(X, nX, h):
     ToBeRemoved = np.zeros(nX.shape[0], dtype=bool)
     for jj in range(nX.shape[0]):
         m = np.linalg.norm(X - nX[jj], axis=1)
@@ -426,7 +427,7 @@ def SeedNodeTet(X, XgID, Twgi, h):
     mask = np.isin(Twgi, XgID)
     nX = nX[~mask, :]
     nX = np.unique(nX, axis=0)
-    nX = CheckReplicateedNodes(X, nX, h)
+    nX = check_replicateed_nodes(X, nX, h)
     nXgID = np.arange(X.shape[0], X.shape[0] + nX.shape[0])
     X = np.vstack((X, nX))
     XgID = np.concatenate((XgID, nXgID))
@@ -450,7 +451,7 @@ def SeedNodeTri(X, XgID, Tri, h):
     mask = np.isin(Tri, XgID)
     nX = nX[~mask, :]
     nX = np.unique(nX, axis=0)
-    nX = CheckReplicateedNodes(X, nX, h)
+    nX = check_replicateed_nodes(X, nX, h)
     nXgID = np.arange(X.shape[0], X.shape[0] + nX.shape[0])
     X = np.vstack((X, nX))
     XgID = np.concatenate((XgID, nXgID))
@@ -513,8 +514,8 @@ def extrapolate_ys_faces_ellipsoid(geo, c_set):
     # Original axis values
     Ys_top = np.concatenate([cell.Y for cell in geo.Cells[1:c_set.TotalCells]])
 
-    a, b, c, paramsOptimized_top = fitEllipsoidToPoints(Ys_top)
-    a, b, c, paramsOptimized_bottom = fitEllipsoidToPoints(geo.Cells[0].Y)
+    a, b, c, paramsOptimized_top = fit_ellipsoid_to_points(Ys_top)
+    a, b, c, paramsOptimized_bottom = fit_ellipsoid_to_points(geo.Cells[0].Y)
 
     # Normalised based on those
     ellipsoid_axis_normalised1 = c_set.ellipsoid_axis1 / paramsOptimized_top[0]
@@ -625,11 +626,12 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
 
     img_neighbours = calculate_neighbours(labelled_img, ratio)
 
-    border_cells_and_main_cells = np.unique(np.concatenate(img_neighbours[main_cells]))
+    np.block([img_neighbours[i] for i in main_cells])
+    border_cells_and_main_cells = np.unique(np.concatenate([img_neighbours[i] for i in main_cells]))
     border_ghost_cells = np.setdiff1d(border_cells_and_main_cells, main_cells)
-    border_cells = np.intersect1d(main_cells, np.unique(np.concatenate(img_neighbours[border_ghost_cells])))
+    border_cells = np.intersect1d(main_cells, np.unique(np.concatenate([img_neighbours[i] for i in border_ghost_cells])))
 
-    border_of_border_cells_and_main_cells = np.unique(np.concatenate(img_neighbours[border_cells_and_main_cells]))
+    border_of_border_cells_and_main_cells = np.unique(np.concatenate([img_neighbours[i] for i in border_cells_and_main_cells]))
     labelled_img[~np.isin(labelled_img, np.arange(1, np.max(border_of_border_cells_and_main_cells) + 1))] = 0
     img_neighbours = calculate_neighbours(labelled_img, ratio)
 
@@ -798,21 +800,75 @@ class VertexModel:
 
         # Reordering cells based on the centre of the image
         img2DLabelled = imgStackLabelled[0, :, :]
-        props = regionprops_table(img2DLabelled, properties=('centroid',))
+        props = regionprops_table(img2DLabelled, properties=('centroid', 'label',))
 
         # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
         # You can combine them into a single array like this:
         centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
-        imgDims = img2DLabelled.shape[0]
-        distanceToMiddle = cdist(np.array([[imgDims / 2, imgDims / 2]]), centroids)
+        centre_of_image = np.array([img2DLabelled.shape[0] / 2, img2DLabelled.shape[1] / 2])
+
+        # Sorting cells based on distance to the middle of the image
+        distanceToMiddle = cdist([centre_of_image], centroids)
+        distanceToMiddle = distanceToMiddle[0]
+        sortedId = np.argsort(distanceToMiddle)
+        sorted_ids = np.array(props['label'])[sortedId]
+
+        oldImg2DLabelled = copy.deepcopy(imgStackLabelled)
+        imgStackLabelled = np.zeros_like(imgStackLabelled)
+        newCont = 1
+        for numCell in sorted_ids:
+            if numCell != 0:
+                imgStackLabelled[oldImg2DLabelled == numCell] = newCont
+                newCont += 1
+
+        # Show the first plane
+        plt.imshow(imgStackLabelled[0, :, :])
+        plt.show()
+
+        # Basic features
+        properties = regionprops(img2DLabelled)
+
+        # Extract major axis lengths
+        avgDiameter = np.mean([prop.major_axis_length for prop in properties])
+        cellHeight = avgDiameter * self.set.CellHeight
+
+        # Building the topology of each plane
+        trianglesConnectivity = {}
+        neighboursNetwork = {}
+        cellEdges = {}
+        verticesOfCell_pos = {}
+        borderCells = {}
+        borderOfborderCellsAndMainCells = {}
+        for numPlane in selectedPlanes:
+            img2DLabelled = imgStackLabelled[:, :, numPlane - 1]
+            centroids = regionprops(img2DLabelled, 'Centroid')
+            centroids = np.round(np.vstack([c.Centroid for c in centroids])).astype(int)
+            Xg_faceCentres2D = np.hstack((centroids, np.tile(cellHeight, (len(centroids), 1))))
+            Xg_vertices2D = np.hstack((np.fliplr(verticesOfCell_pos[numPlane]),
+                                       np.tile(cellHeight, (len(verticesOfCell_pos[numPlane]), 1))))
+            Xg_nodes = np.vstack((Xg_faceCentres2D, Xg_vertices2D))
+            Xg_ids = np.arange(X.shape[0] + 1, X.shape[0] + Xg_nodes.shape[0] + 1)
+            Xg_faceIds = Xg_ids[0:Xg_faceCentres2D.shape[0]]
+            Xg_verticesIds = Xg_ids[Xg_faceCentres2D.shape[0]:]
+            X = np.vstack((X, Xg_nodes))
+
+            # Fill Geo info
+            if numPlane == selectedPlanes[0]:
+                self.geo.Xg
+        distanceToMiddle = cdist([imgDims / 2, imgDims / 2], centroids)
         distanceToMiddle = distanceToMiddle[0]
         sortedId = np.argsort(distanceToMiddle)
         oldImg2DLabelled = copy.deepcopy(imgStackLabelled)
+        imgStackLabelled = np.zeros_like(imgStackLabelled)
         newCont = 1
         for numCell in sortedId:
             if numCell != 0:
                 imgStackLabelled[oldImg2DLabelled == numCell] = newCont
                 newCont += 1
+
+        import matplotlib.pyplot as plt
+        plt.imshow(imgStackLabelled[0, :, :])
+        plt.show()
 
         # Basic features
         properties = regionprops(img2DLabelled)
@@ -831,8 +887,8 @@ class VertexModel:
         for numPlane in selectedPlanes:
             (triangles_connectivity, neighbours_network,
              cell_edges, vertices_location, border_cells,
-             border_of_border_cells_and_main_cells) = build_2d_voronoi_from_image(imgStackLabelled[numPlane - 1, :, :],
-                                                                                  imgStackLabelled[numPlane - 1, :, :],
+             border_of_border_cells_and_main_cells) = build_2d_voronoi_from_image(imgStackLabelled[numPlane, :, :],
+                                                                                  imgStackLabelled[numPlane, :, :],
                                                                                   np.arange(1, self.set.TotalCells+1))
 
             trianglesConnectivity[numPlane] = triangles_connectivity
@@ -1074,7 +1130,7 @@ class VertexModel:
         self.X[:, 2] = self.X[:, 2] - np.mean(self.X[:, 2])
 
         if self.set.InputGeo == 'Bubbles_Cyst':
-            a, b, c, paramsOptimized = fitEllipsoidToPoints(self.X)
+            a, b, c, paramsOptimized = fit_ellipsoid_to_points(self.X)
 
             ellipsoid_axis_normalised1 = mean([self.set.ellipsoid_axis1, self.set.lumen_axis1]) / paramsOptimized[0]
             ellipsoid_axis_normalised2 = mean([self.set.ellipsoid_axis2, self.set.lumen_axis2]) / paramsOptimized[1]

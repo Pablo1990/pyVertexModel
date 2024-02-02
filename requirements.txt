@@ -1,5 +1,4 @@
 numpy~=1.26.1
-pillow~=10.0.1
 scipy~=1.11.3
 scikit-image~=0.22.0
 setuptools~=68.0.0
