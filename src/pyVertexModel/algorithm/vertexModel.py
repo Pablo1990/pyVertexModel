@@ -789,8 +789,11 @@ class VertexModel:
         selectedPlanes = [0, 99]
         xInternal = np.arange(1, self.set.TotalCells + 1)
 
-        # Load the tif file from resources
-        imgStackLabelled = io.imread("src/pyVertexModel/resources/LblImg_imageSequence.tif")
+        # Load the tif file from resources if exists
+        if os.path.exists("src/pyVertexModel/resources/LblImg_imageSequence.tif"):
+            imgStackLabelled = io.imread("src/pyVertexModel/resources/LblImg_imageSequence.tif")
+        elif os.path.exists("resources/LblImg_imageSequence.tif"):
+            imgStackLabelled = io.imread("resources/LblImg_imageSequence.tif")
 
         # Reordering cells based on the centre of the image
         img2DLabelled = imgStackLabelled[0, :, :]
