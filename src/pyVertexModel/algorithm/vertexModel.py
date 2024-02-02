@@ -67,7 +67,10 @@ def build_quartets_of_neighs_2d(neighbours):
         intercept_cells = [None] * len(neigh_cell)
 
         for cell_j in range(len(neigh_cell)):
-            common_cells = list(set(neigh_cell).intersection(neighbours[neigh_cell[cell_j]]))
+            print(n_cell)
+            print(cell_j)
+            print(neigh_cell[cell_j])
+            common_cells = list(set(neigh_cell).intersection(neighbours[neigh_cell[cell_j] - 1]))
             if len(common_cells) > 2:
                 intercept_cells[cell_j] = common_cells + [neigh_cell[cell_j], n_cell]
 
@@ -636,8 +639,11 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
     img_neighbours = calculate_neighbours(labelled_img, ratio)
 
     quartets = get_four_fold_vertices(img_neighbours)
-    face_centres = regionprops(labelled_img, 'centroid')
-    face_centres_vertices = np.fliplr(np.vstack([prop.centroid for prop in face_centres]))
+    props = regionprops_table(labelled_img, properties=('centroid', 'label',))
+
+    # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
+    # You can combine them into a single array like this:
+    face_centres_vertices = np.column_stack([props['centroid-0'], props['centroid-1']])
     for num_quartets in range(quartets.shape[0]):
         current_centroids = face_centres_vertices[quartets[num_quartets, :], :]
         distance_between_centroids = squareform(pdist(current_centroids))
