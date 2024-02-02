@@ -804,6 +804,7 @@ class VertexModel:
         centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
         imgDims = img2DLabelled.shape[0]
         distanceToMiddle = cdist(np.array([[imgDims / 2, imgDims / 2]]), centroids)
+        distanceToMiddle = distanceToMiddle[0]
         sortedId = np.argsort(distanceToMiddle)
         oldImg2DLabelled = imgStackLabelled.copy()
         newCont = 1
