@@ -822,50 +822,6 @@ class VertexModel:
                 newCont += 1
 
         # Show the first plane
-        plt.imshow(imgStackLabelled[0, :, :])
-        plt.show()
-
-        # Basic features
-        properties = regionprops(img2DLabelled)
-
-        # Extract major axis lengths
-        avgDiameter = np.mean([prop.major_axis_length for prop in properties])
-        cellHeight = avgDiameter * self.set.CellHeight
-
-        # Building the topology of each plane
-        trianglesConnectivity = {}
-        neighboursNetwork = {}
-        cellEdges = {}
-        verticesOfCell_pos = {}
-        borderCells = {}
-        borderOfborderCellsAndMainCells = {}
-        for numPlane in selectedPlanes:
-            img2DLabelled = imgStackLabelled[:, :, numPlane - 1]
-            centroids = regionprops(img2DLabelled, 'Centroid')
-            centroids = np.round(np.vstack([c.Centroid for c in centroids])).astype(int)
-            Xg_faceCentres2D = np.hstack((centroids, np.tile(cellHeight, (len(centroids), 1))))
-            Xg_vertices2D = np.hstack((np.fliplr(verticesOfCell_pos[numPlane]),
-                                       np.tile(cellHeight, (len(verticesOfCell_pos[numPlane]), 1))))
-            Xg_nodes = np.vstack((Xg_faceCentres2D, Xg_vertices2D))
-            Xg_ids = np.arange(X.shape[0] + 1, X.shape[0] + Xg_nodes.shape[0] + 1)
-            Xg_faceIds = Xg_ids[0:Xg_faceCentres2D.shape[0]]
-            Xg_verticesIds = Xg_ids[Xg_faceCentres2D.shape[0]:]
-            X = np.vstack((X, Xg_nodes))
-
-            # Fill Geo info
-            if numPlane == selectedPlanes[0]:
-                self.geo.Xg
-        distanceToMiddle = cdist([imgDims / 2, imgDims / 2], centroids)
-        distanceToMiddle = distanceToMiddle[0]
-        sortedId = np.argsort(distanceToMiddle)
-        oldImg2DLabelled = copy.deepcopy(imgStackLabelled)
-        imgStackLabelled = np.zeros_like(imgStackLabelled)
-        newCont = 1
-        for numCell in sortedId:
-            if numCell != 0:
-                imgStackLabelled[oldImg2DLabelled == numCell] = newCont
-                newCont += 1
-
         import matplotlib.pyplot as plt
         plt.imshow(imgStackLabelled[0, :, :])
         plt.show()
