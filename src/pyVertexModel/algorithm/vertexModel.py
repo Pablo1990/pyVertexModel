@@ -1,3 +1,4 @@
+import copy
 import logging
 import math
 import os
@@ -620,7 +621,7 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
     filled_image = closest_id
     filled_image[~edge_mask] = labelled_img[~edge_mask]
 
-    labelled_img = filled_image
+    labelled_img = copy.deepcopy(filled_image)
 
     img_neighbours = calculate_neighbours(labelled_img, ratio)
 
@@ -806,11 +807,12 @@ class VertexModel:
         distanceToMiddle = cdist(np.array([[imgDims / 2, imgDims / 2]]), centroids)
         distanceToMiddle = distanceToMiddle[0]
         sortedId = np.argsort(distanceToMiddle)
-        oldImg2DLabelled = imgStackLabelled.copy()
+        oldImg2DLabelled = copy.deepcopy(imgStackLabelled)
         newCont = 1
         for numCell in sortedId:
-            imgStackLabelled[oldImg2DLabelled == numCell] = newCont
-            newCont += 1
+            if numCell != 0:
+                imgStackLabelled[oldImg2DLabelled == numCell] = newCont
+                newCont += 1
 
         # Basic features
         properties = regionprops(img2DLabelled)
@@ -829,9 +831,9 @@ class VertexModel:
         for numPlane in selectedPlanes:
             (triangles_connectivity, neighbours_network,
              cell_edges, vertices_location, border_cells,
-             border_of_border_cells_and_main_cells) = build_2d_voronoi_from_image(imgStackLabelled[:, :, numPlane - 1],
-                                                                                  imgStackLabelled[:, :, numPlane - 1],
-                                                                                  range(self.set.TotalCells))
+             border_of_border_cells_and_main_cells) = build_2d_voronoi_from_image(imgStackLabelled[numPlane - 1, :, :],
+                                                                                  imgStackLabelled[numPlane - 1, :, :],
+                                                                                  np.arange(1, self.set.TotalCells+1))
 
             trianglesConnectivity[numPlane] = triangles_connectivity
             neighboursNetwork[numPlane] = neighbours_network
