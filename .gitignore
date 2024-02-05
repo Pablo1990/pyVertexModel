@@ -176,3 +176,5 @@ Result/*
 .idea/runConfigurations/
 
 src/pyVertexModel/Result/*
+
+*.xz
