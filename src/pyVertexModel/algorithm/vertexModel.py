@@ -44,7 +44,7 @@ def calculate_neighbours(labelled_img, ratio_strel):
         # Deleting cell 0 from range
         cells = cells[1:]
 
-    img_neighbours = [None] * len(cells)
+    img_neighbours = [None] * (np.max(cells) + 1)
 
     for idx, cell in enumerate(cells):
         BW = find_boundaries(labelled_img == cell, mode='inner')
@@ -631,10 +631,9 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
 
     img_neighbours = calculate_neighbours(labelled_img, ratio)
 
-    np.block([img_neighbours[i] for i in main_cells])
-    border_cells_and_main_cells = np.unique(np.concatenate([img_neighbours[i] for i in main_cells]))
+    border_cells_and_main_cells = np.unique(np.block([img_neighbours[i] for i in main_cells]))
     border_ghost_cells = np.setdiff1d(border_cells_and_main_cells, main_cells)
-    border_cells = np.intersect1d(main_cells, np.unique(np.concatenate([img_neighbours[i] for i in border_ghost_cells])))
+    border_cells = np.intersect1d(main_cells, np.unique(np.block([img_neighbours[i] for i in border_ghost_cells])))
 
     border_of_border_cells_and_main_cells = np.unique(np.concatenate([img_neighbours[i] for i in border_cells_and_main_cells]))
     labelled_img[~np.isin(labelled_img, np.arange(1, np.max(border_of_border_cells_and_main_cells) + 1))] = 0
