@@ -112,15 +112,17 @@ def build_triplets_of_neighs(neighbours):
 
     for i in range(len(neighbours)):
         neigh_cell = neighbours[i]
-        for j in range(len(neigh_cell)):
-            if neigh_cell[j] > i:
-                neigh_j = neighbours[neigh_cell[j]]
-                for k in range(len(neigh_j)):
-                    if neigh_j[k] > neigh_cell[j]:
-                        common_cell = list({i}.intersection(set(neigh_j), set(neighbours[neigh_j[k]])))
-                        if common_cell:
-                            triangle_seed = sorted([i, neigh_cell[j], neigh_j[k]])
-                            triplets_of_neighs.append(triangle_seed)
+        if neigh_cell is not None:
+            for j in range(len(neigh_cell)):
+                if neigh_cell[j] > i:
+                    neigh_j = neighbours[neigh_cell[j]]
+                    if neigh_j is not None:
+                        for k in range(len(neigh_j)):
+                            if neigh_j[k] > neigh_cell[j] and neighbours[neigh_j[k]] is not None:
+                                common_cell = list({i}.intersection(set(neigh_j), set(neighbours[neigh_j[k]])))
+                                if common_cell:
+                                    triangle_seed = sorted([i, neigh_cell[j], neigh_j[k]])
+                                    triplets_of_neighs.append(triangle_seed)
 
     triplets_of_neighs = np.unique(np.sort(triplets_of_neighs, axis=1), axis=0)
 
