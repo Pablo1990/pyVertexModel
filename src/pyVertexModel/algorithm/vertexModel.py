@@ -1,7 +1,9 @@
 import copy
 import logging
+import lzma
 import math
 import os
+import pickle
 import statistics
 from itertools import combinations
 
@@ -23,7 +25,7 @@ from src.pyVertexModel.geometry import degreesOfFreedom
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
 from src.pyVertexModel.parameters.set import Set
-from src.pyVertexModel.util.utils import save_state
+from src.pyVertexModel.util.utils import save_state, save_variables
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -744,15 +746,16 @@ class VertexModel:
         else:
             self.set.SubstrateZ = minZs * 1.01
 
-        # TODO FIXME, this is bad, should be joined somehow
         if self.set.Substrate == 1:
             self.Dofs.GetDOFsSubstrate(self.geo, self.set)
         else:
             self.Dofs.get_dofs(self.geo, self.set)
+
         self.geo.Remodelling = False
         self.t = 0
         self.tr = 0
         self.geo_0 = self.geo.copy()
+
         # Removing info of unused features from geo_0
         for cell in self.geo_0.Cells:
             cell.Vol = None
@@ -799,7 +802,10 @@ class VertexModel:
         xInternal = np.arange(1, self.set.TotalCells + 1)
 
         # Load the tif file from resources if exists
-        if os.path.exists("src/pyVertexModel/resources/LblImg_imageSequence.tif"):
+        if os.path.exists("src/pyVertexModel/resources/LblImg_imageSequence.pkl"):
+            imgStackLabelled = pickle.load(lzma.open("src/pyVertexModel/resources/LblImg_imageSequence.xz", "rb"))
+            imgStackLabelled = imgStackLabelled['imgStackLabelled']
+        elif os.path.exists("src/pyVertexModel/resources/LblImg_imageSequence.tif"):
             imgStackLabelled = io.imread("src/pyVertexModel/resources/LblImg_imageSequence.tif")
         elif os.path.exists("resources/LblImg_imageSequence.tif"):
             imgStackLabelled = io.imread("resources/LblImg_imageSequence.tif")
@@ -826,6 +832,9 @@ class VertexModel:
             if numCell != 0:
                 imgStackLabelled[oldImg2DLabelled == numCell] = newCont
                 newCont += 1
+
+        if ~os.path.exists("src/pyVertexModel/resources/LblImg_imageSequence.xz"):
+            save_variables({'imgStackLabelled': imgStackLabelled}, 'src/pyVertexModel/resources/LblImg_imageSequence.xz')
 
         # Show the first plane
         import matplotlib.pyplot as plt

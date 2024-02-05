@@ -1,3 +1,4 @@
+import lzma
 import pickle
 
 import numpy as np
@@ -16,6 +17,19 @@ def save_state(obj, filename):
             # If the attribute is not a method, save it
             if not callable(getattr(obj, attr)) and not attr.startswith("__"):
                 pickle.dump({attr: getattr(obj, attr)}, f)
+
+
+def save_variables(vars, filename):
+    """
+    Save state of the different variables in filename
+    :param vars:
+    :param filename:
+    :return:
+    """
+    with lzma.open(filename, 'wb') as f:
+        # Go through all the attributes of obj
+        for var in vars:
+            pickle.dump({var: vars[var]}, f)
 
 
 def load_state(obj, filename):
