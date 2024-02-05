@@ -66,22 +66,23 @@ def build_quartets_of_neighs_2d(neighbours):
 
     for n_cell in range(len(neighbours)):
         neigh_cell = neighbours[n_cell]
-        intercept_cells = [None] * len(neigh_cell)
+        if neigh_cell is not None:
+            intercept_cells = [None] * len(neigh_cell)
 
-        for cell_j in range(len(neigh_cell)):
-            if neighbours[neigh_cell[cell_j] - 1] is not None and neigh_cell is not None:
-                common_cells = list(set(neigh_cell).intersection(neighbours[neigh_cell[cell_j] - 1]))
-                if len(common_cells) > 2:
-                    intercept_cells[cell_j] = common_cells + [neigh_cell[cell_j], n_cell]
+            for cell_j in range(len(neigh_cell)):
+                if neighbours[neigh_cell[cell_j] - 1] is not None and neigh_cell is not None:
+                    common_cells = list(set(neigh_cell).intersection(neighbours[neigh_cell[cell_j] - 1]))
+                    if len(common_cells) > 2:
+                        intercept_cells[cell_j] = common_cells + [neigh_cell[cell_j], n_cell]
 
-        intercept_cells = [cell for cell in intercept_cells if cell is not None]
+            intercept_cells = [cell for cell in intercept_cells if cell is not None]
 
-        if intercept_cells:
-            for index_a in range(len(intercept_cells) - 1):
-                for index_b in range(index_a + 1, len(intercept_cells)):
-                    intersection_cells = list(set(intercept_cells[index_a]).intersection(intercept_cells[index_b]))
-                    if len(intersection_cells) >= 4:
-                        quartets_of_neighs.extend(list(combinations(intersection_cells, 4)))
+            if intercept_cells:
+                for index_a in range(len(intercept_cells) - 1):
+                    for index_b in range(index_a + 1, len(intercept_cells)):
+                        intersection_cells = list(set(intercept_cells[index_a]).intersection(intercept_cells[index_b]))
+                        if len(intersection_cells) >= 4:
+                            quartets_of_neighs.extend(list(combinations(intersection_cells, 4)))
 
     quartets_of_neighs = np.unique(np.sort(quartets_of_neighs, axis=1), axis=0)
 
@@ -97,7 +98,7 @@ def get_four_fold_vertices(img_neighbours):
     quartets = build_quartets_of_neighs_2d(img_neighbours)
     percQuartets = quartets.shape[0] / len(img_neighbours)
 
-    return percQuartets
+    return quartets, percQuartets
 
 
 def build_triplets_of_neighs(neighbours):
@@ -637,7 +638,7 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
     labelled_img[~np.isin(labelled_img, np.arange(1, np.max(border_of_border_cells_and_main_cells) + 1))] = 0
     img_neighbours = calculate_neighbours(labelled_img, ratio)
 
-    quartets = get_four_fold_vertices(img_neighbours)
+    quartets, _ = get_four_fold_vertices(img_neighbours)
     props = regionprops_table(labelled_img, properties=('centroid', 'label',))
 
     # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
