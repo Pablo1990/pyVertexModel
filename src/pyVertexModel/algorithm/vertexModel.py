@@ -124,7 +124,8 @@ def build_triplets_of_neighs(neighbours):
                                     triangle_seed = sorted([i, neigh_cell[j], neigh_j[k]])
                                     triplets_of_neighs.append(triangle_seed)
 
-    triplets_of_neighs = np.unique(np.sort(triplets_of_neighs, axis=1), axis=0)
+    if len(triplets_of_neighs) > 0:
+        triplets_of_neighs = np.unique(np.sort(triplets_of_neighs, axis=1), axis=0)
 
     return triplets_of_neighs
 
