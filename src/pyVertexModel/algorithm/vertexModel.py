@@ -66,15 +66,13 @@ def build_quartets_of_neighs_2d(neighbours):
 
     for n_cell in range(len(neighbours)):
         neigh_cell = neighbours[n_cell]
-        intercept_cells = [None] * len(neigh_cell)
+        intercept_cells = [None] * (np.max(neigh_cell) + 1)
 
         for cell_j in range(len(neigh_cell)):
-            print(n_cell)
-            print(cell_j)
-            print(neigh_cell[cell_j])
-            common_cells = list(set(neigh_cell).intersection(neighbours[neigh_cell[cell_j] - 1]))
-            if len(common_cells) > 2:
-                intercept_cells[cell_j] = common_cells + [neigh_cell[cell_j], n_cell]
+            if neighbours[neigh_cell[cell_j] - 1] is not None and neigh_cell is not None:
+                common_cells = list(set(neigh_cell).intersection(neighbours[neigh_cell[cell_j] - 1]))
+                if len(common_cells) > 2:
+                    intercept_cells[cell_j] = common_cells + [neigh_cell[cell_j], n_cell]
 
         intercept_cells = [cell for cell in intercept_cells if cell is not None]
 
@@ -139,10 +137,10 @@ def calculate_vertices(labelled_img, neighbours, ratio):
     """
     se = disk(ratio)
     neighbours_vertices = build_triplets_of_neighs(neighbours)
-    vertices = [None] * len(neighbours_vertices)
+    vertices = [None] * (np.max(neighbours_vertices) + 1)
 
     # Calculate the perimeter of each cell for efficiency
-    dilated_cells = [None] * np.max(labelled_img)
+    dilated_cells = [None] * (np.max(labelled_img) + 1)
 
     for i in range(np.max(labelled_img)):
         BW = np.zeros_like(labelled_img)
@@ -661,7 +659,7 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
 
     vertices_info = calculate_vertices(labelled_img, img_neighbours, ratio)
 
-    total_cells = np.max(border_cells_and_main_cells)
+    total_cells = np.max(border_cells_and_main_cells) + 1
     vertices_info['PerCell'] = [None] * total_cells
 
     for num_cell in range(np.max(main_cells)):
