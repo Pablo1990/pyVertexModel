@@ -141,7 +141,8 @@ def calculate_vertices(labelled_img, neighbours, ratio):
     """
     se = disk(ratio)
     neighbours_vertices = build_triplets_of_neighs(neighbours)
-    vertices = [None] * (np.max(neighbours_vertices) + 1)
+    # Initialize vertices
+    vertices = [None] * len(neighbours_vertices)
 
     # Calculate the perimeter of each cell for efficiency
     dilated_cells = [None] * (np.max(labelled_img) + 1)
