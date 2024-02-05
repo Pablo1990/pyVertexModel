@@ -66,7 +66,7 @@ def build_quartets_of_neighs_2d(neighbours):
 
     for n_cell in range(len(neighbours)):
         neigh_cell = neighbours[n_cell]
-        intercept_cells = [None] * (np.max(neigh_cell) + 1)
+        intercept_cells = [None] * len(neigh_cell)
 
         for cell_j in range(len(neigh_cell)):
             if neighbours[neigh_cell[cell_j] - 1] is not None and neigh_cell is not None:
@@ -142,7 +142,7 @@ def calculate_vertices(labelled_img, neighbours, ratio):
     # Calculate the perimeter of each cell for efficiency
     dilated_cells = [None] * (np.max(labelled_img) + 1)
 
-    for i in range(np.max(labelled_img)):
+    for i in range(np.max(labelled_img) + 1):
         BW = np.zeros_like(labelled_img)
         BW[labelled_img == i] = 1
         BW_dilated = dilation(find_boundaries(BW, mode='inner'), se)
@@ -662,7 +662,7 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
     total_cells = np.max(border_cells_and_main_cells) + 1
     vertices_info['PerCell'] = [None] * total_cells
 
-    for num_cell in range(np.max(main_cells)):
+    for num_cell in range(np.max(main_cells) + 1):
         vertices_of_cell = np.where(np.any(np.isin(vertices_info['connectedCells'], num_cell), axis=1))
         vertices_info['PerCell'][num_cell] = vertices_of_cell
         current_vertices = vertices_info['location'][vertices_of_cell, :]
@@ -676,7 +676,7 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
 
     neighbours_network = []
 
-    for num_cell in range(np.max(main_cells)):
+    for num_cell in range(np.max(main_cells) + 1):
         current_neighbours = np.array(img_neighbours[num_cell])
         current_cell_neighbours = np.vstack(
             [np.ones(len(current_neighbours), dtype=int) * num_cell, current_neighbours]).T
