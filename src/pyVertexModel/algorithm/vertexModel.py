@@ -802,9 +802,10 @@ class VertexModel:
         xInternal = np.arange(1, self.set.TotalCells + 1)
 
         # Load the tif file from resources if exists
-        if os.path.exists("src/pyVertexModel/resources/LblImg_imageSequence.pkl"):
+        if os.path.exists("src/pyVertexModel/resources/LblImg_imageSequence.xz"):
             imgStackLabelled = pickle.load(lzma.open("src/pyVertexModel/resources/LblImg_imageSequence.xz", "rb"))
             imgStackLabelled = imgStackLabelled['imgStackLabelled']
+            img2DLabelled = imgStackLabelled[0, :, :]
         else:
             if os.path.exists("src/pyVertexModel/resources/LblImg_imageSequence.tif"):
                 imgStackLabelled = io.imread("src/pyVertexModel/resources/LblImg_imageSequence.tif")
@@ -834,12 +835,12 @@ class VertexModel:
                     imgStackLabelled[oldImg2DLabelled == numCell] = newCont
                     newCont += 1
 
-            save_variables({'imgStackLabelled': imgStackLabelled}, 'src/pyVertexModel/resources/LblImg_imageSequence.xz')
+            # Show the first plane
+            import matplotlib.pyplot as plt
+            plt.imshow(imgStackLabelled[0, :, :])
+            plt.show()
 
-        # Show the first plane
-        import matplotlib.pyplot as plt
-        plt.imshow(imgStackLabelled[0, :, :])
-        plt.show()
+            save_variables({'imgStackLabelled': imgStackLabelled}, 'src/pyVertexModel/resources/LblImg_imageSequence.xz')
 
         # Basic features
         properties = regionprops(img2DLabelled)
