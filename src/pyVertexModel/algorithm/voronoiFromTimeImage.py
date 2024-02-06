@@ -329,47 +329,7 @@ class VoronoiFromTimeImage(VertexModel):
         selectedPlanes = [0, 99]
         xInternal = np.arange(1, self.set.TotalCells + 1)
 
-        # Load the tif file from resources if exists
-        if os.path.exists("src/pyVertexModel/resources/LblImg_imageSequence.xz"):
-            imgStackLabelled = pickle.load(lzma.open("src/pyVertexModel/resources/LblImg_imageSequence.xz", "rb"))
-            imgStackLabelled = imgStackLabelled['imgStackLabelled']
-            img2DLabelled = imgStackLabelled[0, :, :]
-        else:
-            if os.path.exists("src/pyVertexModel/resources/LblImg_imageSequence.tif"):
-                imgStackLabelled = io.imread("src/pyVertexModel/resources/LblImg_imageSequence.tif")
-            elif os.path.exists("resources/LblImg_imageSequence.tif"):
-                imgStackLabelled = io.imread("resources/LblImg_imageSequence.tif")
-
-            # Reordering cells based on the centre of the image
-            img2DLabelled = imgStackLabelled[0, :, :]
-            props = regionprops_table(img2DLabelled, properties=('centroid', 'label',))
-
-            # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
-            # You can combine them into a single array like this:
-            centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
-            centre_of_image = np.array([img2DLabelled.shape[0] / 2, img2DLabelled.shape[1] / 2])
-
-            # Sorting cells based on distance to the middle of the image
-            distanceToMiddle = cdist([centre_of_image], centroids)
-            distanceToMiddle = distanceToMiddle[0]
-            sortedId = np.argsort(distanceToMiddle)
-            sorted_ids = np.array(props['label'])[sortedId]
-
-            oldImg2DLabelled = copy.deepcopy(imgStackLabelled)
-            imgStackLabelled = np.zeros_like(imgStackLabelled)
-            newCont = 1
-            for numCell in sorted_ids:
-                if numCell != 0:
-                    imgStackLabelled[oldImg2DLabelled == numCell] = newCont
-                    newCont += 1
-
-            # Show the first plane
-            import matplotlib.pyplot as plt
-            plt.imshow(imgStackLabelled[0, :, :])
-            plt.show()
-
-            save_variables({'imgStackLabelled': imgStackLabelled},
-                           'src/pyVertexModel/resources/LblImg_imageSequence.xz')
+        img2DLabelled, imgStackLabelled = self.process_image()
 
         # Basic features
         properties = regionprops(img2DLabelled)
@@ -537,3 +497,47 @@ class VoronoiFromTimeImage(VertexModel):
 
         minZs = np.min([cell.Y for cell in Geo.Cells])
         self.geo.CellHeightOriginal = np.abs(minZs[2])
+
+    def process_image(self):
+        # Load the tif file from resources if exists
+        if os.path.exists("src/pyVertexModel/resources/LblImg_imageSequence.xz"):
+            imgStackLabelled = pickle.load(lzma.open("src/pyVertexModel/resources/LblImg_imageSequence.xz", "rb"))
+            imgStackLabelled = imgStackLabelled['imgStackLabelled']
+            img2DLabelled = imgStackLabelled[0, :, :]
+        else:
+            if os.path.exists("src/pyVertexModel/resources/LblImg_imageSequence.tif"):
+                imgStackLabelled = io.imread("src/pyVertexModel/resources/LblImg_imageSequence.tif")
+            elif os.path.exists("resources/LblImg_imageSequence.tif"):
+                imgStackLabelled = io.imread("resources/LblImg_imageSequence.tif")
+
+            # Reordering cells based on the centre of the image
+            img2DLabelled = imgStackLabelled[0, :, :]
+            props = regionprops_table(img2DLabelled, properties=('centroid', 'label',))
+
+            # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
+            # You can combine them into a single array like this:
+            centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
+            centre_of_image = np.array([img2DLabelled.shape[0] / 2, img2DLabelled.shape[1] / 2])
+
+            # Sorting cells based on distance to the middle of the image
+            distanceToMiddle = cdist([centre_of_image], centroids)
+            distanceToMiddle = distanceToMiddle[0]
+            sortedId = np.argsort(distanceToMiddle)
+            sorted_ids = np.array(props['label'])[sortedId]
+
+            oldImg2DLabelled = copy.deepcopy(imgStackLabelled)
+            imgStackLabelled = np.zeros_like(imgStackLabelled)
+            newCont = 1
+            for numCell in sorted_ids:
+                if numCell != 0:
+                    imgStackLabelled[oldImg2DLabelled == numCell] = newCont
+                    newCont += 1
+
+            # Show the first plane
+            import matplotlib.pyplot as plt
+            plt.imshow(imgStackLabelled[0, :, :])
+            plt.show()
+
+            save_variables({'imgStackLabelled': imgStackLabelled},
+                           'src/pyVertexModel/resources/LblImg_imageSequence.xz')
+        return img2DLabelled, imgStackLabelled
