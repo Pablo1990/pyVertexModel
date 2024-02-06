@@ -662,6 +662,7 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
 
     total_cells = np.max(border_cells_and_main_cells) + 1
     vertices_info['PerCell'] = [None] * total_cells
+    vertices_info['edges'] = [None] * total_cells
 
     for num_cell in range(1, np.max(main_cells) + 1):
         vertices_of_cell = np.where(np.any(np.isin(vertices_info['connectedCells'], num_cell), axis=1))[0]
@@ -672,15 +673,15 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
         # Remove the current cell 'num_cell' from the connected cells
         current_connected_cells = [np.delete(cell, np.where(cell == num_cell)) for cell in current_connected_cells]
 
-        vertices_info['edges'][num_cell, 0] = vertices_of_cell[
+        vertices_info['edges'][num_cell] = vertices_of_cell[
             boundary_of_cell(current_vertices, current_connected_cells)]
-        assert len(vertices_info['edges'][num_cell, 0]) == len(
-            img_neighbours[num_cell]), 'Error missing vertices of neighbours'
+        assert len(vertices_info['edges'][num_cell]) == len(
+            img_neighbours[num_cell-1]), 'Error missing vertices of neighbours'
 
     neighbours_network = []
 
-    for num_cell in range(np.max(main_cells) + 1):
-        current_neighbours = np.array(img_neighbours[num_cell])
+    for num_cell in range(1, np.max(main_cells) + 1):
+        current_neighbours = np.array(img_neighbours[num_cell-1])
         current_cell_neighbours = np.vstack(
             [np.ones(len(current_neighbours), dtype=int) * num_cell, current_neighbours]).T
 
