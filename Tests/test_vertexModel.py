@@ -7,7 +7,7 @@ from Tests.tests import Tests, assert_matrix, load_data
 from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 from src.pyVertexModel.algorithm.newtonRaphson import newton_raphson
 from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_first_ghost_nodes, build_topo, \
-    delaunay_compute_entities, SeedWithBoundingBox
+    delaunay_compute_entities, SeedWithBoundingBox, build_triplets_of_neighs
 
 
 class TestVertexModel(Tests):
@@ -218,4 +218,19 @@ class TestVertexModel(Tests):
 
         newton_raphson(geo_test.copy(), geo_test.copy(), geo_test.copy(), DegreesOfFreedom(mat_info['Dofs']).copy(),
                        set_test, mat_info['K'], mat_info['g'][:, 0], 0, 0)
+
+    def test_build_triplets_of_neighs(self):
+        """
+        Test the build_triplets_of_neighs function.
+        :return:
+        """
+        # Load data
+        _, _, mat_info = load_data('build_triplets_wingdisc.mat')
+
+        all_neighbours = [np.concatenate(neighours[0]) for neighours in mat_info['neighbours']]
+
+        triplets_of_neighs_test = build_triplets_of_neighs(all_neighbours)
+
+        # Check if triplets of neighbours are correct
+        assert_matrix(triplets_of_neighs_test, mat_info['neighboursVertices'])
 

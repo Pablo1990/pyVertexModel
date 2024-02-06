@@ -110,18 +110,17 @@ def build_triplets_of_neighs(neighbours):
     """
     triplets_of_neighs = []
 
-    for i in range(len(neighbours)):
-        neigh_cell = neighbours[i]
-        if neigh_cell is not None:
-            for j in range(len(neigh_cell)):
-                if neigh_cell[j] > i:
-                    neigh_j = neighbours[neigh_cell[j]]
+    for i, neigh_i in enumerate(neighbours, start=0):
+        if neigh_i is not None:
+            for j in neigh_i:
+                if j > i:
+                    neigh_j = neighbours[j-1]
                     if neigh_j is not None:
-                        for k in range(len(neigh_j)):
-                            if neigh_j[k] > neigh_cell[j] and neighbours[neigh_j[k]] is not None:
-                                common_cell = list({i}.intersection(set(neigh_j), set(neighbours[neigh_j[k]])))
+                        for k in neigh_j:
+                            if k > j and neighbours[k-1] is not None:
+                                common_cell = {i+1}.intersection(neigh_j, neighbours[k-1])
                                 if common_cell:
-                                    triangle_seed = sorted([i, neigh_cell[j], neigh_j[k]])
+                                    triangle_seed = sorted([i+1, j, k])
                                     triplets_of_neighs.append(triangle_seed)
 
     if len(triplets_of_neighs) > 0:
@@ -638,7 +637,8 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
     border_ghost_cells = np.setdiff1d(border_cells_and_main_cells, main_cells)
     border_cells = np.intersect1d(main_cells, np.unique(np.block([img_neighbours[i] for i in border_ghost_cells])))
 
-    border_of_border_cells_and_main_cells = np.unique(np.concatenate([img_neighbours[i] for i in border_cells_and_main_cells]))
+    border_of_border_cells_and_main_cells = np.unique(
+        np.concatenate([img_neighbours[i] for i in border_cells_and_main_cells]))
     labelled_img[~np.isin(labelled_img, np.arange(1, np.max(border_of_border_cells_and_main_cells) + 1))] = 0
     img_neighbours = calculate_neighbours(labelled_img, ratio)
 
@@ -842,7 +842,8 @@ class VertexModel:
             plt.imshow(imgStackLabelled[0, :, :])
             plt.show()
 
-            save_variables({'imgStackLabelled': imgStackLabelled}, 'src/pyVertexModel/resources/LblImg_imageSequence.xz')
+            save_variables({'imgStackLabelled': imgStackLabelled},
+                           'src/pyVertexModel/resources/LblImg_imageSequence.xz')
 
         # Basic features
         properties = regionprops(img2DLabelled)
@@ -863,7 +864,7 @@ class VertexModel:
              cell_edges, vertices_location, border_cells,
              border_of_border_cells_and_main_cells) = build_2d_voronoi_from_image(imgStackLabelled[numPlane, :, :],
                                                                                   imgStackLabelled[numPlane, :, :],
-                                                                                  np.arange(1, self.set.TotalCells+1))
+                                                                                  np.arange(1, self.set.TotalCells + 1))
 
             trianglesConnectivity[numPlane] = triangles_connectivity
             neighboursNetwork[numPlane] = neighbours_network
