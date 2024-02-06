@@ -168,14 +168,16 @@ def calculate_vertices(labelled_img, neighbours, ratio):
                 vertices[num_triplet] = [round(np.mean([row[col > np.mean(col)], col[col > np.mean(col)]]))]
                 vertices.append([round(np.mean([row[col < np.mean(col)], col[col < np.mean(col)]]))])
             else:
-                vertices[num_triplet] = [round(np.mean([row, col]))]
+                vertices[num_triplet] = [round(np.mean(row)), round(np.mean(col))]
+        elif len(row) == 0:
+            vertices[num_triplet] = [None, None]
         else:
-            vertices[num_triplet] = [[row[0], col[0]]]
+            vertices[num_triplet] = [[row, col]]
 
     # Store vertices and remove artifacts
     vertices_info = {'location': vertices, 'connectedCells': neighbours_vertices}
 
-    not_empty_cells = [bool(v) for v in vertices_info['location']]
+    not_empty_cells = [v[0] is not None for v in vertices_info['location']]
     if len(vertices_info['location'][0]) == 2:
         vertices_info['location'] = [vertices_info['location'][i] for i in range(len(not_empty_cells)) if
                                      not_empty_cells[i]]
@@ -186,8 +188,6 @@ def calculate_vertices(labelled_img, neighbours, ratio):
                                      not_empty_cells[i]]
         vertices_info['connectedCells'] = [vertices_info['connectedCells'][i] for i in range(len(not_empty_cells)) if
                                            not_empty_cells[i]]
-
-    vertices_info['location'] = np.vstack(vertices_info['location'])
 
     return vertices_info
 
