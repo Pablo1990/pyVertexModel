@@ -202,6 +202,7 @@ def boundary_of_cell(vertices_of_cell, neighbours=None):
     """
     # If neighbours are provided, try to order the vertices based on their neighbors
     if neighbours is not None:
+        initial_neighbours = neighbours
         neighbours_order = neighbours[0]
         next_neighbour = neighbours[0][1]
         next_neighbour_prev = next_neighbour
@@ -219,7 +220,7 @@ def boundary_of_cell(vertices_of_cell, neighbours=None):
 
             next_neighbour_prev = next_neighbour
 
-        _, vert_order = ismember_rows(vertices_of_cell, neighbours_order)
+        _, vert_order = ismember_rows(neighbours_order, initial_neighbours)
 
         new_vert_order = np.hstack((vert_order, np.vstack((vert_order[1:], vert_order[0]))))
 
