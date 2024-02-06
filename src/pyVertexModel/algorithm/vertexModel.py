@@ -5,6 +5,7 @@ import math
 import os
 import pickle
 import statistics
+from abc import abstractmethod
 from itertools import combinations
 
 import numpy as np
@@ -120,7 +121,7 @@ def build_triplets_of_neighs(neighbours):
                             if k > j and neighbours[k - 1] is not None:
                                 common_cell = {i + 1}.intersection(neigh_j, neighbours[k - 1])
                                 if common_cell:
-                                    triangle_seed = sorted([i+1, j, k])
+                                    triangle_seed = sorted([i + 1, j, k])
                                     triplets_of_neighs.append(triangle_seed)
 
     if len(triplets_of_neighs) > 0:
@@ -238,372 +239,6 @@ def boundary_of_cell(vertices_of_cell, neighbours=None):
     return new_vert_order
 
 
-def generate_points_in_sphere(total_cells):
-    """
-    Generate points in a sphere
-    :param total_cells: The total number of cells
-    :return:        The X, Y, Z coordinates of the points
-    """
-    r_unit = 1
-
-    # Calculating area, distance, and increments for theta and phi
-    Area = 4 * math.pi * r_unit ** 2 / total_cells
-    Distance = math.sqrt(Area)
-    M_theta = round(math.pi / Distance)
-    d_theta = math.pi / M_theta
-    d_phi = Area / d_theta
-
-    # Initializing lists for X, Y, Z coordinates
-    X, Y, Z = [], [], []
-    N_new = 0
-
-    for m in range(M_theta):
-        Theta = math.pi * (m + 0.5) / M_theta
-        M_phi = round(2 * math.pi * math.sin(Theta) / d_phi)
-
-        for n in range(M_phi):
-            Phi = 2 * math.pi * n / M_phi
-
-            # Updating node count
-            N_new += 1
-
-            # Calculating and appending coordinates
-            X.append(math.sin(Theta) * math.cos(Phi))
-            Y.append(math.sin(Theta) * math.sin(Phi))
-            Z.append(math.cos(Theta))
-
-    return X, Y, Z, N_new
-
-
-def fit_ellipsoid_to_points(points):
-    """
-    Fit an ellipsoid to a set of points using the least-squares method
-    :param points:
-    :return:
-    """
-    # Extract coordinates from the input array
-    x, y, z = points[:, 0], points[:, 1], points[:, 2]
-
-    # Define the objective function for ellipsoid fitting
-    def ellipsoidError(points):
-        """
-        Calculate the sum of squared distances from the ellipsoid surface to the input points
-        :param points:  The input points
-        :return:    The sum of squared distances from the ellipsoid surface to the input points
-        """
-        a, b, c = points
-        distances = (x ** 2 / a ** 2) + (y ** 2 / b ** 2) + (z ** 2 / c ** 2) - 1
-        error = np.sum(distances ** 2)
-        return error
-
-    # Initial guess for the semi-axis lengths
-    initialGuess = np.array([np.std(x), np.std(y), np.std(z)])
-
-    # Perform optimization to find the best-fitting ellipsoid parameters
-    result = minimize(ellipsoidError, x0=initialGuess, method='BFGS')
-
-    # Extract optimized parameters and normalize
-    paramsOptimized = result.x
-    a, b, c = paramsOptimized / np.max(paramsOptimized)
-
-    return abs(a), abs(b), abs(c), abs(paramsOptimized)
-
-
-def extrapolate_points_to_ellipsoid(points, ellipsoid_axis_normalised1, ellipsoid_axis_normalised2,
-                                    ellipsoid_axis_normalised3):
-    points[:, 0] = points[:, 0] * ellipsoid_axis_normalised1
-    points[:, 1] = points[:, 1] * ellipsoid_axis_normalised2
-    points[:, 2] = points[:, 2] * ellipsoid_axis_normalised3
-
-    return points
-
-
-def generate_first_ghost_nodes(X):
-    # Bounding Box 1
-    nCells = X.shape[0]
-    r0 = np.average(X, axis=0)
-    r0[0] = statistics.mean(X[:, 0])
-    r0[1] = statistics.mean(X[:, 1])
-    r0[2] = statistics.mean(X[:, 2])
-
-    r = 5 * np.max(np.abs(X - r0))
-    # Define bounding nodes: bounding sphere
-    theta = np.linspace(0, 2 * np.pi, 5)
-    phi = np.linspace(0, np.pi, 5)
-    theta, phi = np.meshgrid(theta, phi, indexing='ij')  # Ensure the order matches MATLAB
-    # Phi and Theta should be transpose as it is in Matlab
-    phi = phi.T
-    theta = theta.T
-
-    # Convert to Cartesian coordinates
-    x = r * np.sin(phi) * np.cos(theta)
-    y = r * np.sin(phi) * np.sin(theta)
-    z = r * np.cos(phi)
-    # Reshape to column vectors, ensuring the same order as MATLAB
-    x = x.flatten('F')
-    y = y.flatten('F')
-    z = z.flatten('F')
-    # Offset the points by r0 and combine into a single array
-    Xg = np.column_stack((x, y, z)) + r0
-    # Find unique values considering the tolerance
-    tolerance = 1e-6
-    _, idx = np.unique(Xg.round(decimals=int(-np.log10(tolerance))), axis=0, return_index=True)
-    Xg = Xg[idx]
-
-    # Add new bounding nodes to X
-    XgID = np.arange(nCells, nCells + Xg.shape[0])
-    XgIDBB = XgID.copy()
-    X = np.vstack((X, Xg))
-    return X, XgID, XgIDBB, nCells
-
-
-def build_topo(c_set, nx=None, ny=None, nz=None, columnar_cells=False):
-    """
-    This function builds the topology of the mesh.
-    :param nx:  Number of nodes in x direction
-    :param ny:  Number of nodes in y direction
-    :param nz:  Number of nodes in z direction
-    :param c_set:   Set class
-    :param columnar_cells:  Boolean to indicate if the cells are columnar
-    :return:    X:  Nodal positions
-                X_Ids:  Nodal IDs
-    """
-    X = np.empty((0, 3))
-    X_Ids = []
-    if c_set.InputGeo == 'Bubbles':
-        for numZ in range(nz):
-            x = np.arange(nx)
-            y = np.arange(ny)
-            x, y = np.meshgrid(x, y, indexing='ij')
-            x = x.flatten('F')
-            y = y.flatten('F')
-            z = np.ones_like(x) * numZ
-            X = np.vstack((X, np.column_stack((x, y, z))))
-
-            if columnar_cells:
-                X_Ids.append(np.arange(len(x)))
-            else:
-                X_Ids = np.arange(X.shape[0])
-
-    elif c_set.InputGeo == 'Bubbles_Cyst':
-        X, Y, Z, _ = generate_points_in_sphere(c_set.TotalCells)
-
-        X = np.array([X, Y, Z]).T * 10
-
-        # Lumen as the first cell
-        lumenCell = np.mean(X, axis=0)
-        X = np.vstack([lumenCell, X])
-        c_set.TotalCells = X.shape[0]
-
-    return X, X_Ids
-
-
-def AreTri(p1, p2, p3):
-    return 0.5 * np.linalg.norm(np.cross(p2 - p1, p3 - p1))
-
-
-def check_replicateed_nodes(X, nX, h):
-    ToBeRemoved = np.zeros(nX.shape[0], dtype=bool)
-    for jj in range(nX.shape[0]):
-        m = np.linalg.norm(X - nX[jj], axis=1)
-        m = np.min(m)
-        if m < 1e-2 * h:
-            ToBeRemoved[jj] = True
-    nX = nX[~ToBeRemoved]
-    return nX
-
-
-def SeedNodeTet(X, XgID, Twgi, h):
-    XTet = X[Twgi, :]
-    Center = np.mean(XTet, axis=0)
-    nX = np.zeros((4, 3))
-    for i in range(4):
-        vc = Center - XTet[i, :]
-        dis = np.linalg.norm(vc)
-        dir = vc / dis
-        offset = h * dir
-        if dis > np.linalg.norm(offset):
-            nX[i, :] = XTet[i, :] + offset
-        else:
-            nX[i, :] = XTet[i, :] + vc
-
-    mask = np.isin(Twgi, XgID)
-    nX = nX[~mask, :]
-    nX = np.unique(nX, axis=0)
-    nX = check_replicateed_nodes(X, nX, h)
-    nXgID = np.arange(X.shape[0], X.shape[0] + nX.shape[0])
-    X = np.vstack((X, nX))
-    XgID = np.concatenate((XgID, nXgID))
-    return X, XgID
-
-
-def SeedNodeTri(X, XgID, Tri, h):
-    XTri = X[Tri, :]
-    Center = np.mean(XTri, axis=0)
-    nX = np.zeros((3, 3))
-    for i in range(3):
-        vc = Center - XTri[i, :]
-        dis = np.linalg.norm(vc)
-        dir = vc / dis
-        offset = h * dir
-        if dis > np.linalg.norm(offset):
-            nX[i, :] = XTri[i, :] + offset
-        else:
-            nX[i, :] = XTri[i, :] + vc
-
-    mask = np.isin(Tri, XgID)
-    nX = nX[~mask, :]
-    nX = np.unique(nX, axis=0)
-    nX = check_replicateed_nodes(X, nX, h)
-    nXgID = np.arange(X.shape[0], X.shape[0] + nX.shape[0])
-    X = np.vstack((X, nX))
-    XgID = np.concatenate((XgID, nXgID))
-    return X, XgID
-
-
-def delaunay_compute_entities(tris, X, XgID, XgIDBB, nCells, s):
-    # Initialize variables
-    Side = np.array([[0, 1, 2], [0, 1, 3], [1, 2, 3], [0, 2, 3]])
-    Edges = np.array([[0, 1], [1, 2], [0, 2], [0, 3], [1, 3], [2, 3]])
-    Vol = np.zeros(tris.shape[0])
-    AreaFaces = np.zeros((tris.shape[0] * 3, 4))
-    LengthEdges = np.zeros((tris.shape[0] * 3, 6))
-    Arc = 0
-    Lnc = 0
-
-    # Compute volume, area and length of each tetrahedron
-    for i in range(tris.shape[0]):
-        for j in range(4):
-            if np.sum(np.isin(tris[i, Side[j]], XgID)) == 0:
-                p1, p2, p3 = X[tris[i, Side[j]]]
-                AreaFaces[i, j] = AreTri(p1, p2, p3)
-                Arc += 1
-
-        for j in range(6):
-            if np.sum(np.isin(tris[i, Edges[j]], XgID)) == 0:
-                p1, p2 = X[tris[i, Edges[j]]]
-                LengthEdges[i, j] = np.linalg.norm(p1 - p2)
-                Lnc += 1
-
-    # Seed nodes in big entities (based on characteristic Length h)
-    for i in range(tris.shape[0]):
-        for j in range(4):
-            if np.sum(np.isin(tris[i, Side[j]], XgID)) == 0 and AreaFaces[i, j] > s ** 2:
-                X, XgID = SeedNodeTri(X, XgID, tris[i, Side[j]], s)
-
-        for j in range(6):
-            if np.sum(np.isin(tris[i, Edges[j]], XgID)) == 0 and LengthEdges[i, j] > 2 * s:
-                X, XgID = SeedNodeTet(X, XgID, tris[i], s)
-                break
-
-    # Seed on ghost tetrahedra
-    for i in range(len(Vol)):
-        if np.sum(np.isin(tris[i], XgID)) > 0:
-            X, XgID = SeedNodeTet(X, XgID, tris[i], s)
-
-    X = np.delete(X, XgIDBB, axis=0)
-    XgID = np.arange(nCells, X.shape[0])
-
-    return X, XgID
-
-
-def extrapolate_ys_faces_ellipsoid(geo, c_set):
-    """
-    Extrapolate the vertices of the cells to the ellipsoid
-    :param geo:
-    :param c_set:
-    :return:
-    """
-    # Original axis values
-    Ys_top = np.concatenate([cell.Y for cell in geo.Cells[1:c_set.TotalCells]])
-
-    a, b, c, paramsOptimized_top = fit_ellipsoid_to_points(Ys_top)
-    a, b, c, paramsOptimized_bottom = fit_ellipsoid_to_points(geo.Cells[0].Y)
-
-    # Normalised based on those
-    ellipsoid_axis_normalised1 = c_set.ellipsoid_axis1 / paramsOptimized_top[0]
-    ellipsoid_axis_normalised2 = c_set.ellipsoid_axis2 / paramsOptimized_top[1]
-    ellipsoid_axis_normalised3 = c_set.ellipsoid_axis3 / paramsOptimized_top[2]
-    lumen_axis_normalised1 = c_set.lumen_axis1 / paramsOptimized_bottom[0]
-    lumen_axis_normalised2 = c_set.lumen_axis2 / paramsOptimized_bottom[1]
-    lumen_axis_normalised3 = c_set.lumen_axis3 / paramsOptimized_bottom[2]
-
-    # Extrapolate top layer as the outer ellipsoid, the bottom layer as the lumen, and lateral is rebuilt.
-    allTs = np.unique(np.sort(np.concatenate([cell.T for cell in geo.Cells[:c_set.TotalCells]]), axis=1), axis=0)
-    topTs = allTs[np.any(np.isin(allTs, geo.XgTop), axis=1)]
-    bottomsTs = allTs[np.any(np.isin(allTs, geo.XgBottom), axis=1)]
-
-    # Changes vertices of other cells
-    for tetToCheck in topTs:
-        for nodeInTet in tetToCheck:
-            if (nodeInTet not in geo.XgTop and geo.Cells[nodeInTet] is not None and
-                    geo.Cells[nodeInTet].Y is not None):
-                newPoint = geo.Cells[nodeInTet].Y[
-                    np.all(np.isin(geo.Cells[nodeInTet].T, tetToCheck), axis=1)]
-                newPoint_extrapolated = extrapolate_points_to_ellipsoid(newPoint, ellipsoid_axis_normalised1,
-                                                                        ellipsoid_axis_normalised2,
-                                                                        ellipsoid_axis_normalised3)
-                geo.Cells[nodeInTet].Y[
-                    np.all(np.isin(geo.Cells[nodeInTet].T, tetToCheck), axis=1)] = newPoint_extrapolated
-
-    for tetToCheck in bottomsTs:
-        for nodeInTet in tetToCheck:
-            if (nodeInTet not in geo.XgTop and geo.Cells[nodeInTet] is not None and
-                    geo.Cells[nodeInTet].Y is not None):
-                newPoint = geo.Cells[nodeInTet].Y[
-                    np.all(np.isin(geo.Cells[nodeInTet].T, tetToCheck), axis=1)]
-                newPoint_extrapolated = extrapolate_points_to_ellipsoid(newPoint, lumen_axis_normalised1,
-                                                                        lumen_axis_normalised2,
-                                                                        lumen_axis_normalised3)
-                geo.Cells[nodeInTet].Y[
-                    np.all(np.isin(geo.Cells[nodeInTet].T, tetToCheck), axis=1)] = newPoint_extrapolated
-
-    # Recalculating face centres here based on the previous changes
-    geo.rebuild(geo.copy(), c_set)
-    geo.build_global_ids()
-    geo.update_measures()
-    for cell in geo.Cells:
-        cell.Area0 = c_set.cell_A0
-        cell.Vol0 = c_set.cell_V0
-    geo.Cells[0].Area0 = c_set.lumen_V0 * (c_set.cell_A0 / c_set.cell_V0)
-    geo.Cells[0].Vol0 = c_set.lumen_V0
-
-    # Calculate the mean volume excluding the first cell
-    meanVolume = np.mean([cell.Vol for cell in geo.Cells[1:c_set.TotalCells]])
-    logger.info(f'Average Cell Volume: {meanVolume}')
-    # Calculate the standard deviation of volumes excluding the first cell
-    stdVolume = np.std([cell.Vol for cell in geo.Cells[1:c_set.TotalCells]])
-    logger.info(f'Standard Deviation of Cell Volumes: {stdVolume}')
-    # Display the volume of the first cell
-    firstCellVolume = geo.Cells[0].Vol
-    logger.info(f'Volume of Lumen: {firstCellVolume}')
-    # Calculate the sum of volumes excluding the first cell
-    sumVolumes = np.sum([cell.Vol for cell in geo.Cells[1:c_set.TotalCells]])
-    logger.info(f'Tissue Volume: {sumVolumes}')
-
-    return geo
-
-
-def SeedWithBoundingBox(X, s):
-    """
-    This function seeds nodes in desired entities (edges, faces and tetrahedrons) while cell-centers are bounded
-    by ghost nodes.
-    :param X:
-    :param s:
-    :return:
-    """
-
-    X, XgID, XgIDBB, nCells = generate_first_ghost_nodes(X)
-
-    N = 3  # The dimensions of our points
-    options = 'Qt Qbb Qc' if N <= 3 else 'Qt Qbb Qc Qx'  # Set the QHull options
-    Tri = Delaunay(X, qhull_options=options)
-
-    # first Delaunay with ghost nodes
-    X, XgID = delaunay_compute_entities(Tri.simplices, X, XgID, XgIDBB, nCells, s)
-    return XgID, X
-
-
 def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
     """
     Build a 2D Voronoi diagram from an image
@@ -629,12 +264,12 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
 
     img_neighbours = calculate_neighbours(labelled_img, ratio)
 
-    border_cells_and_main_cells = np.unique(np.block([img_neighbours[i-1] for i in main_cells]))
+    border_cells_and_main_cells = np.unique(np.block([img_neighbours[i - 1] for i in main_cells]))
     border_ghost_cells = np.setdiff1d(border_cells_and_main_cells, main_cells)
-    border_cells = np.intersect1d(main_cells, np.unique(np.block([img_neighbours[i-1] for i in border_ghost_cells])))
+    border_cells = np.intersect1d(main_cells, np.unique(np.block([img_neighbours[i - 1] for i in border_ghost_cells])))
 
     border_of_border_cells_and_main_cells = np.unique(
-        np.concatenate([img_neighbours[i-1] for i in border_cells_and_main_cells]))
+        np.concatenate([img_neighbours[i - 1] for i in border_cells_and_main_cells]))
     labelled_img[~np.isin(labelled_img, border_of_border_cells_and_main_cells)] = 0
     img_neighbours = calculate_neighbours(labelled_img, ratio)
 
@@ -644,7 +279,7 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
     # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
     # You can combine them into a single array like this:
     face_centres_vertices = np.column_stack([props['centroid-0'], props['centroid-1']])
-    #TODO: CHECK IF THIS IS RIGHT
+    # TODO: CHECK IF THIS IS RIGHT
     for num_quartets in range(quartets.shape[0]):
         # Get the face centres of the current quartet whose ids correspond to props['label']
         quartets_ids = [np.where(props['label'] == i)[0][0] for i in quartets[num_quartets]]
@@ -680,12 +315,12 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
         vertices_info['edges'][num_cell] = vertices_of_cell[
             boundary_of_cell(current_vertices, current_connected_cells)]
         assert len(vertices_info['edges'][num_cell]) == len(
-            img_neighbours[num_cell-1]), 'Error missing vertices of neighbours'
+            img_neighbours[num_cell - 1]), 'Error missing vertices of neighbours'
 
     neighbours_network = []
 
     for num_cell in main_cells:
-        current_neighbours = np.array(img_neighbours[num_cell-1])
+        current_neighbours = np.array(img_neighbours[num_cell - 1])
         current_cell_neighbours = np.vstack(
             [np.ones(len(current_neighbours), dtype=int) * num_cell, current_neighbours]).T
 
@@ -730,19 +365,44 @@ class VertexModel:
 
         self.relaxingNu = False
         self.EnergiesPerTimeStep = []
+        self.InitiateOutputFolder()
 
+    @abstractmethod
     def initialize(self):
+        pass
         """
         Initialize the model
         :return:
         """
-        self.InitiateOutputFolder()
         if "Bubbles" in self.set.InputGeo:
             self.InitializeGeometry_Bubbles()
-        elif self.set.InputGeo == 'Voronoi':
-            self.InitializeGeometry_3DVoronoi()
         elif self.set.InputGeo == 'VertexModelTime':
             self.InitializeGeometry_VertexModel2DTime()
+
+    def brownian_motion(self, scale):
+        """
+        Applies Brownian motion to the vertices of cells in the Geo structure.
+        Displacements are generated with a normal distribution in each dimension.
+        :param scale:
+        :return:
+        """
+
+        # Concatenate and sort all tetrahedron vertices
+        all_tets = np.sort(np.vstack([cell.T for cell in self.geo.Cells]), axis=1)
+        all_tets_unique = np.unique(all_tets, axis=0)
+
+        # Generate random displacements with a normal distribution for each dimension
+        displacements = scale * np.random.randn(all_tets_unique.shape[0], 3)
+
+        # Update vertex positions based on 3D Brownian motion displacements
+        for cell in [c for c in self.geo.Cells if c.AliveStatus is not None]:
+            _, corresponding_ids = np.where(np.all(np.sort(cell.T, axis=1)[:, None] == all_tets_unique, axis=2))
+            cell.Y += displacements[corresponding_ids, :]
+
+    def InitiateOutputFolder(self):
+        pass
+
+    def iterate_over_time(self):
 
         allYs = np.vstack([cell.Y for cell in self.geo.Cells if cell.AliveStatus == 1])
         minZs = min(allYs[:, 2])
@@ -782,351 +442,6 @@ class VertexModel:
 
         save_state(self, os.path.join(self.set.OutputFolder, 'data_step_0.pkl'))
 
-    def brownian_motion(self, scale):
-        """
-        Applies Brownian motion to the vertices of cells in the Geo structure.
-        Displacements are generated with a normal distribution in each dimension.
-        :param scale:
-        :return:
-        """
-
-        # Concatenate and sort all tetrahedron vertices
-        all_tets = np.sort(np.vstack([cell.T for cell in self.geo.Cells]), axis=1)
-        all_tets_unique = np.unique(all_tets, axis=0)
-
-        # Generate random displacements with a normal distribution for each dimension
-        displacements = scale * np.random.randn(all_tets_unique.shape[0], 3)
-
-        # Update vertex positions based on 3D Brownian motion displacements
-        for cell in [c for c in self.geo.Cells if c.AliveStatus is not None]:
-            _, corresponding_ids = np.where(np.all(np.sort(cell.T, axis=1)[:, None] == all_tets_unique, axis=2))
-            cell.Y += displacements[corresponding_ids, :]
-
-    def InitializeGeometry_VertexModel2DTime(self):
-        selectedPlanes = [0, 99]
-        xInternal = np.arange(1, self.set.TotalCells + 1)
-
-        # Load the tif file from resources if exists
-        if os.path.exists("src/pyVertexModel/resources/LblImg_imageSequence.xz"):
-            imgStackLabelled = pickle.load(lzma.open("src/pyVertexModel/resources/LblImg_imageSequence.xz", "rb"))
-            imgStackLabelled = imgStackLabelled['imgStackLabelled']
-            img2DLabelled = imgStackLabelled[0, :, :]
-        else:
-            if os.path.exists("src/pyVertexModel/resources/LblImg_imageSequence.tif"):
-                imgStackLabelled = io.imread("src/pyVertexModel/resources/LblImg_imageSequence.tif")
-            elif os.path.exists("resources/LblImg_imageSequence.tif"):
-                imgStackLabelled = io.imread("resources/LblImg_imageSequence.tif")
-
-            # Reordering cells based on the centre of the image
-            img2DLabelled = imgStackLabelled[0, :, :]
-            props = regionprops_table(img2DLabelled, properties=('centroid', 'label',))
-
-            # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
-            # You can combine them into a single array like this:
-            centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
-            centre_of_image = np.array([img2DLabelled.shape[0] / 2, img2DLabelled.shape[1] / 2])
-
-            # Sorting cells based on distance to the middle of the image
-            distanceToMiddle = cdist([centre_of_image], centroids)
-            distanceToMiddle = distanceToMiddle[0]
-            sortedId = np.argsort(distanceToMiddle)
-            sorted_ids = np.array(props['label'])[sortedId]
-
-            oldImg2DLabelled = copy.deepcopy(imgStackLabelled)
-            imgStackLabelled = np.zeros_like(imgStackLabelled)
-            newCont = 1
-            for numCell in sorted_ids:
-                if numCell != 0:
-                    imgStackLabelled[oldImg2DLabelled == numCell] = newCont
-                    newCont += 1
-
-            # Show the first plane
-            import matplotlib.pyplot as plt
-            plt.imshow(imgStackLabelled[0, :, :])
-            plt.show()
-
-            save_variables({'imgStackLabelled': imgStackLabelled},
-                           'src/pyVertexModel/resources/LblImg_imageSequence.xz')
-
-        # Basic features
-        properties = regionprops(img2DLabelled)
-
-        # Extract major axis lengths
-        avgDiameter = np.mean([prop.major_axis_length for prop in properties])
-        cellHeight = avgDiameter * self.set.CellHeight
-
-        # Building the topology of each plane
-        trianglesConnectivity = {}
-        neighboursNetwork = {}
-        cellEdges = {}
-        verticesOfCell_pos = {}
-        borderCells = {}
-        borderOfborderCellsAndMainCells = {}
-        for numPlane in selectedPlanes:
-            (triangles_connectivity, neighbours_network,
-             cell_edges, vertices_location, border_cells,
-             border_of_border_cells_and_main_cells) = build_2d_voronoi_from_image(imgStackLabelled[numPlane, :, :],
-                                                                                  imgStackLabelled[numPlane, :, :],
-                                                                                  np.arange(1, self.set.TotalCells + 1))
-
-            trianglesConnectivity[numPlane] = triangles_connectivity
-            neighboursNetwork[numPlane] = neighbours_network
-            cellEdges[numPlane] = cell_edges
-            verticesOfCell_pos[numPlane] = vertices_location
-            borderCells[numPlane] = border_cells
-            borderOfborderCellsAndMainCells[numPlane] = border_of_border_cells_and_main_cells
-
-        # Select nodes from images
-        img3DProperties = regionprops(imgStackLabelled)
-        X = np.zeros((len(img3DProperties.Centroid), 3))
-        X[:, 0:2] = img3DProperties.Centroid[np.concatenate(borderOfborderCellsAndMainCells)].astype(int)
-        X[:, 2] = np.zeros(len(img3DProperties.Centroid))
-
-        # Using the centroids and vertices of the cells of each 2D image as ghost nodes
-        bottomPlane = 1
-        topPlane = 2
-
-        if bottomPlane == 1:
-            zCoordinate = [-cellHeight, cellHeight]
-        else:
-            zCoordinate = [cellHeight, -cellHeight]
-
-        Twg = []
-        for idPlane, numPlane in enumerate(selectedPlanes):
-            img2DLabelled = imgStackLabelled[:, :, numPlane - 1]
-            centroids = regionprops(img2DLabelled, 'Centroid')
-            centroids = np.round(np.vstack([c.Centroid for c in centroids])).astype(int)
-            Xg_faceCentres2D = np.hstack((centroids, np.tile(zCoordinate[idPlane], (len(centroids), 1))))
-            Xg_vertices2D = np.hstack((np.fliplr(verticesOfCell_pos[numPlane]),
-                                       np.tile(zCoordinate[idPlane], (len(verticesOfCell_pos[numPlane]), 1))))
-
-            Xg_nodes = np.vstack((Xg_faceCentres2D, Xg_vertices2D))
-            Xg_ids = np.arange(X.shape[0] + 1, X.shape[0] + Xg_nodes.shape[0] + 1)
-            Xg_faceIds = Xg_ids[0:Xg_faceCentres2D.shape[0]]
-            Xg_verticesIds = Xg_ids[Xg_faceCentres2D.shape[0]:]
-            X = np.vstack((X, Xg_nodes))
-
-            # Fill Geo info
-            if idPlane == bottomPlane - 1:
-                self.geo.XgBottom = Xg_ids
-            elif idPlane == topPlane - 1:
-                self.geo.XgTop = Xg_ids
-
-            # Create tetrahedra
-            Twg_numPlane = self.CreateTetrahedra(trianglesConnectivity[numPlane], neighboursNetwork[numPlane],
-                                                 cellEdges[numPlane], xInternal, Xg_faceIds, Xg_verticesIds, X)
-
-            Twg.append(Twg_numPlane)
-
-        # Fill Geo info
-        self.geo.nCells = len(xInternal)
-        self.geo.XgLateral = np.setdiff1d(np.arange(1, np.max(np.concatenate(borderOfborderCellsAndMainCells)) + 1),
-                                          xInternal)
-        self.geo.XgID = np.setdiff1d(np.arange(1, X.shape[0] + 1), xInternal)
-
-        # Define border cells
-        self.geo.BorderCells = np.unique(np.concatenate([borderCells[numPlane] for numPlane in selectedPlanes]))
-        self.geo.BorderGhostNodes = self.geo.XgLateral
-
-        # Create new tetrahedra based on intercalations
-        allCellIds = np.concatenate([xInternal, self.geo.XgLateral])
-        neighboursMissing = {}
-        for numCell in xInternal:
-            Twg_cCell = Twg[np.any(np.isin(Twg, numCell), axis=1), :]
-
-            Twg_cCell_bottom = Twg_cCell[np.any(np.isin(Twg_cCell, self.geo.XgBottom), axis=1), :]
-            neighbours_bottom = allCellIds[np.isin(allCellIds, Twg_cCell_bottom)]
-
-            Twg_cCell_top = Twg_cCell[np.any(np.isin(Twg_cCell, self.geo.XgTop), axis=1), :]
-            neighbours_top = allCellIds[np.isin(allCellIds, Twg_cCell_top)]
-
-            neighboursMissing[numCell] = np.setxor1d(neighbours_bottom, neighbours_top)
-            for missingCell in neighboursMissing[numCell]:
-                tetsToAdd = allCellIds[
-                    np.isin(allCellIds, Twg_cCell[np.any(np.isin(Twg_cCell, missingCell), axis=1), :])]
-                assert len(tetsToAdd) == 4, f'Missing 4-fold at Cell {numCell}'
-                if not np.any(np.all(np.sort(tetsToAdd, axis=1) == Twg, axis=1)):
-                    Twg = np.vstack((Twg, tetsToAdd))
-
-        # After removing ghost tetrahedras, some nodes become disconnected,
-        # that is, not a part of any tetrahedra. Therefore, they should be
-        # removed from X
-        Twg = Twg[~np.all(np.isin(Twg, self.geo.XgID), axis=1)]
-        # Re-number the surviving tets
-        oldIds, oldTwgNewIds = np.unique(Twg, return_inverse=True, axis=0)
-        newIds = np.arange(len(oldIds))
-        X = X[oldIds, :]
-        Twg = oldTwgNewIds.reshape(Twg.shape)
-        self.geo.XgBottom = newIds[np.isin(oldIds, self.geo.XgBottom)]
-        self.geo.XgTop = newIds[np.isin(oldIds, self.geo.XgTop)]
-        self.geo.XgLateral = newIds[np.isin(oldIds, self.geo.XgLateral)]
-        self.geo.XgID = newIds[np.isin(oldIds, self.geo.XgID)]
-        self.geo.BorderGhostNodes = self.geo.XgLateral
-
-        # Normalise Xs
-        X = X / imgDims
-
-        # Build cells
-        self.geo.build_cells(self.set, X, Twg)  # Please define the BuildCells function
-
-        # Define upper and lower area threshold for remodelling
-        allFaces = np.concatenate([Geo.Cells.Faces for c in range(Geo.nCells)])
-        allTris = np.concatenate([face.Tris for face in allFaces])
-        avgArea = np.mean([tri.Area for tri in allTris])
-        stdArea = np.std([tri.Area for tri in allTris])
-        Set.upperAreaThreshold = avgArea + stdArea
-        Set.lowerAreaThreshold = avgArea - stdArea
-
-        # Geo.AssembleNodes = find(cellfun(@isempty, {Geo.Cells.AliveStatus})==0)
-        self.geo.AssembleNodes = [idx for idx, cell in enumerate(Geo.Cells) if cell.AliveStatus]
-
-        # Define BarrierTri0
-        Set.BarrierTri0 = np.finfo(float).max
-        Set.lmin0 = np.finfo(float).max
-        edgeLengths_Top = []
-        edgeLengths_Bottom = []
-        edgeLengths_Lateral = []
-        lmin_values = []
-        for c in range(Geo.nCells):
-            for f in range(len(Geo.Cells[c].Faces)):
-                Face = Geo.Cells[c].Faces[f]
-                Set.BarrierTri0 = min([tri.Area for tri in Geo.Cells[c].Faces[f].Tris] + [Set.BarrierTri0])
-                lmin_values.append(min(tri.LengthsToCentre))
-                lmin_values.append(tri.EdgeLength)
-                for nTris in range(len(Geo.Cells[c].Faces[f].Tris)):
-                    tri = Geo.Cells[c].Faces[f].Tris[nTris]
-                    if tri.Location == 'Top':
-                        edgeLengths_Top.append(tri.Edge.compute_edge_length(Geo.Cells[c].Y))
-                    elif tri.Location == 'Bottom':
-                        edgeLengths_Bottom.append(tri.Edge.compute_edge_length(Geo.Cells[c].Y))
-                    else:
-                        edgeLengths_Lateral.append(tri.Edge.compute_edge_length(Geo.Cells[c].Y))
-
-        self.set.lmin0 = min(lmin_values)
-
-        self.geo.AvgEdgeLength_Top = np.mean(edgeLengths_Top)
-        self.geo.AvgEdgeLength_Bottom = np.mean(edgeLengths_Bottom)
-        self.geo.AvgEdgeLength_Lateral = np.mean(edgeLengths_Lateral)
-        self.set.BarrierTri0 = Set.BarrierTri0 / 5
-        self.set.lmin0 = Set.lmin0 * 10
-
-        self.geo.RemovedDebrisCells = []
-
-        minZs = np.min([cell.Y for cell in Geo.Cells])
-        self.geo.CellHeightOriginal = np.abs(minZs[2])
-
-    def InitiateOutputFolder(self):
-        pass
-
-    def InitializeGeometry_3DVoronoi(self):
-        pass
-
-    def InitializeGeometry_Bubbles(self):
-        # Build nodal mesh
-        self.generate_Xs(self.geo.nx, self.geo.ny, self.geo.nz)
-
-        # This code is to match matlab's output and python's
-        # N = 3  # The dimensions of our points
-        # options = 'Qt Qbb Qc' if N <= 3 else 'Qt Qbb Qc Qx'  # Set the QHull options
-        Twg = Delaunay(self.X).simplices
-
-        # Remove tetrahedras formed only by ghost nodes
-        Twg = Twg[~np.all(np.isin(Twg, self.geo.XgID), axis=1)]
-        # Remove weird IDs
-
-        # Re-number the surviving tets
-        uniqueTets, indices = np.unique(Twg, return_inverse=True)
-        self.geo.XgID = np.arange(self.geo.nCells, len(uniqueTets))
-        self.X = self.X[uniqueTets]
-        Twg = indices.reshape(Twg.shape)
-
-        if self.set.InputGeo == 'Bubbles_Cyst':
-            self.geo.XgBottom = [0]
-            self.geo.XgTop = self.geo.XgID
-            self.geo.XgID = np.append(self.geo.XgID, 0)
-        else:
-            Xg = self.X[self.geo.XgID]
-            self.geo.XgBottom = self.geo.XgID[Xg[:, 2] < np.mean(self.X[:, 2])]
-            self.geo.XgTop = self.geo.XgID[Xg[:, 2] > np.mean(self.X[:, 2])]
-
-        self.geo.build_cells(self.set, self.X, Twg)
-
-        if self.set.InputGeo == 'Bubbles_Cyst':
-            # Extrapolate Face centres and Ys to the ellipsoid
-            self.geo = extrapolate_ys_faces_ellipsoid(self.geo, self.set)
-
-        # Define upper and lower area threshold for remodelling
-        allFaces = np.concatenate([cell.Faces for cell in self.geo.Cells])
-        allTris = np.concatenate([face.Tris for face in allFaces])
-        avgArea = np.mean([tri.Area for tri in allTris])
-        stdArea = np.std([tri.Area for tri in allTris])
-        self.set.upperAreaThreshold = avgArea + stdArea
-        self.set.lowerAreaThreshold = avgArea - stdArea
-
-        self.geo.AssembleNodes = [i for i, cell in enumerate(self.geo.Cells) if cell.AliveStatus is not None]
-
-        self.set.BarrierTri0 = np.finfo(float).max
-        self.set.lmin0 = np.finfo(float).max
-        edgeLengths_Top = []
-        edgeLengths_Bottom = []
-        edgeLengths_Lateral = []
-        lmin_values = []
-        for c in range(self.geo.nCells):
-            for f in range(len(self.geo.Cells[c].Faces)):
-                Face = self.geo.Cells[c].Faces[f]
-                self.set.BarrierTri0 = min([min([tri.Area for tri in Face.Tris]), self.set.BarrierTri0])
-
-                for nTris in range(len(self.geo.Cells[c].Faces[f].Tris)):
-                    tri = self.geo.Cells[c].Faces[f].Tris[nTris]
-                    lmin_values.append(min(tri.LengthsToCentre))
-                    lmin_values.append(tri.EdgeLength)
-                    if tri.Location == 'Top':
-                        edgeLengths_Top.append(tri.compute_edge_length(self.geo.Cells[c].Y))
-                    elif tri.Location == 'Bottom':
-                        edgeLengths_Bottom.append(tri.compute_edge_length(self.geo.Cells[c].Y))
-                    else:
-                        edgeLengths_Lateral.append(tri.compute_edge_length(self.geo.Cells[c].Y))
-
-        self.set.lmin0 = min(lmin_values)
-
-        self.geo.AvgEdgeLength_Top = np.mean(edgeLengths_Top)
-        self.geo.AvgEdgeLength_Bottom = np.mean(edgeLengths_Bottom)
-        self.geo.AvgEdgeLength_Lateral = np.mean(edgeLengths_Lateral)
-        self.set.BarrierTri0 = self.set.BarrierTri0 / 10
-        self.set.lmin0 = self.set.lmin0 * 10
-
-    def generate_Xs(self, nx=None, ny=None, nz=None):
-        """
-        Generate the nodal positions of the mesh based on the input geometry
-        :return:
-        """
-        self.X, X_IDs = build_topo(self.set, nx, ny, nz)
-        self.geo.nCells = self.X.shape[0]
-        # Centre Nodal position at (0,0)
-        self.X[:, 0] = self.X[:, 0] - np.mean(self.X[:, 0])
-        self.X[:, 1] = self.X[:, 1] - np.mean(self.X[:, 1])
-        self.X[:, 2] = self.X[:, 2] - np.mean(self.X[:, 2])
-
-        if self.set.InputGeo == 'Bubbles_Cyst':
-            a, b, c, paramsOptimized = fit_ellipsoid_to_points(self.X)
-
-            ellipsoid_axis_normalised1 = mean([self.set.ellipsoid_axis1, self.set.lumen_axis1]) / paramsOptimized[0]
-            ellipsoid_axis_normalised2 = mean([self.set.ellipsoid_axis2, self.set.lumen_axis2]) / paramsOptimized[1]
-            ellipsoid_axis_normalised3 = mean([self.set.ellipsoid_axis3, self.set.lumen_axis3]) / paramsOptimized[2]
-
-            # Extrapolate Xs
-            self.X = extrapolate_points_to_ellipsoid(self.X, ellipsoid_axis_normalised1, ellipsoid_axis_normalised2,
-                                                     ellipsoid_axis_normalised3)
-        # Perform Delaunay
-        self.geo.XgID, self.X = SeedWithBoundingBox(self.X, self.set.s)
-        if self.set.Substrate == 1:
-            Xg = self.X[self.geo.XgID, :]
-            self.X = np.delete(self.X, self.geo.XgID, 0)
-            Xg = Xg[Xg[:, 2] > np.mean(self.X[:, 2]), :]
-            self.geo.XgID = np.arange(self.X.shape[0], self.X.shape[0] + Xg.shape[0] + 2)
-            self.X = np.concatenate((self.X, Xg, [np.mean(self.X[:, 0]), np.mean(self.X[:, 1]), -50]), axis=0)
-
-    def iterate_over_time(self):
         # Create VTK files for initial state
         self.geo.create_vtk_cell(self.geo_0, self.set, 0)
 

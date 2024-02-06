@@ -247,6 +247,6 @@ class TestVertexModel(Tests):
         neighbours_expected = [np.concatenate(neighbours[0]) for neighbours in mat_info['imgNeighbours']]
 
         # Check if the cells are initialized correctly
-        assert_matrix(neighbours_test, neighbours_expected)
+        np.testing.assert_equal(neighbours_test, neighbours_expected)
 
 
