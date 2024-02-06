@@ -264,22 +264,22 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
     # You can combine them into a single array like this:
     face_centres_vertices = np.column_stack([props['centroid-0'], props['centroid-1']])
     # TODO: CHECK IF THIS IS RIGHT
-    for num_quartets in range(quartets.shape[0]):
-        # Get the face centres of the current quartet whose ids correspond to props['label']
-        quartets_ids = [np.where(props['label'] == i)[0][0] for i in quartets[num_quartets]]
-        current_centroids = face_centres_vertices[quartets_ids]
-
-        distance_between_centroids = squareform(pdist(current_centroids))
-        max_distance = np.max(distance_between_centroids)
-        row, col = np.where(distance_between_centroids == max_distance)
-
-        current_neighs = img_neighbours[quartets[num_quartets, col[0]] - 1]
-        current_neighs = current_neighs[current_neighs != quartets[num_quartets, row[0]]]
-        img_neighbours[quartets[num_quartets, col[0]] - 1] = current_neighs
-
-        current_neighs = img_neighbours[quartets[num_quartets, row[0]] - 1]
-        current_neighs = current_neighs[current_neighs != quartets[num_quartets, col[0]]]
-        img_neighbours[quartets[num_quartets, row[0]]] = current_neighs
+    # for num_quartets in range(quartets.shape[0]):
+    #     # Get the face centres of the current quartet whose ids correspond to props['label']
+    #     quartets_ids = [np.where(props['label'] == i)[0][0] for i in quartets[num_quartets]]
+    #     current_centroids = face_centres_vertices[quartets_ids]
+    #
+    #     distance_between_centroids = squareform(pdist(current_centroids))
+    #     max_distance = np.max(distance_between_centroids)
+    #     row, col = np.where(distance_between_centroids == max_distance)
+    #
+    #     current_neighs = img_neighbours[quartets[num_quartets, col[0]] - 1]
+    #     current_neighs = current_neighs[current_neighs != quartets[num_quartets, row[0]]]
+    #     img_neighbours[quartets[num_quartets, col[0]] - 1] = current_neighs
+    #
+    #     current_neighs = img_neighbours[quartets[num_quartets, row[0]] - 1]
+    #     current_neighs = current_neighs[current_neighs != quartets[num_quartets, col[0]]]
+    #     img_neighbours[quartets[num_quartets, row[0]]] = current_neighs
 
     vertices_info = calculate_vertices(labelled_img, img_neighbours, ratio)
 
