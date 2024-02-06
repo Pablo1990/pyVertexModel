@@ -220,9 +220,9 @@ def boundary_of_cell(vertices_of_cell, neighbours=None):
 
             next_neighbour_prev = next_neighbour
 
-        _, vert_order = ismember_rows(neighbours_order, initial_neighbours)
+        _, vert_order = ismember_rows(neighbours_order, np.array(initial_neighbours))
 
-        new_vert_order = np.hstack((vert_order, np.vstack((vert_order[1:], vert_order[0]))))
+        new_vert_order = np.vstack((vert_order, np.hstack((vert_order[1:], vert_order[0])))).T
 
         return new_vert_order
 
