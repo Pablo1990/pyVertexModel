@@ -4,10 +4,12 @@ from scipy.spatial import Delaunay
 
 from Tests.test_geo import check_if_cells_are_the_same
 from Tests.tests import Tests, assert_matrix, load_data
-from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 from src.pyVertexModel.algorithm.newtonRaphson import newton_raphson
-from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_first_ghost_nodes, build_topo, \
-    delaunay_compute_entities, SeedWithBoundingBox, build_triplets_of_neighs, calculate_neighbours
+from src.pyVertexModel.algorithm.vertexModel import VertexModel
+from src.pyVertexModel.algorithm.vertexModelBubbles import build_topo, SeedWithBoundingBox, generate_first_ghost_nodes, \
+    delaunay_compute_entities
+from src.pyVertexModel.algorithm.voronoiFromTimeImage import build_triplets_of_neighs, calculate_neighbours
+from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 
 
 class TestVertexModel(Tests):

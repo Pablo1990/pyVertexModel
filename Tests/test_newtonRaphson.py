@@ -1,9 +1,9 @@
 import numpy as np
 
 from Tests.tests import load_data, Tests, assert_array1D, assert_matrix
+from src.pyVertexModel.algorithm.newtonRaphson import line_search, newton_raphson, newton_raphson_iteration, ml_divide
 from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 from src.pyVertexModel.geometry.geo import Geo
-from src.pyVertexModel.algorithm.newtonRaphson import line_search, newton_raphson, newton_raphson_iteration, ml_divide
 from src.pyVertexModel.parameters.set import Set
 
 
