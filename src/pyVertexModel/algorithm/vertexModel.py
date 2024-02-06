@@ -44,7 +44,7 @@ def calculate_neighbours(labelled_img, ratio_strel):
         # Deleting cell 0 from range
         cells = cells[1:]
 
-    img_neighbours = [None] * (np.max(cells) + 1)
+    img_neighbours = [None] * (np.max(cells))
 
     for idx, cell in enumerate(cells):
         BW = find_boundaries(labelled_img == cell, mode='inner')
@@ -120,7 +120,7 @@ def build_triplets_of_neighs(neighbours):
                             if k > j and neighbours[k - 1] is not None:
                                 common_cell = {i + 1}.intersection(neigh_j, neighbours[k - 1])
                                 if common_cell:
-                                    triangle_seed = sorted([i + 1, j, k])
+                                    triangle_seed = sorted([i+1, j, k])
                                     triplets_of_neighs.append(triangle_seed)
 
     if len(triplets_of_neighs) > 0:
@@ -629,13 +629,13 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
 
     img_neighbours = calculate_neighbours(labelled_img, ratio)
 
-    border_cells_and_main_cells = np.unique(np.block([img_neighbours[i] for i in main_cells]))
+    border_cells_and_main_cells = np.unique(np.block([img_neighbours[i-1] for i in main_cells]))
     border_ghost_cells = np.setdiff1d(border_cells_and_main_cells, main_cells)
-    border_cells = np.intersect1d(main_cells, np.unique(np.block([img_neighbours[i] for i in border_ghost_cells])))
+    border_cells = np.intersect1d(main_cells, np.unique(np.block([img_neighbours[i-1] for i in border_ghost_cells])))
 
     border_of_border_cells_and_main_cells = np.unique(
-        np.concatenate([img_neighbours[i] for i in border_cells_and_main_cells]))
-    labelled_img[~np.isin(labelled_img, np.arange(1, np.max(border_of_border_cells_and_main_cells) + 1))] = 0
+        np.concatenate([img_neighbours[i-1] for i in border_cells_and_main_cells]))
+    labelled_img[~np.isin(labelled_img, border_of_border_cells_and_main_cells)] = 0
     img_neighbours = calculate_neighbours(labelled_img, ratio)
 
     quartets, _ = get_four_fold_vertices(img_neighbours)
@@ -644,17 +644,21 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
     # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
     # You can combine them into a single array like this:
     face_centres_vertices = np.column_stack([props['centroid-0'], props['centroid-1']])
+    #TODO: CHECK IF THIS IS RIGHT
     for num_quartets in range(quartets.shape[0]):
-        current_centroids = face_centres_vertices[quartets[num_quartets, :], :]
+        # Get the face centres of the current quartet whose ids correspond to props['label']
+        quartets_ids = [np.where(props['label'] == i)[0][0] for i in quartets[num_quartets]]
+        current_centroids = face_centres_vertices[quartets_ids]
+
         distance_between_centroids = squareform(pdist(current_centroids))
         max_distance = np.max(distance_between_centroids)
         row, col = np.where(distance_between_centroids == max_distance)
 
-        current_neighs = img_neighbours[quartets[num_quartets, col[0]]]
+        current_neighs = img_neighbours[quartets[num_quartets, col[0]] - 1]
         current_neighs = current_neighs[current_neighs != quartets[num_quartets, row[0]]]
-        img_neighbours[quartets[num_quartets, col[0]]] = current_neighs
+        img_neighbours[quartets[num_quartets, col[0]] - 1] = current_neighs
 
-        current_neighs = img_neighbours[quartets[num_quartets, row[0]]]
+        current_neighs = img_neighbours[quartets[num_quartets, row[0]] - 1]
         current_neighs = current_neighs[current_neighs != quartets[num_quartets, col[0]]]
         img_neighbours[quartets[num_quartets, row[0]]] = current_neighs
 
@@ -664,7 +668,7 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
     vertices_info['PerCell'] = [None] * total_cells
     vertices_info['edges'] = [None] * total_cells
 
-    for num_cell in range(1, np.max(main_cells) + 1):
+    for num_cell in main_cells:
         vertices_of_cell = np.where(np.any(np.isin(vertices_info['connectedCells'], num_cell), axis=1))[0]
         vertices_info['PerCell'][num_cell] = vertices_of_cell
         current_vertices = [vertices_info['location'][i] for i in vertices_of_cell]
@@ -680,7 +684,7 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
 
     neighbours_network = []
 
-    for num_cell in range(1, np.max(main_cells) + 1):
+    for num_cell in main_cells:
         current_neighbours = np.array(img_neighbours[num_cell-1])
         current_cell_neighbours = np.vstack(
             [np.ones(len(current_neighbours), dtype=int) * num_cell, current_neighbours]).T

@@ -7,7 +7,7 @@ from Tests.tests import Tests, assert_matrix, load_data
 from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 from src.pyVertexModel.algorithm.newtonRaphson import newton_raphson
 from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_first_ghost_nodes, build_topo, \
-    delaunay_compute_entities, SeedWithBoundingBox, build_triplets_of_neighs
+    delaunay_compute_entities, SeedWithBoundingBox, build_triplets_of_neighs, calculate_neighbours
 
 
 class TestVertexModel(Tests):
@@ -233,4 +233,20 @@ class TestVertexModel(Tests):
 
         # Check if triplets of neighbours are correct
         assert_matrix(triplets_of_neighs_test, mat_info['neighboursVertices'])
+
+    def test_calculate_neighbours(self):
+        """
+        Test the calculate_neighbours function.
+        :return:
+        """
+        # Load data
+        _, _, mat_info = load_data('calculate_neighbours_wingdisc.mat')
+
+        neighbours_test = calculate_neighbours(mat_info['labelledImg'], 2)
+
+        neighbours_expected = [np.concatenate(neighbours[0]) for neighbours in mat_info['imgNeighbours']]
+
+        # Check if the cells are initialized correctly
+        assert_matrix(neighbours_test, neighbours_expected)
+
 
