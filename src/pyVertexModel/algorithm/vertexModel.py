@@ -1,32 +1,15 @@
-import copy
 import logging
-import lzma
-import math
 import os
-import pickle
-import statistics
 from abc import abstractmethod
-from itertools import combinations
 
 import numpy as np
-import matplotlib.pyplot as plt
-from numpy import mean
-from scipy.optimize import minimize
-from scipy.spatial import Delaunay
-from scipy.spatial.distance import cdist
-from scipy.spatial.distance import pdist, squareform
-from skimage import io
-from skimage.measure import regionprops
-from skimage.measure import regionprops_table
-from skimage.morphology import dilation, square, disk
-from skimage.segmentation import find_boundaries
 
 from src.pyVertexModel.algorithm import newtonRaphson
 from src.pyVertexModel.geometry import degreesOfFreedom
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
 from src.pyVertexModel.parameters.set import Set
-from src.pyVertexModel.util.utils import save_state, save_variables, ismember_rows
+from src.pyVertexModel.util.utils import save_state
 
 logger = logging.getLogger("pyVertexModel")
 
