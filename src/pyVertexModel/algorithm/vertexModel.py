@@ -25,7 +25,7 @@ from src.pyVertexModel.geometry import degreesOfFreedom
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
 from src.pyVertexModel.parameters.set import Set
-from src.pyVertexModel.util.utils import save_state, save_variables
+from src.pyVertexModel.util.utils import save_state, save_variables, ismember_rows
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -114,13 +114,13 @@ def build_triplets_of_neighs(neighbours):
         if neigh_i is not None:
             for j in neigh_i:
                 if j > i:
-                    neigh_j = neighbours[j-1]
+                    neigh_j = neighbours[j - 1]
                     if neigh_j is not None:
                         for k in neigh_j:
-                            if k > j and neighbours[k-1] is not None:
-                                common_cell = {i+1}.intersection(neigh_j, neighbours[k-1])
+                            if k > j and neighbours[k - 1] is not None:
+                                common_cell = {i + 1}.intersection(neigh_j, neighbours[k - 1])
                                 if common_cell:
-                                    triangle_seed = sorted([i+1, j, k])
+                                    triangle_seed = sorted([i + 1, j, k])
                                     triplets_of_neighs.append(triangle_seed)
 
     if len(triplets_of_neighs) > 0:
@@ -202,42 +202,37 @@ def boundary_of_cell(vertices_of_cell, neighbours=None):
     """
     # If neighbours are provided, try to order the vertices based on their neighbors
     if neighbours is not None:
-        try:
-            initial_neighbours = neighbours.copy()
-            neighbours_order = neighbours[0, :].copy()
-            first_neighbour = neighbours[0, 0]
-            next_neighbour = neighbours[0, 1]
+        neighbours_order = neighbours[0]
+        next_neighbour = neighbours[0][1]
+        next_neighbour_prev = next_neighbour
+        neighbours = np.delete(neighbours, 0, axis=0)
+
+        # Loop until all neighbours are ordered
+        while neighbours.size > 0:
+            match_next_vertex = np.any(neighbours == next_neighbour, axis=1)
+
+            neighbours_order = np.vstack((neighbours_order, neighbours[match_next_vertex]))
+
+            next_neighbour = neighbours[match_next_vertex][0]
+            next_neighbour[next_neighbour == next_neighbour_prev] = 0
+            neighbours = np.delete(neighbours, match_next_vertex, axis=0)
+
             next_neighbour_prev = next_neighbour
-            neighbours = np.delete(neighbours, 0, axis=0)
 
-            # Loop until all neighbours are ordered
-            while neighbours.size > 0:
-                match_next_vertex = np.any(neighbours == next_neighbour, axis=1)
+        _, vert_order = ismember_rows(vertices_of_cell, neighbours_order)
 
-                neighbours_order = np.vstack((neighbours_order, neighbours[match_next_vertex, :]))
+        new_vert_order = np.hstack((vert_order, np.vstack((vert_order[1:], vert_order[0]))))
 
-                next_neighbour = neighbours[match_next_vertex, :][0]
-                next_neighbour[next_neighbour == next_neighbour_prev] = 0
-                neighbours = np.delete(neighbours, match_next_vertex, axis=0)
-
-                next_neighbour_prev = next_neighbour
-
-            _, vert_order = np.where((neighbours_order == initial_neighbours[:, None]).all(-1))
-
-            new_vert_order = np.hstack((vert_order, np.vstack((vert_order[1:], vert_order[0]))))
-
-            return new_vert_order
-        except Exception as ex:
-            new_vert_order = []
+        return new_vert_order
 
     # If ordering based on neighbours failed or no neighbours were provided,
     # order the vertices based on their angular position relative to the centroid of the cell
     imaginary_centroid_mean_vert = np.mean(vertices_of_cell, axis=0)
     vector_for_ang_mean = vertices_of_cell - imaginary_centroid_mean_vert
     th_mean = np.arctan2(vector_for_ang_mean[:, 1], vector_for_ang_mean[:, 0])
-    _, vert_order = np.sort(th_mean)
+    vert_order = np.argsort(th_mean)
 
-    new_vert_order = np.hstack((vert_order, np.vstack((vert_order[1:], vert_order[0]))))
+    new_vert_order = np.hstack((vert_order[1:], vert_order[0]))
 
     return new_vert_order
 
@@ -667,13 +662,15 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
     total_cells = np.max(border_cells_and_main_cells) + 1
     vertices_info['PerCell'] = [None] * total_cells
 
-    for num_cell in range(np.max(main_cells) + 1):
-        vertices_of_cell = np.where(np.any(np.isin(vertices_info['connectedCells'], num_cell), axis=1))
+    for num_cell in range(1, np.max(main_cells) + 1):
+        vertices_of_cell = np.where(np.any(np.isin(vertices_info['connectedCells'], num_cell), axis=1))[0]
         vertices_info['PerCell'][num_cell] = vertices_of_cell
-        current_vertices = vertices_info['location'][vertices_of_cell, :]
-        current_connected_cells = vertices_info['connectedCells'][vertices_of_cell, :].T
-        current_connected_cells[current_connected_cells == num_cell] = []
-        current_connected_cells = np.vstack([current_connected_cells[0::2], current_connected_cells[1::2]]).T
+        current_vertices = [vertices_info['location'][i] for i in vertices_of_cell]
+        current_connected_cells = [vertices_info['connectedCells'][i] for i in vertices_of_cell]
+
+        # Remove the current cell 'num_cell' from the connected cells
+        current_connected_cells = [np.delete(cell, np.where(cell == num_cell)) for cell in current_connected_cells]
+
         vertices_info['edges'][num_cell, 0] = vertices_of_cell[
             boundary_of_cell(current_vertices, current_connected_cells)]
         assert len(vertices_info['edges'][num_cell, 0]) == len(
