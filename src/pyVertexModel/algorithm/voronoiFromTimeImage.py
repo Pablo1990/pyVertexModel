@@ -187,29 +187,32 @@ def boundary_of_cell(vertices_of_cell, neighbours=None):
     """
     # If neighbours are provided, try to order the vertices based on their neighbors
     if neighbours is not None:
-        initial_neighbours = neighbours
-        neighbours_order = neighbours[0]
-        next_neighbour = neighbours[0][1]
-        next_neighbour_prev = next_neighbour
-        neighbours = np.delete(neighbours, 0, axis=0)
-
-        # Loop until all neighbours are ordered
-        while neighbours.size > 0:
-            match_next_vertex = np.any(neighbours == next_neighbour, axis=1)
-
-            neighbours_order = np.vstack((neighbours_order, neighbours[match_next_vertex]))
-
-            next_neighbour = neighbours[match_next_vertex][0]
-            next_neighbour[next_neighbour == next_neighbour_prev] = 0
-            neighbours = np.delete(neighbours, match_next_vertex, axis=0)
-
+        try:
+            initial_neighbours = neighbours
+            neighbours_order = neighbours[0]
+            next_neighbour = neighbours[0][1]
             next_neighbour_prev = next_neighbour
+            neighbours = np.delete(neighbours, 0, axis=0)
 
-        _, vert_order = ismember_rows(neighbours_order, np.array(initial_neighbours))
+            # Loop until all neighbours are ordered
+            while neighbours.size > 0:
+                match_next_vertex = np.any(neighbours == next_neighbour, axis=1)
 
-        new_vert_order = np.vstack((vert_order, np.hstack((vert_order[1:], vert_order[0])))).T
+                neighbours_order = np.vstack((neighbours_order, neighbours[match_next_vertex]))
 
-        return new_vert_order
+                next_neighbour = neighbours[match_next_vertex][0]
+                next_neighbour[next_neighbour == next_neighbour_prev] = 0
+                neighbours = np.delete(neighbours, match_next_vertex, axis=0)
+
+                next_neighbour_prev = next_neighbour
+
+            _, vert_order = ismember_rows(neighbours_order, np.array(initial_neighbours))
+
+            new_vert_order = np.vstack((vert_order, np.hstack((vert_order[1:], vert_order[0])))).T
+
+            return new_vert_order
+        except:
+            pass
 
     # If ordering based on neighbours failed or no neighbours were provided,
     # order the vertices based on their angular position relative to the centroid of the cell
@@ -267,43 +270,27 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
     # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
     # You can combine them into a single array like this:
     face_centres_vertices = np.column_stack([props['centroid-0'], props['centroid-1']])
+
     # TODO: CHECK IF THIS IS RIGHT
-    # for num_quartets in range(quartets.shape[0]):
-    #     # Get the face centres of the current quartet whose ids correspond to props['label']
-    #     quartets_ids = [np.where(props['label'] == i)[0][0] for i in quartets[num_quartets]]
-    #     current_centroids = face_centres_vertices[quartets_ids]
-    #
-    #     distance_between_centroids = squareform(pdist(current_centroids))
-    #     max_distance = np.max(distance_between_centroids)
-    #     row, col = np.where(distance_between_centroids == max_distance)
-    #
-    #     current_neighs = img_neighbours[quartets[num_quartets, col[0]] - 1]
-    #     current_neighs = current_neighs[current_neighs != quartets[num_quartets, row[0]]]
-    #     img_neighbours[quartets[num_quartets, col[0]] - 1] = current_neighs
-    #
-    #     current_neighs = img_neighbours[quartets[num_quartets, row[0]] - 1]
-    #     current_neighs = current_neighs[current_neighs != quartets[num_quartets, col[0]]]
-    #     img_neighbours[quartets[num_quartets, row[0]]] = current_neighs
+    for num_quartets in range(quartets.shape[0]):
+        # Get the face centres of the current quartet whose ids correspond to props['label']
+        quartets_ids = [np.where(props['label'] == i)[0][0] for i in quartets[num_quartets]]
+        current_centroids = face_centres_vertices[quartets_ids]
 
-    vertices_info = calculate_vertices(labelled_img, img_neighbours_all, ratio)
+        distance_between_centroids = squareform(pdist(current_centroids))
+        max_distance = np.max(distance_between_centroids)
+        row, col = np.where(distance_between_centroids == max_distance)
 
-    total_cells = np.max(border_cells_and_main_cells) + 1
-    vertices_info['PerCell'] = [None] * total_cells
-    vertices_info['edges'] = [None] * total_cells
+        current_neighs = img_neighbours[quartets[num_quartets, col[0]] - 1]
+        current_neighs = current_neighs[current_neighs != quartets[num_quartets, row[0]]]
+        img_neighbours[quartets[num_quartets, col[0]] - 1] = current_neighs
 
-    for idx, num_cell in enumerate(main_cells):
-        vertices_of_cell = np.where(np.any(np.isin(vertices_info['connectedCells'], num_cell), axis=1))[0]
-        vertices_info['PerCell'][idx] = vertices_of_cell
-        current_vertices = [vertices_info['location'][i] for i in vertices_of_cell]
-        current_connected_cells = [vertices_info['connectedCells'][i] for i in vertices_of_cell]
+        current_neighs = img_neighbours[quartets[num_quartets, row[0]] - 1]
+        current_neighs = current_neighs[current_neighs != quartets[num_quartets, col[0]]]
+        img_neighbours[quartets[num_quartets, row[0]]] = current_neighs
 
-        # Remove the current cell 'num_cell' from the connected cells
-        current_connected_cells = [np.delete(cell, np.where(cell == num_cell)) for cell in current_connected_cells]
-
-        vertices_info['edges'][idx] = vertices_of_cell[
-            boundary_of_cell(current_vertices, current_connected_cells)]
-        assert len(vertices_info['edges'][idx]) == len(
-            img_neighbours[num_cell - 1]), 'Error missing vertices of neighbours'
+    vertices_info = populate_vertices_info(border_cells_and_main_cells, img_neighbours, img_neighbours_all,
+                                           labelled_img, main_cells, ratio)
 
     neighbours_network = []
 
@@ -319,6 +306,29 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
     vertices_location = vertices_info['location']
 
     return triangles_connectivity, neighbours_network, cell_edges, vertices_location, border_cells, border_of_border_cells_and_main_cells
+
+
+def populate_vertices_info(border_cells_and_main_cells, img_neighbours, img_neighbours_all, labelled_img, main_cells,
+                           ratio):
+    vertices_info = calculate_vertices(labelled_img, img_neighbours_all, ratio)
+    total_cells = np.max(border_cells_and_main_cells) + 1
+    vertices_info['PerCell'] = [None] * total_cells
+    vertices_info['edges'] = [None] * total_cells
+    for idx, num_cell in enumerate(main_cells):
+        print(idx)
+        vertices_of_cell = np.where(np.any(np.isin(vertices_info['connectedCells'], num_cell), axis=1))[0]
+        vertices_info['PerCell'][idx] = vertices_of_cell
+        current_vertices = [vertices_info['location'][i] for i in vertices_of_cell]
+        current_connected_cells = [vertices_info['connectedCells'][i] for i in vertices_of_cell]
+
+        # Remove the current cell 'num_cell' from the connected cells
+        current_connected_cells = [np.delete(cell, np.where(cell == num_cell)) for cell in current_connected_cells]
+
+        vertices_info['edges'][idx] = vertices_of_cell[
+            boundary_of_cell(current_vertices, current_connected_cells)]
+        assert (len(vertices_info['edges'][idx]) ==
+                len(img_neighbours[num_cell - 1])), 'Error missing vertices of neighbours'
+    return vertices_info
 
 
 class VoronoiFromTimeImage(VertexModel):
