@@ -221,7 +221,7 @@ def boundary_of_cell(vertices_of_cell, neighbours=None):
     th_mean = np.arctan2(vector_for_ang_mean[:, 1], vector_for_ang_mean[:, 0])
     vert_order = np.argsort(th_mean)
 
-    new_vert_order = np.hstack((vert_order[1:], vert_order[0]))
+    new_vert_order = np.vstack((vert_order, np.hstack((vert_order[1:], vert_order[0])))).T
 
     return new_vert_order
 
