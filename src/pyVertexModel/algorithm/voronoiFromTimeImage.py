@@ -33,9 +33,7 @@ def create_tetrahedra(triangles_connectivity, neighbours_network, edges_of_verti
     twg = []
 
     # Relationships: 1 ghost node, three cell nodes
-    twg_vertices = np.hstack([triangles_connectivity, x_vertices_ids[:, None]])
-    twg_faces = []
-    twg = np.vstack([twg_vertices, twg_faces])
+    twg = np.hstack([triangles_connectivity, x_vertices_ids[:, None]])
 
     # Relationships: 1 cell node and 3 ghost nodes
     new_additions = []
