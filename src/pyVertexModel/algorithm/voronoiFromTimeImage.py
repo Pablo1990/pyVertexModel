@@ -55,8 +55,8 @@ def build_quartets_of_neighs_2d(neighbours):
             intercept_cells = [None] * len(neigh_cell)
 
             for cell_j in range(len(neigh_cell)):
-                if neighbours[neigh_cell[cell_j] - 1] is not None and neigh_cell is not None:
-                    common_cells = list(set(neigh_cell).intersection(neighbours[neigh_cell[cell_j] - 1]))
+                if neighbours[neigh_cell[cell_j]] is not None and neigh_cell is not None:
+                    common_cells = list(set(neigh_cell).intersection(neighbours[neigh_cell[cell_j]]))
                     if len(common_cells) > 2:
                         intercept_cells[cell_j] = common_cells + [neigh_cell[cell_j], n_cell]
 
@@ -264,6 +264,7 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
         if i + 1 in border_of_border_cells_and_main_cells:
             img_neighbours_all[i] = neighbours
 
+    img_neighbours_all.insert(0, None)
     quartets, _ = get_four_fold_vertices(img_neighbours_all)
     props = regionprops_table(labelled_img, properties=('centroid', 'label',))
 
@@ -271,23 +272,28 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
     # You can combine them into a single array like this:
     face_centres_vertices = np.column_stack([props['centroid-0'], props['centroid-1']])
 
-    # TODO: CHECK IF THIS IS RIGHT
+    # Loop through the quartets and split them into two pairs of cells
     for num_quartets in range(quartets.shape[0]):
         # Get the face centres of the current quartet whose ids correspond to props['label']
         quartets_ids = [np.where(props['label'] == i)[0][0] for i in quartets[num_quartets]]
-        current_centroids = face_centres_vertices[quartets_ids]
+        current_centroids = face_centres_vertices[quartets_ids, :]
 
+        # Get the distance between the centroids of the current quartet
         distance_between_centroids = squareform(pdist(current_centroids))
+
+        # Get the maximum distance between the centroids
         max_distance = np.max(distance_between_centroids)
         row, col = np.where(distance_between_centroids == max_distance)
 
-        current_neighs = img_neighbours[quartets[num_quartets, col[0]] - 1]
-        current_neighs = current_neighs[current_neighs != quartets[num_quartets, row[0]]]
-        img_neighbours[quartets[num_quartets, col[0]] - 1] = current_neighs
+        # Split the quartet into two pairs of cells
 
-        current_neighs = img_neighbours[quartets[num_quartets, row[0]] - 1]
-        current_neighs = current_neighs[current_neighs != quartets[num_quartets, col[0]]]
-        img_neighbours[quartets[num_quartets, row[0]]] = current_neighs
+        current_neighs = img_neighbours_all[quartets[num_quartets][col[0]]]
+        current_neighs = current_neighs[current_neighs != quartets[num_quartets][row[0]]]
+        img_neighbours_all[quartets[num_quartets][col[0]]] = current_neighs
+
+        current_neighs = img_neighbours_all[quartets[num_quartets][row[0]]]
+        current_neighs = current_neighs[current_neighs != quartets[num_quartets][col[0]]]
+        img_neighbours_all[quartets[num_quartets][row[0]]] = current_neighs
 
     vertices_info = populate_vertices_info(border_cells_and_main_cells, img_neighbours, img_neighbours_all,
                                            labelled_img, main_cells, ratio)
