@@ -494,6 +494,7 @@ class VoronoiFromTimeImage(VertexModel):
             neighbours_top = allCellIds[np.isin(allCellIds, Twg_cCell_top)]
 
             neighboursMissing[numCell] = np.setxor1d(neighbours_bottom, neighbours_top)
+            neighboursMissing[numCell] = np.intersect1d(neighboursMissing[numCell], xInternal)
             for missingCell in neighboursMissing[numCell]:
                 tetsToAdd = allCellIds[
                     np.isin(allCellIds, Twg_cCell[np.any(np.isin(Twg_cCell, missingCell), axis=1), :])]
