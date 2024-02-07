@@ -254,17 +254,14 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
 
     border_of_border_cells_and_main_cells = np.unique(
         np.concatenate([img_neighbours[i - 1] for i in border_cells_and_main_cells]))
-
-    import matplotlib.pyplot as plt
-    plt.imshow(labelled_img[0, :, :])
-    plt.show()
     labelled_img[~np.isin(labelled_img, border_of_border_cells_and_main_cells)] = 0
-    import matplotlib.pyplot as plt
-    plt.imshow(labelled_img[0, :, :])
-    plt.show()
-    img_neighbours = calculate_neighbours(labelled_img, ratio)
 
-    quartets, _ = get_four_fold_vertices(img_neighbours)
+    img_neighbours_all = [None] * len(img_neighbours)
+    for i, neighbours in enumerate(img_neighbours):
+        if i + 1 in border_of_border_cells_and_main_cells:
+            img_neighbours_all[i] = neighbours
+
+    quartets, _ = get_four_fold_vertices(img_neighbours_all)
     props = regionprops_table(labelled_img, properties=('centroid', 'label',))
 
     # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
@@ -288,7 +285,7 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
     #     current_neighs = current_neighs[current_neighs != quartets[num_quartets, col[0]]]
     #     img_neighbours[quartets[num_quartets, row[0]]] = current_neighs
 
-    vertices_info = calculate_vertices(labelled_img, img_neighbours, ratio)
+    vertices_info = calculate_vertices(labelled_img, img_neighbours_all, ratio)
 
     total_cells = np.max(border_cells_and_main_cells) + 1
     vertices_info['PerCell'] = [None] * total_cells
@@ -509,7 +506,12 @@ class VoronoiFromTimeImage(VertexModel):
         # Load the tif file from resources if exists
         if (os.path.exists("src/pyVertexModel/resources/LblImg_imageSequence.xz") or
                 os.path.exists("resources/LblImg_imageSequence.xz")):
-            imgStackLabelled = pickle.load(lzma.open("src/pyVertexModel/resources/LblImg_imageSequence.xz", "rb"))
+
+            if os.path.exists("src/pyVertexModel/resources/LblImg_imageSequence.xz"):
+                imgStackLabelled = pickle.load(lzma.open("src/pyVertexModel/resources/LblImg_imageSequence.xz", "rb"))
+            else:
+                imgStackLabelled = pickle.load(lzma.open("resources/LblImg_imageSequence.xz", "rb"))
+
             imgStackLabelled = imgStackLabelled['imgStackLabelled']
             img2DLabelled = imgStackLabelled[0, :, :]
         else:
