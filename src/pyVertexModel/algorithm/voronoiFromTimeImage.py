@@ -291,18 +291,18 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
     vertices_info['PerCell'] = [None] * total_cells
     vertices_info['edges'] = [None] * total_cells
 
-    for num_cell in main_cells:
+    for idx, num_cell in enumerate(main_cells):
         vertices_of_cell = np.where(np.any(np.isin(vertices_info['connectedCells'], num_cell), axis=1))[0]
-        vertices_info['PerCell'][num_cell] = vertices_of_cell
+        vertices_info['PerCell'][idx] = vertices_of_cell
         current_vertices = [vertices_info['location'][i] for i in vertices_of_cell]
         current_connected_cells = [vertices_info['connectedCells'][i] for i in vertices_of_cell]
 
         # Remove the current cell 'num_cell' from the connected cells
         current_connected_cells = [np.delete(cell, np.where(cell == num_cell)) for cell in current_connected_cells]
 
-        vertices_info['edges'][num_cell] = vertices_of_cell[
+        vertices_info['edges'][idx] = vertices_of_cell[
             boundary_of_cell(current_vertices, current_connected_cells)]
-        assert len(vertices_info['edges'][num_cell]) == len(
+        assert len(vertices_info['edges'][idx]) == len(
             img_neighbours[num_cell - 1]), 'Error missing vertices of neighbours'
 
     neighbours_network = []
