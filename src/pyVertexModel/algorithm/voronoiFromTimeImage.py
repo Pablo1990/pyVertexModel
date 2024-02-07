@@ -321,7 +321,6 @@ def populate_vertices_info(border_cells_and_main_cells, img_neighbours_all, labe
     vertices_info['PerCell'] = [None] * total_cells
     vertices_info['edges'] = [None] * total_cells
     for idx, num_cell in enumerate(main_cells):
-        print(idx)
         vertices_of_cell = np.where(np.any(np.isin(vertices_info['connectedCells'], num_cell), axis=1))[0]
         vertices_info['PerCell'][idx] = vertices_of_cell
         current_vertices = [vertices_info['location'][i] for i in vertices_of_cell]
@@ -493,7 +492,7 @@ class VoronoiFromTimeImage(VertexModel):
         for c in range(self.geo.nCells):
             for f in range(len(self.geo.Cells[c].Faces)):
                 Face = self.set.Cells[c].Faces[f]
-                self.set.BarrierTri0 = min([tri.Area for tri in self.geo.Cells[c].Faces[f].Tris] + [Set.BarrierTri0])
+                self.set.BarrierTri0 = min([tri.Area for tri in self.geo.Cells[c].Faces[f].Tris] + [self.set.BarrierTri0])
                 lmin_values.append(min(tri.LengthsToCentre))
                 lmin_values.append(tri.EdgeLength)
                 for nTris in range(len(self.geo.Cells[c].Faces[f].Tris)):
