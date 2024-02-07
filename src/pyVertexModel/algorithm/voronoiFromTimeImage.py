@@ -470,10 +470,11 @@ class VoronoiFromTimeImage(VertexModel):
 
             Twg.append(Twg_numPlane)
 
+        Twg = np.vstack(Twg)
+
         # Fill Geo info
         self.geo.nCells = len(xInternal)
-        self.geo.XgLateral = np.setdiff1d(np.arange(1, np.max(np.concatenate(borderOfborderCellsAndMainCells)) + 1),
-                                          xInternal)
+        self.geo.XgLateral = np.setdiff1d(all_main_cells, xInternal)
         self.geo.XgID = np.setdiff1d(np.arange(1, X.shape[0] + 1), xInternal)
 
         # Define border cells
@@ -484,7 +485,7 @@ class VoronoiFromTimeImage(VertexModel):
         allCellIds = np.concatenate([xInternal, self.geo.XgLateral])
         neighboursMissing = {}
         for numCell in xInternal:
-            Twg_cCell = Twg[np.any(np.isin(Twg, numCell), axis=1), :]
+            Twg_cCell = Twg[np.any(np.isin(Twg, numCell), axis=1)]
 
             Twg_cCell_bottom = Twg_cCell[np.any(np.isin(Twg_cCell, self.geo.XgBottom), axis=1), :]
             neighbours_bottom = allCellIds[np.isin(allCellIds, Twg_cCell_bottom)]
@@ -497,7 +498,7 @@ class VoronoiFromTimeImage(VertexModel):
                 tetsToAdd = allCellIds[
                     np.isin(allCellIds, Twg_cCell[np.any(np.isin(Twg_cCell, missingCell), axis=1), :])]
                 assert len(tetsToAdd) == 4, f'Missing 4-fold at Cell {numCell}'
-                if not np.any(np.all(np.sort(tetsToAdd, axis=1) == Twg, axis=1)):
+                if not np.any(np.all(np.sort(tetsToAdd) == Twg, axis=1)):
                     Twg = np.vstack((Twg, tetsToAdd))
 
         # After removing ghost tetrahedras, some nodes become disconnected,
