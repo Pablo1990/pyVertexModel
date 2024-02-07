@@ -99,13 +99,13 @@ def build_triplets_of_neighs(neighbours):
         if neigh_i is not None:
             for j in neigh_i:
                 if j > i:
-                    neigh_j = neighbours[j - 1]
+                    neigh_j = neighbours[j]
                     if neigh_j is not None:
                         for k in neigh_j:
-                            if k > j and neighbours[k - 1] is not None:
-                                common_cell = {i + 1}.intersection(neigh_j, neighbours[k - 1])
+                            if k > j and neighbours[k] is not None:
+                                common_cell = {i}.intersection(neigh_j, neighbours[k])
                                 if common_cell:
-                                    triangle_seed = sorted([i + 1, j, k])
+                                    triangle_seed = sorted([i, j, k])
                                     triplets_of_neighs.append(triangle_seed)
 
     if len(triplets_of_neighs) > 0:
@@ -295,13 +295,13 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
         current_neighs = current_neighs[current_neighs != quartets[num_quartets][col[0]]]
         img_neighbours_all[quartets[num_quartets][row[0]]] = current_neighs
 
-    vertices_info = populate_vertices_info(border_cells_and_main_cells, img_neighbours, img_neighbours_all,
+    vertices_info = populate_vertices_info(border_cells_and_main_cells, img_neighbours_all,
                                            labelled_img, main_cells, ratio)
 
     neighbours_network = []
 
     for num_cell in main_cells:
-        current_neighbours = np.array(img_neighbours[num_cell - 1])
+        current_neighbours = np.array(img_neighbours_all[num_cell])
         current_cell_neighbours = np.vstack(
             [np.ones(len(current_neighbours), dtype=int) * num_cell, current_neighbours]).T
 
@@ -314,7 +314,7 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
     return triangles_connectivity, neighbours_network, cell_edges, vertices_location, border_cells, border_of_border_cells_and_main_cells
 
 
-def populate_vertices_info(border_cells_and_main_cells, img_neighbours, img_neighbours_all, labelled_img, main_cells,
+def populate_vertices_info(border_cells_and_main_cells, img_neighbours_all, labelled_img, main_cells,
                            ratio):
     vertices_info = calculate_vertices(labelled_img, img_neighbours_all, ratio)
     total_cells = np.max(border_cells_and_main_cells) + 1
@@ -333,7 +333,7 @@ def populate_vertices_info(border_cells_and_main_cells, img_neighbours, img_neig
         vertices_info['edges'][idx] = vertices_of_cell[
             boundary_of_cell(current_vertices, current_connected_cells)]
         assert (len(vertices_info['edges'][idx]) ==
-                len(img_neighbours[num_cell - 1])), 'Error missing vertices of neighbours'
+                len(img_neighbours_all[num_cell])), 'Error missing vertices of neighbours'
     return vertices_info
 
 
