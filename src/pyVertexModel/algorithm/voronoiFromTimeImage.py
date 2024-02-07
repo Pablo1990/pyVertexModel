@@ -254,7 +254,14 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
 
     border_of_border_cells_and_main_cells = np.unique(
         np.concatenate([img_neighbours[i - 1] for i in border_cells_and_main_cells]))
+
+    import matplotlib.pyplot as plt
+    plt.imshow(labelled_img[0, :, :])
+    plt.show()
     labelled_img[~np.isin(labelled_img, border_of_border_cells_and_main_cells)] = 0
+    import matplotlib.pyplot as plt
+    plt.imshow(labelled_img[0, :, :])
+    plt.show()
     img_neighbours = calculate_neighbours(labelled_img, ratio)
 
     quartets, _ = get_four_fold_vertices(img_neighbours)
@@ -453,61 +460,64 @@ class VoronoiFromTimeImage(VertexModel):
         self.geo.build_cells(self.set, X, Twg)  # Please define the BuildCells function
 
         # Define upper and lower area threshold for remodelling
-        allFaces = np.concatenate([Geo.Cells.Faces for c in range(Geo.nCells)])
+        allFaces = np.concatenate([self.geo.Cells.Faces for c in range(self.geo.nCells)])
         allTris = np.concatenate([face.Tris for face in allFaces])
         avgArea = np.mean([tri.Area for tri in allTris])
         stdArea = np.std([tri.Area for tri in allTris])
-        Set.upperAreaThreshold = avgArea + stdArea
-        Set.lowerAreaThreshold = avgArea - stdArea
+        self.set.upperAreaThreshold = avgArea + stdArea
+        self.set.lowerAreaThreshold = avgArea - stdArea
 
         # Geo.AssembleNodes = find(cellfun(@isempty, {Geo.Cells.AliveStatus})==0)
-        self.geo.AssembleNodes = [idx for idx, cell in enumerate(Geo.Cells) if cell.AliveStatus]
+        self.geo.AssembleNodes = [idx for idx, cell in enumerate(self.geo.Cells) if cell.AliveStatus]
 
         # Define BarrierTri0
-        Set.BarrierTri0 = np.finfo(float).max
-        Set.lmin0 = np.finfo(float).max
+        self.set.BarrierTri0 = np.finfo(float).max
+        self.set.lmin0 = np.finfo(float).max
         edgeLengths_Top = []
         edgeLengths_Bottom = []
         edgeLengths_Lateral = []
         lmin_values = []
-        for c in range(Geo.nCells):
-            for f in range(len(Geo.Cells[c].Faces)):
-                Face = Geo.Cells[c].Faces[f]
-                Set.BarrierTri0 = min([tri.Area for tri in Geo.Cells[c].Faces[f].Tris] + [Set.BarrierTri0])
+        for c in range(self.geo.nCells):
+            for f in range(len(self.geo.Cells[c].Faces)):
+                Face = self.set.Cells[c].Faces[f]
+                self.set.BarrierTri0 = min([tri.Area for tri in self.geo.Cells[c].Faces[f].Tris] + [Set.BarrierTri0])
                 lmin_values.append(min(tri.LengthsToCentre))
                 lmin_values.append(tri.EdgeLength)
-                for nTris in range(len(Geo.Cells[c].Faces[f].Tris)):
-                    tri = Geo.Cells[c].Faces[f].Tris[nTris]
+                for nTris in range(len(self.geo.Cells[c].Faces[f].Tris)):
+                    tri = self.geo.Cells[c].Faces[f].Tris[nTris]
                     if tri.Location == 'Top':
-                        edgeLengths_Top.append(tri.Edge.compute_edge_length(Geo.Cells[c].Y))
+                        edgeLengths_Top.append(tri.Edge.compute_edge_length(self.geo.Cells[c].Y))
                     elif tri.Location == 'Bottom':
-                        edgeLengths_Bottom.append(tri.Edge.compute_edge_length(Geo.Cells[c].Y))
+                        edgeLengths_Bottom.append(tri.Edge.compute_edge_length(self.geo.Cells[c].Y))
                     else:
-                        edgeLengths_Lateral.append(tri.Edge.compute_edge_length(Geo.Cells[c].Y))
+                        edgeLengths_Lateral.append(tri.Edge.compute_edge_length(self.geo.Cells[c].Y))
 
         self.set.lmin0 = min(lmin_values)
 
         self.geo.AvgEdgeLength_Top = np.mean(edgeLengths_Top)
         self.geo.AvgEdgeLength_Bottom = np.mean(edgeLengths_Bottom)
         self.geo.AvgEdgeLength_Lateral = np.mean(edgeLengths_Lateral)
-        self.set.BarrierTri0 = Set.BarrierTri0 / 5
-        self.set.lmin0 = Set.lmin0 * 10
+        self.set.BarrierTri0 = self.set.BarrierTri0 / 5
+        self.set.lmin0 = self.set.lmin0 * 10
 
         self.geo.RemovedDebrisCells = []
 
-        minZs = np.min([cell.Y for cell in Geo.Cells])
+        minZs = np.min([cell.Y for cell in self.geo.Cells])
         self.geo.CellHeightOriginal = np.abs(minZs[2])
 
     def process_image(self):
         # Load the tif file from resources if exists
-        if os.path.exists("src/pyVertexModel/resources/LblImg_imageSequence.xz"):
+        if (os.path.exists("src/pyVertexModel/resources/LblImg_imageSequence.xz") or
+                os.path.exists("resources/LblImg_imageSequence.xz")):
             imgStackLabelled = pickle.load(lzma.open("src/pyVertexModel/resources/LblImg_imageSequence.xz", "rb"))
             imgStackLabelled = imgStackLabelled['imgStackLabelled']
             img2DLabelled = imgStackLabelled[0, :, :]
         else:
             if os.path.exists("src/pyVertexModel/resources/LblImg_imageSequence.tif"):
                 imgStackLabelled = io.imread("src/pyVertexModel/resources/LblImg_imageSequence.tif")
+                os_linux = False
             elif os.path.exists("resources/LblImg_imageSequence.tif"):
+                os_linux = True
                 imgStackLabelled = io.imread("resources/LblImg_imageSequence.tif")
 
             # Reordering cells based on the centre of the image
@@ -538,6 +548,10 @@ class VoronoiFromTimeImage(VertexModel):
             plt.imshow(imgStackLabelled[0, :, :])
             plt.show()
 
-            save_variables({'imgStackLabelled': imgStackLabelled},
-                           'src/pyVertexModel/resources/LblImg_imageSequence.xz')
+            if os_linux:
+                save_variables({'imgStackLabelled': imgStackLabelled},
+                               'resources/LblImg_imageSequence.xz')
+            else:
+                save_variables({'imgStackLabelled': imgStackLabelled},
+                               'src/pyVertexModel/resources/LblImg_imageSequence.xz')
         return img2DLabelled, imgStackLabelled
