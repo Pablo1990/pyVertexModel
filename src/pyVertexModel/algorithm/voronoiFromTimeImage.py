@@ -15,6 +15,58 @@ from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.util.utils import ismember_rows, save_variables
 
 
+def create_tetrahedra(triangles_connectivity, neighbours_network, edges_of_vertices, x_internal, x_face_ids,
+                      x_vertices_ids, x):
+    """
+    Add connections between real nodes and ghost cells to create tetrahedra.
+
+    :param triangles_connectivity: A 2D array where each row represents a triangle connectivity.
+    :param neighbours_network: A 2D array where each row represents a pair of neighboring nodes.
+    :param edges_of_vertices: A list of lists where each sublist represents the edges of a vertex.
+    :param x_internal: A 1D array representing the internal nodes.
+    :param x_face_ids: A 1D array representing the face ids.
+    :param x_vertices_ids: A 1D array representing the vertices ids.
+    :param x: A 2D array representing the nodes.
+    :return: A 2D array representing the tetrahedra.
+    """
+    x_ids = np.concatenate([x_face_ids, x_vertices_ids])
+    twg = []
+
+    # Relationships: 1 ghost node, three cell nodes
+    twg_vertices = np.hstack([triangles_connectivity, x_vertices_ids[:, None]])
+    twg_faces = []
+    twg = np.vstack([twg_vertices, twg_faces])
+
+    # Relationships: 1 cell node and 3 ghost nodes
+    new_additions = []
+    for num_cell in x_internal:
+        face_id = x_face_ids[num_cell]
+        vertices_to_connect = edges_of_vertices[num_cell]
+        new_additions.extend(np.hstack([np.full((len(vertices_to_connect), 1), [num_cell, face_id]),
+                                        x_vertices_ids[vertices_to_connect][:, None]]))
+    twg = np.vstack([twg, new_additions])
+
+    # Relationships: 2 ghost nodes, two cell nodes
+    twg_sorted = np.sort(twg[np.any(np.isin(twg, x_ids), axis=1)], axis=1)
+    internal_neighbour_network = neighbours_network[np.any(np.isin(neighbours_network, x_internal), axis=1)]
+    internal_neighbour_network = np.unique(np.sort(internal_neighbour_network, axis=1), axis=0)
+
+    new_additions = []
+    for num_pair in range(internal_neighbour_network.shape[0]):
+        found = np.isin(twg_sorted, internal_neighbour_network[num_pair])
+        new_connections = np.unique(twg_sorted[np.sum(found, axis=1) == 2, 3])
+        if len(new_connections) > 1:
+            new_connections_pairs = np.array(list(combinations(new_connections, 2)))
+            new_additions.extend(np.hstack(
+                [np.full((new_connections_pairs.shape[0], 1), internal_neighbour_network[num_pair]),
+                 new_connections_pairs]))
+        else:
+            raise ValueError('Error while creating the connections and initial topology')
+    twg = np.vstack([twg, new_additions])
+
+    return twg
+
+
 def calculate_neighbours(labelled_img, ratio_strel):
     """
     Calculate the neighbours of each cell
@@ -380,9 +432,10 @@ class VoronoiFromTimeImage(VertexModel):
 
         # Select nodes from images
         img3DProperties = regionprops(imgStackLabelled)
-        X = np.zeros((len(img3DProperties.Centroid), 3))
-        X[:, 0:2] = img3DProperties.Centroid[np.concatenate(borderOfborderCellsAndMainCells)].astype(int)
-        X[:, 2] = np.zeros(len(img3DProperties.Centroid))
+        all_main_cells = np.unique(
+            np.concatenate([borderOfborderCellsAndMainCells[numPlane] for numPlane in selectedPlanes]))
+        X = np.vstack([prop.centroid for prop in img3DProperties if prop.label in all_main_cells])
+        X[:, 2] = 0
 
         # Using the centroids and vertices of the cells of each 2D image as ghost nodes
         bottomPlane = 1
@@ -396,8 +449,8 @@ class VoronoiFromTimeImage(VertexModel):
         Twg = []
         for idPlane, numPlane in enumerate(selectedPlanes):
             img2DLabelled = imgStackLabelled[:, :, numPlane - 1]
-            centroids = regionprops(img2DLabelled, 'Centroid')
-            centroids = np.round(np.vstack([c.Centroid for c in centroids])).astype(int)
+            props = regionprops_table(img2DLabelled, properties=('centroid', 'label',))
+            centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
             Xg_faceCentres2D = np.hstack((centroids, np.tile(zCoordinate[idPlane], (len(centroids), 1))))
             Xg_vertices2D = np.hstack((np.fliplr(verticesOfCell_pos[numPlane]),
                                        np.tile(zCoordinate[idPlane], (len(verticesOfCell_pos[numPlane]), 1))))
@@ -415,8 +468,8 @@ class VoronoiFromTimeImage(VertexModel):
                 self.geo.XgTop = Xg_ids
 
             # Create tetrahedra
-            Twg_numPlane = self.CreateTetrahedra(trianglesConnectivity[numPlane], neighboursNetwork[numPlane],
-                                                 cellEdges[numPlane], xInternal, Xg_faceIds, Xg_verticesIds, X)
+            Twg_numPlane = create_tetrahedra(trianglesConnectivity[numPlane], neighboursNetwork[numPlane],
+                                             cellEdges[numPlane], xInternal, Xg_faceIds, Xg_verticesIds, X)
 
             Twg.append(Twg_numPlane)
 
@@ -492,7 +545,8 @@ class VoronoiFromTimeImage(VertexModel):
         for c in range(self.geo.nCells):
             for f in range(len(self.geo.Cells[c].Faces)):
                 Face = self.set.Cells[c].Faces[f]
-                self.set.BarrierTri0 = min([tri.Area for tri in self.geo.Cells[c].Faces[f].Tris] + [self.set.BarrierTri0])
+                self.set.BarrierTri0 = min(
+                    [tri.Area for tri in self.geo.Cells[c].Faces[f].Tris] + [self.set.BarrierTri0])
                 lmin_values.append(min(tri.LengthsToCentre))
                 lmin_values.append(tri.EdgeLength)
                 for nTris in range(len(self.geo.Cells[c].Faces[f].Tris)):
@@ -542,7 +596,6 @@ class VoronoiFromTimeImage(VertexModel):
             props = regionprops_table(img2DLabelled, properties=('centroid', 'label',))
 
             # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
-            # You can combine them into a single array like this:
             centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
             centre_of_image = np.array([img2DLabelled.shape[0] / 2, img2DLabelled.shape[1] / 2])
 
