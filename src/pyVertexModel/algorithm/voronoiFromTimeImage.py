@@ -38,15 +38,15 @@ def create_tetrahedra(triangles_connectivity, neighbours_network, edges_of_verti
     # Relationships: 1 cell node and 3 ghost nodes
     new_additions = []
     for num_cell in x_internal:
-        face_id = x_face_ids[num_cell]
-        vertices_to_connect = edges_of_vertices[num_cell]
-        new_additions.extend(np.hstack([np.full((len(vertices_to_connect), 1), [num_cell, face_id]),
-                                        x_vertices_ids[vertices_to_connect][:, None]]))
+        face_id = x_face_ids[num_cell - 1]
+        vertices_to_connect = edges_of_vertices[num_cell - 1]
+        new_additions.extend(np.hstack([np.repeat(np.array([[num_cell, face_id]]), len(vertices_to_connect), axis=0),
+                                        x_vertices_ids[vertices_to_connect]]))
     twg = np.vstack([twg, new_additions])
 
     # Relationships: 2 ghost nodes, two cell nodes
     twg_sorted = np.sort(twg[np.any(np.isin(twg, x_ids), axis=1)], axis=1)
-    internal_neighbour_network = neighbours_network[np.any(np.isin(neighbours_network, x_internal), axis=1)]
+    internal_neighbour_network = [neighbour for neighbour in neighbours_network if np.any(np.isin(neighbour, x_internal))]
     internal_neighbour_network = np.unique(np.sort(internal_neighbour_network, axis=1), axis=0)
 
     new_additions = []
@@ -55,9 +55,8 @@ def create_tetrahedra(triangles_connectivity, neighbours_network, edges_of_verti
         new_connections = np.unique(twg_sorted[np.sum(found, axis=1) == 2, 3])
         if len(new_connections) > 1:
             new_connections_pairs = np.array(list(combinations(new_connections, 2)))
-            new_additions.extend(np.hstack(
-                [np.full((new_connections_pairs.shape[0], 1), internal_neighbour_network[num_pair]),
-                 new_connections_pairs]))
+            new_additions.extend([np.hstack([internal_neighbour_network[num_pair], new_connections_pair])
+                                  for new_connections_pair in new_connections_pairs])
         else:
             raise ValueError('Error while creating the connections and initial topology')
     twg = np.vstack([twg, new_additions])
@@ -446,7 +445,7 @@ class VoronoiFromTimeImage(VertexModel):
 
         Twg = []
         for idPlane, numPlane in enumerate(selectedPlanes):
-            img2DLabelled = imgStackLabelled[:, :, numPlane - 1]
+            img2DLabelled = imgStackLabelled[numPlane, :, :]
             props = regionprops_table(img2DLabelled, properties=('centroid', 'label',))
             centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
             Xg_faceCentres2D = np.hstack((centroids, np.tile(zCoordinate[idPlane], (len(centroids), 1))))
