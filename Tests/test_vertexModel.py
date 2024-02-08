@@ -9,7 +9,7 @@ from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.algorithm.vertexModelBubbles import build_topo, SeedWithBoundingBox, generate_first_ghost_nodes, \
     delaunay_compute_entities
 from src.pyVertexModel.algorithm.voronoiFromTimeImage import build_triplets_of_neighs, calculate_neighbours, \
-    VoronoiFromTimeImage, create_tetrahedra
+    VoronoiFromTimeImage, create_tetrahedra, add_tetrahedral_intercalations
 from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 
 
@@ -265,7 +265,7 @@ class TestVertexModel(Tests):
         Twg_test, X_test = vModel_test.obtain_initial_x_and_tetrahedra("/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/src/pyVertexModel/resources/LblImg_imageSequence.tif")
 
         # Check if the test and expected are the same
-        assert_matrix(Twg_test, mat_info_expected['Twg'] - 1)
+        assert_matrix(Twg_test, mat_info_expected['Twg'])
         assert_matrix(X_test, mat_info_expected['X'])
 
     def test_create_tetrahedra(self):
@@ -294,6 +294,29 @@ class TestVertexModel(Tests):
 
         # Check if the test and expected are the same
         assert_matrix(Twg_test, mat_info['Twg'])
+
+    def test_add_tetrahedra_intercalations(self):
+        """
+        Test the add_tetrahedra_from_intercalations function.
+        :return:
+        """
+        # Load data
+        geo_test, set_test, mat_info = load_data('add_tetrahedra_from_intercalations_wingdisc.mat')
+        Twg = mat_info['Twg']
+        xInternal = mat_info['xInternal']
+        xInternal = [xInternal[i][0] for i in range(len(xInternal))]
+        XgBottom = geo_test.XgBottom
+        XgTop = geo_test.XgTop
+        XgLateral = geo_test.XgLateral
+
+        # Load expected
+        _, _, mat_info_expected = load_data('add_tetrahedra_from_intercalations_wingdisc_expected.mat')
+
+        # Test if initialize geometry function does not change anything
+        Twg = add_tetrahedral_intercalations(Twg, xInternal, XgBottom, XgTop, XgLateral)
+
+        # Check if the test and expected are the same
+        assert_matrix(Twg, mat_info_expected['Twg'])
 
 
 

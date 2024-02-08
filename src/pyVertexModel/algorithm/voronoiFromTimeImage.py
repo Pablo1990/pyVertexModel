@@ -437,6 +437,29 @@ def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence
     return img2DLabelled, imgStackLabelled
 
 
+def add_tetrahedral_intercalations(Twg, xInternal, XgBottom, XgTop, XgLateral):
+    allCellIds = np.concatenate([xInternal, XgLateral])
+    neighboursMissing = {}
+    for numCell in xInternal:
+        Twg_cCell = Twg[np.any(np.isin(Twg, numCell), axis=1)]
+
+        Twg_cCell_bottom = Twg_cCell[np.any(np.isin(Twg_cCell, XgBottom), axis=1), :]
+        neighbours_bottom = allCellIds[np.isin(allCellIds, Twg_cCell_bottom)]
+
+        Twg_cCell_top = Twg_cCell[np.any(np.isin(Twg_cCell, XgTop), axis=1), :]
+        neighbours_top = allCellIds[np.isin(allCellIds, Twg_cCell_top)]
+
+        neighboursMissing[numCell] = np.setxor1d(neighbours_bottom, neighbours_top)
+        neighboursMissing[numCell] = np.intersect1d(neighboursMissing[numCell], xInternal)
+        for missingCell in neighboursMissing[numCell]:
+            tetsToAdd = allCellIds[
+                np.isin(allCellIds, Twg_cCell[np.any(np.isin(Twg_cCell, missingCell), axis=1), :])]
+            assert len(tetsToAdd) == 4, f'Missing 4-fold at Cell {numCell}'
+            if not np.any(np.all(np.sort(tetsToAdd) == Twg, axis=1)):
+                Twg = np.vstack((Twg, tetsToAdd))
+    return Twg
+
+
 class VoronoiFromTimeImage(VertexModel):
     def __init__(self, set_test=None):
         super().__init__(set_test)
@@ -570,7 +593,9 @@ class VoronoiFromTimeImage(VertexModel):
                                              cellEdges[numPlane], xInternal, Xg_faceIds, Xg_verticesIds, X)
 
             Twg.append(Twg_numPlane)
+
         Twg = np.vstack(Twg)
+
         # Fill Geo info
         self.geo.nCells = len(xInternal)
         self.geo.XgLateral = np.setdiff1d(all_main_cells, xInternal)
@@ -578,8 +603,10 @@ class VoronoiFromTimeImage(VertexModel):
         # Define border cells
         self.geo.BorderCells = np.unique(np.concatenate([borderCells[numPlane] for numPlane in selectedPlanes]))
         self.geo.BorderGhostNodes = self.geo.XgLateral
+
         # Create new tetrahedra based on intercalations
-        Twg = self.add_tetrahedra_interacalations(Twg, xInternal)
+        Twg = add_tetrahedral_intercalations(Twg, xInternal, self.geo.XgBottom, self.geo.XgTop, self.geo.XgLateral)
+
         # After removing ghost tetrahedras, some nodes become disconnected,
         # that is, not a part of any tetrahedra. Therefore, they should be
         # removed from X
@@ -602,25 +629,3 @@ class VoronoiFromTimeImage(VertexModel):
         self.geo.XgID = newIds[np.isin(oldIds, self.geo.XgID)]
         self.geo.BorderGhostNodes = self.geo.XgLateral
         return Twg, X
-
-    def add_tetrahedra_interacalations(self, Twg, xInternal):
-        allCellIds = np.concatenate([xInternal, self.geo.XgLateral])
-        neighboursMissing = {}
-        for numCell in xInternal:
-            Twg_cCell = Twg[np.any(np.isin(Twg, numCell), axis=1)]
-
-            Twg_cCell_bottom = Twg_cCell[np.any(np.isin(Twg_cCell, self.geo.XgBottom), axis=1), :]
-            neighbours_bottom = allCellIds[np.isin(allCellIds, Twg_cCell_bottom)]
-
-            Twg_cCell_top = Twg_cCell[np.any(np.isin(Twg_cCell, self.geo.XgTop), axis=1), :]
-            neighbours_top = allCellIds[np.isin(allCellIds, Twg_cCell_top)]
-
-            neighboursMissing[numCell] = np.setxor1d(neighbours_bottom, neighbours_top)
-            neighboursMissing[numCell] = np.intersect1d(neighboursMissing[numCell], xInternal)
-            for missingCell in neighboursMissing[numCell]:
-                tetsToAdd = allCellIds[
-                    np.isin(allCellIds, Twg_cCell[np.any(np.isin(Twg_cCell, missingCell), axis=1), :])]
-                assert len(tetsToAdd) == 4, f'Missing 4-fold at Cell {numCell}'
-                if not np.any(np.all(np.sort(tetsToAdd) == Twg, axis=1)):
-                    Twg = np.vstack((Twg, tetsToAdd))
-        return Twg
