@@ -9,7 +9,7 @@ from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.algorithm.vertexModelBubbles import build_topo, SeedWithBoundingBox, generate_first_ghost_nodes, \
     delaunay_compute_entities
 from src.pyVertexModel.algorithm.voronoiFromTimeImage import build_triplets_of_neighs, calculate_neighbours, \
-    VoronoiFromTimeImage, create_tetrahedra, add_tetrahedral_intercalations
+    VoronoiFromTimeImage, create_tetrahedra, add_tetrahedral_intercalations, build_2d_voronoi_from_image
 from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 
 
@@ -317,6 +317,33 @@ class TestVertexModel(Tests):
 
         # Check if the test and expected are the same
         assert_matrix(Twg, mat_info_expected['Twg'])
+
+    def test_build_2d_voronoi_from_image(self):
+        """
+        Test the build_2d_voronoi_from_image function.
+        :return:
+        """
+        # Load data
+        _, _, mat_info = load_data('build_2d_voronoi_from_image_wingdisc.mat')
+        labelled_img = mat_info['labelledImg']
+        watershed_img = mat_info['watershedImg']
+        main_cells = mat_info['mainCells']
+
+        # Test if initialize geometry function does not change anything
+        (triangles_connectivity, neighbours_network, cell_edges, vertices_location, border_cells,
+         border_of_border_cells_and_main_cells) = build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells)
+
+        # Load expected
+        _, _, mat_info_expected = load_data('build_2d_voronoi_from_image_wingdisc_expected.mat')
+
+        # Assert
+        assert_matrix(triangles_connectivity, mat_info_expected['trianglesConnectivity'])
+        assert_matrix(neighbours_network, mat_info_expected['neighboursNetwork'])
+        assert_matrix(cell_edges, mat_info_expected['cellEdges'])
+        assert_matrix(vertices_location, mat_info_expected['verticesLocation'])
+        assert_matrix(border_cells, mat_info_expected['borderCells'])
+        assert_matrix(border_of_border_cells_and_main_cells, mat_info_expected['borderOfborderCellsAndMainCells'])
+
 
 
 

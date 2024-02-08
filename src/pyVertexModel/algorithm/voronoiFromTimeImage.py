@@ -5,6 +5,7 @@ import pickle
 from itertools import combinations
 
 import numpy as np
+from numpy import arange
 from scipy.spatial.distance import squareform, pdist, cdist
 from skimage import io
 from skimage.measure import regionprops_table, regionprops
@@ -561,8 +562,9 @@ class VoronoiFromTimeImage(VertexModel):
         X = np.vstack([prop.centroid for prop in img3DProperties if prop.label in all_main_cells])
         X[:, 2] = 0
         # Using the centroids and vertices of the cells of each 2D image as ghost nodes
-        bottomPlane = 1
-        topPlane = 2
+        bottomPlane = 0
+        topPlane = 1
+
         if bottomPlane == 1:
             zCoordinate = [-cellHeight, cellHeight]
         else:
@@ -583,9 +585,9 @@ class VoronoiFromTimeImage(VertexModel):
             X = np.vstack((X, Xg_nodes))
 
             # Fill Geo info
-            if idPlane == bottomPlane - 1:
+            if idPlane == bottomPlane:
                 self.geo.XgBottom = Xg_ids
-            elif idPlane == topPlane - 1:
+            elif idPlane == topPlane:
                 self.geo.XgTop = Xg_ids
 
             # Create tetrahedra
@@ -598,7 +600,7 @@ class VoronoiFromTimeImage(VertexModel):
 
         # Fill Geo info
         self.geo.nCells = len(xInternal)
-        self.geo.XgLateral = np.setdiff1d(all_main_cells, xInternal)
+        self.geo.XgLateral = np.setdiff1d(arange(1, np.max(all_main_cells)), xInternal)
         self.geo.XgID = np.setdiff1d(np.arange(1, X.shape[0] + 1), xInternal)
         # Define border cells
         self.geo.BorderCells = np.unique(np.concatenate([borderCells[numPlane] for numPlane in selectedPlanes]))
