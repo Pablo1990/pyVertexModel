@@ -305,9 +305,9 @@ class TestVertexModel(Tests):
         Twg = mat_info['Twg']
         xInternal = mat_info['xInternal']
         xInternal = [xInternal[i][0] for i in range(len(xInternal))]
-        XgBottom = geo_test.XgBottom
-        XgTop = geo_test.XgTop
-        XgLateral = geo_test.XgLateral
+        XgBottom = geo_test.XgBottom + 1
+        XgTop = geo_test.XgTop + 1
+        XgLateral = geo_test.XgLateral + 1
 
         # Load expected
         _, _, mat_info_expected = load_data('add_tetrahedra_from_intercalations_wingdisc_expected.mat')

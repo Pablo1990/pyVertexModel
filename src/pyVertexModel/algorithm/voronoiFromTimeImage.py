@@ -440,6 +440,7 @@ def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence
 def add_tetrahedral_intercalations(Twg, xInternal, XgBottom, XgTop, XgLateral):
     allCellIds = np.concatenate([xInternal, XgLateral])
     neighboursMissing = {}
+
     for numCell in xInternal:
         Twg_cCell = Twg[np.any(np.isin(Twg, numCell), axis=1)]
 
@@ -450,7 +451,6 @@ def add_tetrahedral_intercalations(Twg, xInternal, XgBottom, XgTop, XgLateral):
         neighbours_top = allCellIds[np.isin(allCellIds, Twg_cCell_top)]
 
         neighboursMissing[numCell] = np.setxor1d(neighbours_bottom, neighbours_top)
-        neighboursMissing[numCell] = np.intersect1d(neighboursMissing[numCell], xInternal)
         for missingCell in neighboursMissing[numCell]:
             tetsToAdd = allCellIds[
                 np.isin(allCellIds, Twg_cCell[np.any(np.isin(Twg_cCell, missingCell), axis=1), :])]
