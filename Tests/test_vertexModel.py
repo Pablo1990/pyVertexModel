@@ -285,16 +285,15 @@ class TestVertexModel(Tests):
         x_vertices_ids = mat_info['X_VerticesIds'][0]
         x = mat_info['X']
 
-        x_internal = np.array(x_internal, dtype=int)
-
-
+        x_internal = [x_internal[i][0] for i in range(len(x_internal))]
+        edges_of_vertices = [edges_of_vertices[i][0] for i in range(len(edges_of_vertices))]
 
         # Test if initialize geometry function does not change anything
         Twg_test = create_tetrahedra(traingles_connectivity, neighbours_network, edges_of_vertices, x_internal,
                                      x_face_ids, x_vertices_ids, x)
 
         # Check if the test and expected are the same
-        assert_matrix(Twg_test, mat_info['Twg'] - 1)
+        assert_matrix(Twg_test, mat_info['Twg'])
 
 
 
