@@ -18,6 +18,7 @@ class VertexModel:
 
     def __init__(self, c_set=None):
 
+        self.OutputFolder = None
         self.numStep = None
         self.backupVars = None
         self.geo_n = None
@@ -38,7 +39,9 @@ class VertexModel:
             self.set.NoBulk_110()
             self.set.update_derived_parameters()
 
-        self.set.redirect_output()
+        # Redirect output
+        if self.OutputFolder is not None:
+            self.set.redirect_output()
 
         # Degrees of freedom definition
         self.Dofs = degreesOfFreedom.DegreesOfFreedom()

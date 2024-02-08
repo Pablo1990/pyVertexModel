@@ -8,7 +8,8 @@ from src.pyVertexModel.algorithm.newtonRaphson import newton_raphson
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.algorithm.vertexModelBubbles import build_topo, SeedWithBoundingBox, generate_first_ghost_nodes, \
     delaunay_compute_entities
-from src.pyVertexModel.algorithm.voronoiFromTimeImage import build_triplets_of_neighs, calculate_neighbours
+from src.pyVertexModel.algorithm.voronoiFromTimeImage import build_triplets_of_neighs, calculate_neighbours, \
+    VoronoiFromTimeImage, create_tetrahedra
 from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 
 
@@ -250,5 +251,50 @@ class TestVertexModel(Tests):
 
         # Check if the cells are initialized correctly
         np.testing.assert_equal(neighbours_test, neighbours_expected)
+
+    def test_obtain_initial_x_and_tetrahedra(self):
+        """
+        Test the obtain_initial_x_and_tetrahedra function.
+        :return:
+        """
+        # Load data
+        _, set_test, mat_info_expected = load_data('obtain_x_and_twg_wingdisc.mat')
+
+        # Test if initialize geometry function does not change anything
+        vModel_test = VoronoiFromTimeImage(set_test)
+        Twg_test, X_test = vModel_test.obtain_initial_x_and_tetrahedra("/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/src/pyVertexModel/resources/LblImg_imageSequence.tif")
+
+        # Check if the test and expected are the same
+        assert_matrix(Twg_test, mat_info_expected['Twg'] - 1)
+        assert_matrix(X_test, mat_info_expected['X'])
+
+    def test_create_tetrahedra(self):
+        """
+        Test the create_tetrahedra function.
+        :return:
+        """
+        # Load data
+        _, _, mat_info = load_data('create_tetrahedra_wingdisc.mat')
+
+        # Load data
+        traingles_connectivity = mat_info['trianglesConnectivity']
+        neighbours_network = mat_info['neighboursNetwork']
+        edges_of_vertices = mat_info['edgesOfVertices']
+        x_internal = mat_info['xInternal']
+        x_face_ids = mat_info['X_FaceIds'][0]
+        x_vertices_ids = mat_info['X_VerticesIds'][0]
+        x = mat_info['X']
+
+        x_internal = np.array(x_internal, dtype=int)
+
+
+
+        # Test if initialize geometry function does not change anything
+        Twg_test = create_tetrahedra(traingles_connectivity, neighbours_network, edges_of_vertices, x_internal,
+                                     x_face_ids, x_vertices_ids, x)
+
+        # Check if the test and expected are the same
+        assert_matrix(Twg_test, mat_info['Twg'] - 1)
+
 
 

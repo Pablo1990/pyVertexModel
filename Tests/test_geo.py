@@ -1,7 +1,7 @@
 import numpy as np
 
 from Tests.tests import Tests, load_data, assert_matrix, assert_array1D
-from src.pyVertexModel.algorithm.vertexModel import extrapolate_ys_faces_ellipsoid
+from src.pyVertexModel.algorithm.vertexModelBubbles import extrapolate_ys_faces_ellipsoid
 
 
 def check_if_cells_are_the_same(geo_expected, geo_test):
