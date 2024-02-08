@@ -327,7 +327,7 @@ class TestVertexModel(Tests):
         _, _, mat_info = load_data('build_2d_voronoi_from_image_wingdisc.mat')
         labelled_img = mat_info['labelledImg']
         watershed_img = mat_info['watershedImg']
-        main_cells = mat_info['mainCells']
+        main_cells = mat_info['mainCells'][0]
 
         # Test if initialize geometry function does not change anything
         (triangles_connectivity, neighbours_network, cell_edges, vertices_location, border_cells,
