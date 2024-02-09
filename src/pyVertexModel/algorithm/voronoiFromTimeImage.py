@@ -308,7 +308,7 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
 
     border_of_border_cells_and_main_cells = np.unique(
         np.concatenate([img_neighbours[i - 1] for i in border_cells_and_main_cells]))
-    labelled_img[~np.isin(labelled_img, border_of_border_cells_and_main_cells)] = 0
+    labelled_img[~np.isin(labelled_img, np.arange(1, np.max(border_of_border_cells_and_main_cells)))] = 0
 
     img_neighbours_all = [None] * len(img_neighbours)
     for i, neighbours in enumerate(img_neighbours):
