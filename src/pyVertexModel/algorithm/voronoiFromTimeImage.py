@@ -304,7 +304,7 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
 
     border_of_border_cells_and_main_cells = np.unique(
         np.concatenate([img_neighbours[i] for i in border_cells_and_main_cells]))
-    labelled_img[~np.isin(labelled_img, np.arange(1, np.max(border_of_border_cells_and_main_cells)))] = 0
+    labelled_img[~np.isin(labelled_img, np.arange(1, np.max(border_of_border_cells_and_main_cells) + 1))] = 0
 
     img_neighbours_all = calculate_neighbours(labelled_img, ratio)
     quartets, _ = get_four_fold_vertices(img_neighbours_all)
