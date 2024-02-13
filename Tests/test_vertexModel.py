@@ -368,9 +368,12 @@ class TestVertexModel(Tests):
         vertices_info_test = populate_vertices_info(border_cells_and_main_cells, img_neighbours_all, labelled_img,
                                                     main_cells, ratio)
 
+        vertices_info_expected_per_cell = [np.concatenate(vertices[0]) for vertices in mat_info['verticesInfo']['PerCell'][0][0] if len(vertices[0][0]) > 0]
+        vertices_info_expected_edges = [np.concatenate(vertices[0]) for vertices in mat_info['verticesInfo']['edges'][0][0] if len(vertices[0][0]) > 0]
+
         # Assert
-        assert_matrix(vertices_info_test['PerCell'], mat_info['verticesInfo']['PerCell'][0][0])
-        assert_matrix(vertices_info_test['edges'], mat_info['verticesInfo']['edges'][0][0])
+        np.testing.assert_equal([vertices + 1 for vertices in vertices_info_test['PerCell'] if vertices is not None], vertices_info_expected_per_cell)
+        np.testing.assert_equal([np.concatenate(edges) + 1 for edges in vertices_info_test['edges'] if edges is not None], vertices_info_expected_edges)
 
     def test_calculate_vertices(self):
         """
