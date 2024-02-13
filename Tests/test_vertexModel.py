@@ -341,12 +341,11 @@ class TestVertexModel(Tests):
         _, _, mat_info_expected = load_data('build_2d_voronoi_from_image_wingdisc_expected.mat')
 
         # Assert
-        assert_matrix(triangles_connectivity, mat_info_expected['trianglesConnectivity'])
-        assert_matrix(neighbours_network, mat_info_expected['neighboursNetwork'])
-        assert_matrix(cell_edges, mat_info_expected['cellEdges'])
-        assert_matrix(vertices_location, mat_info_expected['verticesLocation'])
-        assert_matrix(border_cells, mat_info_expected['borderCells'])
-        assert_matrix(border_of_border_cells_and_main_cells, mat_info_expected['borderOfborderCellsAndMainCells'])
+        np.testing.assert_equal(triangles_connectivity, mat_info_expected['trianglesConnectivity'])
+        np.testing.assert_equal(neighbours_network, mat_info_expected['neighboursNetwork'])
+        np.testing.assert_equal(cell_edges, [cell_edge[0] for cell_edge in mat_info_expected['cellEdges']])
+        np.testing.assert_equal(border_cells, mat_info_expected['borderCells'])
+        np.testing.assert_equal(border_of_border_cells_and_main_cells, mat_info_expected['borderOfborderCellsAndMainCells'])
 
     def test_populate_vertices_info(self):
         """

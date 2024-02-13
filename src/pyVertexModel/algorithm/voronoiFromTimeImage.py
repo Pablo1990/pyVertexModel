@@ -328,7 +328,6 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
         row, col = np.where(distance_between_centroids == max_distance)
 
         # Split the quartet into two pairs of cells
-
         current_neighs = img_neighbours_all[quartets[num_quartets][col[0]]]
         current_neighs = current_neighs[current_neighs != quartets[num_quartets][row[0]]]
         img_neighbours_all[quartets[num_quartets][col[0]]] = current_neighs
