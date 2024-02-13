@@ -145,7 +145,7 @@ def build_triplets_of_neighs(neighbours):
     """
     triplets_of_neighs = []
 
-    for i, neigh_i in enumerate(neighbours, start=1):
+    for i, neigh_i in enumerate(neighbours):
         if neigh_i is not None:
             for j in neigh_i:
                 if j > i:
@@ -237,32 +237,29 @@ def boundary_of_cell(vertices_of_cell, neighbours=None):
     """
     # If neighbours are provided, try to order the vertices based on their neighbors
     if neighbours is not None:
-        try:
-            initial_neighbours = neighbours
-            neighbours_order = neighbours[0]
-            next_neighbour = neighbours[0][1]
+        initial_neighbours = neighbours
+        neighbours_order = neighbours[0]
+        next_neighbour = neighbours[0][1]
+        next_neighbour_prev = next_neighbour
+        neighbours = np.delete(neighbours, 0, axis=0)
+
+        # Loop until all neighbours are ordered
+        while neighbours.size > 0:
+            match_next_vertex = np.any(neighbours == next_neighbour, axis=1)
+
+            neighbours_order = np.vstack((neighbours_order, neighbours[match_next_vertex]))
+
+            next_neighbour = neighbours[match_next_vertex][0]
+            next_neighbour[next_neighbour == next_neighbour_prev] = 0
+            neighbours = np.delete(neighbours, match_next_vertex, axis=0)
+
             next_neighbour_prev = next_neighbour
-            neighbours = np.delete(neighbours, 0, axis=0)
 
-            # Loop until all neighbours are ordered
-            while neighbours.size > 0:
-                match_next_vertex = np.any(neighbours == next_neighbour, axis=1)
+        _, vert_order = ismember_rows(neighbours_order, np.array(initial_neighbours))
 
-                neighbours_order = np.vstack((neighbours_order, neighbours[match_next_vertex]))
+        new_vert_order = np.vstack((vert_order, np.hstack((vert_order[1:], vert_order[0])))).T
 
-                next_neighbour = neighbours[match_next_vertex][0]
-                next_neighbour[next_neighbour == next_neighbour_prev] = 0
-                neighbours = np.delete(neighbours, match_next_vertex, axis=0)
-
-                next_neighbour_prev = next_neighbour
-
-            _, vert_order = ismember_rows(neighbours_order, np.array(initial_neighbours))
-
-            new_vert_order = np.vstack((vert_order, np.hstack((vert_order[1:], vert_order[0])))).T
-
-            return new_vert_order
-        except:
-            pass
+        return new_vert_order
 
     # If ordering based on neighbours failed or no neighbours were provided,
     # order the vertices based on their angular position relative to the centroid of the cell
