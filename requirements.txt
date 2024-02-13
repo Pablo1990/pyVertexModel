@@ -5,5 +5,5 @@ setuptools~=68.0.0
 cython~=3.0.5
 networkx~=3.2.1
 pandas~=2.1.1
-vtk~=9.0.1
+vtk~=9.0.2
 scikit-learn~=1.2.2
