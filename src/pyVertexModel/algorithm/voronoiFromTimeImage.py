@@ -145,7 +145,7 @@ def build_triplets_of_neighs(neighbours):
     """
     triplets_of_neighs = []
 
-    for i, neigh_i in enumerate(neighbours, start=0):
+    for i, neigh_i in enumerate(neighbours, start=1):
         if neigh_i is not None:
             for j in neigh_i:
                 if j > i:
@@ -365,7 +365,7 @@ def populate_vertices_info(border_cells_and_main_cells, img_neighbours_all, labe
     total_cells = np.max(border_cells_and_main_cells) + 1
     vertices_info['PerCell'] = [None] * total_cells
     vertices_info['edges'] = [None] * total_cells
-    for idx, num_cell in enumerate(main_cells):
+    for idx, num_cell in enumerate(main_cells, start=1):
         vertices_of_cell = np.where(np.any(np.isin(vertices_info['connectedCells'], num_cell), axis=1))[0]
         vertices_info['PerCell'][idx] = vertices_of_cell
         current_vertices = [vertices_info['location'][i] for i in vertices_of_cell]
