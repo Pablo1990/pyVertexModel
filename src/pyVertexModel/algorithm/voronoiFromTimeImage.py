@@ -80,9 +80,9 @@ def calculate_neighbours(labelled_img, ratio_strel):
         # Deleting cell 0 from range
         cells = cells[1:]
 
-    img_neighbours = [None] * (np.max(cells))
+    img_neighbours = [None] * (np.max(cells) + 1)
 
-    for idx, cell in enumerate(cells):
+    for idx, cell in enumerate(cells, start=1):
         BW = find_boundaries(labelled_img == cell, mode='inner')
         BW_dilate = dilation(BW, se)
         neighs = np.unique(labelled_img[BW_dilate == 1])
@@ -100,8 +100,7 @@ def build_quartets_of_neighs_2d(neighbours):
     """
     quartets_of_neighs = []
 
-    for n_cell in range(len(neighbours)):
-        neigh_cell = neighbours[n_cell]
+    for n_cell, neigh_cell in enumerate(neighbours, start=1):
         if neigh_cell is not None:
             intercept_cells = [None] * len(neigh_cell)
 
@@ -302,12 +301,12 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
 
     img_neighbours = calculate_neighbours(labelled_img, ratio)
 
-    border_cells_and_main_cells = np.unique(np.block([img_neighbours[i - 1] for i in main_cells]))
+    border_cells_and_main_cells = np.unique(np.block([img_neighbours[i] for i in main_cells]))
     border_ghost_cells = np.setdiff1d(border_cells_and_main_cells, main_cells)
-    border_cells = np.intersect1d(main_cells, np.unique(np.block([img_neighbours[i - 1] for i in border_ghost_cells])))
+    border_cells = np.intersect1d(main_cells, np.unique(np.block([img_neighbours[i] for i in border_ghost_cells])))
 
     border_of_border_cells_and_main_cells = np.unique(
-        np.concatenate([img_neighbours[i - 1] for i in border_cells_and_main_cells]))
+        np.concatenate([img_neighbours[i] for i in border_cells_and_main_cells]))
     labelled_img[~np.isin(labelled_img, np.arange(1, np.max(border_of_border_cells_and_main_cells)))] = 0
 
     img_neighbours_all = calculate_neighbours(labelled_img, ratio)
