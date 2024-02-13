@@ -596,7 +596,7 @@ class VoronoiFromTimeImage(VertexModel):
                                        np.tile(zCoordinate[idPlane], (len(verticesOfCell_pos[numPlane]), 1))))
 
             Xg_nodes = np.vstack((Xg_faceCentres2D, Xg_vertices2D))
-            Xg_ids = np.arange(X.shape[0] + 1, X.shape[0] + Xg_nodes.shape[0] + 1)
+            Xg_ids = np.arange(X.shape[0], X.shape[0] + Xg_nodes.shape[0])
             Xg_faceIds = Xg_ids[0:Xg_faceCentres2D.shape[0]]
             Xg_verticesIds = Xg_ids[Xg_faceCentres2D.shape[0]:]
             X = np.vstack((X, Xg_nodes))
@@ -617,7 +617,7 @@ class VoronoiFromTimeImage(VertexModel):
 
         # Fill Geo info
         self.geo.nCells = len(xInternal)
-        self.geo.XgLateral = np.setdiff1d(arange(1, np.max(all_main_cells)), xInternal)
+        self.geo.XgLateral = np.setdiff1d(arange(1, np.max(all_main_cells) + 1), xInternal)
         self.geo.XgID = np.setdiff1d(np.arange(1, X.shape[0] + 1), xInternal)
         # Define border cells
         self.geo.BorderCells = np.unique(np.concatenate([borderCells[numPlane] for numPlane in selectedPlanes]))
