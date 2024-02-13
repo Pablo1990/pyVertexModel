@@ -10,7 +10,7 @@ from src.pyVertexModel.algorithm.vertexModelBubbles import build_topo, SeedWithB
     delaunay_compute_entities
 from src.pyVertexModel.algorithm.voronoiFromTimeImage import build_triplets_of_neighs, calculate_neighbours, \
     VoronoiFromTimeImage, create_tetrahedra, add_tetrahedral_intercalations, build_2d_voronoi_from_image, \
-    populate_vertices_info, calculate_vertices, get_four_fold_vertices
+    populate_vertices_info, calculate_vertices, get_four_fold_vertices, divide_quartets_neighbours
 from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 
 
@@ -373,6 +373,7 @@ class TestVertexModel(Tests):
         # Assert
         np.testing.assert_equal([vertices + 1 for vertices in vertices_info_test['PerCell'] if vertices is not None], vertices_info_expected_per_cell)
         np.testing.assert_equal([np.concatenate(edges) + 1 for edges in vertices_info_test['edges'] if edges is not None], vertices_info_expected_edges)
+        np.testing.assert_equal(vertices_info_test['connectedCells'], mat_info['verticesInfo']['connectedCells'][0][0])
 
     def test_calculate_vertices(self):
         """
@@ -415,3 +416,28 @@ class TestVertexModel(Tests):
 
         # Assert
         np.testing.assert_equal(four_fold_vertices_test, mat_info['quartets'])
+
+    def test_divide_quartets_neighbours(self):
+        """
+        Test the divide_quartets_neighbours function.
+        :return:
+        """
+        # Load data
+        _, _, mat_info_expected = load_data('calculate_vertices_wingdisc.mat')
+        labelled_img = mat_info_expected['labelledImg']
+
+        _, _, mat_info = load_data('get_four_fold_vertices_wingdisc.mat')
+
+        # Load data
+        img_neighbours_all = [np.concatenate(neighbours[0]) for neighbours in mat_info['imgNeighbours']]
+        img_neighbours_all.insert(0, None)
+
+        # Test if initialize geometry function does not change anything
+        divide_quartets_neighbours(img_neighbours_all, labelled_img, mat_info['quartets'])
+
+        # Load expected
+        img_neighbours_expected = [np.concatenate(neighbours[0]) for neighbours in mat_info_expected['neighbours']]
+        img_neighbours_expected.insert(0, None)
+
+        # Assert
+        np.testing.assert_equal(img_neighbours_all, img_neighbours_expected)

@@ -308,12 +308,40 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
 
     img_neighbours_all = calculate_neighbours(labelled_img, ratio)
     quartets, _ = get_four_fold_vertices(img_neighbours_all)
-    props = regionprops_table(labelled_img, properties=('centroid', 'label',))
+    divide_quartets_neighbours(img_neighbours_all, labelled_img, quartets)
 
+    vertices_info = populate_vertices_info(border_cells_and_main_cells, img_neighbours_all,
+                                           labelled_img, main_cells, ratio)
+
+    neighbours_network = []
+
+    for num_cell in main_cells:
+        current_neighbours = np.array(img_neighbours_all[num_cell])
+        current_cell_neighbours = np.vstack(
+            [np.ones(len(current_neighbours), dtype=int) * num_cell, current_neighbours]).T
+
+        neighbours_network.extend(current_cell_neighbours)
+
+    triangles_connectivity = np.array(vertices_info['connectedCells'])
+    cell_edges = vertices_info['edges']
+    vertices_location = vertices_info['location']
+
+    return (triangles_connectivity, neighbours_network, cell_edges, vertices_location, border_cells,
+            border_of_border_cells_and_main_cells)
+
+
+def divide_quartets_neighbours(img_neighbours_all, labelled_img, quartets):
+    """
+    Divide the quartets of neighboring cells into two pairs of cells.
+    :param img_neighbours_all:
+    :param labelled_img:
+    :param quartets:
+    :return:
+    """
+    props = regionprops_table(labelled_img, properties=('centroid', 'label',))
     # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
     # You can combine them into a single array like this:
     face_centres_vertices = np.column_stack([props['centroid-0'], props['centroid-1']])
-
     # Loop through the quartets and split them into two pairs of cells
     for num_quartets in range(quartets.shape[0]):
         # Get the face centres of the current quartet whose ids correspond to props['label']
@@ -336,27 +364,18 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
         current_neighs = current_neighs[current_neighs != quartets[num_quartets][col[0]]]
         img_neighbours_all[quartets[num_quartets][row[0]]] = current_neighs
 
-    vertices_info = populate_vertices_info(border_cells_and_main_cells, img_neighbours_all,
-                                           labelled_img, main_cells, ratio)
-
-    neighbours_network = []
-
-    for num_cell in main_cells:
-        current_neighbours = np.array(img_neighbours_all[num_cell])
-        current_cell_neighbours = np.vstack(
-            [np.ones(len(current_neighbours), dtype=int) * num_cell, current_neighbours]).T
-
-        neighbours_network.extend(current_cell_neighbours)
-
-    triangles_connectivity = np.array(vertices_info['connectedCells'])
-    cell_edges = vertices_info['edges']
-    vertices_location = vertices_info['location']
-
-    return triangles_connectivity, neighbours_network, cell_edges, vertices_location, border_cells, border_of_border_cells_and_main_cells
-
 
 def populate_vertices_info(border_cells_and_main_cells, img_neighbours_all, labelled_img, main_cells,
                            ratio):
+    """
+    Populate the vertices information.
+    :param border_cells_and_main_cells:
+    :param img_neighbours_all:
+    :param labelled_img:
+    :param main_cells:
+    :param ratio:
+    :return:
+    """
     vertices_info = calculate_vertices(labelled_img, img_neighbours_all, ratio)
     total_cells = np.max(border_cells_and_main_cells) + 1
     vertices_info['PerCell'] = [None] * total_cells
