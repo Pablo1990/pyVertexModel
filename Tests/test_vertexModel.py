@@ -232,6 +232,8 @@ class TestVertexModel(Tests):
 
         all_neighbours = [np.concatenate(neighours[0]) for neighours in mat_info['neighbours']]
 
+        all_neighbours.insert(0, None)
+
         triplets_of_neighs_test = build_triplets_of_neighs(all_neighbours)
 
         # Check if triplets of neighbours are correct
@@ -250,7 +252,7 @@ class TestVertexModel(Tests):
         neighbours_expected = [np.concatenate(neighbours[0]) for neighbours in mat_info['imgNeighbours']]
 
         # Check if the cells are initialized correctly
-        np.testing.assert_equal(neighbours_test, neighbours_expected)
+        np.testing.assert_equal(neighbours_test[1:], neighbours_expected)
 
     def test_obtain_initial_x_and_tetrahedra(self):
         """
