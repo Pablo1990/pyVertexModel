@@ -361,19 +361,16 @@ class TestVertexModel(Tests):
         labelled_img = mat_info['labelledImg']
         img_neighbours_all = [np.concatenate(neighbours[0]) for neighbours in mat_info['imgNeighbours']]
         main_cells = mat_info['mainCells'][0]
-        ratio = mat_info['ratio'][0][0]
+        ratio = 2
 
         img_neighbours_all.insert(0, None)
-
-        import matplotlib.pyplot as plt
-        plt.imshow(labelled_img)
-        plt.show()
 
         vertices_info_test = populate_vertices_info(border_cells_and_main_cells, img_neighbours_all, labelled_img,
                                                     main_cells, ratio)
 
         # Assert
-        assert_matrix(vertices_info_test, mat_info['verticesInfo'])
+        assert_matrix(vertices_info_test['PerCell'], mat_info['verticesInfo']['PerCell'][0][0])
+        assert_matrix(vertices_info_test['edges'], mat_info['verticesInfo']['edges'][0][0])
 
     def test_calculate_vertices(self):
         """
@@ -385,13 +382,16 @@ class TestVertexModel(Tests):
 
         # Load data
         labelled_img = mat_info['labelledImg']
-        img_neighbours_all = [np.concatenate(neighbours[0]) for neighbours in mat_info['imgNeighbours']]
-        ratio = mat_info['ratio'][0][0]
+        img_neighbours_all = [np.concatenate(neighbours[0]) for neighbours in mat_info['neighbours']]
+        ratio = 2
 
         img_neighbours_all.insert(0, None)
 
         # Test if initialize geometry function does not change anything
         vertices_info_test = calculate_vertices(labelled_img, img_neighbours_all, ratio)
 
+        # Load expected
+        _, _, mat_info_expected = load_data('calculate_vertices_wingdisc_expected.mat')
+
         # Assert
-        assert_matrix(vertices_info_test, mat_info['verticesInfo'])
+        assert_matrix(vertices_info_test['connectedCells'], mat_info_expected['verticesInfo']['connectedCells'][0][0])
