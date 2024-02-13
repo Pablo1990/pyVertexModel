@@ -343,9 +343,9 @@ class TestVertexModel(Tests):
         # Assert
         np.testing.assert_equal(triangles_connectivity, mat_info_expected['trianglesConnectivity'])
         np.testing.assert_equal(neighbours_network, mat_info_expected['neighboursNetwork'])
-        np.testing.assert_equal(cell_edges, [cell_edge[0] for cell_edge in mat_info_expected['cellEdges']])
-        np.testing.assert_equal(border_cells, mat_info_expected['borderCells'])
-        np.testing.assert_equal(border_of_border_cells_and_main_cells, mat_info_expected['borderOfborderCellsAndMainCells'])
+        np.testing.assert_equal([cell_edge+1 for cell_edge in cell_edges if cell_edge is not None], [cell_edge[0] for cell_edge in mat_info_expected['cellEdges']])
+        np.testing.assert_equal(border_cells, np.concatenate(mat_info_expected['borderCells']))
+        np.testing.assert_equal(border_of_border_cells_and_main_cells, mat_info_expected['borderOfborderCellsAndMainCells'][0])
 
     def test_populate_vertices_info(self):
         """
