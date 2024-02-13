@@ -119,7 +119,8 @@ def build_quartets_of_neighs_2d(neighbours):
                         if len(intersection_cells) >= 4:
                             quartets_of_neighs.extend(list(combinations(intersection_cells, 4)))
 
-    quartets_of_neighs = np.unique(np.sort(quartets_of_neighs, axis=1), axis=0)
+    if len(quartets_of_neighs) > 0:
+        quartets_of_neighs = np.unique(np.sort(quartets_of_neighs, axis=1), axis=0)
 
     return quartets_of_neighs
 
@@ -131,6 +132,9 @@ def get_four_fold_vertices(img_neighbours):
     :return:
     """
     quartets = build_quartets_of_neighs_2d(img_neighbours)
+    if len(quartets) == 0:
+        return None, 0
+
     percQuartets = quartets.shape[0] / len(img_neighbours)
 
     return quartets, percQuartets
@@ -308,7 +312,8 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
 
     img_neighbours_all = calculate_neighbours(labelled_img, ratio)
     quartets, _ = get_four_fold_vertices(img_neighbours_all)
-    divide_quartets_neighbours(img_neighbours_all, labelled_img, quartets)
+    if quartets is not None:
+        divide_quartets_neighbours(img_neighbours_all, labelled_img, quartets)
 
     vertices_info = populate_vertices_info(border_cells_and_main_cells, img_neighbours_all,
                                            labelled_img, main_cells, ratio)
