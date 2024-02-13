@@ -10,7 +10,7 @@ from src.pyVertexModel.algorithm.vertexModelBubbles import build_topo, SeedWithB
     delaunay_compute_entities
 from src.pyVertexModel.algorithm.voronoiFromTimeImage import build_triplets_of_neighs, calculate_neighbours, \
     VoronoiFromTimeImage, create_tetrahedra, add_tetrahedral_intercalations, build_2d_voronoi_from_image, \
-    populate_vertices_info, calculate_vertices
+    populate_vertices_info, calculate_vertices, get_four_fold_vertices
 from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 
 
@@ -398,3 +398,21 @@ class TestVertexModel(Tests):
 
         # Assert
         assert_matrix(vertices_info_test['connectedCells'], mat_info_expected['verticesInfo']['connectedCells'][0][0])
+
+    def test_get_four_fold_vertices(self):
+        """
+        Test the get_four_fold_vertices function.
+        :return:
+        """
+        # Load data
+        _, _, mat_info = load_data('get_four_fold_vertices_wingdisc.mat')
+
+        # Load data
+        img_neighbours_all = [np.concatenate(neighbours[0]) for neighbours in mat_info['imgNeighbours']]
+        img_neighbours_all.insert(0, None)
+
+        # Test if initialize geometry function does not change anything
+        four_fold_vertices_test, _ = get_four_fold_vertices(img_neighbours_all)
+
+        # Assert
+        np.testing.assert_equal(four_fold_vertices_test, mat_info['quartets'])

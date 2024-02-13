@@ -100,7 +100,7 @@ def build_quartets_of_neighs_2d(neighbours):
     """
     quartets_of_neighs = []
 
-    for n_cell, neigh_cell in enumerate(neighbours, start=1):
+    for n_cell, neigh_cell in enumerate(neighbours):
         if neigh_cell is not None:
             intercept_cells = [None] * len(neigh_cell)
 
