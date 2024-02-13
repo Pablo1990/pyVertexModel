@@ -9,7 +9,8 @@ from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.algorithm.vertexModelBubbles import build_topo, SeedWithBoundingBox, generate_first_ghost_nodes, \
     delaunay_compute_entities
 from src.pyVertexModel.algorithm.voronoiFromTimeImage import build_triplets_of_neighs, calculate_neighbours, \
-    VoronoiFromTimeImage, create_tetrahedra, add_tetrahedral_intercalations, build_2d_voronoi_from_image
+    VoronoiFromTimeImage, create_tetrahedra, add_tetrahedral_intercalations, build_2d_voronoi_from_image, \
+    populate_vertices_info, calculate_vertices
 from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 
 
@@ -264,7 +265,8 @@ class TestVertexModel(Tests):
 
         # Test if initialize geometry function does not change anything
         vModel_test = VoronoiFromTimeImage(set_test)
-        Twg_test, X_test = vModel_test.obtain_initial_x_and_tetrahedra("/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/src/pyVertexModel/resources/LblImg_imageSequence.tif")
+        Twg_test, X_test = vModel_test.obtain_initial_x_and_tetrahedra(
+            "/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/src/pyVertexModel/resources/LblImg_imageSequence.tif")
 
         # Check if the test and expected are the same
         assert_matrix(Twg_test, mat_info_expected['Twg'])
@@ -346,6 +348,50 @@ class TestVertexModel(Tests):
         assert_matrix(border_cells, mat_info_expected['borderCells'])
         assert_matrix(border_of_border_cells_and_main_cells, mat_info_expected['borderOfborderCellsAndMainCells'])
 
+    def test_populate_vertices_info(self):
+        """
+        Test the populate_vertices_info function.
+        :return:
+        """
+        # Load data
+        _, _, mat_info = load_data('populate_vertices_info_wingdisc.mat')
 
+        # Load data
+        border_cells_and_main_cells = [border_cell[0] for border_cell in mat_info['borderCellsAndMainCells']]
+        labelled_img = mat_info['labelledImg']
+        img_neighbours_all = [np.concatenate(neighbours[0]) for neighbours in mat_info['imgNeighbours']]
+        main_cells = mat_info['mainCells'][0]
+        ratio = mat_info['ratio'][0][0]
 
+        img_neighbours_all.insert(0, None)
 
+        import matplotlib.pyplot as plt
+        plt.imshow(labelled_img)
+        plt.show()
+
+        vertices_info_test = populate_vertices_info(border_cells_and_main_cells, img_neighbours_all, labelled_img,
+                                                    main_cells, ratio)
+
+        # Assert
+        assert_matrix(vertices_info_test, mat_info['verticesInfo'])
+
+    def test_calculate_vertices(self):
+        """
+        Test the calculate_vertices function.
+        :return:
+        """
+        # Load data
+        _, _, mat_info = load_data('calculate_vertices_wingdisc.mat')
+
+        # Load data
+        labelled_img = mat_info['labelledImg']
+        img_neighbours_all = [np.concatenate(neighbours[0]) for neighbours in mat_info['imgNeighbours']]
+        ratio = mat_info['ratio'][0][0]
+
+        img_neighbours_all.insert(0, None)
+
+        # Test if initialize geometry function does not change anything
+        vertices_info_test = calculate_vertices(labelled_img, img_neighbours_all, ratio)
+
+        # Assert
+        assert_matrix(vertices_info_test, mat_info['verticesInfo'])

@@ -181,7 +181,7 @@ def calculate_vertices(labelled_img, neighbours, ratio):
     # Calculate the perimeter of each cell for efficiency
     dilated_cells = [None] * (np.max(labelled_img) + 1)
 
-    for i in range(np.max(labelled_img) + 1):
+    for i in arange(1, np.max(labelled_img) + 1):
         BW = np.zeros_like(labelled_img)
         BW[labelled_img == i] = 1
         BW_dilated = dilation(find_boundaries(BW, mode='inner'), se)
@@ -362,7 +362,7 @@ def populate_vertices_info(border_cells_and_main_cells, img_neighbours_all, labe
     total_cells = np.max(border_cells_and_main_cells) + 1
     vertices_info['PerCell'] = [None] * total_cells
     vertices_info['edges'] = [None] * total_cells
-    for idx, num_cell in enumerate(main_cells, start=1):
+    for idx, num_cell in enumerate(main_cells):
         vertices_of_cell = np.where(np.any(np.isin(vertices_info['connectedCells'], num_cell), axis=1))[0]
         vertices_info['PerCell'][idx] = vertices_of_cell
         current_vertices = [vertices_info['location'][i] for i in vertices_of_cell]
