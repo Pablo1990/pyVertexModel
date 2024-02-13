@@ -245,7 +245,7 @@ def boundary_of_cell(vertices_of_cell, neighbours=None):
 
         # Loop until all neighbours are ordered
         while neighbours.size > 0:
-            match_next_vertex = np.any(neighbours == next_neighbour, axis=1)
+            match_next_vertex = np.any(np.isin(neighbours, next_neighbour), axis=1)
 
             neighbours_order = np.vstack((neighbours_order, neighbours[match_next_vertex]))
 
