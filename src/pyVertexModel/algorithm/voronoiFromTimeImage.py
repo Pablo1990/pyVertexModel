@@ -434,9 +434,12 @@ def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence
                     imgStackLabelled[oldImg2DLabelled == numCell] = newCont
                     newCont += 1
 
+            img2DLabelled = imgStackLabelled[0, :, :]
+
             # Show the first plane
             import matplotlib.pyplot as plt
-            plt.imshow(imgStackLabelled[0, :, :])
+            plt.imshow(img2DLabelled)
+            plt.imshow(imgStackLabelled[99, :, :])
             plt.show()
 
             save_variables({'imgStackLabelled': imgStackLabelled},

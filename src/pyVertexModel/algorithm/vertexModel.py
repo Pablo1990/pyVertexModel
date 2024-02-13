@@ -15,8 +15,16 @@ logger = logging.getLogger("pyVertexModel")
 
 
 class VertexModel:
+    """
+    The main class for the vertex model simulation. It contains the methods for initializing the model,
+    iterating over time, applying Brownian motion, and checking the integrity of the model.
+    """
 
     def __init__(self, c_set=None):
+        """
+        Vertex Model class.
+        :param c_set:
+        """
 
         self.OutputFolder = None
         self.numStep = None
@@ -79,7 +87,11 @@ class VertexModel:
         pass
 
     def iterate_over_time(self):
-
+        """
+        Iterate the model over time. This includes updating the degrees of freedom, applying boundary conditions,
+        updating measures, and checking for convergence.
+        :return:
+        """
         allYs = np.vstack([cell.Y for cell in self.geo.Cells if cell.AliveStatus == 1])
         minZs = min(allYs[:, 2])
         if minZs > 0:
@@ -142,6 +154,14 @@ class VertexModel:
         return self.didNotConverge
 
     def post_newton_raphson(self, dy, dyr, g, gr):
+        """
+        Post Newton Raphson operations.
+        :param dy:
+        :param dyr:
+        :param g:
+        :param gr:
+        :return:
+        """
         if (gr < self.set.tol and dyr < self.set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
                 np.all(~np.isnan(dy[self.Dofs.Free]))):
             self.iteration_converged()
@@ -149,6 +169,10 @@ class VertexModel:
             self.iteration_did_not_converged()
 
     def iteration_did_not_converged(self):
+        """
+        If the iteration did not converge, the algorithm will try to relax the value of nu and dt.
+        :return:
+        """
         # TODO
         # self.backupVars.Geo_b.log = self.Geo.log
         self.geo = self.backupVars['Geo_b'].copy()
@@ -170,6 +194,10 @@ class VertexModel:
                 self.didNotConverge = True
 
     def iteration_converged(self):
+        """
+        If the iteration converged, the algorithm will update the values of the variables and proceed to the next step.
+        :return:
+        """
         if self.set.nu / self.set.nu0 == 1:
             # STEP has converged
             logger.info(f"STEP {str(self.set.i_incr)} has converged ...")
