@@ -5,7 +5,13 @@ requires = [
     "setuptools-scm",
     "cython",
     "wheel",
-    "numpy"
+    "numpy",
+    "scipy",
+    "pillow",
+    "scikit-image==0.22.0",
+    "vtk==9.0.1",
+    "pandas",
+    "networkx"
 ]
 
 [project]
@@ -20,6 +26,9 @@ dependencies = [
     "pillow",
     "scikit-image==0.22.0",
     "cython==3.0.5",
+    "vtk==9.0.1",
+    "pandas",
+    "networkx"
 ]
 
 [tool.coverage]
