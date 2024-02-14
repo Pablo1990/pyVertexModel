@@ -604,8 +604,11 @@ class VoronoiFromTimeImage(VertexModel):
         Twg = []
         for idPlane, numPlane in enumerate(selectedPlanes):
             img2DLabelled = imgStackLabelled[numPlane, :, :]
+            unique_label = np.max(img2DLabelled)
             props = regionprops_table(img2DLabelled, properties=('centroid', 'label',))
-            centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
+
+            centroids = np.full((unique_label+1, 2), np.nan)
+            centroids[np.array(props['label'], dtype=int)] = np.column_stack([props['centroid-0'], props['centroid-1']])
             Xg_faceCentres2D = np.hstack((centroids, np.tile(zCoordinate[idPlane], (len(centroids), 1))))
             Xg_vertices2D = np.hstack((np.fliplr(verticesOfCell_pos[numPlane]),
                                        np.tile(zCoordinate[idPlane], (len(verticesOfCell_pos[numPlane]), 1))))
