@@ -5,6 +5,7 @@ import pickle
 from itertools import combinations
 
 import numpy as np
+import scipy
 from numpy import arange
 from scipy.spatial.distance import squareform, pdist, cdist
 from skimage import io
@@ -409,51 +410,56 @@ def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence
     """
     # Load the tif file from resources if exists
     if os.path.exists(img_filename):
-        if os.path.exists(img_filename.replace('.tif', '.xz')) and not redo:
-            imgStackLabelled = pickle.load(lzma.open(img_filename.replace('.tif', '.xz'), "rb"))
+        if img_filename.endswith('.tif'):
+            if os.path.exists(img_filename.replace('.tif', '.xz')) and not redo:
+                imgStackLabelled = pickle.load(lzma.open(img_filename.replace('.tif', '.xz'), "rb"))
 
-            imgStackLabelled = imgStackLabelled['imgStackLabelled']
-            img2DLabelled = imgStackLabelled[0, :, :]
-        else:
-            imgStackLabelled = io.imread(img_filename)
+                imgStackLabelled = imgStackLabelled['imgStackLabelled']
+                img2DLabelled = imgStackLabelled[0, :, :]
+            else:
+                imgStackLabelled = io.imread(img_filename)
 
-            # Reordering cells based on the centre of the image
-            img2DLabelled = imgStackLabelled[0, :, :]
-            props = regionprops_table(img2DLabelled, properties=('centroid', 'label',), )
+                # Reordering cells based on the centre of the image
+                img2DLabelled = imgStackLabelled[0, :, :]
+                props = regionprops_table(img2DLabelled, properties=('centroid', 'label',), )
 
-            # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
-            centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
-            centre_of_image = np.array([img2DLabelled.shape[0] / 2, img2DLabelled.shape[0] / 2])
+                # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
+                centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
+                centre_of_image = np.array([img2DLabelled.shape[0] / 2, img2DLabelled.shape[0] / 2])
 
-            # Sorting cells based on distance to the middle of the image
-            distanceToMiddle = cdist([centre_of_image], centroids)
-            distanceToMiddle = distanceToMiddle[0]
-            sortedId = np.argsort(distanceToMiddle)
-            sorted_ids = np.array(props['label'])[sortedId]
+                # Sorting cells based on distance to the middle of the image
+                distanceToMiddle = cdist([centre_of_image], centroids)
+                distanceToMiddle = distanceToMiddle[0]
+                sortedId = np.argsort(distanceToMiddle)
+                sorted_ids = np.array(props['label'])[sortedId]
 
-            oldImgStackLabelled = copy.deepcopy(imgStackLabelled)
-            imgStackLabelled = np.zeros_like(imgStackLabelled)
-            newCont = 1
-            for numCell in sorted_ids:
-                if numCell != 0:
+                oldImgStackLabelled = copy.deepcopy(imgStackLabelled)
+                #imgStackLabelled = np.zeros_like(imgStackLabelled)
+                newCont = 1
+                for numCell in sorted_ids:
+                    if numCell != 0:
+                        imgStackLabelled[oldImgStackLabelled == numCell] = newCont
+                        newCont += 1
+
+                # Remaining cells that are not in the image
+                for numCell in np.arange(newCont, np.max(img2DLabelled) + 1):
                     imgStackLabelled[oldImgStackLabelled == numCell] = newCont
                     newCont += 1
 
-            # Remaining cells that are not in the image
-            for numCell in np.arange(newCont, np.max(img2DLabelled) + 1):
-                imgStackLabelled[oldImgStackLabelled == numCell] = newCont
-                newCont += 1
+                img2DLabelled = imgStackLabelled[0, :, :]
 
+                # Show the first plane
+                import matplotlib.pyplot as plt
+                plt.imshow(img2DLabelled)
+                plt.imshow(imgStackLabelled[99, :, :])
+                plt.show()
+
+                save_variables({'imgStackLabelled': imgStackLabelled},
+                               img_filename.replace('.tif', '.xz'))
+        elif img_filename.endswith('.mat'):
+            imgStackLabelled = scipy.io.loadmat(img_filename)['imgStackLabelled']
+            imgStackLabelled = np.transpose(imgStackLabelled, (2, 0, 1))
             img2DLabelled = imgStackLabelled[0, :, :]
-
-            # Show the first plane
-            import matplotlib.pyplot as plt
-            plt.imshow(img2DLabelled)
-            plt.imshow(imgStackLabelled[99, :, :])
-            plt.show()
-
-            save_variables({'imgStackLabelled': imgStackLabelled},
-                           img_filename.replace('.tif', '.xz'))
     else:
         raise ValueError('Image file not found %s' % img_filename)
 
