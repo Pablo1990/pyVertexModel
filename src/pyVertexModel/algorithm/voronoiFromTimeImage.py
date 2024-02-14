@@ -419,7 +419,7 @@ def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence
 
             # Reordering cells based on the centre of the image
             img2DLabelled = imgStackLabelled[0, :, :]
-            props = regionprops_table(img2DLabelled, properties=('centroid', 'label',))
+            props = regionprops_table(img2DLabelled, properties=('centroid', 'label',), )
 
             # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
             centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
@@ -431,13 +431,18 @@ def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence
             sortedId = np.argsort(distanceToMiddle)
             sorted_ids = np.array(props['label'])[sortedId]
 
-            oldImg2DLabelled = copy.deepcopy(imgStackLabelled)
+            oldImgStackLabelled = copy.deepcopy(imgStackLabelled)
             imgStackLabelled = np.zeros_like(imgStackLabelled)
             newCont = 1
             for numCell in sorted_ids:
                 if numCell != 0:
-                    imgStackLabelled[oldImg2DLabelled == numCell] = newCont
+                    imgStackLabelled[oldImgStackLabelled == numCell] = newCont
                     newCont += 1
+
+            # Remaining cells that are not in the image
+            for numCell in np.arange(newCont, np.max(img2DLabelled) + 1):
+                imgStackLabelled[oldImgStackLabelled == numCell] = newCont
+                newCont += 1
 
             img2DLabelled = imgStackLabelled[0, :, :]
 
