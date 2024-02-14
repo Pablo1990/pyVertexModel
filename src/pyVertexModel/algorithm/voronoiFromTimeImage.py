@@ -588,8 +588,9 @@ class VoronoiFromTimeImage(VertexModel):
             borderOfborderCellsAndMainCells[numPlane] = border_of_border_cells_and_main_cells
         # Select nodes from images
         img3DProperties = regionprops(imgStackLabelled)
-        all_main_cells = np.unique(
-            np.concatenate([borderOfborderCellsAndMainCells[numPlane] for numPlane in selectedPlanes]))
+        # TODO: even though this is like in matlab, it should change because it is not correct. You might not
+        #  connected neighbours and thus, issues with neighbours
+        all_main_cells = np.arange(1, np.max(np.concatenate([borderOfborderCellsAndMainCells[numPlane] for numPlane in selectedPlanes])) + 1)
         X = np.vstack([prop.centroid for prop in img3DProperties if prop.label in all_main_cells])
         X[:, 2] = 0
         # Using the centroids and vertices of the cells of each 2D image as ghost nodes
@@ -631,7 +632,7 @@ class VoronoiFromTimeImage(VertexModel):
 
         # Fill Geo info
         self.geo.nCells = len(xInternal)
-        self.geo.XgLateral = np.setdiff1d(arange(1, np.max(all_main_cells) + 1), xInternal)
+        self.geo.XgLateral = np.setdiff1d(all_main_cells, xInternal)
         self.geo.XgID = np.setdiff1d(np.arange(1, X.shape[0] + 1), xInternal)
         # Define border cells
         self.geo.BorderCells = np.unique(np.concatenate([borderCells[numPlane] for numPlane in selectedPlanes]))
