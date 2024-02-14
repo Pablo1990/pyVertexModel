@@ -482,12 +482,12 @@ class VoronoiFromTimeImage(VertexModel):
     def __init__(self, set_test=None):
         super().__init__(set_test)
 
-    def initialize(self):
+    def initialize(self, filename="src/pyVertexModel/resources/LblImg_imageSequence.tif"):
         """
         Initialize the geometry and the topology of the model.
         :return:
         """
-        Twg, X = self.obtain_initial_x_and_tetrahedra()
+        Twg, X = self.obtain_initial_x_and_tetrahedra(filename)
 
         # Build cells
         self.geo.build_cells(self.set, X, Twg)  # Please define the BuildCells function
