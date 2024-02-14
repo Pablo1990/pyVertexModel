@@ -149,7 +149,10 @@ class Geo:
                 self.EdgeLengthAvg_0 = mat_file['EdgeLengthAvg_0'][0][0][0][1:4]
             self.XgBottom = mat_file['XgBottom'][0][0][0] - 1
             self.XgTop = mat_file['XgTop'][0][0][0] - 1
-            self.XgLateral = mat_file['XgLateral'][0][0][0] - 1
+            if 'XgLateral' in mat_file.dtype.names:
+                self.XgLateral = mat_file['XgLateral'][0][0][0] - 1
+            else:
+                self.XgLateral = []
             self.XgID = mat_file['XgID'][0][0][0] - 1
             self.nz = 1
             self.ny = 3
