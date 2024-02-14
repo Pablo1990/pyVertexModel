@@ -1,3 +1,5 @@
+from os.path import exists
+
 import numpy as np
 import pandas as pd
 from scipy.spatial import Delaunay
@@ -10,7 +12,7 @@ from src.pyVertexModel.algorithm.vertexModelBubbles import build_topo, SeedWithB
     delaunay_compute_entities
 from src.pyVertexModel.algorithm.voronoiFromTimeImage import build_triplets_of_neighs, calculate_neighbours, \
     VoronoiFromTimeImage, create_tetrahedra, add_tetrahedral_intercalations, build_2d_voronoi_from_image, \
-    populate_vertices_info, calculate_vertices, get_four_fold_vertices, divide_quartets_neighbours
+    populate_vertices_info, calculate_vertices, get_four_fold_vertices, divide_quartets_neighbours, process_image
 from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 
 
@@ -441,3 +443,19 @@ class TestVertexModel(Tests):
 
         # Assert
         np.testing.assert_equal(img_neighbours_all, img_neighbours_expected)
+
+    def test_process_image(self):
+        """
+        Test the process_image function.
+        :return:
+        """
+        # Process image
+        file_name = "resources/LblImg_imageSequence.tif"
+        _, imgStackLabelled_test = process_image(file_name, redo=True) if exists(file_name) else process_image(
+            '../src/pyVertexModel/%s' % file_name, redo=True)
+
+        # Load expected
+        _, _, mat_info_expected = load_data('process_image_wingdisc_expected.mat')
+
+        # Check if the test and expected are the same
+        assert_matrix(np.transpose(imgStackLabelled_test, (1, 2, 0)), mat_info_expected['imgStackLabelled'])

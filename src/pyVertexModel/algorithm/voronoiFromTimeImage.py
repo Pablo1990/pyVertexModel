@@ -401,7 +401,7 @@ def populate_vertices_info(border_cells_and_main_cells, img_neighbours_all, labe
     return vertices_info
 
 
-def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence.tif"):
+def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence.tif", redo=False):
     """
     Process the image and return the 2D labeled image and the 3D labeled image.
     :param img_filename:
@@ -409,7 +409,7 @@ def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence
     """
     # Load the tif file from resources if exists
     if os.path.exists(img_filename):
-        if os.path.exists(img_filename.replace('.tif', '.xz')):
+        if os.path.exists(img_filename.replace('.tif', '.xz')) and not redo:
             imgStackLabelled = pickle.load(lzma.open(img_filename.replace('.tif', '.xz'), "rb"))
 
             imgStackLabelled = imgStackLabelled['imgStackLabelled']
@@ -450,7 +450,7 @@ def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence
             save_variables({'imgStackLabelled': imgStackLabelled},
                            img_filename.replace('.tif', '.xz'))
     else:
-        raise ValueError('Image file not found')
+        raise ValueError('Image file not found %s' % img_filename)
 
     return img2DLabelled, imgStackLabelled
 
