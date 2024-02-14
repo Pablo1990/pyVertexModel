@@ -332,6 +332,9 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
     cell_edges = vertices_info['edges']
     vertices_location = vertices_info['location']
 
+    # Remove Nones from the vertices location
+    cell_edges = [cell_edges[i] for i in range(len(cell_edges)) if cell_edges[i] is not None]
+
     return (triangles_connectivity, neighbours_network, cell_edges, vertices_location, border_cells,
             border_of_border_cells_and_main_cells)
 
