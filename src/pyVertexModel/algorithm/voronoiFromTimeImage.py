@@ -555,7 +555,9 @@ class VoronoiFromTimeImage(VertexModel):
         #  connected neighbours and thus, issues with neighbours
         all_main_cells = np.arange(1, np.max(np.concatenate([borderOfborderCellsAndMainCells[numPlane] for numPlane in selectedPlanes])) + 1)
         X = np.vstack([prop.centroid for prop in img3DProperties if prop.label in all_main_cells])
+        X = X[:, [1, 0, 2]]
         X[:, 2] = 0
+
         # Using the centroids and vertices of the cells of each 2D image as ghost nodes
         bottomPlane = 0
         topPlane = 1
