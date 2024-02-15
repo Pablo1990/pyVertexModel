@@ -552,11 +552,12 @@ class VoronoiFromTimeImage(VertexModel):
             borderCells[numPlane] = border_cells
             borderOfborderCellsAndMainCells[numPlane] = border_of_border_cells_and_main_cells
         # Select nodes from images
-        img3DProperties = regionprops(imgStackLabelled)
+        img3DProperties = regionprops_table(imgStackLabelled, properties=('centroid', 'label',))
         # TODO: even though this is like in matlab, it should change because it is not correct. You might not
         #  connected neighbours and thus, issues with neighbours
         all_main_cells = np.arange(1, np.max(np.concatenate([borderOfborderCellsAndMainCells[numPlane] for numPlane in selectedPlanes])) + 1)
-        X = np.vstack([prop.centroid for prop in img3DProperties if prop.label in all_main_cells])
+        X = np.vstack([[img3DProperties['centroid-1'][i], img3DProperties['centroid-0'][i]] for i in
+                       range(len(img3DProperties['label'])) if img3DProperties['label'][i] in all_main_cells])
         X[:, 2] = 0
 
         # Using the centroids and vertices of the cells of each 2D image as ghost nodes
@@ -574,7 +575,7 @@ class VoronoiFromTimeImage(VertexModel):
             props = regionprops_table(img2DLabelled, properties=('centroid', 'label',))
 
             centroids = np.full((unique_label, 2), np.nan)
-            centroids[np.array(props['label'], dtype=int) - 1] = np.column_stack([props['centroid-0'], props['centroid-1']])
+            centroids[np.array(props['label'], dtype=int) - 1] = np.column_stack([props['centroid-1'], props['centroid-0']])
             Xg_faceCentres2D = np.hstack((centroids, np.tile(zCoordinate[idPlane], (len(centroids), 1))))
             Xg_vertices2D = np.hstack((np.fliplr(verticesOfCell_pos[numPlane]),
                                        np.tile(zCoordinate[idPlane], (len(verticesOfCell_pos[numPlane]), 1))))
