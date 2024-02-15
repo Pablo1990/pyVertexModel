@@ -323,3 +323,68 @@ class VertexModel:
                         assert any(length > min_error_edge for length in
                                    tris.LengthsToCentre), "Triangle lengths to centre are too low"
                         assert tris.Area > min_error_area, "Triangle area is too low"
+
+    def initialize_average_cell_props(self):
+        """
+        Initializes the average cell properties. This method calculates the average area of all triangles (tris) in the
+        geometry (Geo) structure, and sets the upper and lower area thresholds based on the standard deviation of the areas.
+        It also calculates the minimum edge length and the minimum area of all tris, and sets the initial values for
+        BarrierTri0 and lmin0 based on these calculations. The method also calculates the average edge lengths for tris
+        located at the top, bottom, and lateral sides of the cells. Finally, it initializes an empty list for storing
+        removed debris cells.
+
+        :return: None
+        """
+        # Concatenate all faces from all cells in the Geo structure
+        all_faces = np.concatenate([cell.Faces for cell in self.geo.Cells])
+        # Concatenate all tris from all faces
+        all_tris = np.concatenate([face.Tris for face in all_faces])
+        # Calculate the average area of all tris
+        avgArea = np.mean([tri.Area for tri in all_tris])
+        # Calculate the standard deviation of the areas of all tris
+        stdArea = np.std([tri.Area for tri in all_tris])
+        # Set the upper and lower area thresholds based on the average area and standard deviation
+        self.set.upperAreaThreshold = avgArea + stdArea
+        self.set.lowerAreaThreshold = avgArea - stdArea
+        # Assemble nodes from all cells that are not None
+        self.geo.AssembleNodes = [i for i, cell in enumerate(self.geo.Cells) if cell.AliveStatus is not None]
+        # Initialize BarrierTri0 and lmin0 with the maximum possible float value
+        self.set.BarrierTri0 = np.finfo(float).max
+        self.set.lmin0 = np.finfo(float).max
+        # Initialize lists for storing edge lengths of tris located at the top, bottom, and lateral sides of the cells
+        edgeLengths_Top = []
+        edgeLengths_Bottom = []
+        edgeLengths_Lateral = []
+        # Initialize list for storing minimum lengths to the centre and edge lengths of tris
+        lmin_values = []
+        # Iterate over all cells in the Geo structure
+        for c in range(self.geo.nCells):
+            # Iterate over all faces in the current cell
+            for f in range(len(self.geo.Cells[c].Faces)):
+                Face = self.geo.Cells[c].Faces[f]
+                # Update BarrierTri0 with the minimum area of all tris in the current face
+                self.set.BarrierTri0 = min([min([tri.Area for tri in Face.Tris]), self.set.BarrierTri0])
+                # Iterate over all tris in the current face
+                for nTris in range(len(self.geo.Cells[c].Faces[f].Tris)):
+                    tri = self.geo.Cells[c].Faces[f].Tris[nTris]
+                    # Append the minimum length to the centre and the edge length of the current tri to lmin_values
+                    lmin_values.append(min(tri.LengthsToCentre))
+                    lmin_values.append(tri.EdgeLength)
+                    # Depending on the location of the tri, append the edge length to the corresponding list
+                    if tri.Location == 'Top':
+                        edgeLengths_Top.append(tri.compute_edge_length(self.geo.Cells[c].Y))
+                    elif tri.Location == 'Bottom':
+                        edgeLengths_Bottom.append(tri.compute_edge_length(self.geo.Cells[c].Y))
+                    else:
+                        edgeLengths_Lateral.append(tri.compute_edge_length(self.geo.Cells[c].Y))
+        # Update lmin0 with the minimum value in lmin_values
+        self.set.lmin0 = min(lmin_values)
+        # Calculate the average edge lengths for tris located at the top, bottom, and lateral sides of the cells
+        self.geo.AvgEdgeLength_Top = np.mean(edgeLengths_Top)
+        self.geo.AvgEdgeLength_Bottom = np.mean(edgeLengths_Bottom)
+        self.geo.AvgEdgeLength_Lateral = np.mean(edgeLengths_Lateral)
+        # Update BarrierTri0 and lmin0 based on their initial values
+        self.set.BarrierTri0 = self.set.BarrierTri0 / 10
+        self.set.lmin0 = self.set.lmin0 * 10
+        # Initialize an empty list for storing removed debris cells
+        self.geo.RemovedDebrisCells = []

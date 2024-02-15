@@ -14,7 +14,7 @@ from skimage.morphology import dilation, disk, square
 from skimage.segmentation import find_boundaries
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
-from src.pyVertexModel.util.utils import ismember_rows, save_variables
+from src.pyVertexModel.util.utils import ismember_rows, save_variables, save_state, load_state
 
 
 def create_tetrahedra(triangles_connectivity, neighbours_network, edges_of_vertices, x_internal, x_face_ids,
@@ -501,54 +501,16 @@ class VoronoiFromTimeImage(VertexModel):
         Initialize the geometry and the topology of the model.
         :return:
         """
-        Twg, X = self.obtain_initial_x_and_tetrahedra(filename)
-
-        # Build cells
-        self.geo.build_cells(self.set, X, Twg)  # Please define the BuildCells function
+        if os.path.exists('voronoi_40cells.pkl'):
+            load_state(self, 'voronoi_40cells.pkl')
+        else:
+            # Load the image and obtain the initial X and tetrahedra
+            Twg, X = self.obtain_initial_x_and_tetrahedra(filename)
+            # Build cells
+            self.geo.build_cells(self.set, X, Twg)  # Please define the BuildCells function
 
         # Define upper and lower area threshold for remodelling
-        allFaces = np.concatenate([self.geo.Cells.Faces for c in range(self.geo.nCells)])
-        allTris = np.concatenate([face.Tris for face in allFaces])
-        avgArea = np.mean([tri.Area for tri in allTris])
-        stdArea = np.std([tri.Area for tri in allTris])
-        self.set.upperAreaThreshold = avgArea + stdArea
-        self.set.lowerAreaThreshold = avgArea - stdArea
-
-        # Geo.AssembleNodes = find(cellfun(@isempty, {Geo.Cells.AliveStatus})==0)
-        self.geo.AssembleNodes = [idx for idx, cell in enumerate(self.geo.Cells) if cell.AliveStatus]
-
-        # Define BarrierTri0
-        self.set.BarrierTri0 = np.finfo(float).max
-        self.set.lmin0 = np.finfo(float).max
-        edgeLengths_Top = []
-        edgeLengths_Bottom = []
-        edgeLengths_Lateral = []
-        lmin_values = []
-        for c in range(self.geo.nCells):
-            for f in range(len(self.geo.Cells[c].Faces)):
-                Face = self.set.Cells[c].Faces[f]
-                self.set.BarrierTri0 = min(
-                    [tri.Area for tri in self.geo.Cells[c].Faces[f].Tris] + [self.set.BarrierTri0])
-                lmin_values.append(min(tri.LengthsToCentre))
-                lmin_values.append(tri.EdgeLength)
-                for nTris in range(len(self.geo.Cells[c].Faces[f].Tris)):
-                    tri = self.geo.Cells[c].Faces[f].Tris[nTris]
-                    if tri.Location == 'Top':
-                        edgeLengths_Top.append(tri.Edge.compute_edge_length(self.geo.Cells[c].Y))
-                    elif tri.Location == 'Bottom':
-                        edgeLengths_Bottom.append(tri.Edge.compute_edge_length(self.geo.Cells[c].Y))
-                    else:
-                        edgeLengths_Lateral.append(tri.Edge.compute_edge_length(self.geo.Cells[c].Y))
-
-        self.set.lmin0 = min(lmin_values)
-
-        self.geo.AvgEdgeLength_Top = np.mean(edgeLengths_Top)
-        self.geo.AvgEdgeLength_Bottom = np.mean(edgeLengths_Bottom)
-        self.geo.AvgEdgeLength_Lateral = np.mean(edgeLengths_Lateral)
-        self.set.BarrierTri0 = self.set.BarrierTri0 / 5
-        self.set.lmin0 = self.set.lmin0 * 10
-
-        self.geo.RemovedDebrisCells = []
+        self.initialize_average_cell_props()
 
         minZs = np.min([cell.Y for cell in self.geo.Cells])
         self.geo.CellHeightOriginal = np.abs(minZs[2])
