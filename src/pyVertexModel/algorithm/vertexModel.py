@@ -43,12 +43,12 @@ class VertexModel:
         else:
             # TODO Create a menu to select the set
             self.set = Set()
-            # self.set.cyst()
+            #self.set.cyst()
             self.set.NoBulk_110()
             self.set.update_derived_parameters()
 
         # Redirect output
-        if self.OutputFolder is not None:
+        if self.set.OutputFolder is not None:
             self.set.redirect_output()
 
         # Degrees of freedom definition
@@ -57,7 +57,6 @@ class VertexModel:
 
         self.relaxingNu = False
         self.EnergiesPerTimeStep = []
-        self.InitiateOutputFolder()
 
     @abstractmethod
     def initialize(self):
@@ -82,9 +81,6 @@ class VertexModel:
         for cell in [c for c in self.geo.Cells if c.AliveStatus is not None]:
             _, corresponding_ids = np.where(np.all(np.sort(cell.T, axis=1)[:, None] == all_tets_unique, axis=2))
             cell.Y += displacements[corresponding_ids, :]
-
-    def InitiateOutputFolder(self):
-        pass
 
     def iterate_over_time(self):
         """
@@ -128,7 +124,7 @@ class VertexModel:
         }
         self.numStep = 1
 
-        save_state(self, os.path.join(self.set.OutputFolder, 'data_step_0.pkl'))
+        #save_state(self, os.path.join(self.set.OutputFolder, 'data_step_0.pkl'))
 
         # Create VTK files for initial state
         self.geo.create_vtk_cell(self.geo_0, self.set, 0)

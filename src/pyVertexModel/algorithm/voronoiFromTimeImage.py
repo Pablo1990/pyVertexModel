@@ -502,8 +502,8 @@ class VoronoiFromTimeImage(VertexModel):
         Initialize the geometry and the topology of the model.
         :return:
         """
-        if os.path.exists('voronoi_40cells.pkl'):
-            load_state(self, 'voronoi_40cells.pkl')
+        if filename.endswith('.pkl') and os.path.exists(filename):
+            load_state(self, filename)
         else:
             # Load the image and obtain the initial X and tetrahedra
             Twg, X = self.obtain_initial_x_and_tetrahedra(filename)
