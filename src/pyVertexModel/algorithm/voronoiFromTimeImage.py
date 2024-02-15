@@ -614,7 +614,7 @@ class VoronoiFromTimeImage(VertexModel):
                                        np.tile(zCoordinate[idPlane], (len(verticesOfCell_pos[numPlane]), 1))))
 
             Xg_nodes = np.vstack((Xg_faceCentres2D, Xg_vertices2D))
-            Xg_ids = np.arange(X.shape[0], X.shape[0] + Xg_nodes.shape[0])
+            Xg_ids = np.arange(X.shape[0] + 1, X.shape[0] + Xg_nodes.shape[0] + 1)
             Xg_faceIds = Xg_ids[0:Xg_faceCentres2D.shape[0]]
             Xg_verticesIds = Xg_ids[Xg_faceCentres2D.shape[0]:]
             X = np.vstack((X, Xg_nodes))
