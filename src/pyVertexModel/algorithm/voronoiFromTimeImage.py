@@ -512,8 +512,9 @@ class VoronoiFromTimeImage(VertexModel):
         # Define upper and lower area threshold for remodelling
         self.initialize_average_cell_props()
 
-        minZs = np.min([cell.Y for cell in self.geo.Cells])
-        self.geo.CellHeightOriginal = np.abs(minZs[2])
+        # Obtain the original cell height
+        min_zs = np.min([np.min(cell.Y[:, 2]) for cell in self.geo.Cells if cell.Y is not None])
+        self.geo.CellHeightOriginal = np.abs(min_zs)
 
     def obtain_initial_x_and_tetrahedra(self, img_filename="src/pyVertexModel/resources/LblImg_imageSequence.tif"):
         """
