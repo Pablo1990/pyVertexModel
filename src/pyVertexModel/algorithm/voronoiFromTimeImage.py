@@ -517,6 +517,10 @@ class VoronoiFromTimeImage(VertexModel):
         # Obtain the original cell height
         min_zs = np.min([np.min(cell.Y[:, 2]) for cell in self.geo.Cells if cell.Y is not None])
         self.geo.CellHeightOriginal = np.abs(min_zs)
+        if min_zs > 0:
+            self.set.SubstrateZ = min_zs * 0.99
+        else:
+            self.set.SubstrateZ = min_zs * 1.01
 
     def obtain_initial_x_and_tetrahedra(self, img_filename="src/pyVertexModel/resources/LblImg_imageSequence.tif"):
         """

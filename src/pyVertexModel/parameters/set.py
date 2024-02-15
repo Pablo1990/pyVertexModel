@@ -13,7 +13,7 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
-        self.RemodelingFrequency = None
+        self.RemodelingFrequency = 0.2
         self.i_incr = None
         self.iter = None
         self.ablation = False
@@ -90,7 +90,7 @@ class Set:
             self.Remodelling = False
             self.RemodelTol = 0
             self.contributionOldYs = 0
-            self.RemodelStiffness = 0.6
+            self.RemodelStiffness = 0.1
             self.Reset_PercentageGeo0 = 0.15
             # ============================ Solution ==============================
             self.tol = 1e-08
@@ -134,7 +134,7 @@ class Set:
 
     def define_if_not_defined(self, param, value):
         """
-        Define a parameter if it is not defined
+        Define a parameter if it is not defined or is None
         :param param:
         :param value:
         :return:
@@ -165,7 +165,7 @@ class Set:
         self.define_if_not_defined("contributionOldFaceCentre", self.contributionOldYs)
 
         current_datetime = datetime.now()
-        new_outputFolder = ''.join(['Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")), self.InputGeo,
+        new_outputFolder = ''.join([PROJECT_DIRECTORY, '/Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")), self.InputGeo,
                                     '_Cells_', str(self.TotalCells), '_visc_', str(self.nu), '_lVol_',
                                     str(self.lambdaV), '_muBulk_', str(self.mu_bulk), '_lBulk_',
                                     str(self.lambda_bulk), '_kSubs_',
@@ -198,16 +198,17 @@ class Set:
         self.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/Cyst')
         self.lambdaR = 0
         self.Remodelling = True
+        self.RemodelStiffness = 0.1
 
     def NoBulk_110(self):
         self.InputGeo = 'VertexModelTime'
         # 40 cells 3 cells to ablate
         # 110 cells 7 cells to ablate
-        self.TotalCells = 110
+        self.TotalCells = 40
+        self.CellHeight = 15
 
         self.InPlaneElasticity = False
         self.mu_bulk = 0
-
         self.lambda_bulk = 0
 
         self.nu = 5000
@@ -222,7 +223,7 @@ class Set:
         self.purseStringStrength = 12
 
         self.noiseContractility = 0
-        self.DelayedAdditionalContractility = 0
+        #self.DelayedAdditionalContractility = 0
         # Soft < 0
         # Stiff > 0
         self.RemodelStiffness = 0
