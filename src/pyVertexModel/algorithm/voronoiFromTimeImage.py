@@ -459,10 +459,11 @@ def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence
 
                 save_variables({'imgStackLabelled': imgStackLabelled},
                                img_filename.replace('.tif', '.xz'))
+
+            imgStackLabelled = np.transpose(imgStackLabelled, (2, 0, 1))
         elif img_filename.endswith('.mat'):
             imgStackLabelled = scipy.io.loadmat(img_filename)['imgStackLabelled']
-            imgStackLabelled = np.transpose(imgStackLabelled, (2, 0, 1))
-            img2DLabelled = imgStackLabelled[0, :, :]
+            img2DLabelled = imgStackLabelled[:, :, 0]
     else:
         raise ValueError('Image file not found %s' % img_filename)
 
@@ -508,6 +509,7 @@ class VoronoiFromTimeImage(VertexModel):
             Twg, X = self.obtain_initial_x_and_tetrahedra(filename)
             # Build cells
             self.geo.build_cells(self.set, X, Twg)  # Please define the BuildCells function
+            save_state(self, 'voronoi_40cells.pkl')
 
         # Define upper and lower area threshold for remodelling
         self.initialize_average_cell_props()
@@ -539,8 +541,8 @@ class VoronoiFromTimeImage(VertexModel):
         for numPlane in selectedPlanes:
             (triangles_connectivity, neighbours_network,
              cell_edges, vertices_location, border_cells,
-             border_of_border_cells_and_main_cells) = build_2d_voronoi_from_image(imgStackLabelled[numPlane, :, :],
-                                                                                  imgStackLabelled[numPlane, :, :],
+             border_of_border_cells_and_main_cells) = build_2d_voronoi_from_image(imgStackLabelled[:, :, numPlane],
+                                                                                  imgStackLabelled[:, :, numPlane],
                                                                                   np.arange(1, self.set.TotalCells + 1))
 
             trianglesConnectivity[numPlane] = triangles_connectivity
@@ -555,7 +557,6 @@ class VoronoiFromTimeImage(VertexModel):
         #  connected neighbours and thus, issues with neighbours
         all_main_cells = np.arange(1, np.max(np.concatenate([borderOfborderCellsAndMainCells[numPlane] for numPlane in selectedPlanes])) + 1)
         X = np.vstack([prop.centroid for prop in img3DProperties if prop.label in all_main_cells])
-        X = X[:, [1, 0, 2]]
         X[:, 2] = 0
 
         # Using the centroids and vertices of the cells of each 2D image as ghost nodes
@@ -568,7 +569,7 @@ class VoronoiFromTimeImage(VertexModel):
             zCoordinate = [cellHeight, -cellHeight]
         Twg = []
         for idPlane, numPlane in enumerate(selectedPlanes):
-            img2DLabelled = imgStackLabelled[numPlane, :, :]
+            img2DLabelled = imgStackLabelled[:, :, numPlane]
             unique_label = np.max(img2DLabelled)
             props = regionprops_table(img2DLabelled, properties=('centroid', 'label',))
 
@@ -621,13 +622,33 @@ class VoronoiFromTimeImage(VertexModel):
         return Twg, X
 
     def renumber_tets_xs(self, Twg, X):
+        """
+        Renumber the tetrahedra and the coordinates.
+
+        This function renumbers the tetrahedra and the coordinates based on the unique values in the tetrahedra array.
+        It also updates the ghost node indices in the geometry object.
+
+        Parameters:
+        Twg (numpy.ndarray): A 2D array where each row represents a tetrahedron and each column represents a node of the tetrahedron.
+        X (numpy.ndarray): A 2D array where each row represents a node and each column represents a coordinate of the node.
+
+        Returns:
+        Twg (numpy.ndarray): The renumbered tetrahedra array.
+        X (numpy.ndarray): The renumbered coordinates array.
+        """
+        # Get the unique values in the tetrahedra array and their inverse mapping
         oldIds, oldTwgNewIds = np.unique(Twg, return_inverse=True)
+        # Create a new array of indices
         newIds = np.arange(len(oldIds))
-        X = X[oldIds, :]
+        # Update the coordinates array based on the old indices
+        X = X[oldIds - 1, :]
+        # Reshape the inverse mapping to match the shape of the tetrahedra array
         Twg = oldTwgNewIds.reshape(Twg.shape)
+        # Update the ghost node indices in the geometry object
         self.geo.XgBottom = newIds[np.isin(oldIds, self.geo.XgBottom)]
         self.geo.XgTop = newIds[np.isin(oldIds, self.geo.XgTop)]
         self.geo.XgLateral = newIds[np.isin(oldIds, self.geo.XgLateral)]
         self.geo.XgID = newIds[np.isin(oldIds, self.geo.XgID)]
         self.geo.BorderGhostNodes = self.geo.XgLateral
+        # Return the renumbered tetrahedra and coordinates arrays
         return Twg, X
