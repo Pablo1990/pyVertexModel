@@ -556,7 +556,7 @@ class VoronoiFromTimeImage(VertexModel):
         # TODO: even though this is like in matlab, it should change because it is not correct. You might not
         #  connected neighbours and thus, issues with neighbours
         all_main_cells = np.arange(1, np.max(np.concatenate([borderOfborderCellsAndMainCells[numPlane] for numPlane in selectedPlanes])) + 1)
-        X = np.vstack([[img3DProperties['centroid-1'][i], img3DProperties['centroid-0'][i]] for i in
+        X = np.vstack([[img3DProperties['centroid-1'][i], img3DProperties['centroid-0'][i], img3DProperties['centroid-2'][i]] for i in
                        range(len(img3DProperties['label'])) if img3DProperties['label'][i] in all_main_cells])
         X[:, 2] = 0
 
