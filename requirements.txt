@@ -5,3 +5,4 @@ vtk
 scikit-learn
 pandas
 cython
+networkx
