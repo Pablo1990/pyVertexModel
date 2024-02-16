@@ -5,7 +5,8 @@ import pandas as pd
 from scipy.spatial import Delaunay
 
 from Tests.test_geo import check_if_cells_are_the_same
-from Tests.tests import Tests, assert_matrix, load_data
+from Tests.tests import Tests, assert_matrix, load_data, assert_array1D
+from src.pyVertexModel.algorithm import newtonRaphson
 from src.pyVertexModel.algorithm.newtonRaphson import newton_raphson
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.algorithm.vertexModelBubbles import build_topo, SeedWithBoundingBox, generate_first_ghost_nodes, \
@@ -459,3 +460,24 @@ class TestVertexModel(Tests):
 
         # Check if the test and expected are the same
         assert_matrix(np.transpose(imgStackLabelled_test, (1, 2, 0)), mat_info_expected['imgStackLabelled'])
+
+    def test_initialize_voronoi_from_time_image(self):
+        """
+        Test the initialize function.
+        :return:
+        """
+        # Load data
+        _, set_test, mat_info = load_data('initialize_voronoi_wingdisc.mat')
+
+        set_test.OutputFolder = '../Result/Test'
+
+        # Test if initialize geometry function does not change anything
+        vModel_test = VoronoiFromTimeImage(set_test)
+        vModel_test.initialize('data/voronoi_40cells.pkl')
+        g_test, K_test, energies_test = newtonRaphson.KgGlobal(vModel_test.geo_0, vModel_test.geo, vModel_test.geo,
+                                                    vModel_test.set)
+
+        # Check if energies are the same
+        assert_matrix(K_test, mat_info['K'])
+        assert_array1D(g_test, mat_info['g'])
+

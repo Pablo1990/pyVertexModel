@@ -420,44 +420,7 @@ class VertexModelBubbles(VertexModel):
             self.geo = extrapolate_ys_faces_ellipsoid(self.geo, self.set)
 
         # Define upper and lower area threshold for remodelling
-        allFaces = np.concatenate([cell.Faces for cell in self.geo.Cells])
-        allTris = np.concatenate([face.Tris for face in allFaces])
-        avgArea = np.mean([tri.Area for tri in allTris])
-        stdArea = np.std([tri.Area for tri in allTris])
-        self.set.upperAreaThreshold = avgArea + stdArea
-        self.set.lowerAreaThreshold = avgArea - stdArea
-
-        self.geo.AssembleNodes = [i for i, cell in enumerate(self.geo.Cells) if cell.AliveStatus is not None]
-
-        self.set.BarrierTri0 = np.finfo(float).max
-        self.set.lmin0 = np.finfo(float).max
-        edgeLengths_Top = []
-        edgeLengths_Bottom = []
-        edgeLengths_Lateral = []
-        lmin_values = []
-        for c in range(self.geo.nCells):
-            for f in range(len(self.geo.Cells[c].Faces)):
-                Face = self.geo.Cells[c].Faces[f]
-                self.set.BarrierTri0 = min([min([tri.Area for tri in Face.Tris]), self.set.BarrierTri0])
-
-                for nTris in range(len(self.geo.Cells[c].Faces[f].Tris)):
-                    tri = self.geo.Cells[c].Faces[f].Tris[nTris]
-                    lmin_values.append(min(tri.LengthsToCentre))
-                    lmin_values.append(tri.EdgeLength)
-                    if tri.Location == 'Top':
-                        edgeLengths_Top.append(tri.compute_edge_length(self.geo.Cells[c].Y))
-                    elif tri.Location == 'Bottom':
-                        edgeLengths_Bottom.append(tri.compute_edge_length(self.geo.Cells[c].Y))
-                    else:
-                        edgeLengths_Lateral.append(tri.compute_edge_length(self.geo.Cells[c].Y))
-
-        self.set.lmin0 = min(lmin_values)
-
-        self.geo.AvgEdgeLength_Top = np.mean(edgeLengths_Top)
-        self.geo.AvgEdgeLength_Bottom = np.mean(edgeLengths_Bottom)
-        self.geo.AvgEdgeLength_Lateral = np.mean(edgeLengths_Lateral)
-        self.set.BarrierTri0 = self.set.BarrierTri0 / 10
-        self.set.lmin0 = self.set.lmin0 * 10
+        self.initialize_average_cell_props()
 
     def generate_Xs(self, nx=None, ny=None, nz=None):
         """

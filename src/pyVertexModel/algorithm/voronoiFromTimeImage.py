@@ -14,7 +14,7 @@ from skimage.morphology import dilation, disk, square
 from skimage.segmentation import find_boundaries
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
-from src.pyVertexModel.util.utils import ismember_rows, save_variables
+from src.pyVertexModel.util.utils import ismember_rows, save_variables, save_state, load_state
 
 
 def create_tetrahedra(triangles_connectivity, neighbours_network, edges_of_vertices, x_internal, x_face_ids,
@@ -459,10 +459,11 @@ def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence
 
                 save_variables({'imgStackLabelled': imgStackLabelled},
                                img_filename.replace('.tif', '.xz'))
+
+            imgStackLabelled = np.transpose(imgStackLabelled, (2, 0, 1))
         elif img_filename.endswith('.mat'):
             imgStackLabelled = scipy.io.loadmat(img_filename)['imgStackLabelled']
-            imgStackLabelled = np.transpose(imgStackLabelled, (2, 0, 1))
-            img2DLabelled = imgStackLabelled[0, :, :]
+            img2DLabelled = imgStackLabelled[:, :, 0]
     else:
         raise ValueError('Image file not found %s' % img_filename)
 
@@ -501,57 +502,25 @@ class VoronoiFromTimeImage(VertexModel):
         Initialize the geometry and the topology of the model.
         :return:
         """
-        Twg, X = self.obtain_initial_x_and_tetrahedra(filename)
-
-        # Build cells
-        self.geo.build_cells(self.set, X, Twg)  # Please define the BuildCells function
+        if filename.endswith('.pkl') and os.path.exists(filename):
+            load_state(self, filename)
+        else:
+            # Load the image and obtain the initial X and tetrahedra
+            Twg, X = self.obtain_initial_x_and_tetrahedra(filename)
+            # Build cells
+            self.geo.build_cells(self.set, X, Twg)  # Please define the BuildCells function
+            save_state(self, 'voronoi_40cells.pkl')
 
         # Define upper and lower area threshold for remodelling
-        allFaces = np.concatenate([self.geo.Cells.Faces for c in range(self.geo.nCells)])
-        allTris = np.concatenate([face.Tris for face in allFaces])
-        avgArea = np.mean([tri.Area for tri in allTris])
-        stdArea = np.std([tri.Area for tri in allTris])
-        self.set.upperAreaThreshold = avgArea + stdArea
-        self.set.lowerAreaThreshold = avgArea - stdArea
+        self.initialize_average_cell_props()
 
-        # Geo.AssembleNodes = find(cellfun(@isempty, {Geo.Cells.AliveStatus})==0)
-        self.geo.AssembleNodes = [idx for idx, cell in enumerate(self.geo.Cells) if cell.AliveStatus]
-
-        # Define BarrierTri0
-        self.set.BarrierTri0 = np.finfo(float).max
-        self.set.lmin0 = np.finfo(float).max
-        edgeLengths_Top = []
-        edgeLengths_Bottom = []
-        edgeLengths_Lateral = []
-        lmin_values = []
-        for c in range(self.geo.nCells):
-            for f in range(len(self.geo.Cells[c].Faces)):
-                Face = self.set.Cells[c].Faces[f]
-                self.set.BarrierTri0 = min(
-                    [tri.Area for tri in self.geo.Cells[c].Faces[f].Tris] + [self.set.BarrierTri0])
-                lmin_values.append(min(tri.LengthsToCentre))
-                lmin_values.append(tri.EdgeLength)
-                for nTris in range(len(self.geo.Cells[c].Faces[f].Tris)):
-                    tri = self.geo.Cells[c].Faces[f].Tris[nTris]
-                    if tri.Location == 'Top':
-                        edgeLengths_Top.append(tri.Edge.compute_edge_length(self.geo.Cells[c].Y))
-                    elif tri.Location == 'Bottom':
-                        edgeLengths_Bottom.append(tri.Edge.compute_edge_length(self.geo.Cells[c].Y))
-                    else:
-                        edgeLengths_Lateral.append(tri.Edge.compute_edge_length(self.geo.Cells[c].Y))
-
-        self.set.lmin0 = min(lmin_values)
-
-        self.geo.AvgEdgeLength_Top = np.mean(edgeLengths_Top)
-        self.geo.AvgEdgeLength_Bottom = np.mean(edgeLengths_Bottom)
-        self.geo.AvgEdgeLength_Lateral = np.mean(edgeLengths_Lateral)
-        self.set.BarrierTri0 = self.set.BarrierTri0 / 5
-        self.set.lmin0 = self.set.lmin0 * 10
-
-        self.geo.RemovedDebrisCells = []
-
-        minZs = np.min([cell.Y for cell in self.geo.Cells])
-        self.geo.CellHeightOriginal = np.abs(minZs[2])
+        # Obtain the original cell height
+        min_zs = np.min([np.min(cell.Y[:, 2]) for cell in self.geo.Cells if cell.Y is not None])
+        self.geo.CellHeightOriginal = np.abs(min_zs)
+        if min_zs > 0:
+            self.set.SubstrateZ = min_zs * 0.99
+        else:
+            self.set.SubstrateZ = min_zs * 1.01
 
     def obtain_initial_x_and_tetrahedra(self, img_filename="src/pyVertexModel/resources/LblImg_imageSequence.tif"):
         """
@@ -576,8 +545,8 @@ class VoronoiFromTimeImage(VertexModel):
         for numPlane in selectedPlanes:
             (triangles_connectivity, neighbours_network,
              cell_edges, vertices_location, border_cells,
-             border_of_border_cells_and_main_cells) = build_2d_voronoi_from_image(imgStackLabelled[numPlane, :, :],
-                                                                                  imgStackLabelled[numPlane, :, :],
+             border_of_border_cells_and_main_cells) = build_2d_voronoi_from_image(imgStackLabelled[:, :, numPlane],
+                                                                                  imgStackLabelled[:, :, numPlane],
                                                                                   np.arange(1, self.set.TotalCells + 1))
 
             trianglesConnectivity[numPlane] = triangles_connectivity
@@ -587,12 +556,14 @@ class VoronoiFromTimeImage(VertexModel):
             borderCells[numPlane] = border_cells
             borderOfborderCellsAndMainCells[numPlane] = border_of_border_cells_and_main_cells
         # Select nodes from images
-        img3DProperties = regionprops(imgStackLabelled)
+        img3DProperties = regionprops_table(imgStackLabelled, properties=('centroid', 'label',))
         # TODO: even though this is like in matlab, it should change because it is not correct. You might not
         #  connected neighbours and thus, issues with neighbours
         all_main_cells = np.arange(1, np.max(np.concatenate([borderOfborderCellsAndMainCells[numPlane] for numPlane in selectedPlanes])) + 1)
-        X = np.vstack([prop.centroid for prop in img3DProperties if prop.label in all_main_cells])
+        X = np.vstack([[img3DProperties['centroid-1'][i], img3DProperties['centroid-0'][i], img3DProperties['centroid-2'][i]] for i in
+                       range(len(img3DProperties['label'])) if img3DProperties['label'][i] in all_main_cells])
         X[:, 2] = 0
+
         # Using the centroids and vertices of the cells of each 2D image as ghost nodes
         bottomPlane = 0
         topPlane = 1
@@ -603,18 +574,18 @@ class VoronoiFromTimeImage(VertexModel):
             zCoordinate = [cellHeight, -cellHeight]
         Twg = []
         for idPlane, numPlane in enumerate(selectedPlanes):
-            img2DLabelled = imgStackLabelled[numPlane, :, :]
+            img2DLabelled = imgStackLabelled[:, :, numPlane]
             unique_label = np.max(img2DLabelled)
             props = regionprops_table(img2DLabelled, properties=('centroid', 'label',))
 
             centroids = np.full((unique_label, 2), np.nan)
-            centroids[np.array(props['label'], dtype=int) - 1] = np.column_stack([props['centroid-0'], props['centroid-1']])
+            centroids[np.array(props['label'], dtype=int) - 1] = np.column_stack([props['centroid-1'], props['centroid-0']])
             Xg_faceCentres2D = np.hstack((centroids, np.tile(zCoordinate[idPlane], (len(centroids), 1))))
             Xg_vertices2D = np.hstack((np.fliplr(verticesOfCell_pos[numPlane]),
                                        np.tile(zCoordinate[idPlane], (len(verticesOfCell_pos[numPlane]), 1))))
 
             Xg_nodes = np.vstack((Xg_faceCentres2D, Xg_vertices2D))
-            Xg_ids = np.arange(X.shape[0], X.shape[0] + Xg_nodes.shape[0])
+            Xg_ids = np.arange(X.shape[0] + 1, X.shape[0] + Xg_nodes.shape[0] + 1)
             Xg_faceIds = Xg_ids[0:Xg_faceCentres2D.shape[0]]
             Xg_verticesIds = Xg_ids[Xg_faceCentres2D.shape[0]:]
             X = np.vstack((X, Xg_nodes))
@@ -656,13 +627,33 @@ class VoronoiFromTimeImage(VertexModel):
         return Twg, X
 
     def renumber_tets_xs(self, Twg, X):
+        """
+        Renumber the tetrahedra and the coordinates.
+
+        This function renumbers the tetrahedra and the coordinates based on the unique values in the tetrahedra array.
+        It also updates the ghost node indices in the geometry object.
+
+        Parameters:
+        Twg (numpy.ndarray): A 2D array where each row represents a tetrahedron and each column represents a node of the tetrahedron.
+        X (numpy.ndarray): A 2D array where each row represents a node and each column represents a coordinate of the node.
+
+        Returns:
+        Twg (numpy.ndarray): The renumbered tetrahedra array.
+        X (numpy.ndarray): The renumbered coordinates array.
+        """
+        # Get the unique values in the tetrahedra array and their inverse mapping
         oldIds, oldTwgNewIds = np.unique(Twg, return_inverse=True)
+        # Create a new array of indices
         newIds = np.arange(len(oldIds))
-        X = X[oldIds, :]
+        # Update the coordinates array based on the old indices
+        X = X[oldIds - 1, :]
+        # Reshape the inverse mapping to match the shape of the tetrahedra array
         Twg = oldTwgNewIds.reshape(Twg.shape)
+        # Update the ghost node indices in the geometry object
         self.geo.XgBottom = newIds[np.isin(oldIds, self.geo.XgBottom)]
         self.geo.XgTop = newIds[np.isin(oldIds, self.geo.XgTop)]
         self.geo.XgLateral = newIds[np.isin(oldIds, self.geo.XgLateral)]
         self.geo.XgID = newIds[np.isin(oldIds, self.geo.XgID)]
         self.geo.BorderGhostNodes = self.geo.XgLateral
+        # Return the renumbered tetrahedra and coordinates arrays
         return Twg, X
