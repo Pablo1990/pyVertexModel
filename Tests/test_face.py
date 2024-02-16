@@ -56,7 +56,8 @@ class TestFace(Tests):
         set_test.InputGeo = 'Bubbles_Cyst'
 
         # Build the face
-        geo_test.Cells[c].Faces[j].build_face(c,
+        try:
+            geo_test.Cells[c].Faces[j].build_face(c,
                                               j,
                                               np.concatenate(mat_info['face_ids']),
                                               geo_test.nCells,
@@ -65,6 +66,8 @@ class TestFace(Tests):
                                               set_test,
                                               geo_test.XgTop,
                                               geo_test.XgBottom)
+        except Exception as e:
+            np.testing.assert_equal(e, 0)
 
         face_expected = Face(mat_info_expected['Face'])
 
