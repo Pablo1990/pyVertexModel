@@ -23,6 +23,10 @@ def load_data(file_name, return_geo=True):
 
         if 'Set' in mat_info.keys():
             set_test = Set(mat_info['Set'])
+            # Set the output folder to the test directory if it is not set
+            if set_test.OutputFolder.__eq__(b'') or set_test.OutputFolder is None:
+                set_test.OutputFolder = '../Result/Test'
+
         else:
             set_test = None
     else:

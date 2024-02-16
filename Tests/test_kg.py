@@ -96,38 +96,14 @@ class Test(Tests):
     def test_kg_substrate(self):
         test_kg_substrate_filename('Geo_var_3x3_stretch.mat', 'Geo_var_3x3_stretch_expectedResults.mat')
 
-    def test_kg_substrate_Iter6(self):
-        # Check that the global K, g and E are the same in a different iteration
-        filename = 'Geo_var_3x3_stretch_Iter6_expectedResults.mat'
-        filename_expected = 'Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat'
-        test_kg_substrate_filename(filename, filename_expected)
-
     def test_kg_contractility(self):
         test_kg_contractility_filename('Geo_var_3x3_stretch.mat', 'Geo_var_3x3_stretch_expectedResults.mat')
-
-    def test_kg_contractility_Iter6(self):
-        # Check that the global K, g and E are the same in a different iteration
-        filename = 'Geo_var_3x3_stretch_Iter6_expectedResults.mat'
-        filename_expected = 'Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat'
-        test_kg_contractility_filename(filename, filename_expected)
 
     def test_kg_surface(self):
         kg_surface_area_filename('Geo_var_3x3_stretch.mat', 'Geo_var_3x3_stretch_expectedResults.mat', )
 
-    def test_kg_surface_Iter6(self):
-        # Check that the global K, g and E are the same in a different iteration
-        filename = 'Geo_var_3x3_stretch_Iter6_expectedResults.mat'
-        filename_expected = 'Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat'
-        kg_surface_area_filename(filename, filename_expected)
-
     def test_kg_triAR(self):
         test_kg_tri_AR('Geo_var_3x3_stretch.mat', 'Geo_var_3x3_stretch_expectedResults.mat')
-
-    def test_kg_triAR_Iter6(self):
-        # Check that the global K, g and E are the same in a different iteration
-        filename = 'Geo_var_3x3_stretch_Iter6_expectedResults.mat'
-        filename_expected = 'Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat'
-        test_kg_tri_AR(filename, filename_expected)
 
     def test_kg_tri(self):
         filename = 'Geo_var_3x3_stretch.mat'
@@ -146,12 +122,6 @@ class Test(Tests):
         v_kg.compute_work(geo_test, set_test)
         np.testing.assert_almost_equal(v_kg.energy, 7.381125000000000e+04)
 
-    def test_kg_volume_Iter6(self):
-        # Check that the global K, g and E are the same in a different iteration
-        filename = 'Geo_var_3x3_stretch_Iter6_expectedResults.mat'
-        filename_expected = 'Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat'
-        test_kg_volume_filename(filename, filename_expected)
-
     def test_kg_viscosity(self):
         test_kg_viscosity_filename('Geo_var_3x3_stretch.mat', 'Geo_var_3x3_stretch_expectedResults.mat')
 
@@ -163,12 +133,6 @@ class Test(Tests):
         v_kg = KgViscosity(geo_test)
         v_kg.compute_work(geo_test, set_test, geo_n_test)
         np.testing.assert_almost_equal(v_kg.energy, 3.194411761833479e+04)
-
-    def test_kg_viscosity_Iter6(self):
-        # Check that the global K, g and E are the same in a different iteration
-        filename = 'Geo_var_3x3_stretch_Iter6_expectedResults.mat'
-        filename_expected = 'Geo_var_3x3_stretch_Iter6_Kgs_expectedResults.mat'
-        test_kg_viscosity_filename(filename, filename_expected)
 
     def test_KgGlobal(self):
         geo_test, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')

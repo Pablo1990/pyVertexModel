@@ -8,11 +8,10 @@ from Tests.test_geo import check_if_cells_are_the_same
 from Tests.tests import Tests, assert_matrix, load_data, assert_array1D
 from src.pyVertexModel.algorithm import newtonRaphson
 from src.pyVertexModel.algorithm.newtonRaphson import newton_raphson
-from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.algorithm.vertexModelBubbles import build_topo, SeedWithBoundingBox, generate_first_ghost_nodes, \
-    delaunay_compute_entities
-from src.pyVertexModel.algorithm.voronoiFromTimeImage import build_triplets_of_neighs, calculate_neighbours, \
-    VoronoiFromTimeImage, create_tetrahedra, add_tetrahedral_intercalations, build_2d_voronoi_from_image, \
+    delaunay_compute_entities, VertexModelBubbles
+from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import build_triplets_of_neighs, calculate_neighbours, \
+    VertexModelVoronoiFromTimeImage, create_tetrahedra, add_tetrahedral_intercalations, build_2d_voronoi_from_image, \
     populate_vertices_info, calculate_vertices, get_four_fold_vertices, divide_quartets_neighbours, process_image
 from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 
@@ -32,7 +31,7 @@ class TestVertexModel(Tests):
         set_test.TotalCells = 30
 
         # Test if initialize geometry function does not change anything
-        vModel_test = VertexModel(set_test)
+        vModel_test = VertexModelBubbles(set_test)
         vModel_test.initialize()
 
         # Check if the cells are initialized correctly
@@ -51,7 +50,7 @@ class TestVertexModel(Tests):
         set_test.TotalCells = 30
 
         # Test if initialize geometry function does not change anything
-        vModel_test = VertexModel(set_test)
+        vModel_test = VertexModelBubbles(set_test)
         vModel_test.generate_Xs()
 
         # Check if the cells are initialized correctly
@@ -89,7 +88,7 @@ class TestVertexModel(Tests):
         X_input = mat_info['X']
 
         # Test if initialize geometry function does not change anything
-        vModel_test = VertexModel(set_test)
+        vModel_test = VertexModelBubbles(set_test)
         XgID_expected, X_test = SeedWithBoundingBox(X_input, set_test.s)
 
         # Check if the cells are initialized correctly
@@ -183,7 +182,7 @@ class TestVertexModel(Tests):
         geo_original, _, mat_info_original = load_data('Geo_var_cyst.mat')
 
         # Test if initialize geometry function does not change anything
-        v_model_test = VertexModel(set_test)
+        v_model_test = VertexModelBubbles(set_test)
         v_model_test.backupVars = {
             'Geo_b': geo_test,
             'tr_b': 0,
@@ -218,7 +217,7 @@ class TestVertexModel(Tests):
         geo_test, set_test, mat_info = load_data('Geo_var_cyst.mat')
 
         # Test if initialize geometry function does not change anything
-        v_model_test = VertexModel(set_test)
+        v_model_test = VertexModelBubbles(set_test)
         v_model_test.geo = geo_test.copy()
         v_model_test.geo_0 = geo_test.copy()
         v_model_test.geo_n = geo_test.copy()
@@ -267,9 +266,9 @@ class TestVertexModel(Tests):
         _, set_test, mat_info_expected = load_data('obtain_x_and_twg_wingdisc.mat')
 
         # Test if initialize geometry function does not change anything
-        vModel_test = VoronoiFromTimeImage(set_test)
+        vModel_test = VertexModelVoronoiFromTimeImage(set_test)
         Twg_test, X_test = vModel_test.obtain_initial_x_and_tetrahedra(
-            "/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/src/pyVertexModel/resources/LblImg_imageSequence.tif")
+            "resources/LblImg_imageSequence.tif")
 
         # Check if the test and expected are the same
         assert_matrix(Twg_test, mat_info_expected['Twg'])
@@ -469,10 +468,8 @@ class TestVertexModel(Tests):
         # Load data
         _, set_test, mat_info = load_data('initialize_voronoi_wingdisc.mat')
 
-        set_test.OutputFolder = '../Result/Test'
-
         # Test if initialize geometry function does not change anything
-        vModel_test = VoronoiFromTimeImage(set_test)
+        vModel_test = VertexModelVoronoiFromTimeImage(set_test)
         vModel_test.initialize('data/voronoi_40cells.pkl')
         g_test, K_test, energies_test = newtonRaphson.KgGlobal(vModel_test.geo_0, vModel_test.geo, vModel_test.geo,
                                                     vModel_test.set)

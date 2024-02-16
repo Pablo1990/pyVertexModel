@@ -493,7 +493,7 @@ def add_tetrahedral_intercalations(Twg, xInternal, XgBottom, XgTop, XgLateral):
     return Twg
 
 
-class VoronoiFromTimeImage(VertexModel):
+class VertexModelVoronoiFromTimeImage(VertexModel):
     def __init__(self, set_test=None):
         super().__init__(set_test)
 
