@@ -2,5 +2,5 @@ numpy
 scipy
 matplotlib
 vtk
-sklearn
+scikit-learn
 pandas
