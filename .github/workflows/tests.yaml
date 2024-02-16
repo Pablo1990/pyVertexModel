@@ -31,3 +31,13 @@ jobs:
     - name: Run tests
       run: |
         python -m unittest discover Tests
+
+    - name: Generate coverage report
+      run: |
+        coverage xml
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v4.0.1
+      env:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        slug: Pablo1990/pyVertexModel
