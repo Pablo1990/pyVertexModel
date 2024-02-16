@@ -2,3 +2,5 @@ numpy
 scipy
 matplotlib
 vtk
+sklearn
+pandas
