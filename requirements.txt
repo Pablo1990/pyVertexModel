@@ -4,3 +4,4 @@ matplotlib
 vtk
 scikit-learn
 pandas
+cython

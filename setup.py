@@ -11,8 +11,6 @@ setup(
     packages=['src', 'src.pyVertexModel', 'src.pyVertexModel.Kg', 'pyVertexModel'],
     url='',
     license='',
-    author='Pablo Vicente Munuera',
-    author_email='p.munuera@ucl.ac.uk',
     description='',
     ext_modules=cythonize(extensions, **ext_options),
     include_dirs=[np.get_include()],
