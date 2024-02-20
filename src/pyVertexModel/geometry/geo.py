@@ -235,7 +235,7 @@ class Geo:
             self.Cells[c].SubstrateLambda = 1
             self.Cells[c].lambdaB_perc = 1
 
-        self.Cells[range(self.nCells)].Vol0 = np.mean([c_cell.Vol for c_cell in self.Cells])
+        self.Cells[1:self.nCells].Vol0 = np.mean([c_cell.Vol for c_cell in self.Cells])
 
         # Edge lengths 0 as average of all cells by location (Top, bottom, or lateral)
         self.EdgeLengthAvg_0 = []
