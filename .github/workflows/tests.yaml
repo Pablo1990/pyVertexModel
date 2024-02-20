@@ -39,3 +39,6 @@ jobs:
       env:
         token: ${{ secrets.CODECOV_TOKEN }}
         slug: Pablo1990/pyVertexModel
+
+    - name: Coveralls GitHub Action
+      uses: coverallsapp/github-action@v2.2.3
