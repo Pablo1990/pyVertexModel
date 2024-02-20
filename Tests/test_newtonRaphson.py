@@ -84,6 +84,43 @@ class TestNewtonRaphson(Tests):
         np.testing.assert_almost_equal(energy_expected, energy_test)
         assert_array1D(g_expected, g_test)
 
+    def test_newton_raphson_wingdisc(self):
+        """
+        Test the newton_raphson function with the wingdisc input.
+        :return:
+        """
+        # Load data
+        geo_test, set_test, mat_info = load_data('Newton_Raphson_Iteration_wingdisc.mat')
+        geo_n_test = Geo(mat_info['Geo_n'])
+        geo_0_test = Geo(mat_info['Geo_0'])
+        dofs_test = DegreesOfFreedom(mat_info['Dofs'])
+        k_test = mat_info['K']
+        g_test = mat_info['g'][:, 0]
+        num_step_test = mat_info['numStep'][0][0]
+        t_test = mat_info['t'][0][0]
+
+        Set.iter = 1000000
+        geo_test, g_test, k_test, energy_test, set_test, gr_test, dyr_test, dy_test = (
+            newton_raphson(geo_0_test,
+                           geo_n_test,
+                           geo_test,
+                           dofs_test,
+                           set_test, k_test,
+                           g_test,
+                           num_step_test,
+                           t_test))
+
+        _, _, mat_info_expected = load_data('Newton_Raphson_wingdisc_expected.mat', False)
+        gr_expected = mat_info_expected['gr'][0][0]
+        dyr_expected = mat_info_expected['dyr'][0][0]
+        dy_expected = np.array(mat_info_expected['dy'])
+        g_expected = mat_info_expected['g'][:, 0]
+
+        np.testing.assert_almost_equal(dyr_expected, dyr_test)
+        np.testing.assert_almost_equal(gr_expected, gr_test)
+        assert_array1D(dy_expected, np.array(dy_test))
+        assert_array1D(g_expected, g_test)
+
     def test_newton_raphson(self):
         geo_test, set_test, mat_info = load_data('Newton_Raphson_3x3_stretch.mat')
         geo_expected, set_expected, mat_info_expected = load_data('Newton_Raphson_3x3_stretch_expected.mat')
