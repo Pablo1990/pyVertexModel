@@ -569,7 +569,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         bottomPlane = 0
         topPlane = 1
 
-        if bottomPlane == 1:
+        if bottomPlane == 0:
             zCoordinate = [-cellHeight, cellHeight]
         else:
             zCoordinate = [cellHeight, -cellHeight]
