@@ -57,22 +57,33 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
 
 def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g, gr0, ig, numStep, t):
     """
-    Newton-Raphson iteration
-    :param Dofs:
-    :param Geo:
-    :param Geo_0:
-    :param Geo_n:
-    :param K:
-    :param Set:
-    :param aux_gr:
-    :param dof:
-    :param dy:
-    :param g:
-    :param gr0:
-    :param ig:
-    :param numStep:
-    :param t:
-    :return:
+    Perform a single iteration of the Newton-Raphson method for solving a system of nonlinear equations.
+
+    Parameters:
+    Dofs (object): Object containing information about the degrees of freedom in the system.
+    Geo (object): Object containing the current geometry of the system.
+    Geo_0 (object): Object containing the initial geometry of the system.
+    Geo_n (object): Object containing the geometry of the system at the previous time step.
+    K (ndarray): The Jacobian matrix of the system.
+    Set (object): Object containing various settings for the simulation.
+    aux_gr (ndarray): Array containing the norms of the gradient at the previous three steps.
+    dof (ndarray): Array containing the indices of the free degrees of freedom in the system.
+    dy (ndarray): Array containing the current guess for the solution of the system.
+    g (ndarray): The gradient of the system.
+    gr0 (float): The norm of the gradient at the start of the current time step.
+    ig (int): Index used to cycle through the elements of aux_gr.
+    numStep (int): The current time step number.
+    t (float): The current time.
+
+    Returns:
+    Energy (float): The total energy of the system after the current iteration.
+    K (ndarray): The updated Jacobian matrix of the system.
+    dyr (float): The norm of the change in the solution guess during the current iteration.
+    g (ndarray): The updated gradient of the system.
+    gr (float): The norm of the updated gradient of the system.
+    ig (int): The updated index used to cycle through the elements of aux_gr.
+    aux_gr (ndarray): The updated array containing the norms of the gradient at the previous three steps.
+    dy (ndarray): The updated guess for the solution of the system.
     """
     dy[dof, 0] = ml_divide(K, dof, g)
 

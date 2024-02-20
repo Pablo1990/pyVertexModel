@@ -60,7 +60,7 @@ class TestNewtonRaphson(Tests):
         t_test = mat_info['t'][0][0]
         gr_test = mat_info['gr'][0][0]
         gr0_test = gr_test
-        dy_test = np.concatenate(mat_info['dy'], dtype='float64')
+        dy_test = np.zeros(((geo_test.numF + geo_test.numY + geo_test.nCells) * 3, 1), dtype=np.float64)
         geo_0_test = Geo(mat_info['Geo_0'])
         geo_n_test = Geo(mat_info['Geo_n'])
         ig = 1
@@ -162,7 +162,7 @@ class TestNewtonRaphson(Tests):
         g_test = mat_info_expected['g'][:, 0]
         dofs_test = DegreesOfFreedom(mat_info_expected['Dofs'])
 
-        dy_test = np.zeros(((geo_test.numF + geo_test.numY + geo_test.nCells) * 3, 1), dtype=np.float32)
+        dy_test = np.zeros(((geo_test.numF + geo_test.numY + geo_test.nCells) * 3, 1), dtype='float64')
         dy_test[dofs_test.Free, 0] = ml_divide(k_test, dofs_test.Free, g_test)
 
         assert_array1D(dy_test, mat_info_expected['dy'])
