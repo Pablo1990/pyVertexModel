@@ -34,11 +34,16 @@ jobs:
         pytest Tests/ --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
       continue-on-error: true
 
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v4.0.1
-      env:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        slug: Pablo1990/pyVertexModel
+    - name: Upload coverage results to Codecov.io
+      uses: codecov/codecov-action@v2
+      with:
+        token: ${{secrets.CODECOV_TOKEN}}
+        version: "v0.1.15"
+
+    - name: Generate coverage report
+      run: |
+        pip install coverage
+        coverage xml
 
     - name: Coveralls GitHub Action
       uses: coverallsapp/github-action@v2.2.3
