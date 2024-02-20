@@ -267,8 +267,13 @@ class TestVertexModel(Tests):
 
         # Test if initialize geometry function does not change anything
         vModel_test = VertexModelVoronoiFromTimeImage(set_test)
-        Twg_test, X_test = vModel_test.obtain_initial_x_and_tetrahedra(
-            "resources/LblImg_imageSequence.tif")
+
+        file_name = 'LblImg_imageSequence.mat'
+        test_dir = 'Tests/data/%s' % file_name
+        if exists(test_dir):
+            Twg_test, X_test = vModel_test.obtain_initial_x_and_tetrahedra(test_dir)
+        else:
+            Twg_test, X_test = vModel_test.obtain_initial_x_and_tetrahedra('data/%s' % file_name)
 
         # Check if the test and expected are the same
         assert_matrix(Twg_test, mat_info_expected['Twg'])
@@ -450,9 +455,12 @@ class TestVertexModel(Tests):
         :return:
         """
         # Process image
-        file_name = "resources/LblImg_imageSequence.tif"
-        _, imgStackLabelled_test = process_image(file_name, redo=True) if exists(file_name) else process_image(
-            '../src/pyVertexModel/%s' % file_name, redo=True)
+        file_name = 'LblImg_imageSequence.mat'
+        test_dir = 'Tests/data/%s' % file_name
+        if exists(test_dir):
+            _, imgStackLabelled_test = process_image(test_dir)
+        else:
+            _, imgStackLabelled_test = process_image('data/%s' % file_name)
 
         # Load expected
         _, _, mat_info_expected = load_data('process_image_wingdisc_expected.mat')
@@ -470,7 +478,13 @@ class TestVertexModel(Tests):
 
         # Test if initialize geometry function does not change anything
         vModel_test = VertexModelVoronoiFromTimeImage(set_test)
-        vModel_test.initialize('data/voronoi_40cells.pkl')
+        file_name = 'voronoi_40cells.pkl'
+        test_dir = 'Tests/data/%s' % file_name
+        if exists(test_dir):
+            vModel_test.initialize(test_dir)
+        else:
+            vModel_test.initialize('data/%s' % file_name)
+
         g_test, K_test, energies_test = newtonRaphson.KgGlobal(vModel_test.geo_0, vModel_test.geo, vModel_test.geo,
                                                     vModel_test.set)
 

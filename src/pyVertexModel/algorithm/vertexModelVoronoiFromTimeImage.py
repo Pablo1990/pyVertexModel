@@ -408,6 +408,7 @@ def populate_vertices_info(border_cells_and_main_cells, img_neighbours_all, labe
 def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence.tif", redo=False):
     """
     Process the image and return the 2D labeled image and the 3D labeled image.
+    :param redo:
     :param img_filename:
     :return:
     """
