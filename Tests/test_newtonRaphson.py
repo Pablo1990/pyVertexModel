@@ -46,6 +46,44 @@ class TestNewtonRaphson(Tests):
         np.testing.assert_almost_equal(energy_expected, energy_test)
         assert_array1D(g_expected, g_test)
 
+    def test_newton_raphson_iteration_wingdisc(self):
+        """
+        Test the newton_raphson_iteration function with the wingdisc input.
+        :return:
+        """
+        # Load data
+        geo_test, set_test, mat_info = load_data('Newton_Raphson_Iteration_wingdisc.mat')
+        dofs_test = DegreesOfFreedom(mat_info['Dofs'])
+        k_test = mat_info['K']
+        g_test = mat_info['g'][:, 0]
+        num_step_test = mat_info['numStep'][0][0]
+        t_test = mat_info['t'][0][0]
+        gr_test = mat_info['gr'][0][0]
+        gr0_test = gr_test
+        dy_test = np.concatenate(mat_info['dy'], dtype='float64')
+        geo_0_test = Geo(mat_info['Geo_0'])
+        geo_n_test = Geo(mat_info['Geo_n'])
+        ig = 1
+        auxgr_test = np.array([gr_test, 0, 0])
+
+        energy_test, k_test, dyr_test, g_test, gr_test, ig_test, auxgr_test, dy_text = (
+            newton_raphson_iteration(dofs_test, geo_test, geo_0_test,
+                                     geo_n_test, k_test, set_test,
+                                     auxgr_test, dofs_test.Free, dy_test,
+                                     g_test, gr0_test, ig, num_step_test,
+                                     t_test))
+
+        _, _, mat_info_expected = load_data('Newton_Raphson_Iteration_wingdisc_expected.mat', False)
+        energy_expected = mat_info_expected['Energy'][0][0]
+        dyr_expected = mat_info_expected['dyr'][0][0]
+        g_expected = mat_info_expected['g'][:, 0]
+        gr_expected = mat_info_expected['gr'][0][0]
+
+        np.testing.assert_almost_equal(dyr_expected, dyr_test)
+        np.testing.assert_almost_equal(gr_expected, gr_test)
+        np.testing.assert_almost_equal(energy_expected, energy_test)
+        assert_array1D(g_expected, g_test)
+
     def test_newton_raphson(self):
         geo_test, set_test, mat_info = load_data('Newton_Raphson_3x3_stretch.mat')
         geo_expected, set_expected, mat_info_expected = load_data('Newton_Raphson_3x3_stretch_expected.mat')
