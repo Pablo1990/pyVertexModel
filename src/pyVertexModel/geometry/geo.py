@@ -230,11 +230,12 @@ class Geo:
             self.Cells[c].compute_area()
             self.Cells[c].Area0 = self.Cells[c].Area
             self.Cells[c].compute_volume()
-            self.Cells[c].Vol0 = self.Cells[c].Vol
             self.Cells[c].ExternalLambda = 1
             self.Cells[c].InternalLambda = 1
             self.Cells[c].SubstrateLambda = 1
             self.Cells[c].lambdaB_perc = 1
+
+        self.Cells[range(self.nCells)].Vol0 = np.mean([c_cell.Vol for c_cell in self.Cells])
 
         # Edge lengths 0 as average of all cells by location (Top, bottom, or lateral)
         self.EdgeLengthAvg_0 = []
