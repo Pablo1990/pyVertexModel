@@ -31,8 +31,11 @@ jobs:
     - name: Run tests
       run: |
         pip install pytest pytest-cov
-        pytest Tests/test_cell.py --doctest-modules --junitxml=junit/test-results.xml --cov app --cov-report=xml --cov-report=html
+        pytest Tests/test_cell.py --doctest-modules --junitxml=junit/test-results.xml --cov . --cov-report=xml --cov-report=html
       continue-on-error: true
+
+    - name: List files
+      run: ls -la
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4.0.1
