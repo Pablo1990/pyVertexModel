@@ -30,18 +30,9 @@ jobs:
 
     - name: Run tests
       run: |
-        python -m unittest discover Tests
+        pip install pytest pytest-cov
+        pytest Tests/ --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
       continue-on-error: true
-
-    - name: Lint with Ruff
-      run: |
-        pip install ruff
-        ruff --output-format=github .
-      continue-on-error: true
-
-    - name: Generate coverage report
-      run: |
-        coverage xml
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4.0.1
