@@ -504,13 +504,13 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         :return:
         """
         if filename.endswith('.pkl') and os.path.exists(filename):
-            load_state(self, filename)
+            load_state(self.geo, filename)
         else:
             # Load the image and obtain the initial X and tetrahedra
             Twg, X = self.obtain_initial_x_and_tetrahedra(filename)
             # Build cells
-            self.geo.build_cells(self.set, X, Twg)  # Please define the BuildCells function
-            save_state(self, 'voronoi_40cells.pkl')
+            self.geo.build_cells(self.set, X, Twg)
+            save_state(self.geo, 'voronoi_40cells.pkl')
 
         # Define upper and lower area threshold for remodelling
         self.initialize_average_cell_props()
