@@ -534,7 +534,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         # Basic features
         properties = regionprops(img2DLabelled)
         # Extract major axis lengths
-        avgDiameter = np.mean([prop.major_axis_length for prop in properties])
+        avgDiameter = np.mean([prop.major_axis_length for prop in properties[0:self.set.TotalCells]])
         cellHeight = avgDiameter * self.set.CellHeight
         # Building the topology of each plane
         trianglesConnectivity = {}
