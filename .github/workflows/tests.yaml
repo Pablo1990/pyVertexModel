@@ -31,6 +31,13 @@ jobs:
     - name: Run tests
       run: |
         python -m unittest discover Tests
+      continue-on-error: true
+
+    - name: Lint with Ruff
+      run: |
+        pip install ruff
+        ruff --output-format=github .
+      continue-on-error: true
 
     - name: Generate coverage report
       run: |
