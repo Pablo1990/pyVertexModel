@@ -1,6 +1,5 @@
-from src.pyVertexModel.algorithm.vertexModel import VertexModel
-from src.pyVertexModel.algorithm.voronoiFromTimeImage import VoronoiFromTimeImage
+from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 
-vModel = VoronoiFromTimeImage()
+vModel = VertexModelVoronoiFromTimeImage()
 vModel.initialize()
 vModel.iterate_over_time()
