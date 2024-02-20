@@ -485,10 +485,12 @@ class TestVertexModel(Tests):
         else:
             vModel_test.initialize('data/%s' % file_name)
 
+        vModel_test.set = set_test
+
         g_test, K_test, energies_test = newtonRaphson.KgGlobal(vModel_test.geo_0, vModel_test.geo, vModel_test.geo,
                                                     vModel_test.set)
 
         # Check if energies are the same
-        assert_matrix(K_test, mat_info['K'])
         assert_array1D(g_test, mat_info['g'])
+        assert_matrix(K_test, mat_info['K'])
 
