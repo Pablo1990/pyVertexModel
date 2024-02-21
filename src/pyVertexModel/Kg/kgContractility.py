@@ -5,7 +5,7 @@ import numpy as np
 from src.pyVertexModel.Kg.kg import Kg, add_noise_to_parameter
 
 
-def getIntensityBasedContractility(Set, currentFace):
+def getIntensityBasedContractility(Set, current_face):
     timeAfterAblation = float(Set.currentT) - float(Set.TInitAblation)
     contractilityValue = 0
 
@@ -15,11 +15,11 @@ def getIntensityBasedContractility(Set, currentFace):
         indicesOfClosestTimePoints = np.argsort(distanceToTimeVariables)
         closestTimePointsDistance = 1 - distanceToTimeVariables[indicesOfClosestTimePoints]
 
-        if currentFace.InterfaceType == 'Top':
+        if current_face.InterfaceType == 'Top':
             contractilityValue = Set.Contractility_Variability_PurseString[indicesOfClosestTimePoints[0]] * \
                                  closestTimePointsDistance[0] + Set.Contractility_Variability_PurseString[
                                      indicesOfClosestTimePoints[1]] * closestTimePointsDistance[1]
-        elif currentFace.InterfaceType == 'CellCell':
+        elif current_face.InterfaceType == 'CellCell':
             contractilityValue = Set.Contractility_Variability_LateralCables[indicesOfClosestTimePoints[0]] * \
                                  closestTimePointsDistance[0] + Set.Contractility_Variability_LateralCables[
                                      indicesOfClosestTimePoints[1]] * closestTimePointsDistance[1]
@@ -65,6 +65,52 @@ def computeEnergyContractility(l_i0, l_i, C):
     return energyContractility
 
 
+def getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set):
+    contractilityValue = None
+    CUTOFF = 3
+
+    if currentTri.ContractilityValue is None:
+        if Set.ablation:
+            if Set.DelayedAdditionalContractility == 1:
+                contractilityValue = getDelayedContractility(Set.currentT, Set.purseStringStrength,
+                                                             currentTri,
+                                                             CUTOFF * Set.purseStringStrength)
+            else:
+                contractilityValue = getIntensityBasedContractility(Set, currentFace)
+        else:
+            contractilityValue = 1
+
+        if currentFace.InterfaceType == 'Top' or currentFace.InterfaceType == 0:
+            if any([Geo.Cells[cell].AliveStatus == 0 for cell in currentTri.SharedByCells]):
+                contractilityValue = contractilityValue * Set.cLineTension
+            else:
+                contractilityValue = Set.cLineTension
+        elif currentFace.InterfaceType == 'CellCell' or currentFace.InterfaceType == 1:
+            if any([Geo.Cells[cell].AliveStatus == 0 for cell in currentTri.SharedByCells]):
+                contractilityValue = contractilityValue * Set.cLineTension
+            else:
+                contractilityValue = Set.cLineTension / 100
+        elif currentFace.InterfaceType == 'Bottom' or currentFace.InterfaceType == 2:
+            contractilityValue = Set.cLineTension / 100
+        else:
+            contractilityValue = Set.cLineTension
+
+        contractilityValue = add_noise_to_parameter(contractilityValue, Set.noiseContractility, currentTri)
+
+        for cellToCheck in currentTri.SharedByCells:
+            facesToCheck = Geo.Cells[cellToCheck].Faces
+            faceToCheckID = [np.array_equal(sorted(face.ij), sorted(currentFace.ij)) for face in facesToCheck]
+            if any(faceToCheckID):
+                trisToCheck = Geo.Cells[cellToCheck].Faces[faceToCheckID[0]].Tris
+                for triToCheck in trisToCheck:
+                    if all(item in currentTri.SharedByCells for item in triToCheck.SharedByCells):
+                        triToCheck.ContractilityValue = contractilityValue
+    else:
+        contractilityValue = currentTri.ContractilityValue
+
+    return contractilityValue, Geo
+
+
 class KgContractility(Kg):
     def compute_work(self, Geo, Set, Geo_n=None, calculate_K=True):
 
@@ -84,7 +130,7 @@ class KgContractility(Kg):
                                                 value == currentFace.InterfaceType or key == currentFace.InterfaceType)]
                 for currentTri in currentFace.Tris:
                     if len(currentTri.SharedByCells) > 1:
-                        C, Geo = self.getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set)
+                        C, Geo = getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set)
 
                         y_1 = cell.Y[currentTri.Edge[0]]
                         y_2 = cell.Y[currentTri.Edge[1]]
@@ -93,7 +139,7 @@ class KgContractility(Kg):
                         ge = self.assemble_g(ge[:], g_current[:], cell.globalIds[currentTri.Edge])
 
                         # TODO
-                        # currentFace.Tris.ContractileG = np.linalg.norm(g_current[:3])
+                        # current_face.Tris.ContractileG = np.linalg.norm(g_current[:3])
                         if calculate_K:
                             K_current = self.computeKContractility(l_i0, y_1, y_2, C)
                             self.assemble_k(K_current[:, :], cell.globalIds[currentTri.Edge])
@@ -131,48 +177,3 @@ class KgContractility(Kg):
         gContractility[3:6] = -gContractility[0:3]
 
         return gContractility
-
-    def getContractilityBasedOnLocation(self, currentFace, currentTri, Geo, Set):
-        contractilityValue = None
-        CUTOFF = 3
-
-        if currentTri.ContractilityValue is None:
-            if Set.ablation:
-                if Set.DelayedAdditionalContractility == 1:
-                    contractilityValue = getDelayedContractility(Set.currentT, Set.purseStringStrength,
-                                                                 currentTri,
-                                                                 CUTOFF * Set.purseStringStrength)
-                else:
-                    contractilityValue = getIntensityBasedContractility(Set, currentFace)
-            else:
-                contractilityValue = 1
-
-            if currentFace.InterfaceType == 'Top' or currentFace.InterfaceType == 0:
-                if any([Geo.Cells[cell].AliveStatus == 0 for cell in currentTri.SharedByCells]):
-                    contractilityValue = contractilityValue * Set.cLineTension
-                else:
-                    contractilityValue = Set.cLineTension
-            elif currentFace.InterfaceType == 'CellCell' or currentFace.InterfaceType == 1:
-                if any([Geo.Cells[cell].AliveStatus == 0 for cell in currentTri.SharedByCells]):
-                    contractilityValue = contractilityValue * Set.cLineTension
-                else:
-                    contractilityValue = Set.cLineTension / 100
-            elif currentFace.InterfaceType == 'Bottom' or currentFace.InterfaceType == 2:
-                contractilityValue = Set.cLineTension / 100
-            else:
-                contractilityValue = Set.cLineTension
-
-            contractilityValue = add_noise_to_parameter(contractilityValue, Set.noiseContractility, currentTri)
-
-            for cellToCheck in currentTri.SharedByCells:
-                facesToCheck = Geo.Cells[cellToCheck].Faces
-                faceToCheckID = [np.array_equal(sorted(face.ij), sorted(currentFace.ij)) for face in facesToCheck]
-                if any(faceToCheckID):
-                    trisToCheck = Geo.Cells[cellToCheck].Faces[faceToCheckID[0]].Tris
-                    for triToCheck in trisToCheck:
-                        if all(item in currentTri.SharedByCells for item in triToCheck.SharedByCells):
-                            triToCheck.ContractilityValue = contractilityValue
-        else:
-            contractilityValue = currentTri.ContractilityValue
-
-        return contractilityValue, Geo

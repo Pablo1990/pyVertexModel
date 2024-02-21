@@ -45,6 +45,8 @@ class VertexModel:
             self.set = Set()
             #self.set.cyst()
             self.set.NoBulk_110()
+            if self.set.ablation:
+                self.set.woundDefault()
             self.set.update_derived_parameters()
 
         # Redirect output

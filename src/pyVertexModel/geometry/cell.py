@@ -46,6 +46,9 @@ class Cell:
         :param mat_file:
         """
 
+        self.SubstrateLambda = None
+        self.InternalLambda = None
+        self.ExternalLambda = None
         self.axes_lengths = None
         self.Y = None
         self.globalIds = np.array([], dtype='int')

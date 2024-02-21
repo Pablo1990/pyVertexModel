@@ -13,6 +13,14 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.DelayedAdditionalContractility = None
+        self.Contractility_TimeVariability = None
+        self.Contractility_Variability_LateralCables = None
+        self.Contractility_Variability_PurseString = None
+        self.purseStringStrength = None
+        self.TEndAblation = None
+        self.lambdaSFactor_Debris = None
+        self.TInitAblation = None
         self.RemodelingFrequency = 0.2
         self.i_incr = None
         self.iter = None
@@ -233,9 +241,10 @@ class Set:
         self.lambdaS4 = self.lambdaS3
         self.VTK = True
 
+        self.ablation = True
+
     def woundDefault(self):
         # ============================== Ablation ============================
-        self.ablation = False
         self.TInitAblation = 1
         self.TEndAblation = self.tend
         self.lambdaSFactor_Debris = np.finfo(float).eps

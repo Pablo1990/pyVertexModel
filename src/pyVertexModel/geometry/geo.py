@@ -258,18 +258,18 @@ class Geo:
 
             self.EdgeLengthAvg_0.append(np.mean(edge_lengths))
 
-        # # Differential adhesion values
-        # for l1, val in c_set.lambdaS1CellFactor:
-        #     ci = l1
-        #     self.Cells[ci].ExternalLambda = val
-        #
-        # for l2, val in c_set.lambdaS2CellFactor:
-        #     ci = l2
-        #     self.Cells[ci].InternalLambda = val
-        #
-        # for l3, val in c_set.lambdaS3CellFactor:
-        #     ci = l3
-        #     self.Cells[ci].SubstrateLambda = val
+        # Differential adhesion values
+        for l1, val in c_set.lambdaS1CellFactor:
+            ci = l1
+            self.Cells[ci].ExternalLambda = val
+
+        for l2, val in c_set.lambdaS2CellFactor:
+            ci = l2
+            self.Cells[ci].InternalLambda = val
+
+        for l3, val in c_set.lambdaS3CellFactor:
+            ci = l3
+            self.Cells[ci].SubstrateLambda = val
 
         # Unique Ids for each point (vertex, node or face center) used in K
         self.build_global_ids()
@@ -716,7 +716,7 @@ class Geo:
         file_extension = '.vtk'  # File extension
 
         # Creating a new subdirect
-        #             self.geo.create_vtk_cell(self.geo_0, self.set, self.numStep)ory for cells data
+        #             self.geo.create_vtk_cell(self.geo_0, self.c_set, self.numStep)ory for cells data
         new_sub_folder = os.path.join(str0, 'Cells')
         if not os.path.exists(new_sub_folder):
             os.makedirs(new_sub_folder)
@@ -747,3 +747,31 @@ class Geo:
             # o3d.visualization.draw_geometries([mesh])
 
         return vtk_cells
+
+    def ablate_cells(self, c_set, t):
+        """
+        Ablate the cells
+        :param c_set:
+        :param t:
+        :return:
+        """
+        # Check if the Ablation setting is True and the current time is greater than or equal to the initial ablation
+        # time
+        if c_set.Ablation and c_set.TInitAblation <= t:
+            # Check if the list of cells to ablate is not empty
+            if c_set.cellsToAblate:
+                # Log the ablation process
+                logger.info(' ---- Performing ablation')
+                # Iterate over each cell in the list of cells to ablate
+                for debrisCell in c_set.cellsToAblate:
+                    # c_set the AliveStatus of the cell to 0 (indicating it's not alive)
+                    self.Cells[debrisCell].AliveStatus = 0
+                    # c_set the ExternalLambda of the cell to the Debris factor
+                    self.Cells[debrisCell].ExternalLambda = c_set.lambdaSFactor_Debris
+                    # c_set the InternalLambda of the cell to the Debris factor
+                    self.Cells[debrisCell].InternalLambda = c_set.lambdaSFactor_Debris
+                    # c_set the SubstrateLambda of the cell to the Debris factor
+                    self.Cells[debrisCell].SubstrateLambda = c_set.lambdaSFactor_Debris
+                # Empty the list of cells to ablate
+                c_set.cellsToAblate = []
+        return self
