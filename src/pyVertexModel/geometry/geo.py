@@ -757,7 +757,7 @@ class Geo:
         """
         # Check if the Ablation setting is True and the current time is greater than or equal to the initial ablation
         # time
-        if c_set.Ablation and c_set.TInitAblation <= t:
+        if c_set.ablation and c_set.TInitAblation <= t:
             # Check if the list of cells to ablate is not empty
             if c_set.cellsToAblate:
                 # Log the ablation process

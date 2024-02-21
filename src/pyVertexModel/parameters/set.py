@@ -13,6 +13,7 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.cellsToAblate = None
         self.DelayedAdditionalContractility = None
         self.Contractility_TimeVariability = None
         self.Contractility_Variability_LateralCables = None
@@ -245,6 +246,7 @@ class Set:
 
     def woundDefault(self):
         # ============================== Ablation ============================
+        self.cellsToAblate = np.arange(1, 3)
         self.TInitAblation = 1
         self.TEndAblation = self.tend
         self.lambdaSFactor_Debris = np.finfo(float).eps
