@@ -292,7 +292,7 @@ class Geo:
         :param dy_reshaped: The displacement of the vertices
         :return:
         """
-        for c in [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus]:
+        for c in [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]:
             dY = dy_reshaped[self.Cells[c].globalIds, :]
             self.Cells[c].Y += dY
             # dYc = dy_reshaped[self.Cells[c].cglobalids, :]
@@ -310,7 +310,7 @@ class Geo:
             logger.error('Wont update measures with this Geo')
 
         if ids is None:
-            ids = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1]
+            ids = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]
             resetLengths = 1
         else:
             resetLengths = 0
@@ -341,7 +341,7 @@ class Geo:
         :return:        The new X of the current geometry
         """
         # Obtain IDs from alive cells
-        aliveCells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1]
+        aliveCells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]
 
         # Obtain cells that are not border cells or border ghost nodes
         allCellsToUpdate = [c.ID for c in self.Cells if c.ID not in self.BorderCells or
@@ -399,7 +399,7 @@ class Geo:
         return Y
 
     def build_global_ids(self):
-        self.non_dead_cells = np.array([c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1], dtype='int')
+        self.non_dead_cells = np.array([c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None], dtype='int')
 
         g_ids_tot = 0
         g_ids_tot_f = 0
