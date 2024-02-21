@@ -78,7 +78,6 @@ def add_edge_to_intercalate(geo, num_cell, segment_features, edge_lengths_top, e
                     'neighbours_2': neighbours_2
                 }
                 segment_features = pd.concat([segment_features, pd.DataFrame([new_row])], ignore_index=True)
-            break
 
     return segment_features
 
