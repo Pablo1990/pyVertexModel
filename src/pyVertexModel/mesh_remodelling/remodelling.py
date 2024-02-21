@@ -176,8 +176,6 @@ class Remodelling:
         # Get edges to remodel
         segmentFeatures_all = self.get_tris_to_remodel_ordered()
 
-        nonDeadCells = [c_cell.ID for c_cell in self.Geo.Cells if c_cell.AliveStatus is not None]
-
         while segmentFeatures_all.empty is False:
             Geo_backup = self.Geo.copy()
             Geo_n_backup = self.Geo_n.copy()
@@ -201,7 +199,7 @@ class Remodelling:
 
                 valenceSegment, oldTets, oldYs = edgeValence(self.Geo, nodesPair)
 
-                if sum(np.isin(nonDeadCells, oldTets.flatten())) > 2:
+                if sum(np.isin(self.geo.non_dead_cells, oldTets.flatten())) > 2:
                     newYgIds, hasConverged, Tnew = self.FlipNM(nodesPair,
                                                                cellToIntercalateWith,
                                                                oldTets, oldYs,

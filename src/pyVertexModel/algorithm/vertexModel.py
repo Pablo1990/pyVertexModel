@@ -43,7 +43,7 @@ class VertexModel:
         else:
             # TODO Create a menu to select the set
             self.set = Set()
-            #self.set.cyst()
+            # self.set.cyst()
             self.set.NoBulk_110()
             if self.set.ablation:
                 self.set.woundDefault()
@@ -125,7 +125,7 @@ class VertexModel:
         }
         self.numStep = 1
 
-        #save_state(self, os.path.join(self.set.OutputFolder, 'data_step_0.pkl'))
+        # save_state(self, os.path.join(self.set.OutputFolder, 'data_step_0.pkl'))
 
         # Create VTK files for initial state
         self.geo.create_vtk_cell(self.geo_0, self.set, 0)
@@ -254,7 +254,7 @@ class VertexModel:
                         tri = face.Tris[n_tri]
                         tri.past_contractility_value = tri.ContractilityValue
                         tri.ContractilityValue = None
-                        #tri.edge_length_time.append([self.t, tri.edge_length])
+                        # tri.edge_length_time.append([self.t, tri.edge_length])
                         self.geo.Cells[num_cell].Faces[n_face].Tris[n_tri] = tri
 
             # Brownian Motion
@@ -389,3 +389,5 @@ class VertexModel:
         self.set.lmin0 = self.set.lmin0 * 10
         # Initialize an empty list for storing removed debris cells
         self.geo.RemovedDebrisCells = []
+
+        self.geo.non_dead_cells = [cell.ID for cell in self.geo.Cells if cell.AliveStatus is not None]

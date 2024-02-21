@@ -235,6 +235,7 @@ class Set:
         #self.DelayedAdditionalContractility = 0
         # Soft < 0
         # Stiff > 0
+        self.Remodelling = 1
         self.RemodelStiffness = 0
         self.lambdaS1 = 10
         self.lambdaS2 = self.lambdaS1 / 10
