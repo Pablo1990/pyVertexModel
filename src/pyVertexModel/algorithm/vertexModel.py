@@ -252,9 +252,9 @@ class VertexModel:
                     face = c_cell.Faces[n_face]
                     for n_tri in range(len(face.Tris)):
                         tri = face.Tris[n_tri]
-                        tri.past_contractility_value = tri.contractility_value
-                        tri.contractility_value = None
-                        tri.edge_length_time.append([self.t, tri.edge_length])
+                        tri.past_contractility_value = tri.ContractilityValue
+                        tri.ContractilityValue = None
+                        #tri.edge_length_time.append([self.t, tri.edge_length])
                         self.geo.Cells[num_cell].Faces[n_face].Tris[n_tri] = tri
 
             # Brownian Motion
