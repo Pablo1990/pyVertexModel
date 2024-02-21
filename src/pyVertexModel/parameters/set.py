@@ -246,7 +246,7 @@ class Set:
 
     def woundDefault(self):
         # ============================== Ablation ============================
-        self.cellsToAblate = np.arange(1, 3)
+        self.cellsToAblate = np.arange(3)
         self.TInitAblation = 1
         self.TEndAblation = self.tend
         self.lambdaSFactor_Debris = np.finfo(float).eps

@@ -759,7 +759,7 @@ class Geo:
         # time
         if c_set.ablation and c_set.TInitAblation <= t:
             # Check if the list of cells to ablate is not empty
-            if c_set.cellsToAblate:
+            if c_set.cellsToAblate is not None:
                 # Log the ablation process
                 logger.info(' ---- Performing ablation')
                 # Iterate over each cell in the list of cells to ablate
@@ -773,5 +773,5 @@ class Geo:
                     # c_set the SubstrateLambda of the cell to the Debris factor
                     self.Cells[debrisCell].SubstrateLambda = c_set.lambdaSFactor_Debris
                 # Empty the list of cells to ablate
-                c_set.cellsToAblate = []
+                c_set.cellsToAblate = None
         return self
