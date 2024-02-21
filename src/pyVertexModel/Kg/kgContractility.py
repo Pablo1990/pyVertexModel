@@ -99,13 +99,14 @@ def getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set):
 
         for cellToCheck in currentTri.SharedByCells:
             facesToCheck = Geo.Cells[cellToCheck].Faces
-            faceToCheckID = [np.array_equal(sorted(face.ij), sorted(currentFace.ij)) for face in facesToCheck]
-            if any(faceToCheckID):
-                trisToCheck = Geo.Cells[cellToCheck].Faces[faceToCheckID[0]].Tris
+            faceToCheckID_bool = [np.array_equal(sorted(face.ij), sorted(currentFace.ij)) for face in facesToCheck]
+            if any(faceToCheckID_bool):
+                faceToCheckID = np.where(faceToCheckID_bool)[0][0]
+                trisToCheck = Geo.Cells[cellToCheck].Faces[faceToCheckID].Tris
                 for n_triToCheck in range(len(trisToCheck)):
                     triToCheck = trisToCheck[n_triToCheck]
                     if all(item in currentTri.SharedByCells for item in triToCheck.SharedByCells):
-                        Geo.Cells[cellToCheck].Faces[faceToCheckID[0]].Tris[n_triToCheck].ContractilityValue = contractilityValue
+                        Geo.Cells[cellToCheck].Faces[faceToCheckID].Tris[n_triToCheck].ContractilityValue = contractilityValue
     else:
         contractilityValue = currentTri.ContractilityValue
 
