@@ -158,9 +158,9 @@ class Geo:
             self.ny = 3
             self.nx = 3
             self.nCells = mat_file['nCells'][0][0][0][0]
-            if 'BorderGhostNodes' in mat_file.dtype.names:
+            if 'BorderGhostNodes' in mat_file.dtype.names and mat_file['BorderCells'][0][0].size > 0:
                 self.BorderGhostNodes = np.concatenate(mat_file['BorderGhostNodes'][0][0]) - 1
-            if 'BorderCells' in mat_file.dtype.names:
+            if 'BorderCells' in mat_file.dtype.names and mat_file['BorderCells'][0][0].size > 0:
                 self.BorderCells = np.concatenate(mat_file['BorderCells'][0][0]) - 1
 
             if 'Cells' in mat_file.dtype.names:
