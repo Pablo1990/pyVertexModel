@@ -182,18 +182,17 @@ class VertexModel:
         self.Dofs = self.backupVars['Dofs'].copy()
         self.geo_n = self.geo.copy()
         self.relaxingNu = False
-        if self.set.iter == self.set.MaxIter0:
-            self.set.MaxIter = self.set.MaxIter0 * 1.1
-            self.set.nu = 10 * self.set.nu0
+        # if self.set.iter == self.set.MaxIter0:
+        #     self.set.MaxIter = self.set.MaxIter0 * 1.1
+        #     self.set.nu = 10 * self.set.nu0
+        # else:
+        if self.set.iter >= self.set.MaxIter and self.set.dt / self.set.dt0 > 1 / 100:
+            self.set.MaxIter = self.set.MaxIter0
+            self.set.nu = self.set.nu0
+            self.set.dt = self.set.dt / 2
+            self.t = self.set.last_t_converged + self.set.dt
         else:
-            if (self.set.iter >= self.set.MaxIter and self.set.iter > self.set.MaxIter0 and
-                    self.set.dt / self.set.dt0 > 1 / 100):
-                self.set.MaxIter = self.set.MaxIter0
-                self.set.nu = self.set.nu0
-                self.set.dt = self.set.dt / 2
-                self.t = self.set.last_t_converged + self.set.dt
-            else:
-                self.didNotConverge = True
+            self.didNotConverge = True
 
     def iteration_converged(self):
         """

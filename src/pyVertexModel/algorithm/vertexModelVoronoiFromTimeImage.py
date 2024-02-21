@@ -14,6 +14,7 @@ from skimage.morphology import dilation, disk, square
 from skimage.segmentation import find_boundaries
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
+from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.util.utils import ismember_rows, save_variables, save_state, load_state
 
 
@@ -503,8 +504,12 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         Initialize the geometry and the topology of the model.
         :return:
         """
-        if filename.endswith('.pkl') and os.path.exists(filename):
-            load_state(self.geo, filename)
+        if os.path.exists(filename):
+            if filename.endswith('.pkl'):
+                load_state(self.geo, filename)
+            elif filename.endswith('.mat'):
+                mat_info = scipy.io.loadmat(filename)
+                self.geo = Geo(mat_info['Geo'])
         else:
             # Load the image and obtain the initial X and tetrahedra
             Twg, X = self.obtain_initial_x_and_tetrahedra(filename)

@@ -158,6 +158,10 @@ class Geo:
             self.ny = 3
             self.nx = 3
             self.nCells = mat_file['nCells'][0][0][0][0]
+            if 'BorderGhostNodes' in mat_file.dtype.names:
+                self.BorderGhostNodes = np.concatenate(mat_file['BorderGhostNodes'][0][0]) - 1
+            if 'BorderCells' in mat_file.dtype.names:
+                self.BorderCells = np.concatenate(mat_file['BorderCells'][0][0]) - 1
 
             if 'Cells' in mat_file.dtype.names:
                 for c_cell in mat_file['Cells'][0][0][0]:
@@ -365,6 +369,15 @@ class Geo:
                 self.Cells[c].X = self.Cells[c].X + np.mean(dY, axis=0)
 
     def BuildYSubstrate(self, Cell, Cells, XgID, Set, XgSub):
+        """
+        Build the Y of the substrate
+        :param Cell:
+        :param Cells:
+        :param XgID:
+        :param Set:
+        :param XgSub:
+        :return:
+        """
         Tets = Cell.T
         Y = Cell.Y
         X = np.array([c_cell.X for c_cell in Cells])
@@ -399,6 +412,10 @@ class Geo:
         return Y
 
     def build_global_ids(self):
+        """
+        Build the global ids of the geometry
+        :return:
+        """
         self.non_dead_cells = np.array([c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None], dtype='int')
 
         g_ids_tot = 0
@@ -457,6 +474,12 @@ class Geo:
         #    self.Cells[c].cglobalIds = c + self.numY + self.numF
 
     def rebuild(self, oldGeo, Set):
+        """
+        Rebuild the geometry
+        :param oldGeo:
+        :param Set:
+        :return:
+        """
         aliveCells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1]
         debrisCells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
 
@@ -516,6 +539,12 @@ class Geo:
             self.Cells[cc].Faces = self.Cells[cc].Faces[:len(Neigh_nodes)]
 
     def check_ys_and_faces_have_not_changed(self, new_tets, geo_new):
+        """
+        Check that the Ys and faces have not changed
+        :param new_tets:
+        :param geo_new:
+        :return:
+        """
         def get_cells_by_status(cells, status):
             return [c_cell.id for c_cell in cells if c_cell.alive_status == status]
 
@@ -648,6 +677,13 @@ class Geo:
                                 self.numY += 1
 
     def recalculate_ys_from_previous(self, Tnew, mainNodesToConnect, Set):
+        """
+        Recalculate the Ys from the previous geometry
+        :param Tnew:
+        :param mainNodesToConnect:
+        :param Set:
+        :return:
+        """
         allTs = np.vstack([c_cell.T for c_cell in self.Cells if c_cell.AliveStatus is not None])
         allYs = np.vstack([c_cell.Y for c_cell in self.Cells if c_cell.AliveStatus is not None])
         nGhostNodes_allTs = np.sum(np.isin(allTs, self.XgID), axis=1)
