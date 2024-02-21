@@ -15,11 +15,11 @@ def getIntensityBasedContractility(Set, current_face):
         indicesOfClosestTimePoints = np.argsort(distanceToTimeVariables)
         closestTimePointsDistance = 1 - distanceToTimeVariables[indicesOfClosestTimePoints]
 
-        if current_face.InterfaceType == 'Top':
+        if current_face.InterfaceType == 'Top' or current_face.InterfaceType == 0:
             contractilityValue = Set.Contractility_Variability_PurseString[indicesOfClosestTimePoints[0]] * \
                                  closestTimePointsDistance[0] + Set.Contractility_Variability_PurseString[
                                      indicesOfClosestTimePoints[1]] * closestTimePointsDistance[1]
-        elif current_face.InterfaceType == 'CellCell':
+        elif current_face.InterfaceType == 'CellCell' or current_face.InterfaceType == 1:
             contractilityValue = Set.Contractility_Variability_LateralCables[indicesOfClosestTimePoints[0]] * \
                                  closestTimePointsDistance[0] + Set.Contractility_Variability_LateralCables[
                                      indicesOfClosestTimePoints[1]] * closestTimePointsDistance[1]
