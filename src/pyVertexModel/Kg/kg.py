@@ -5,9 +5,13 @@ import numpy as np
 
 
 def add_noise_to_parameter(avgParameter, noise, currentTri=None):
-    # TODO: CHECK THIS FUNCTION
-    noise = 0
-    # THIS FUNCTION IS NOT GOOD
+    """
+    Add noise to a parameter.
+    :param avgParameter:
+    :param noise:
+    :param currentTri:
+    :return:
+    """
     minValue = avgParameter - avgParameter * noise
     maxValue = avgParameter + avgParameter * noise
 
@@ -16,9 +20,9 @@ def add_noise_to_parameter(avgParameter, noise, currentTri=None):
 
     finalValue = minValue + (maxValue - minValue) * random.random()
 
-    # if currentTri is not None:
-    #     if currentTri.pastContractilityValue:
-    #         finalValue = (finalValue + currentTri.pastContractilityValue) / 2
+    if currentTri is not None:
+        if currentTri.pastContractilityValue is not None:
+            finalValue = (finalValue + currentTri.pastContractilityValue) / 2
 
     return finalValue
 

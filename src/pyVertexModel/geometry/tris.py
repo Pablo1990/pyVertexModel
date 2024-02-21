@@ -9,7 +9,15 @@ def compute_tri_aspect_ratio(side_lengths):
 
 
 class Tris:
+    """
+    Class to store information about the triangles in the mesh.
+    """
     def __init__(self, mat_file=None):
+        """
+        Initialize the triangles.
+        :param mat_file:
+        """
+        self.pastContractilityValue = None
         if mat_file is None or mat_file[0].shape[0] == 0:
             self.Edge = []
             self.SharedByCells = []
