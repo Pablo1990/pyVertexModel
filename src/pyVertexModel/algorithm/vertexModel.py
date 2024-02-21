@@ -245,13 +245,17 @@ class VertexModel:
             # Post Processing and Saving Data
             self.geo.create_vtk_cell(self.geo_0, self.set, self.numStep)
 
-            # TODO: Update Contractility Value and Edge Length
-            for c_cell in self.geo.Cells:
-                for face in c_cell.Faces:
-                    for tri in face.Tris:
+            # Reset Contractility Value and Edge Length
+            for num_cell in range(len(self.geo.Cells)):
+                c_cell = self.geo.Cells[num_cell]
+                for n_face in range(len(c_cell.Faces)):
+                    face = c_cell.Faces[n_face]
+                    for n_tri in range(len(face.Tris)):
+                        tri = face.Tris[n_tri]
                         tri.past_contractility_value = tri.contractility_value
                         tri.contractility_value = None
                         tri.edge_length_time.append([self.t, tri.edge_length])
+                        self.geo.Cells[num_cell].Faces[n_face].Tris[n_tri] = tri
 
             # Brownian Motion
             if self.set.brownian_motion:
