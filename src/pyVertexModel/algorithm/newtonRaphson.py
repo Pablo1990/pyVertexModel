@@ -39,7 +39,7 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
     while True:
         g, k, _ = KgGlobal(geo_0, geo_n, geo, c_set)
 
-        dy = np.zeros((geo.numF + geo.numY + geo.nCells) * 3)
+        dy = np.zeros(((geo.numY + geo.numF + geo.nCells) * 3, 1), dtype=np.float64)
         dyr = np.linalg.norm(dy[dofs.remodel, 0])
         gr = np.linalg.norm(g[dofs.remodel])
         logger.info(
