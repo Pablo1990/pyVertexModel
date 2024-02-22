@@ -117,16 +117,6 @@ class Face:
         """
         FaceTets = T[face_ids,]
 
-        # TODO: INCORPORATE THIS INTO A TEST
-        # FaceTets = np.array([
-        #         [1, 94, 101, 2],
-        #         [52, 2, 1, 106],
-        #         [2, 46, 52, 1],
-        #         [1, 30, 94, 2],
-        #         [1, 46, 30, 2],
-        #         [101, 4, 1, 2],
-        #         [106, 2, 1, 4]
-        #     ])-1
         tet_order = np.zeros(len(FaceTets), dtype=int) - 1
         tet_order[0] = 0
         prev_tet = FaceTets[0, :]
