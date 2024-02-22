@@ -40,7 +40,7 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
         g, k, _ = KgGlobal(geo_0, geo_n, geo, c_set)
 
         dy = np.zeros((geo.numF + geo.numY + geo.nCells) * 3)
-        dyr = np.linalg.norm(dy[dofs.remodel])
+        dyr = np.linalg.norm(dy[dofs.remodel, 0])
         gr = np.linalg.norm(g[dofs.remodel])
         logger.info(
             f'Local Problem ->Iter: 0, ||gr||= {gr:.3e} ||dyr||= {dyr:.3e}  nu/nu0={c_set.nu / c_set.nu0:.3e}  '
@@ -84,8 +84,7 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
     """
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.newton.html
     if Geo.Remodelling:
-        # TODO:
-        dof = Dofs.Remodel
+        dof = Dofs.remodel
     else:
         dof = Dofs.Free
 

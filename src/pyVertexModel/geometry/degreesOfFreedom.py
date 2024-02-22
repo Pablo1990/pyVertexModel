@@ -110,8 +110,8 @@ class DegreesOfFreedom:
                     remodel_dofs.append(face_r.globalIds)
 
         self.remodel = np.unique(remodel_dofs, axis=0)
-        self.remodel = 3 * np.kron(self.remodel.T, [1, 1, 1]) - 1 + np.kron(np.ones((1, len(self.remodel.T))),
-                                                                            [1, 2, 3])
+        self.remodel = np.array(3 * np.kron(self.remodel.T, [1, 1, 1]) - 1 + np.kron(np.ones((1, len(self.remodel.T))),
+                                [1, 2, 3]), dtype=int)
         geo.assemble_gids = np.unique(remodel_dofs, axis=0)
 
         return geo
