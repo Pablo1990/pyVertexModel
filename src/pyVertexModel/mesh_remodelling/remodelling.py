@@ -28,8 +28,7 @@ def get_faces_from_node(geo, nodes):
     return faces, faces_tris
 
 
-def add_edge_to_intercalate(geo, num_cell, segment_features, edge_lengths_top, edges_to_intercalate_top,
-                            ghost_node_id):
+def add_edge_to_intercalate(geo, num_cell, segment_features, edge_lengths_top, edges_to_intercalate_top, ghost_node_id):
     """
     Add an edge to intercalate.
     :param geo:
@@ -53,31 +52,26 @@ def add_edge_to_intercalate(geo, num_cell, segment_features, edge_lengths_top, e
             shared_neighbours_c = shared_neighbours[~np.isin(shared_neighbours, geo.XgID)]
             shared_neighbours_c = shared_neighbours_c[shared_neighbours_c != neighbour_to_num_cell]
 
-            if any([geo.Cells[neighbour].AliveStatus == 1 for neighbour in shared_neighbours_c]):
-                cell_to_intercalate = [neighbour for neighbour in shared_neighbours_c if
-                                       geo.Cells[neighbour].AliveStatus == 1]
-            else:
+            cell_to_intercalate = [neighbour for neighbour in shared_neighbours_c if geo.Cells[neighbour].AliveStatus == 1]
+            if not cell_to_intercalate:
                 continue
 
             c_face, _ = get_faces_from_node(geo, [num_cell, node_pair_g])
-            num_shared_neighbours = len(shared_neighbours)
             face_global_id = c_face[0].globalIds
             cell_to_split_from = neighbour_to_num_cell
 
-            for cell_intercalate in cell_to_intercalate:
-                new_row = {
-                    'num_cell': num_cell,
-                    'node_pair_g': node_pair_g,
-                    'cell_intercalate': cell_intercalate,
-                    'cell_to_split_from': cell_to_split_from,
-                    'edge_length': edge_lengths_top[neighbour_to_num_cell],
-                    'num_shared_neighbours': num_shared_neighbours,
-                    'shared_neighbours': [shared_neighbours],
-                    'face_global_id': face_global_id,
-                    'neighbours_1': [neighbours_1],
-                    'neighbours_2': neighbours_2
-                }
-                segment_features = pd.concat([segment_features, pd.DataFrame([new_row])], ignore_index=True)
+            new_rows = [{'num_cell': num_cell,
+                         'node_pair_g': node_pair_g,
+                         'cell_intercalate': cell_intercalate,
+                         'cell_to_split_from': cell_to_split_from,
+                         'edge_length': edge_lengths_top[neighbour_to_num_cell],
+                         'num_shared_neighbours': len(shared_neighbours),
+                         'shared_neighbours': [shared_neighbours],
+                         'face_global_id': face_global_id,
+                         'neighbours_1': [neighbours_1],
+                         'neighbours_2': neighbours_2} for cell_intercalate in cell_to_intercalate]
+
+            segment_features = pd.concat([segment_features, pd.DataFrame(new_rows)], ignore_index=True)
 
     return segment_features
 
@@ -289,25 +283,18 @@ class Remodelling:
                 segment_features = self.check_edges_to_intercalate(edge_lengths_bottom, num_cell, segment_features,
                                                                    self.Geo.XgBottom[0])
 
-        segment_features_filtered = pd.DataFrame()
+        segment_features_filtered = segment_features[segment_features.notnull()].sort_values(by=['edge_length'],
+                                                                                             ascending=True)
 
-        # Filter segment features
-        if segment_features is not None:
-            segment_features = segment_features.sort_values(by=['edge_length'], ascending=True)
+        for _, segment_feature in segment_features_filtered.iterrows():
+            g_node_neighbours = get_node_neighbours(self.Geo, segment_feature.node_pair_g)
+            g_nodes_neighbours_shared = np.unique(np.concatenate(g_node_neighbours))
+            cell_nodes_shared = g_nodes_neighbours_shared[~np.isin(g_nodes_neighbours_shared, self.Geo.XgID)]
 
-            # Go through each segment feature
-            for index, segment_feature in segment_features.iterrows():
-                # Get the neighbours of the ghost node
-                g_node_neighbours = get_node_neighbours(self.Geo, segment_feature.node_pair_g)
-                g_nodes_neighbours_shared = np.unique(np.concatenate(g_node_neighbours))
-                cell_nodes_shared = g_nodes_neighbours_shared[~np.isin(g_nodes_neighbours_shared, self.Geo.XgID)]
-
-                # Check if the segment feature has less than 2 dead cells
-                if sum([self.Geo.Cells[node].AliveStatus == 0 for node in cell_nodes_shared]) < 2 and len(
-                        cell_nodes_shared) > 3 and len(np.unique(segment_feature.cell_to_split_from)) == 1:
-                    segment_features_filtered = pd.concat([segment_features_filtered,
-                                                           pd.DataFrame(segment_feature).transpose()],
-                                                          ignore_index=True)
+            if sum([self.Geo.Cells[node].AliveStatus == 0 for node in cell_nodes_shared]) < 2 and len(
+                    cell_nodes_shared) > 3 and len(np.unique(segment_feature.cell_to_split_from)) == 1:
+                segment_features_filtered = pd.concat(
+                    [segment_features_filtered, pd.DataFrame(segment_feature).transpose()], ignore_index=True)
 
         return segment_features_filtered
 
@@ -324,9 +311,10 @@ class Remodelling:
             avg_edge_length = np.median(edge_lengths[edge_lengths > 0])
             edges_to_intercalate = (edge_lengths < avg_edge_length - (
                     self.Set.RemodelStiffness * avg_edge_length)) & (edge_lengths > 0)
-            segment_features = add_edge_to_intercalate(self.Geo, num_cell, segment_features, edge_lengths,
-                                                       edges_to_intercalate,
-                                                       ghost_node_id)
+            if np.any(edges_to_intercalate):
+                segment_features = add_edge_to_intercalate(self.Geo, num_cell, segment_features, edge_lengths,
+                                                           edges_to_intercalate,
+                                                           ghost_node_id)
 
         return segment_features
 
