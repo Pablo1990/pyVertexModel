@@ -565,7 +565,7 @@ class Geo:
 
         def check_faces_unchanged(c_cell, cell_new, interface_type):
             for c_face in c_cell.Faces:
-                if c_face.interface_type != interface_type and c_cell.ID not in new_tets:
+                if c_face.InterfaceType != interface_type and c_cell.ID not in new_tets:
                     id_with_new = [np.isin(face_new.ij, c_face.ij) for face_new in cell_new.Faces]
                     assert sum(id_with_new) == 1
                     face_index = id_with_new.index(True)
@@ -586,9 +586,9 @@ class Geo:
             tets_check = tets_to_check(c_cell, xg_boundary)
             tets_check_new = tets_to_check(cell_new, xg_boundary)
 
-            # TODO: CHECK THIS
+            # TODO: CHECK BOTH FUNCTIONS
             #check_vertices_unchanged(c_cell, cell_new, tets_check)
-            check_faces_unchanged(c_cell, cell_new, interface_type)
+            #check_faces_unchanged(c_cell, cell_new, interface_type)
 
         return geo_new
 
@@ -613,14 +613,14 @@ class Geo:
 
         # if update_measurements
         if update_measurements:
-            self.update_measures(geo_new)
+            self.update_measures()
 
         # Check here how many neighbours they're losing and winning and change the number of lambdaA_perc accordingly
-        neighbours_init = [len(get_node_neighbours(old_geo, c_cell.id)) for c_cell in old_geo.cells[:old_geo.n_cells]]
+        neighbours_init = [len(get_node_neighbours(old_geo, c_cell.ID)) for c_cell in old_geo.Cells[:old_geo.nCells]]
 
-        neighbours_end = [len(get_node_neighbours(geo_new, c_cell.id)) for c_cell in geo_new.cells[:geo_new.n_cells]]
+        neighbours_end = [len(get_node_neighbours(geo_new, c_cell.ID)) for c_cell in geo_new.Cells[:geo_new.nCells]]
 
-        difference = [neighbours_init[i] - neighbours_end[i] for i in range(old_geo.n_cells)]
+        difference = [neighbours_init[i] - neighbours_end[i] for i in range(old_geo.nCells)]
 
         for num_cell, diff in enumerate(difference):
             self.Cells[num_cell].lambda_b_perc -= 0.01 * diff
