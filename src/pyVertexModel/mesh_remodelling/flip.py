@@ -30,7 +30,7 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, newYgIds, Set, flipN
     Geo_n = Geo.copy()
 
     Dofs.get_dofs(Geo, Set)
-    Dofs, Geo = Dofs.get_remodel_dofs(Tnew, Geo)
+    Geo = Dofs.get_remodel_dofs(Tnew, Geo)
     Geo, Set, DidNotConverge = solve_remodeling_step(Geo_0, Geo_n, Geo, Dofs, Set)
     if DidNotConverge:
         Geo = Geo_backup

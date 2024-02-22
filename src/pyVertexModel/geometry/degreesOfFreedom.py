@@ -1,5 +1,7 @@
 import numpy as np
 
+from src.pyVertexModel.util.utils import ismember_rows
+
 
 class DegreesOfFreedom:
     def __init__(self, mat_file=None):
@@ -104,7 +106,7 @@ class DegreesOfFreedom:
 
             for face_r in cell.Faces:
                 face_tets = cell.T[np.unique([tri.Edge for tri in face_r.Tris])]
-                if np.any(np.isin(np.sort(face_tets, axis=1), np.sort(cell.T[news], axis=1), axis=1)):
+                if np.any(ismember_rows(face_tets, cell.T[news])[0]):
                     remodel_dofs.append(face_r.globalIds)
 
         self.remodel = np.unique(remodel_dofs, axis=0)
