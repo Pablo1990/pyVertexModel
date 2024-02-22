@@ -192,7 +192,7 @@ class Remodelling:
 
                 valenceSegment, oldTets, oldYs = edgeValence(self.Geo, nodesPair)
 
-                if sum(np.isin(self.geo.non_dead_cells, oldTets.flatten())) > 2:
+                if sum(np.isin(self.Geo.non_dead_cells, oldTets.flatten())) > 2:
                     newYgIds, hasConverged, Tnew = self.FlipNM(nodesPair,
                                                                cellToIntercalateWith,
                                                                oldTets, oldYs,
@@ -321,7 +321,7 @@ class Remodelling:
     def FlipNM(self, segment_to_change, cell_to_intercalate_with, old_tets, old_ys, new_yg_ids):
         hasConverged = False
         flipName = 'N-M'
-        y_new, t_new = YFlipNM(old_tets, cell_to_intercalate_with, old_ys, segment_to_change, self.Geo, self.Set)
+        t_new, y_new = YFlipNM(old_tets, cell_to_intercalate_with, old_ys, segment_to_change, self.Geo, self.Set)
 
         if len(t_new) != 0:
             (self.Geo_0, self.Geo_n, self.Geo,

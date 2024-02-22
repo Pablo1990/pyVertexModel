@@ -473,13 +473,13 @@ class Geo:
         # for c in range(self.nCells):
         #    self.Cells[c].cglobalIds = c + self.numY + self.numF
 
-    def rebuild(self, oldGeo, Set):
+    def rebuild(self, Set):
         """
         Rebuild the geometry
-        :param oldGeo:
         :param Set:
         :return:
         """
+        oldGeo = self.copy()
         aliveCells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1]
         debrisCells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
 

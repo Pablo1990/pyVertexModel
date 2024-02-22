@@ -337,7 +337,7 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
                 Geo_new = Geo.copy()
                 Geo_new.remove_tetrahedra(old_tets)
                 Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), None, Set)
-                Geo_new.rebuild(Geo, Set)
+                Geo_new.rebuild(Set)
                 new_tets_tree.append(new_tets)
                 vol_diff.append(abs(new_vol - old_vol) / old_vol)
                 cell_winning.append(np.sum(np.isin(new_tets, cell_to_intercalate_with)) / len(new_tets))
