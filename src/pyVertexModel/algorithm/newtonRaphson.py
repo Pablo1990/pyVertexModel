@@ -13,7 +13,7 @@ from src.pyVertexModel.Kg.kgVolume import KgVolume
 logger = logging.getLogger("pyVertexModel")
 
 
-def solve_remodeling_step(geo_0, geo_n, geo, dofs, set):
+def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
     """
     This function solves local problem to obtain the position of the newly remodeled vertices with prescribed settings
     (Set.***_LP), e.g. Set.lambda_LP.
@@ -21,7 +21,7 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, set):
     :param geo_n:
     :param geo:
     :param dofs:
-    :param set:
+    :param c_set:
     :return:
     """
 
@@ -29,49 +29,43 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, set):
     logger.info('=====>> Solving Local Problem....')
     geo.remodel_mesh = True
     increase_eta = True
-    original_nu = set.nu
+    original_nu = c_set.nu
 
-    set.nu0 = set.nu
-    set.nu = set.nu_lp_initial
-    set.max_iter = set.max_iter0 * 3
+    c_set.nu0 = c_set.nu
+    c_set.nu = c_set.nu_LP_Initial
+    c_set.max_iter = c_set.MaxIter0 * 3
     did_not_converge = False
 
     while True:
-        g, k, _ = KgGlobal(geo_0, geo_n, geo, set)
+        g, k, _ = KgGlobal(geo_0, geo_n, geo, c_set)
 
-        dy = np.zeros((geo.numF + geo.numY + geo.n_cells) * 3)
+        dy = np.zeros((geo.numF + geo.numY + geo.nCells) * 3)
         dyr = np.linalg.norm(dy[dofs.remodel])
         gr = np.linalg.norm(g[dofs.remodel])
         logger.info(
-            f'Local Problem ->Iter: 0, ||gr||= {gr:.3e} ||dyr||= {dyr:.3e}  nu/nu0={set.nu / set.nu0:.3e}  dt/dt0={set.dt / set.dt0:.3g}')
+            f'Local Problem ->Iter: 0, ||gr||= {gr:.3e} ||dyr||= {dyr:.3e}  nu/nu0={c_set.nu / c_set.nu0:.3e}  '
+            f'dt/dt0={c_set.dt / c_set.dt0:.3g}')
 
-        geo, g, k, energy, set, gr, dyr, dy = newton_raphson(geo_0, geo_n, geo, dofs, set, k, g, -1, -1)
+        geo, g, k, energy, c_set, gr, dyr, dy = newton_raphson(geo_0, geo_n, geo, dofs, c_set, k, g, -1, -1)
 
-        if increase_eta and (gr > set.tol or dyr > set.tol):
-            geo = geop.copy()
-            logger.info("Convergence was not achieved ...")
-            logger.info('First strategy ---> Restart iterating while higher viscosity...')
-            set.nu *= 10
-            set.max_iter = set.max_iter0 * 4
-            increase_eta = False
-        elif gr > set.tol or dyr > set.tol or np.any(np.isnan(g[dofs.free])) or np.any(np.isnan(dy[dofs.free])):
-            logger.info(f'Local Problem did not converge after {set.iter} iterations.')
+        if gr > c_set.tol or dyr > c_set.tol or np.any(np.isnan(g[dofs.free])) or np.any(np.isnan(dy[dofs.free])):
+            logger.info(f'Local Problem did not converge after {c_set.iter} iterations.')
             did_not_converge = True
-            set.max_iter = set.max_iter0
-            set.nu = original_nu
+            c_set.max_iter = c_set.MaxIter0
+            c_set.nu = original_nu
             break
         else:
-            if set.nu / set.nu0 == 1:
-                logger.info(f'=====>> Local Problem converged in {set.iter} iterations.')
+            if c_set.nu / c_set.nu0 == 1:
+                logger.info(f'=====>> Local Problem converged in {c_set.iter} iterations.')
                 did_not_converge = False
-                set.max_iter = set.max_iter0
-                set.nu = original_nu
+                c_set.max_iter = c_set.MaxIter0
+                c_set.nu = original_nu
                 geo.remodel_mesh = False
                 break
             else:
-                set.nu = max(set.nu / 2, set.nu0)
+                c_set.nu = max(c_set.nu / 2, c_set.nu0)
 
-    return geo, set, did_not_converge
+    return geo, c_set, did_not_converge
 
 
 def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
