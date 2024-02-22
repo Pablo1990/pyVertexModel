@@ -6,6 +6,7 @@ import numpy as np
 from scipy.spatial import Delaunay
 
 from src.pyVertexModel.geometry.geo import edgeValenceT
+from src.pyVertexModel.mesh_remodelling.remodelling import solve_remodeling_step
 from src.pyVertexModel.util.utils import ismember_rows
 
 logger = logging.getLogger("pyVertexModel")
@@ -27,35 +28,23 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, newYgIds, Set, flipN
 
     Geo.add_and_rebuild_cells(Geo.copy(), oldTets, Tnew, Ynew, Set, 1)
     Geo_n = Geo.copy()
-    # geo_0 = add_and_rebuild_cells(geo_0, old_tets, Tnew, Ynew, Set, 0)
-    # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr+1)
-    # PostProcessingVTK(geo_0, geo_0, Set, Set.iIncr+2)
 
-    if check_tris(Geo):  # && ~CheckConvexity(Tnew,Geo_backup)
-        # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr+1)
-        if Set['NeedToConverge']:
-            Dofs.get_dofs(Geo, Set)
-            Dofs, Geo = Dofs.get_remodel_dofs(Tnew, Dofs, Geo)
-            Geo, Set, DidNotConverge = solve_remodeling_step(Geo_0, Geo_n, Geo, Dofs, Set)
-            if DidNotConverge:
-                Geo = Geo_backup
-                Geo_n = Geo_n_backup
-                Geo_0 = Geo_0_backup
-                Dofs = Dofs_backup
-                logger.info(f"{flipName}-Flip rejected: did not converge")
-                return Geo_0, Geo_n, Geo, Dofs, newYgIds, hasConverged
-            Geo.update_measures()
-
-        newYgIds = list(set(newYgIds + Geo['AssemblegIds']))
-
-        hasConverged = 1
-    else:
+    Dofs.get_dofs(Geo, Set)
+    Dofs, Geo = Dofs.get_remodel_dofs(Tnew, Dofs, Geo)
+    Geo, Set, DidNotConverge = solve_remodeling_step(Geo_0, Geo_n, Geo, Dofs, Set)
+    if DidNotConverge:
         Geo = Geo_backup
         Geo_n = Geo_n_backup
-        Dofs = Dofs_backup
         Geo_0 = Geo_0_backup
-        logger.info(f"{flipName}-Flip rejected: is not compatible")
+        Dofs = Dofs_backup
+        logger.info(f"{flipName}-Flip rejected: did not converge")
         return Geo_0, Geo_n, Geo, Dofs, newYgIds, hasConverged
+
+    Geo.update_measures()
+
+    newYgIds = list(set(newYgIds + Geo.AssemblegIds))
+
+    hasConverged = 1
 
     return Geo_0, Geo_n, Geo, Dofs, newYgIds, hasConverged
 
@@ -329,7 +318,7 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
                 old_vol += vol
 
             if abs(new_vol - old_vol) / old_vol <= 0.005:
-                #try:
+                # try:
                 if intercalation_flip:
                     Xs_c = Xs[~np.isin(Xs, ghost_nodes_without_debris)]
                     new_tets = np.append(new_tets, [Xs_c], axis=0)
