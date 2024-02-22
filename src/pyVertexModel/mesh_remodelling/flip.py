@@ -352,6 +352,8 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
     else:
         Tnew = []
 
+    Geo.add_tetrahedra(Geo, tets4_cells, None, Set)
+
     Ynew = []
 
     return Tnew, Ynew
