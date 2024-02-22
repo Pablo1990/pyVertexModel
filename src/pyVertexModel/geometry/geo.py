@@ -622,8 +622,9 @@ class Geo:
 
         difference = [neighbours_init[i] - neighbours_end[i] for i in range(old_geo.nCells)]
 
-        for num_cell, diff in enumerate(difference):
-            self.Cells[num_cell].lambda_b_perc -= 0.01 * diff
+        # TODO: CREATE FUNCTION TO CHANGE THE LAMBDA_B_PERC
+        # for num_cell, diff in enumerate(difference):
+        #     self.Cells[num_cell].lambda_b_perc -= 0.01 * diff
 
     def remove_tetrahedra(self, removingTets):
         """
