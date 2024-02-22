@@ -83,29 +83,29 @@ class DegreesOfFreedom:
 
     def get_remodel_dofs(self, t_new, geo):
         remodel_dofs = []
-        alive_cells = [cell.id for cell in geo.cells if cell.alive_status is not None]
+        alive_cells = [cell.ID for cell in geo.Cells if cell.AliveStatus is not None]
 
         id_tnew = np.unique(t_new)
-        id_tnew_cells = np.setdiff1d(id_tnew, geo.xg_id)
-        id_tnew_cells = [cell_id for cell_id in id_tnew_cells if geo.cells[cell_id].alive_status == 1]
+        id_tnew_cells = np.setdiff1d(id_tnew, geo.XgID)
+        id_tnew_cells = [cell_id for cell_id in id_tnew_cells if geo.Cells[cell_id].AliveStatus == 1]
 
         for num_cell in id_tnew_cells:
-            cell = geo.cells[num_cell]
-            news = np.sum(np.isin(cell.t, geo.xg_id), axis=1) > 2
-            news[np.sum(np.isin(cell.t, id_tnew_cells), axis=1) == 2] = True
-            news[np.sum(np.isin(cell.t, id_tnew_cells), axis=1) >= 3] = True
+            cell = geo.Cells[num_cell]
+            news = np.sum(np.isin(cell.T, geo.XgID), axis=1) > 2
+            news[np.sum(np.isin(cell.T, id_tnew_cells), axis=1) == 2] = True
+            news[np.sum(np.isin(cell.T, id_tnew_cells), axis=1) >= 3] = True
 
-            if np.sum(np.isin(t_new, geo.xg_bottom)) > np.sum(np.isin(t_new, geo.xg_top)):
-                news[np.any(np.isin(cell.t, geo.xg_top), axis=1)] = False
+            if np.sum(np.isin(t_new, geo.XgBottom)) > np.sum(np.isin(t_new, geo.XgTop)):
+                news[np.any(np.isin(cell.T, geo.XgTop), axis=1)] = False
             else:
-                news[np.any(np.isin(cell.t, geo.xg_bottom), axis=1)] = False
+                news[np.any(np.isin(cell.T, geo.XgBottom), axis=1)] = False
 
-            remodel_dofs.extend(cell.global_ids[news])
+            remodel_dofs.extend(cell.globalIds[news])
 
-            for face_r in cell.faces:
-                face_tets = cell.t[np.unique([tri.edge for tri in face_r.tris])]
-                if np.any(np.isin(np.sort(face_tets, axis=1), np.sort(cell.t[news], axis=1), axis=1)):
-                    remodel_dofs.append(face_r.global_ids)
+            for face_r in cell.Faces:
+                face_tets = cell.T[np.unique([tri.Edge for tri in face_r.Tris])]
+                if np.any(np.isin(np.sort(face_tets, axis=1), np.sort(cell.T[news], axis=1), axis=1)):
+                    remodel_dofs.append(face_r.globalIds)
 
         self.remodel = np.unique(remodel_dofs, axis=0)
         self.remodel = 3 * np.kron(self.remodel.T, [1, 1, 1]) - 1 + np.kron(np.ones((1, len(self.remodel.T))),

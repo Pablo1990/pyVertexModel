@@ -3,7 +3,6 @@ import logging
 import numpy as np
 import pandas as pd
 
-from src.pyVertexModel.algorithm.newtonRaphson import newton_raphson, KgGlobal
 from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 from src.pyVertexModel.geometry.geo import edgeValence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import YFlipNM, post_flip
@@ -52,7 +51,8 @@ def add_edge_to_intercalate(geo, num_cell, segment_features, edge_lengths_top, e
             shared_neighbours_c = shared_neighbours[~np.isin(shared_neighbours, geo.XgID)]
             shared_neighbours_c = shared_neighbours_c[shared_neighbours_c != neighbour_to_num_cell]
 
-            cell_to_intercalate = [neighbour for neighbour in shared_neighbours_c if geo.Cells[neighbour].AliveStatus == 1]
+            cell_to_intercalate = [neighbour for neighbour in shared_neighbours_c if
+                                   geo.Cells[neighbour].AliveStatus == 1]
             if not cell_to_intercalate:
                 continue
 
@@ -74,67 +74,6 @@ def add_edge_to_intercalate(geo, num_cell, segment_features, edge_lengths_top, e
             segment_features = pd.concat([segment_features, pd.DataFrame(new_rows)], ignore_index=True)
 
     return segment_features
-
-
-def solve_remodeling_step(geo_0, geo_n, geo, dofs, set):
-    """
-    This function solves local problem to obtain the position of the newly remodeled vertices with prescribed settings
-    (Set.***_LP), e.g. Set.lambda_LP.
-    :param geo_0:
-    :param geo_n:
-    :param geo:
-    :param dofs:
-    :param set:
-    :return:
-    """
-
-    geop = geo.copy()  # Assuming there is a method to copy the Geo object
-    logger.info('=====>> Solving Local Problem....')
-    geo.remodel_mesh = True
-    increase_eta = True
-    original_nu = set.nu
-
-    set.nu0 = set.nu
-    set.nu = set.nu_lp_initial
-    set.max_iter = set.max_iter0 * 3
-    did_not_converge = False
-
-    while True:
-        g, k, _ = KgGlobal(geo_0, geo_n, geo, set)
-
-        dy = np.zeros((geo.numF + geo.numY + geo.n_cells) * 3)
-        dyr = np.linalg.norm(dy[dofs.remodel])
-        gr = np.linalg.norm(g[dofs.remodel])
-        logger.info(
-            f'Local Problem ->Iter: 0, ||gr||= {gr:.3e} ||dyr||= {dyr:.3e}  nu/nu0={set.nu / set.nu0:.3e}  dt/dt0={set.dt / set.dt0:.3g}')
-
-        geo, g, k, energy, set, gr, dyr, dy = newton_raphson(geo_0, geo_n, geo, dofs, set, k, g, -1, -1)
-
-        if increase_eta and (gr > set.tol or dyr > set.tol):
-            geo = geop.copy()
-            logger.info("Convergence was not achieved ...")
-            logger.info('First strategy ---> Restart iterating while higher viscosity...')
-            set.nu *= 10
-            set.max_iter = set.max_iter0 * 4
-            increase_eta = False
-        elif gr > set.tol or dyr > set.tol or np.any(np.isnan(g[dofs.free])) or np.any(np.isnan(dy[dofs.free])):
-            logger.info(f'Local Problem did not converge after {set.iter} iterations.')
-            did_not_converge = True
-            set.max_iter = set.max_iter0
-            set.nu = original_nu
-            break
-        else:
-            if set.nu / set.nu0 == 1:
-                logger.info(f'=====>> Local Problem converged in {set.iter} iterations.')
-                did_not_converge = False
-                set.max_iter = set.max_iter0
-                set.nu = original_nu
-                geo.remodel_mesh = False
-                break
-            else:
-                set.nu = max(set.nu / 2, set.nu0)
-
-    return geo, set, did_not_converge
 
 
 class Remodelling:
@@ -221,7 +160,8 @@ class Remodelling:
 
                 self.Dofs = DegreesOfFreedom.get_dofs(self.Geo, self.Set)
                 self.Geo = self.Dofs.get_remodel_dofs(allTnew, self.Geo)
-                self.Geo, Set, DidNotConverge = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs, self.Set)
+                self.Geo, Set, DidNotConverge = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
+                                                                      self.Set)
                 if DidNotConverge:
                     self.Geo = Geo_backup
                     self.Geo_n = Geo_n_backup
