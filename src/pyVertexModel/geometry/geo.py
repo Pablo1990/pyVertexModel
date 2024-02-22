@@ -557,7 +557,7 @@ class Geo:
             return [not any(n in tet for n in xg_boundary) for tet in c_cell.T]
 
         def check_vertices_unchanged(c_cell, cell_new, tets_check):
-            y_old = [c_cell.Y[i] for i, check in enumerate(tets_check) if check for tet in c_cell.t
+            y_old = [c_cell.Y[i] for i, check in enumerate(tets_check) if check for tet in c_cell.T
                      if any(n in tet for n in self.XgID)]
             y_new = [cell_new.Y[i] for i, check in enumerate(tets_check) if check for tet in cell_new.T
                      if any(n in tet for n in self.XgID)]
