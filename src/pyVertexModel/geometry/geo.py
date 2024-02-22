@@ -473,13 +473,13 @@ class Geo:
         # for c in range(self.nCells):
         #    self.Cells[c].cglobalIds = c + self.numY + self.numF
 
-    def rebuild(self, Set):
+    def rebuild(self, oldGeo, Set):
         """
         Rebuild the geometry
+        :param oldGeo:
         :param Set:
         :return:
         """
-        oldGeo = self.copy()
         aliveCells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1]
         debrisCells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
 
@@ -602,9 +602,10 @@ class Geo:
         :param update_measurements:
         :return:
         """
+
         self.remove_tetrahedra(old_tets)
-        self.add_tetrahedra(old_geo, new_tets, y_new, set)
-        self.rebuild(old_geo, set)
+        self.add_tetrahedra(old_geo, new_tets, None, set)
+        self.rebuild(self.copy(), set)
         self.build_global_ids()
 
         geo_new = self.check_ys_and_faces_have_not_changed(old_geo, new_tets)
