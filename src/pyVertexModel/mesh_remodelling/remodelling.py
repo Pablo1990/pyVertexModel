@@ -116,7 +116,7 @@ class Remodelling:
 
             # Get the first segment feature
             segmentFeatures = segmentFeatures_all.iloc[0]
-            allTnew = []
+            allTnew = np.array([])
             numPair = 0
 
             cellNode = segmentFeatures['num_cell']
@@ -137,7 +137,7 @@ class Remodelling:
                                                                oldTets, oldYs,
                                                                newYgIds)
 
-                    allTnew = np.vstack((allTnew, Tnew))
+                    allTnew = Tnew if allTnew.size == 0 else np.vstack((allTnew, Tnew))
 
                 sharedNodesStill = get_node_neighbours_per_domain(self.Geo, cellNode, ghostNode, cellToSplitFrom)
 
