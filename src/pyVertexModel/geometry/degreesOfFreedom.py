@@ -84,8 +84,14 @@ class DegreesOfFreedom:
         self.FixC = np.array(np.where(g_constrained)[0], dtype=int)
 
     def get_remodel_dofs(self, t_new, geo):
-        remodel_dofs = []
-        alive_cells = [cell.ID for cell in geo.Cells if cell.AliveStatus is not None]
+        """
+        Get the degrees of freedom for the remodelling.
+        :param t_new:
+        :param geo:
+        :return:
+        """
+        dim = 3
+        self.remodel = np.zeros((geo.numY + geo.numF + geo.nCells) * 3, dtype=bool)
 
         id_tnew = np.unique(t_new)
         id_tnew_cells = np.setdiff1d(id_tnew, geo.XgID)
@@ -102,17 +108,15 @@ class DegreesOfFreedom:
             else:
                 news[np.any(np.isin(cell.T, geo.XgBottom), axis=1)] = False
 
-            remodel_dofs.extend(cell.globalIds[news])
+            for globalId in cell.globalIds[news]:
+                self.remodel[(dim * globalId): (dim * (globalId + 1))] = 1
 
             for face_r in cell.Faces:
                 face_tets = cell.T[np.unique([tri.Edge for tri in face_r.Tris])]
                 if np.any(ismember_rows(face_tets, cell.T[news])[0]):
-                    remodel_dofs.append(face_r.globalIds)
+                    self.remodel[(dim * face_r.globalIds): (dim * (face_r.globalIds + 1))] = 1
 
-        self.remodel = np.unique(remodel_dofs, axis=0)
-        self.remodel = np.array(3 * np.kron(self.remodel.T, [1, 1, 1]) - 1 + np.kron(np.ones((1, len(self.remodel.T))),
-                                [1, 2, 3]), dtype=int)
-        geo.AssemblegIds = np.unique(remodel_dofs, axis=0)
+        geo.AssemblegIds = np.array(np.where(self.remodel)[0], dtype=int)
 
         return geo
 
