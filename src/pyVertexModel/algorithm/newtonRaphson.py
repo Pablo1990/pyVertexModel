@@ -44,7 +44,7 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
 
     geo, g, k, energy, c_set, gr, dyr, dy = newton_raphson(geo_0, geo_n, geo, dofs, c_set, k, g, -1, -1)
 
-    if gr > c_set.tol or dyr > c_set.tol or np.any(np.isnan(g[dofs.free])) or np.any(np.isnan(dy[dofs.free])):
+    if gr > c_set.tol or dyr > c_set.tol or np.any(np.isnan(g[dofs.Free])) or np.any(np.isnan(dy[dofs.Free])):
         logger.info(f'Local Problem did not converge after {c_set.iter} iterations.')
         did_not_converge = True
     else:
