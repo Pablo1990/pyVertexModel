@@ -264,7 +264,7 @@ class Remodelling:
         flipName = 'N-M'
         t_new, y_new = YFlipNM(old_tets, cell_to_intercalate_with, old_ys, segment_to_change, self.Geo, self.Set)
 
-        if t_new.shape[0] > 0:
+        if t_new is not None:
             (self.Geo_0, self.Geo_n, self.Geo,
              self.Dofs, new_yg_ids, hasConverged) = post_flip(t_new, y_new, old_tets,
                                                               self.Geo, self.Geo_n, self.Geo_0, self.Dofs,

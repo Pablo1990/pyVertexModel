@@ -339,7 +339,7 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
         max_index = cell_winning.index(max(cell_winning))
         Tnew = new_tets_tree[max_index]
     else:
-        Tnew = []
+        Tnew = None
 
     Geo.add_tetrahedra(Geo, tets4_cells, None, Set)
 
