@@ -33,10 +33,10 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, newYgIds, Set, flipN
     Geo = Dofs.get_remodel_dofs(Tnew, Geo)
     Geo, Set, DidNotConverge = solve_remodeling_step(Geo_0, Geo_n, Geo, Dofs, Set)
     if DidNotConverge:
-        Geo = Geo_backup
-        Geo_n = Geo_n_backup
-        Geo_0 = Geo_0_backup
-        Dofs = Dofs_backup
+        Geo = Geo_backup.copy()
+        Geo_n = Geo_n_backup.copy()
+        Geo_0 = Geo_0_backup.copy()
+        Dofs = Dofs_backup.copy()
         logger.info(f"{flipName}-Flip rejected: did not converge")
         return Geo_0, Geo_n, Geo, Dofs, newYgIds, hasConverged
 
