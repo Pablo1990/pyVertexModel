@@ -122,7 +122,7 @@ class Geo:
         :param mat_file:    The mat file of the geometry
         """
         self.Cells = []
-        self.Remodelling = False
+        self.remodelling = False
         self.non_dead_cells = None
         self.BorderCells = []
         self.BorderGhostNodes = []
