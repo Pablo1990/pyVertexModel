@@ -141,8 +141,10 @@ def YFlipNM_recursive(TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, XsT
                       parentNode, arrayPos):
     endNode = 1
 
-    Told_original = TOld
+
+    Told_original = TOld.copy()
     if TOld.shape[0] == 3:
+        logger.info(f"YFlipNM_recursive: {arrayPos}")
         Ynew_c, Tnew_c = YFlip32(oldYs, TOld, [0, 1, 2], Geo)
         TRemoved.insert(arrayPos, TOld)
         Tnew.insert(arrayPos, Tnew_c)
@@ -165,7 +167,7 @@ def YFlipNM_recursive(TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, XsT
                 Ynew.insert(arrayPos, Ynew_23)
                 treeOfPossibilities.add_edge(parentNode, arrayPos)
 
-                TOld = Told_original
+                TOld = Told_original.copy()
                 # Remove the row of tets that are associated to that edgeToDisconnect
                 TOld = np.delete(TOld, tetIds, axis=0)
                 TOld = np.vstack((TOld, Tnew_23))

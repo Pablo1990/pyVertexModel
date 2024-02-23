@@ -95,7 +95,7 @@ class Set:
             self.LocalViscosityEdgeBased = False
             self.nu_Local_EdgeBased = 0
             self.LocalViscosityOption = 2
-            # =========================== Remodelling ============================
+            # =========================== remodelling ============================
             self.Remodelling = False
             self.RemodelTol = 0
             self.contributionOldYs = 0
@@ -231,7 +231,7 @@ class Set:
         self.cLineTension = 0.05
         self.purseStringStrength = 12
 
-        self.noiseContractility = 0
+        self.noiseContractility = 0.1
         #self.DelayedAdditionalContractility = 0
         # Soft < 0
         # Stiff > 0
@@ -247,7 +247,7 @@ class Set:
 
     def woundDefault(self):
         # ============================== Ablation ============================
-        self.cellsToAblate = np.arange(3)
+        self.cellsToAblate = np.arange(1)
         self.TInitAblation = 1
         self.TEndAblation = self.tend
         self.lambdaSFactor_Debris = np.finfo(float).eps
