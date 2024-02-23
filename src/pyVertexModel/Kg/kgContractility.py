@@ -137,6 +137,9 @@ class KgContractility(Kg):
                         y_1 = cell.Y[currentTri.Edge[0]]
                         y_2 = cell.Y[currentTri.Edge[1]]
 
+                        if Geo.remodelling and not np.any(np.isin([y_1, y_2], Geo.AssemblegIds)):
+                            continue
+
                         g_current = self.computeGContractility(l_i0, y_1, y_2, C)
                         ge = self.assemble_g(ge[:], g_current[:], cell.globalIds[currentTri.Edge])
 

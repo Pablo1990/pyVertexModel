@@ -17,8 +17,8 @@ class KgSubstrate(Kg):
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
             currentCell = Geo.Cells[c]
 
-            # if Geo.remodelling and c not in Geo.AssembleNodes:
-            #     continue
+            if Geo.remodelling and c not in Geo.AssembleNodes:
+                continue
 
             ge = np.zeros(self.g.shape, dtype=self.precision_type)
             Energy_c = 0
@@ -39,6 +39,9 @@ class KgSubstrate(Kg):
                         else:
                             currentVertexYs = currentFace.Centre
                             currentGlobalID = np.array([currentVertex], dtype=int)
+
+                        if Geo.remodelling and not np.any(np.isin(Geo.AssemblegIds, currentVertexYs[2])):
+                            continue
 
                         # Calculate residual g
                         g_current = self.computeGSubstrate(kSubstrate, currentVertexYs[2], z0)

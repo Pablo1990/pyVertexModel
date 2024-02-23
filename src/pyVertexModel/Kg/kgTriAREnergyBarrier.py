@@ -13,9 +13,6 @@ class KgTriAREnergyBarrier(Kg):
         fact = Set.lambdaR / Set.lmin0 ** 4
 
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
-            # if Geo.remodelling and c not in Geo.AssembleNodes:
-            #     continue
-
             energy_c = 0
             Cell = Geo.Cells[c]
             Ys = Cell.Y
@@ -30,8 +27,8 @@ class KgTriAREnergyBarrier(Kg):
                         n3 = Cell.Faces[f].globalIds
                         nY_original = np.array([Cell.globalIds[edge] for edge in Tris[t].Edge] + [n3], dtype=int)
 
-                        # if Geo.remodelling and not np.any(np.isin(nY_original, Geo.AssemblegIds)):
-                        #     continue
+                        if Geo.remodelling and not np.any(np.isin(nY_original, Geo.AssemblegIds)):
+                            continue
 
                         y1 = Ys[Tris[t].Edge[0], :]
                         y2 = Ys[Tris[t].Edge[1], :]

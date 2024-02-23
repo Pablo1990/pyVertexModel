@@ -27,7 +27,6 @@ class KgSurfaceCellBasedAdhesion(Kg):
         self.timeInSeconds = f"Time at SurfaceCell: {end - start} seconds"
 
     def work_per_cell(self, Cell, Geo, Set, calculate_K=True):
-        # TODO: TRY JIT AND NUMBA https://numba.readthedocs.io/en/stable/user/jit.html#basic-usage
         Energy_c = 0
         Ys = Cell.Y
         ge = np.zeros(self.g.shape, dtype=self.precision_type)
@@ -58,9 +57,9 @@ class KgSurfaceCellBasedAdhesion(Kg):
                 n3 = face.globalIds
                 nY = [Cell.globalIds[edge] for edge in t.Edge] + [n3]
 
-                if Geo.remodelling:
-                    if not any(np.isin(nY, Geo.AssemblegIds)):
-                        continue
+                if Geo.remodelling and not np.any(np.isin(nY, Geo.AssemblegIds)):
+                    continue
+
                 if calculate_K:
                     ge = self.calculate_Kg(Lambda, fact, ge, nY, y1, y2, y3)
                 else:

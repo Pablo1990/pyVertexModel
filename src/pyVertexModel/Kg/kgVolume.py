@@ -54,7 +54,7 @@ class KgVolume(Kg):
                     n3 = face.globalIds
                     nY = [Cell.globalIds[tri.Edge[0]], Cell.globalIds[tri.Edge[1]], n3]
 
-                    if Geo.remodelling and not any(id in Geo.AssemblegIds for id in nY):
+                    if Geo.remodelling and not any(ids in Geo.AssemblegIds for ids in nY):
                         continue
 
                     gs, Ks = kg_functions.gKDet(y1, y2, y3)
