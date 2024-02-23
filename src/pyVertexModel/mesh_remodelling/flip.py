@@ -42,7 +42,7 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, newYgIds, Set, flipN
 
     Geo.update_measures()
 
-    newYgIds = list(set(newYgIds + Geo.AssemblegIds))
+    newYgIds = list(set(np.concatenate((newYgIds, Geo.AssemblegIds))))
 
     hasConverged = True
 
