@@ -40,20 +40,19 @@ def edgeValenceT(tets, nodesEdge):
     :param nodesEdge:
     :return:
     """
-    # Tets in common with an edge
-    tets1 = tets[np.any(np.isin(tets, nodesEdge[0]), axis=1)]
-    tets2 = tets[np.any(np.isin(tets, nodesEdge[1]), axis=1)]
+    # Find tets that contain either node of the edge
+    tets1, tets2 = [tets[np.any(tets == node, axis=1)] for node in nodesEdge]
 
     nodeTets1 = np.sort(tets1, axis=1)
     nodeTets2 = np.sort(tets2, axis=1)
 
     tetIds, _ = ismember_rows(nodeTets1, nodeTets2)
     sharedTets = nodeTets1[tetIds]
-    valence = sharedTets.shape[0]
 
-    tetIds = np.where(np.isin(np.sort(tets, axis=1), sharedTets).all(axis=1))[0]
+    # Find the indices of the shared tets in the original tets array
+    tetIds = np.where((np.sort(tets, axis=1)[:, None] == sharedTets).all(-1))[0]
 
-    return valence, sharedTets, tetIds
+    return sharedTets.shape[0], sharedTets, tetIds
 
 
 def get_node_neighbours(geo, node, main_node=None):
