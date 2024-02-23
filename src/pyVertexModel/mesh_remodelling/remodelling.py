@@ -3,6 +3,7 @@ import logging
 import numpy as np
 import pandas as pd
 
+from src.pyVertexModel.algorithm.newtonRaphson import solve_remodeling_step
 from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 from src.pyVertexModel.geometry.geo import edgeValence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import YFlipNM, post_flip
@@ -107,6 +108,7 @@ class Remodelling:
 
         # Get edges to remodel
         segmentFeatures_all = self.get_tris_to_remodel_ordered()
+        allTnew = np.array([])
 
         while segmentFeatures_all.empty is False:
             Geo_backup = self.Geo.copy()
@@ -116,7 +118,6 @@ class Remodelling:
 
             # Get the first segment feature
             segmentFeatures = segmentFeatures_all.iloc[0]
-            allTnew = np.array([])
             numPair = 0
 
             cellNode = segmentFeatures['num_cell']
@@ -163,10 +164,10 @@ class Remodelling:
                 self.Geo, Set, DidNotConverge = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
                                                                       self.Set)
                 if DidNotConverge:
-                    self.Geo = Geo_backup
-                    self.Geo_n = Geo_n_backup
-                    self.Dofs = Dofs_backup
-                    self.Geo_0 = Geo_0_backup
+                    self.Geo = Geo_backup.copy()
+                    self.Geo_n = Geo_n_backup.copy()
+                    self.Dofs = Dofs_backup.copy()
+                    self.Geo_0 = Geo_0_backup.copy()
                     logger.info(f'=>> Full-Flip rejected: did not converge1')
                 else:
                     newYgIds = np.unique(np.concatenate((newYgIds, self.Geo.AssemblegIds)))

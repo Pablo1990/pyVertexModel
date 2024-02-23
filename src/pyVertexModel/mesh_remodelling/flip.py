@@ -44,7 +44,7 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, newYgIds, Set, flipN
 
     newYgIds = list(set(newYgIds + Geo.AssemblegIds))
 
-    hasConverged = 1
+    hasConverged = True
 
     return Geo_0, Geo_n, Geo, Dofs, newYgIds, hasConverged
 
