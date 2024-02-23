@@ -281,9 +281,9 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
                                                                   arrayPos)
 
     paths = list(nx.all_simple_paths(treeOfPossibilities, parentNode, endNode))
-    new_tets_tree = []
-    vol_diff = []
-    cell_winning = []
+    new_tets_tree = None
+    vol_diff = np.inf
+    cell_winning = -np.inf
     for c_path in paths:
         c_path = np.array(c_path)
         new_tets = np.vstack(old_tets)
@@ -294,57 +294,36 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
             new_tets = new_tets[~ismember_rows(np.sort(new_tets, 1), np.sort(toRemove, 1))[0]]
             new_tets = np.vstack((new_tets, toAdd))
 
-        it_was_found = False
-        for new_tet_tree in new_tets_tree:
-            if np.array_equal(np.sort(new_tet_tree, axis=1), np.sort(new_tets, axis=1)):
-                it_was_found = True
-                break
+        volumes = [compute_tet_volume(tet, Geo) for tet in new_tets]
+        volumes = np.array(volumes)
+        norm_vols = volumes / np.max(volumes)
+        new_tets = np.array(new_tets)
+        new_tets = new_tets[norm_vols > 0.05]
+        new_vol = np.sum(volumes[norm_vols > 0.05])
+        old_vol = sum(compute_tet_volume(tet, Geo) for tet in old_tets)
+        if abs(new_vol - old_vol) / old_vol <= 0.005:
+            try:
+                if intercalation_flip:
+                    Xs_c = Xs[~np.isin(Xs, ghost_nodes_without_debris)]
+                    new_tets = np.append(new_tets, [Xs_c], axis=0)
 
-        if not it_was_found:
-            volumes = []
-            for tet in new_tets:
-                vol = compute_tet_volume(tet, Geo)
-                volumes.append(vol)
-
-            volumes = np.array(volumes)
-            norm_vols = volumes / np.max(volumes)
-            new_tets = np.array(new_tets)
-            new_tets = new_tets[norm_vols > 0.05]
-            new_vol = np.sum(volumes[norm_vols > 0.05])
-
-            old_vol = 0
-            for tet in old_tets:
-                vol = compute_tet_volume(tet, Geo)
-                old_vol += vol
-
-            if abs(new_vol - old_vol) / old_vol <= 0.005:
-                try:
-                    if intercalation_flip:
-                        Xs_c = Xs[~np.isin(Xs, ghost_nodes_without_debris)]
-                        new_tets = np.append(new_tets, [Xs_c], axis=0)
-
-                    Geo_new = Geo.copy()
-                    Geo_new.remove_tetrahedra(old_tets)
-                    Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), None, Set)
-                    Geo_new.rebuild(Geo_new.copy(), Set)
-                    new_tets_tree.append(new_tets)
-                    vol_diff.append(abs(new_vol - old_vol) / old_vol)
-                    cell_winning.append(np.sum(np.isin(new_tets, cell_to_intercalate_with)) / len(new_tets))
-                except Exception as ex:
-                    logger.warning(f"Exception on flip remodelling: {ex}")
-                    pass  # handle exception here if necessary
-
-    if len(new_tets_tree) > 0:
-        # min_index = vol_diff.index(min(vol_diff))
-        max_index = cell_winning.index(max(cell_winning))
-        Tnew = new_tets_tree[max_index]
-    else:
-        Tnew = None
-
+                current_won_valence = np.sum(np.isin(new_tets, cell_to_intercalate_with)) / len(new_tets)
+                if current_won_valence >= cell_winning:
+                    current_vol_diff = abs(new_vol - old_vol) / old_vol
+                    if current_vol_diff < vol_diff:
+                        Geo_new = Geo.copy()
+                        Geo_new.remove_tetrahedra(old_tets)
+                        Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), None, Set)
+                        Geo_new.rebuild(Geo_new.copy(), Set)
+                        new_tets_tree = new_tets
+                        cell_winning = current_won_valence
+                        vol_diff = current_vol_diff
+            except Exception as ex:
+                logger.warning(f"Exception on flip remodelling: {ex}")
+    # Get the last combination from new_tets_tree
+    Tnew = new_tets_tree
     Geo.add_tetrahedra(Geo, tets4_cells, None, Set)
-
     Ynew = []
-
     return Tnew, Ynew
 
 
