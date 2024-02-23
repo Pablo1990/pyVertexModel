@@ -17,7 +17,7 @@ class KgSubstrate(Kg):
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
             currentCell = Geo.Cells[c]
 
-            # if Geo.Remodelling and c not in Geo.AssembleNodes:
+            # if Geo.remodelling and c not in Geo.AssembleNodes:
             #     continue
 
             ge = np.zeros(self.g.shape, dtype=self.precision_type)

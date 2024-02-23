@@ -37,7 +37,7 @@ class KgVolume(Kg):
         # Loop over Cells
         # Analytical residual g and Jacobian K
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus]:
-            if Geo.Remodelling and c not in Geo.AssembleNodes:
+            if Geo.remodelling and c not in Geo.AssembleNodes:
                 continue
 
             Cell = Geo.Cells[c]
@@ -54,7 +54,7 @@ class KgVolume(Kg):
                     n3 = face.globalIds
                     nY = [Cell.globalIds[tri.Edge[0]], Cell.globalIds[tri.Edge[1]], n3]
 
-                    if Geo.Remodelling and not any(id in Geo.AssemblegIds for id in nY):
+                    if Geo.remodelling and not any(id in Geo.AssemblegIds for id in nY):
                         continue
 
                     gs, Ks = kg_functions.gKDet(y1, y2, y3)

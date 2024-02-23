@@ -25,45 +25,35 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
     :return:
     """
 
-    geop = geo.copy()  # Assuming there is a method to copy the Geo object
     logger.info('=====>> Solving Local Problem....')
-    geo.remodel_mesh = True
-    increase_eta = True
+    geo.remodelling = True
     original_nu = c_set.nu
 
     c_set.nu0 = c_set.nu
     c_set.nu = c_set.nu_LP_Initial
     c_set.max_iter = c_set.MaxIter0 * 3
-    did_not_converge = False
 
-    while True:
-        g, k, _ = KgGlobal(geo_0, geo_n, geo, c_set)
+    g, k, _ = KgGlobal(geo_0, geo_n, geo, c_set)
 
-        dy = np.zeros(((geo.numY + geo.numF + geo.nCells) * 3, 1), dtype=np.float64)
-        dyr = np.linalg.norm(dy[dofs.remodel, 0])
-        gr = np.linalg.norm(g[dofs.remodel])
-        logger.info(
-            f'Local Problem ->Iter: 0, ||gr||= {gr:.3e} ||dyr||= {dyr:.3e}  nu/nu0={c_set.nu / c_set.nu0:.3e}  '
-            f'dt/dt0={c_set.dt / c_set.dt0:.3g}')
+    dy = np.zeros(((geo.numY + geo.numF + geo.nCells) * 3, 1), dtype=np.float64)
+    dyr = np.linalg.norm(dy[dofs.remodel, 0])
+    gr = np.linalg.norm(g[dofs.remodel])
+    logger.info(
+        f'Local Problem ->Iter: 0, ||gr||= {gr:.3e} ||dyr||= {dyr:.3e}  nu/nu0={c_set.nu / c_set.nu0:.3e}  '
+        f'dt/dt0={c_set.dt / c_set.dt0:.3g}')
 
-        geo, g, k, energy, c_set, gr, dyr, dy = newton_raphson(geo_0, geo_n, geo, dofs, c_set, k, g, -1, -1)
+    geo, g, k, energy, c_set, gr, dyr, dy = newton_raphson(geo_0, geo_n, geo, dofs, c_set, k, g, -1, -1)
 
-        if gr > c_set.tol or dyr > c_set.tol or np.any(np.isnan(g[dofs.free])) or np.any(np.isnan(dy[dofs.free])):
-            logger.info(f'Local Problem did not converge after {c_set.iter} iterations.')
-            did_not_converge = True
-            c_set.max_iter = c_set.MaxIter0
-            c_set.nu = original_nu
-            break
-        else:
-            if c_set.nu / c_set.nu0 == 1:
-                logger.info(f'=====>> Local Problem converged in {c_set.iter} iterations.')
-                did_not_converge = False
-                c_set.max_iter = c_set.MaxIter0
-                c_set.nu = original_nu
-                geo.remodel_mesh = False
-                break
-            else:
-                c_set.nu = max(c_set.nu / 2, c_set.nu0)
+    if gr > c_set.tol or dyr > c_set.tol or np.any(np.isnan(g[dofs.free])) or np.any(np.isnan(dy[dofs.free])):
+        logger.info(f'Local Problem did not converge after {c_set.iter} iterations.')
+        did_not_converge = True
+    else:
+        logger.info(f'=====>> Local Problem converged in {c_set.iter} iterations.')
+        did_not_converge = False
+        geo.remodelling = False
+
+    c_set.max_iter = c_set.MaxIter0
+    c_set.nu = original_nu
 
     return geo, c_set, did_not_converge
 
@@ -83,7 +73,7 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
     :return:
     """
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.newton.html
-    if Geo.Remodelling:
+    if Geo.remodelling:
         dof = Dofs.remodel
     else:
         dof = Dofs.Free

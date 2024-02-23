@@ -18,7 +18,7 @@ class KgViscosity(Kg):
     def calculate_g(self, Geo, Geo_n, Set):
         dY = np.zeros((Geo.numF + Geo.numY + Geo.nCells, 3), dtype=self.precision_type)
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
-            if Geo.Remodelling and c not in Geo.AssembleNodes:
+            if Geo.remodelling and c not in Geo.AssembleNodes:
                 continue
 
             Cell = Geo.Cells[c]
