@@ -138,11 +138,11 @@ class Remodelling:
                                                                oldTets, oldYs,
                                                                newYgIds)
                     if len(Tnew) > 0:
-                    allTnew = Tnew if allTnew.size == 0 else np.vstack((allTnew, Tnew))
+                        allTnew = Tnew if allTnew.size == 0 else np.vstack((allTnew, Tnew))
 
                 sharedNodesStill = get_node_neighbours_per_domain(self.Geo, cellNode, ghostNode, cellToSplitFrom)
 
-                if any(np.isin(sharedNodesStill, self.Geo.XgID)):
+                if any(np.isin(sharedNodesStill, self.Geo.XgID)) or not hasConverged:
                     sharedNodesStill_g = sharedNodesStill[np.isin(sharedNodesStill, self.Geo.XgID)]
                     ghostNode = sharedNodesStill_g[0]
                 else:
