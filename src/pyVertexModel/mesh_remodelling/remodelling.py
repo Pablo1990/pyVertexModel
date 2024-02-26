@@ -126,6 +126,7 @@ class Remodelling:
             cellToSplitFrom = segmentFeatures['cell_to_split_from']
 
             hasConverged = True
+            allTnew = None
 
             while hasConverged:
                 nodesPair = np.array([cellNode, ghostNode])
@@ -137,12 +138,12 @@ class Remodelling:
                                                                cellToIntercalateWith,
                                                                oldTets, oldYs,
                                                                newYgIds)
-                    if len(Tnew) > 0:
-                        allTnew = Tnew if allTnew.size == 0 else np.vstack((allTnew, Tnew))
+                    if Tnew is not None:
+                        allTnew = Tnew if allTnew is None else np.vstack((allTnew, Tnew))
 
                 sharedNodesStill = get_node_neighbours_per_domain(self.Geo, cellNode, ghostNode, cellToSplitFrom)
 
-                if any(np.isin(sharedNodesStill, self.Geo.XgID)) or not hasConverged:
+                if any(np.isin(sharedNodesStill, self.Geo.XgID)) and hasConverged:
                     sharedNodesStill_g = sharedNodesStill[np.isin(sharedNodesStill, self.Geo.XgID)]
                     ghostNode = sharedNodesStill_g[0]
                 else:
