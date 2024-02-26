@@ -137,7 +137,7 @@ class Remodelling:
                                                                cellToIntercalateWith,
                                                                oldTets, oldYs,
                                                                newYgIds)
-
+                    if len(Tnew) > 0:
                     allTnew = Tnew if allTnew.size == 0 else np.vstack((allTnew, Tnew))
 
                 sharedNodesStill = get_node_neighbours_per_domain(self.Geo, cellNode, ghostNode, cellToSplitFrom)

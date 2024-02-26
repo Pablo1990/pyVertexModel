@@ -143,7 +143,6 @@ def YFlipNM_recursive(TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, XsT
 
     Told_original = TOld.copy()
     if TOld.shape[0] == 3:
-        logger.info(f"YFlipNM_recursive: {arrayPos}")
         Ynew_c, Tnew_c = YFlip32(oldYs, TOld, [0, 1, 2], Geo)
         TRemoved.insert(arrayPos, TOld)
         Tnew.insert(arrayPos, Tnew_c)
@@ -349,7 +348,7 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
             new_vol = np.sum(volumes[norm_vols > 0.05])
             old_vol = sum(compute_tet_volume(tet, Geo) for tet in old_tets)
             current_vol_diff = abs(new_vol - old_vol) / old_vol
-            if abs(new_vol - old_vol) / old_vol <= 0.005 and current_vol_diff < vol_diff:
+            if current_vol_diff < vol_diff:
                 try:
                     if intercalation_flip:
                         Xs_c = Xs[~np.isin(Xs, ghost_nodes_without_debris)]
