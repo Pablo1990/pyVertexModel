@@ -19,3 +19,17 @@ class TestDofs(Tests):
         np.testing.assert_array_equal(dofs_test.Fix.tolist(), dofs_expected.Fix.tolist())
         np.testing.assert_array_equal(dofs_test.Free.tolist(), dofs_expected.Free.tolist())
         np.testing.assert_array_equal(dofs_test.FixP.tolist(), dofs_expected.FixP.tolist())
+
+    def test_get_remodel_dofs(self):
+        """
+        Test if the get_remodel_dofs function returns the correct degrees of freedom
+        :return:
+        """
+        geo_test, _, mat_info = test_kg.load_data('get_dofs_remodel.mat')
+
+        t_new_test = mat_info['Tnew'] - 1
+
+        dof_test = DegreesOfFreedom()
+        dof_test.get_remodel_dofs(t_new_test, geo_test)
+
+
