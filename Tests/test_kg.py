@@ -83,7 +83,7 @@ def test_kg_contractility_filename(filename, filename_expected):
     assert_k_g_energy('EC', 'gC_full', 'KC_full', kg, mat_expected)
 
 
-def test_kg_tri_AR(filename, filename_expected):
+def test_kg_tri_ar_filename(filename, filename_expected):
     geo_test, set_test, _ = load_data(filename)
     _, _, mat_expected = load_data(filename_expected, False)
     kg = KgTriAREnergyBarrier(geo_test)
@@ -103,7 +103,7 @@ class Test(Tests):
         kg_surface_area_filename('Geo_var_3x3_stretch.mat', 'Geo_var_3x3_stretch_expectedResults.mat', )
 
     def test_kg_triAR(self):
-        test_kg_tri_AR('Geo_var_3x3_stretch.mat', 'Geo_var_3x3_stretch_expectedResults.mat')
+        test_kg_tri_ar_filename('Geo_var_3x3_stretch.mat', 'Geo_var_3x3_stretch_expectedResults.mat')
 
     def test_kg_tri(self):
         filename = 'Geo_var_3x3_stretch.mat'
@@ -199,7 +199,7 @@ class Test(Tests):
         # Check with a different simulation 'cyst'
         filename = 'Geo_var_cyst.mat'
         filename_expected = 'Geo_var_cyst.mat'
-        test_kg_tri_AR(filename, filename_expected)
+        test_kg_tri_ar_filename(filename, filename_expected)
 
     def test_kg_viscosity_cyst(self):
         # Check with a different simulation 'cyst'
