@@ -127,9 +127,11 @@ class Remodelling:
 
             hasConverged = True
             allTnew = None
+            ghost_nodes_tried = []
 
             while hasConverged:
                 nodesPair = np.array([cellNode, ghostNode])
+                ghost_nodes_tried.append(ghostNode)
 
                 valenceSegment, oldTets, oldYs = edgeValence(self.Geo, nodesPair)
 
@@ -186,7 +188,8 @@ class Remodelling:
             # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr + 1)
 
             # Remove the segment feature that has been checked
-            checkedYgIds.extend([[segmentFeatures['num_cell'], segmentFeatures['node_pair_g']]])
+            for ghost_node_tried in ghost_nodes_tried:
+                checkedYgIds.append([segmentFeatures['num_cell'], ghost_node_tried])
 
             rowsToRemove = []
             if segmentFeatures_all.shape[0] > 0:
