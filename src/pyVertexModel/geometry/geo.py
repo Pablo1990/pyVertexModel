@@ -28,7 +28,7 @@ def edgeValence(geo, nodesEdge):
     nodeTets1 = np.sort(geo.Cells[nodesEdge[0]].T, axis=1)
     nodeTets2 = np.sort(geo.Cells[nodesEdge[1]].T, axis=1)
 
-    tetIds, _ = ismember_rows(nodeTets1, nodeTets2)
+    tetIds, _ = ismember_rows(np.array(nodeTets1, dtype=int), np.array(nodeTets2, dtype=int))
     sharedTets = nodeTets1[tetIds]
 
     sharedYs = []
