@@ -141,7 +141,6 @@ def YFlipNM_recursive(TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, XsT
                       parentNode, arrayPos):
     endNode = 1
 
-
     Told_original = TOld.copy()
     if TOld.shape[0] == 3:
         logger.info(f"YFlipNM_recursive: {arrayPos}")
@@ -282,11 +281,54 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
                                                                   xs_to_disconnect, treeOfPossibilities, parentNode,
                                                                   arrayPos)
 
-    paths = list(nx.all_simple_paths(treeOfPossibilities, parentNode, endNode))
+    logger.info(f"Number of possible combinations: {len(Tnew)}")
+    new_tets_tree = get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercalate_with, endNode,
+                                                  ghost_nodes_without_debris, intercalation_flip, old_tets, parentNode,
+                                                  tets4_cells, treeOfPossibilities)
+
+    # Get the last combination from new_tets_tree
+    Tnew = new_tets_tree
+    Geo.add_tetrahedra(Geo, tets4_cells, None, Set)
+    Ynew = []
+    return Tnew, Ynew
+
+
+def dfs(graph, start, end):
+    stack = [(start, [start])]
+    while stack:
+        (node, path) = stack.pop()
+        for next_node in set(graph[node]) - set(path):
+            if next_node == end:
+                yield path + [next_node]
+            else:
+                stack.append((next_node, path + [next_node]))
+
+
+def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercalate_with, endNode,
+                                  ghost_nodes_without_debris, intercalation_flip, old_tets, parentNode, tets4_cells,
+                                  treeOfPossibilities):
+    """
+    Get the best combination of new tets
+    :param Geo:
+    :param Set:
+    :param TRemoved:
+    :param Tnew:
+    :param Xs:
+    :param cell_to_intercalate_with:
+    :param endNode:
+    :param ghost_nodes_without_debris:
+    :param intercalation_flip:
+    :param old_tets:
+    :param parentNode:
+    :param tets4_cells:
+    :param treeOfPossibilities:
+    :return:
+    """
     new_tets_tree = None
     vol_diff = np.inf
     cell_winning = -np.inf
-    for c_path in paths:
+
+    for c_path in dfs(treeOfPossibilities, parentNode, endNode):
         c_path = np.array(c_path)
         new_tets = np.vstack(old_tets)
 
@@ -296,37 +338,34 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
             new_tets = new_tets[~ismember_rows(np.sort(new_tets, 1), np.sort(toRemove, 1))[0]]
             new_tets = np.vstack((new_tets, toAdd))
 
-        volumes = [compute_tet_volume(tet, Geo) for tet in new_tets]
-        volumes = np.array(volumes)
-        norm_vols = volumes / np.max(volumes)
-        new_tets = np.array(new_tets)
-        new_tets = new_tets[norm_vols > 0.05]
-        new_vol = np.sum(volumes[norm_vols > 0.05])
-        old_vol = sum(compute_tet_volume(tet, Geo) for tet in old_tets)
-        if abs(new_vol - old_vol) / old_vol <= 0.005:
-            try:
-                if intercalation_flip:
-                    Xs_c = Xs[~np.isin(Xs, ghost_nodes_without_debris)]
-                    new_tets = np.append(new_tets, [Xs_c], axis=0)
+        current_won_valence = np.sum(np.isin(new_tets, cell_to_intercalate_with)) / len(new_tets)
 
-                current_won_valence = np.sum(np.isin(new_tets, cell_to_intercalate_with)) / len(new_tets)
-                if current_won_valence >= cell_winning:
-                    current_vol_diff = abs(new_vol - old_vol) / old_vol
-                    if current_vol_diff < vol_diff:
-                        Geo_new = Geo.copy()
-                        Geo_new.remove_tetrahedra(old_tets)
-                        Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), None, Set)
-                        Geo_new.rebuild(Geo_new.copy(), Set)
-                        new_tets_tree = new_tets
-                        cell_winning = current_won_valence
-                        vol_diff = current_vol_diff
-            except Exception as ex:
-                logger.warning(f"Exception on flip remodelling: {ex}")
-    # Get the last combination from new_tets_tree
-    Tnew = new_tets_tree
-    Geo.add_tetrahedra(Geo, tets4_cells, None, Set)
-    Ynew = []
-    return Tnew, Ynew
+        if current_won_valence >= cell_winning:
+            volumes = [compute_tet_volume(tet, Geo) for tet in new_tets]
+            volumes = np.array(volumes)
+            norm_vols = volumes / np.max(volumes)
+            new_tets = np.array(new_tets)
+            new_tets = new_tets[norm_vols > 0.05]
+            new_vol = np.sum(volumes[norm_vols > 0.05])
+            old_vol = sum(compute_tet_volume(tet, Geo) for tet in old_tets)
+            current_vol_diff = abs(new_vol - old_vol) / old_vol
+            if abs(new_vol - old_vol) / old_vol <= 0.005 and current_vol_diff < vol_diff:
+                try:
+                    if intercalation_flip:
+                        Xs_c = Xs[~np.isin(Xs, ghost_nodes_without_debris)]
+                        new_tets = np.append(new_tets, [Xs_c], axis=0)
+
+                    Geo_new = Geo.copy()
+                    Geo_new.remove_tetrahedra(old_tets)
+                    Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), None, Set)
+                    Geo_new.rebuild(Geo_new.copy(), Set)
+                    new_tets_tree = new_tets
+                    cell_winning = current_won_valence
+                    vol_diff = current_vol_diff
+                    logger.info(f"New combination found: {current_won_valence} {current_vol_diff}")
+                except Exception as ex:
+                    logger.warning(f"Exception on flip remodelling: {ex}")
+    return new_tets_tree
 
 
 def add_new_info(Tnew_23, Ynew_23, final_tets, final_ys, new_tets, new_ys, removed_tets, removed_ys, tetIds):
