@@ -33,7 +33,6 @@ def create_tetrahedra(triangles_connectivity, neighbours_network, edges_of_verti
     :return: A 2D array representing the tetrahedra.
     """
     x_ids = np.concatenate([x_face_ids, x_vertices_ids])
-    twg = []
 
     # Relationships: 1 ghost node, three cell nodes
     twg = np.hstack([triangles_connectivity, x_vertices_ids[:, None]])
