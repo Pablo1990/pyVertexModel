@@ -162,7 +162,7 @@ class Remodelling:
                 #                                          ghostNode, Tnew, Set)
                 # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr + 1)
 
-                self.Dofs = DegreesOfFreedom.get_dofs(self.Geo, self.Set)
+                self.Dofs.get_dofs(self.Geo, self.Set)
                 self.Geo = self.Dofs.get_remodel_dofs(allTnew, self.Geo)
                 self.Geo, Set, DidNotConverge = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
                                                                       self.Set)
