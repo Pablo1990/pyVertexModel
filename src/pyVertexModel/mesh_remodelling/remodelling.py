@@ -14,6 +14,7 @@ logger = logging.getLogger("pyVertexModel")
 def get_faces_from_node(geo, nodes):
     """
     Get the faces from a node.
+    :param geo:
     :param nodes:
     :return:
     """
@@ -108,7 +109,6 @@ class Remodelling:
 
         # Get edges to remodel
         segmentFeatures_all = self.get_tris_to_remodel_ordered()
-        allTnew = np.array([])
 
         while segmentFeatures_all.empty is False:
             Geo_backup = self.Geo.copy()
@@ -118,7 +118,6 @@ class Remodelling:
 
             # Get the first segment feature
             segmentFeatures = segmentFeatures_all.iloc[0]
-            numPair = 0
 
             cellNode = segmentFeatures['num_cell']
             ghostNode = segmentFeatures['node_pair_g']
@@ -132,6 +131,7 @@ class Remodelling:
             while hasConverged:
                 nodesPair = np.array([cellNode, ghostNode])
                 ghost_nodes_tried.append(ghostNode)
+                logger.info(f"Remodeling: {cellNode} - {ghostNode}")
 
                 valenceSegment, oldTets, oldYs = edgeValence(self.Geo, nodesPair)
 
