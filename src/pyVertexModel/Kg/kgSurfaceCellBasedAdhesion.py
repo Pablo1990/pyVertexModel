@@ -38,6 +38,9 @@ class KgSurfaceCellBasedAdhesion(Kg):
                 Lambda = Set.lambdaS2
             elif face.InterfaceType == 'Bottom' or face.InterfaceType == 2:
                 Lambda = Set.lambdaS3
+            else:
+                raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
+
             fact0 += (Lambda * face.Area)
 
         fact = fact0 / Cell.Area0 ** 2
@@ -49,6 +52,8 @@ class KgSurfaceCellBasedAdhesion(Kg):
                 Lambda = Set.lambdaS2
             elif face.InterfaceType == 'Bottom' or face.InterfaceType == 2:
                 Lambda = Set.lambdaS3
+            else:
+                raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
 
             for t in face.Tris:
                 y1 = Ys[t.Edge[0]]

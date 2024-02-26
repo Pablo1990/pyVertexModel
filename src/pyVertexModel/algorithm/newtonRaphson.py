@@ -91,6 +91,7 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
     auxgr = np.zeros(3, dtype=np.float64)
     auxgr[0] = gr
     ig = 0
+    Energy = 0
 
     while (gr > Set.tol or dyr > Set.tol) and Set.iter < Set.MaxIter:
         Energy, K, dyr, g, gr, ig, auxgr, dy = newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof, dy,
