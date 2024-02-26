@@ -88,7 +88,6 @@ class TestVertexModel(Tests):
         X_input = mat_info['X']
 
         # Test if initialize geometry function does not change anything
-        vModel_test = VertexModelBubbles(set_test)
         XgID_expected, X_test = SeedWithBoundingBox(X_input, set_test.s)
 
         # Check if the cells are initialized correctly

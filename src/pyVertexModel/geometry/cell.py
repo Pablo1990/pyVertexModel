@@ -129,11 +129,11 @@ class Cell:
         """
         v = 0.0
         for f in range(len(self.Faces)):
-            face = self.Faces[f]
-            for t in range(len(face.Tris)):
-                y1 = self.Y[face.Tris[t].Edge[0], :] - self.X
-                y2 = self.Y[face.Tris[t].Edge[1], :] - self.X
-                y3 = face.Centre - self.X
+            c_face = self.Faces[f]
+            for t in range(len(c_face.Tris)):
+                y1 = self.Y[c_face.Tris[t].Edge[0], :] - self.X
+                y2 = self.Y[c_face.Tris[t].Edge[1], :] - self.X
+                y3 = c_face.Centre - self.X
                 Ytri = np.array([y1, y2, y3])
 
                 currentV = np.linalg.det(Ytri) / 6

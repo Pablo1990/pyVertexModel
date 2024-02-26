@@ -10,23 +10,31 @@ from src.pyVertexModel.util.utils import ismember_rows
 logger = logging.getLogger("pyVertexModel")
 
 
-def edgeValence(Geo, nodesEdge):
+def get_cells_by_status(cells, status):
+    return [c_cell.ID for c_cell in cells if c_cell.AliveStatus == status]
+
+
+def tets_to_check(c_cell, xg_boundary):
+    return [not any(n in tet for n in xg_boundary) for tet in c_cell.T]
+
+
+def edgeValence(geo, nodesEdge):
     """
 
-    :param Geo:
+    :param geo:
     :param nodesEdge:
     :return:
     """
-    nodeTets1 = np.sort(Geo.Cells[nodesEdge[0]].T, axis=1)
-    nodeTets2 = np.sort(Geo.Cells[nodesEdge[1]].T, axis=1)
+    nodeTets1 = np.sort(geo.Cells[nodesEdge[0]].T, axis=1)
+    nodeTets2 = np.sort(geo.Cells[nodesEdge[1]].T, axis=1)
 
     tetIds, _ = ismember_rows(nodeTets1, nodeTets2)
     sharedTets = nodeTets1[tetIds]
 
     sharedYs = []
 
-    if np.any(np.isin(nodesEdge, Geo.XgID)):
-        sharedYs = Geo.Cells[nodesEdge[0]].Y[tetIds]
+    if np.any(np.isin(nodesEdge, geo.XgID)):
+        sharedYs = geo.Cells[nodesEdge[0]].Y[tetIds]
 
     valence = sharedTets.shape[0]
 
@@ -88,7 +96,7 @@ def get_node_neighbours_per_domain(geo, node, node_of_domain, main_node=None):
     :return:
     """
 
-    all_node_tets = np.vstack([cell.T for cell in geo.Cells if cell.ID == node])
+    all_node_tets = np.vstack([c_cell.T for c_cell in geo.Cells if c_cell.ID == node])
 
     if np.isin(node_of_domain, geo.XgBottom).any():
         xg_domain = geo.XgBottom
@@ -415,7 +423,8 @@ class Geo:
         Build the global ids of the geometry
         :return:
         """
-        self.non_dead_cells = np.array([c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None], dtype='int')
+        self.non_dead_cells = np.array([c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None],
+                                       dtype='int')
 
         g_ids_tot = 0
         g_ids_tot_f = 0
@@ -537,6 +546,49 @@ class Geo:
 
             self.Cells[cc].Faces = self.Cells[cc].Faces[:len(Neigh_nodes)]
 
+    def calculate_interface_type(self, new_tets):
+        """
+        Calculate the interface type
+        :param new_tets:
+        :return:
+        """
+        count_bottom = sum(any(tet in n for tet in self.XgBottom) for n in new_tets)
+        count_top = sum(any(tet in n for tet in self.XgTop) for n in new_tets)
+        return 2 if count_bottom > count_top else 0
+
+    def check_vertices_unchanged(self, c_cell, cell_new, tets_check):
+        """
+        Check that the vertices have not changed
+        :param c_cell:
+        :param cell_new:
+        :param tets_check:
+        :return:
+        """
+        y_old = [c_cell.Y[i] for i, check in enumerate(tets_check) if check for tet in c_cell.T
+                 if any(n in tet for n in self.XgID)]
+        y_new = [cell_new.Y[i] for i, check in enumerate(tets_check) if check for tet in cell_new.T
+                 if any(n in tet for n in self.XgID)]
+
+        assert y_old.__eq__(y_new)
+
+    def check_faces_unchanged(self, c_cell, cell_new, interface_type, new_tets):
+        """
+        Check that the faces have not changed
+        :param c_cell:
+        :param cell_new:
+        :param interface_type:
+        :param new_tets:
+        :return:
+        """
+        for c_face in c_cell.Faces:
+            if c_face.InterfaceType != interface_type and c_cell.ID not in new_tets:
+                id_with_new = [np.isin(face_new.ij, c_face.ij) for face_new in cell_new.Faces]
+                assert sum(id_with_new) == 1
+                face_index = id_with_new.index(True)
+                if cell_new.Faces[face_index].Centre != c_face.Centre:
+                    cell_new.Faces[face_index].Centre = c_face.Centre
+                assert cell_new.Faces[face_index].Centre == c_face.Centre
+
     def check_ys_and_faces_have_not_changed(self, new_tets, geo_new):
         """
         Check that the Ys and faces have not changed
@@ -544,50 +596,23 @@ class Geo:
         :param geo_new:
         :return:
         """
-        def get_cells_by_status(cells, status):
-            return [c_cell.ID for c_cell in cells if c_cell.AliveStatus == status]
-
-        def calculate_interface_type():
-            count_bottom = sum(any(tet in n for tet in self.XgBottom) for n in new_tets)
-            count_top = sum(any(tet in n for tet in self.XgTop) for n in new_tets)
-            return 2 if count_bottom > count_top else 0
-
-        def tets_to_check(c_cell, xg_boundary):
-            return [not any(n in tet for n in xg_boundary) for tet in c_cell.T]
-
-        def check_vertices_unchanged(c_cell, cell_new, tets_check):
-            y_old = [c_cell.Y[i] for i, check in enumerate(tets_check) if check for tet in c_cell.T
-                     if any(n in tet for n in self.XgID)]
-            y_new = [cell_new.Y[i] for i, check in enumerate(tets_check) if check for tet in cell_new.T
-                     if any(n in tet for n in self.XgID)]
-            assert y_old.__eq__(y_new)
-
-        def check_faces_unchanged(c_cell, cell_new, interface_type):
-            for c_face in c_cell.Faces:
-                if c_face.InterfaceType != interface_type and c_cell.ID not in new_tets:
-                    id_with_new = [np.isin(face_new.ij, c_face.ij) for face_new in cell_new.Faces]
-                    assert sum(id_with_new) == 1
-                    face_index = id_with_new.index(True)
-                    if cell_new.Faces[face_index].Centre != c_face.Centre:
-                        cell_new.Faces[face_index].Centre = c_face.Centre
-                    assert cell_new.Faces[face_index].Centre == c_face.Centre
 
         non_dead_cells = get_cells_by_status(self.Cells, None)
         alive_cells = get_cells_by_status(self.Cells, 1)
         debris_cells = get_cells_by_status(self.Cells, 0)
 
         for cell_id in alive_cells + debris_cells:
-            interface_type = calculate_interface_type()
-            c_cell = self.Cells[cell_id]
+            interface_type = self.calculate_interface_type(new_tets)
+            current_cell = self.Cells[cell_id]
             cell_new = geo_new.Cells[cell_id]
 
             xg_boundary = self.XgBottom if interface_type == 2 else self.XgTop
-            tets_check = tets_to_check(c_cell, xg_boundary)
+            tets_check = tets_to_check(current_cell, xg_boundary)
             tets_check_new = tets_to_check(cell_new, xg_boundary)
 
             # TODO: CHECK BOTH FUNCTIONS
-            #check_vertices_unchanged(c_cell, cell_new, tets_check)
-            #check_faces_unchanged(c_cell, cell_new, interface_type)
+            # check_vertices_unchanged(current_cell, cell_new, tets_check)
+            # check_faces_unchanged(current_cell, cell_new, interface_type)
 
         return geo_new
 
@@ -664,7 +689,8 @@ class Geo:
                         self.Cells[numNode].T = self.Cells[numNode].T[
                             ~np.isin(np.sort(self.Cells[numNode].T, axis=1), np.sort(newTet))]
                     else:
-                        if len(self.Cells[numNode].T) == 0 or ~np.any(np.isin(self.Cells[numNode].T, newTet).all(axis=1)):
+                        if len(self.Cells[numNode].T) == 0 or ~np.any(
+                                np.isin(self.Cells[numNode].T, newTet).all(axis=1)):
                             self.Cells[numNode].T = np.append(self.Cells[numNode].T, [newTet], axis=0)
                             if self.Cells[numNode].AliveStatus is not None and Set is not None:
                                 if Ynew:
@@ -673,9 +699,10 @@ class Geo:
                                                                       axis=0)
                                 else:
                                     self.Cells[numNode].Y = np.append(self.Cells[numNode].Y,
-                                                                      oldGeo.recalculate_ys_from_previous(np.array([newTet]),
-                                                                                                          numNode,
-                                                                                                          Set), axis=0)
+                                                                      oldGeo.recalculate_ys_from_previous(
+                                                                          np.array([newTet]),
+                                                                          numNode,
+                                                                          Set), axis=0)
                                 self.numY += 1
 
     def recalculate_ys_from_previous(self, Tnew, mainNodesToConnect, Set):
