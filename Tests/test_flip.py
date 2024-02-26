@@ -54,7 +54,6 @@ class TestFlip(Tests):
         Ynew = [None, None]
         parentNode = 0
         arrayPos = 2
-        endNode = 1
         _, Tnew, TRemoved, treeOfPossibilities, _ = YFlipNM_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys, geo_test,
                                                                       possibleEdges,
                                                                       xs_to_disconnect, treeOfPossibilities, parentNode,

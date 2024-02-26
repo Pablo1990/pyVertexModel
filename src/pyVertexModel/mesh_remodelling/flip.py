@@ -24,8 +24,6 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, newYgIds, Set, flipN
     Geo_0_backup = Geo_0.copy()
     Dofs_backup = Dofs.copy()
 
-    logger.info(f"{flipName}-Flip: {segmentToChange[0]} {segmentToChange[1]}.")
-
     Geo.add_and_rebuild_cells(Geo.copy(), oldTets, Tnew, Ynew, Set, 1)
     Geo_n = Geo.copy()
 

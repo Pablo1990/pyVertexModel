@@ -267,13 +267,13 @@ def fit_ellipsoid_to_points(points):
     x, y, z = points[:, 0], points[:, 1], points[:, 2]
 
     # Define the objective function for ellipsoid fitting
-    def ellipsoidError(points):
+    def ellipsoidError(c_points):
         """
         Calculate the sum of squared distances from the ellipsoid surface to the input points
-        :param points:  The input points
+        :param c_points:  The input points
         :return:    The sum of squared distances from the ellipsoid surface to the input points
         """
-        a, b, c = points
+        a, b, c = c_points
         distances = (x ** 2 / a ** 2) + (y ** 2 / b ** 2) + (z ** 2 / c ** 2) - 1
         error = np.sum(distances ** 2)
         return error

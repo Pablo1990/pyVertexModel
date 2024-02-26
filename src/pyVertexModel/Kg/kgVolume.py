@@ -33,6 +33,8 @@ class KgVolume(Kg):
         start = time.time()
 
         self.energy = 0
+        gs = None
+        Ks = None
 
         # Loop over Cells
         # Analytical residual g and Jacobian K
@@ -73,4 +75,4 @@ class KgVolume(Kg):
         end = time.time()
         self.timeInSeconds = f"Time at Volume: {end - start} seconds"
 
-        return gs, Ks, ge
+        return gs, Ks
