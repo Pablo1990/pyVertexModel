@@ -38,7 +38,7 @@ paths.source = [
 [tool.pytest.ini_options]
 addopts = "--color=yes -v"
 testpaths = [
-    "tests",
+    "Tests",
 ]
 
 [tool.ruff]
