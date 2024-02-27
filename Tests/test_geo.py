@@ -193,3 +193,57 @@ class TestGeo(Tests):
         geo_test.check_ys_and_faces_have_not_changed(new_tets_test, old_geo_test)
 
         np.testing.assert_equal(old_geo_test.Cells[2].Faces[0].Centre[0], geo_test.Cells[2].Faces[0].Centre[0])
+
+    def test_remove_tetrahedra(self):
+        """
+        Test the function remove_tetrahedra
+        :return:
+        """
+        # Load data
+        geo_test, _, mat_info = load_data('remove_tetrahedra_wingdisc.mat')
+        tets_to_remove_test = mat_info['oldTets'] - 1
+        geo_test.remove_tetrahedra(tets_to_remove_test)
+        geo_expected = Geo(mat_info['Geo_new'])
+
+        check_if_cells_are_the_same(geo_test, geo_expected)
+
+    def test_add_tetrahedra(self):
+        """
+        Test the function add_tetrahedra
+        :return:
+        """
+        # Load data
+        old_geo, set_test, mat_info = load_data('add_tetrahedra_wingdisc.mat')
+        new_tets_test = mat_info['newTets'] - 1
+        geo_test = Geo(mat_info['Geo_new'])
+
+        geo_test.add_tetrahedra(old_geo, new_tets_test, None, set_test)
+
+        _, _, mat_info = load_data('add_tetrahedra_wingdisc_expected.mat')
+        geo_expected = Geo(mat_info['Geo_new'])
+
+        check_if_cells_are_the_same(geo_test, geo_expected)
+
+    def test_rebuild_wingdisc(self):
+        """
+        Test the function rebuild_wingdisc
+        :return:
+        """
+        # Load data
+        _, set_test, _ = load_data('add_tetrahedra_wingdisc.mat')
+        _, _, mat_info = load_data('add_tetrahedra_wingdisc_expected.mat')
+        geo_test = Geo(mat_info['Geo_new'])
+        geo_test.rebuild(geo_test.copy(), set_test)
+
+        _, _, mat_info = load_data('rebuild_wingdisc_expected.mat')
+        geo_expected = Geo(mat_info['Geo_new'])
+
+        check_if_cells_are_the_same(geo_test, geo_expected)
+
+    def test_add_and_rebuild_cells(self):
+        """
+        Test the function add_and_rebuild_cells
+        :return:
+        """
+        pass
+
