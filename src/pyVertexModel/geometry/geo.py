@@ -608,7 +608,7 @@ class Geo:
         """
 
         self.remove_tetrahedra(old_tets)
-        self.add_tetrahedra(old_geo, new_tets, None, set)
+        self.add_tetrahedra(old_geo, new_tets, y_new, set)
         self.rebuild(self.copy(), set)
         self.build_global_ids()
 
