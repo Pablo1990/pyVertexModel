@@ -118,28 +118,6 @@ def get_node_neighbours_per_domain(geo, node, node_of_domain, main_node=None):
     return node_neighbours
 
 
-def check_faces_unchanged(c_cell, cell_new, interface_type, new_tets):
-    """
-    Check that the faces have not changed
-    :param c_cell:
-    :param cell_new:
-    :param interface_type:
-    :param new_tets:
-    :return:
-    """
-    for c_face in c_cell.Faces:
-        if c_face.InterfaceType != interface_type and c_cell.ID not in new_tets:
-            id_with_new = np.array([np.all(np.isin(face_new.ij, c_face.ij)) for face_new in cell_new.Faces])
-            assert sum(id_with_new) == 1
-
-            id_with_new_index = np.where(id_with_new)[0][0]
-
-            if np.any(cell_new.Faces[id_with_new_index].Centre != c_face.Centre):
-                cell_new.Faces[id_with_new_index].Centre = c_face.Centre
-
-            assert np.all(cell_new.Faces[id_with_new_index].Centre == c_face.Centre)
-
-
 class Geo:
     """
     Class that contains the information of the geometry.
@@ -605,7 +583,17 @@ class Geo:
                 tets_to_check_new & any(node in tet for node in old_geo.XgID for tet in self.Cells[cell_id].T)]
             assert np.all(old_geo_ys == new_geo_ys)
 
-            check_faces_unchanged(current_cell, cell_new, interface_type, new_tets)
+            for c_face in old_geo.Cells[cell_id].Faces:
+                if c_face.InterfaceType != interface_type and old_geo.Cells[cell_id].ID not in new_tets:
+                    id_with_new = np.array([np.all(np.isin(face_new.ij, c_face.ij)) for face_new in self.Cells[cell_id].Faces])
+                    assert sum(id_with_new) == 1
+
+                    id_with_new_index = np.where(id_with_new)[0][0]
+
+                    if np.any(self.Cells[cell_id].Faces[id_with_new_index].Centre != c_face.Centre):
+                        self.Cells[cell_id].Faces[id_with_new_index].Centre = c_face.Centre
+
+                    assert np.all(self.Cells[cell_id].Faces[id_with_new_index].Centre == c_face.Centre)
 
     def add_and_rebuild_cells(self, old_geo, old_tets, new_tets, y_new, set, update_measurements):
         """

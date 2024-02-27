@@ -2,6 +2,7 @@ import numpy as np
 
 from Tests.tests import Tests, load_data, assert_matrix, assert_array1D
 from src.pyVertexModel.algorithm.vertexModelBubbles import extrapolate_ys_faces_ellipsoid
+from src.pyVertexModel.geometry.geo import Geo
 
 
 def check_if_cells_are_the_same(geo_expected, geo_test):
@@ -147,3 +148,48 @@ class TestGeo(Tests):
 
         # Check if cells are extrapolated correctly
         check_if_cells_are_the_same(geo_expected, geo_test)
+
+    def test_check_ys_and_faces_have_not_changed(self):
+        """
+        Check if the ys and faces have not changed
+        :return:
+        """
+        # Load data
+        old_geo_test, _, mat_info = load_data('check_ys_and_faces_have_not_changed_wingdisc.mat')
+        new_tets_test = mat_info['newTets']
+        geo_test = Geo(mat_info['Geo_new'])
+
+        # Check if the ys and faces have not changed
+        geo_test.check_ys_and_faces_have_not_changed(new_tets_test, old_geo_test)
+
+    def test_check_ys_and_faces_have_changed_ys(self):
+        """
+        Check if the ys and faces have not changed
+        :return:
+        """
+        # Load data
+        old_geo_test, _, mat_info = load_data('check_ys_and_faces_have_not_changed_wingdisc.mat')
+        new_tets_test = mat_info['newTets']
+        geo_test = Geo(mat_info['Geo_new'])
+
+        geo_test.Cells[0].Y[0, 1] = -100000
+
+        # Check if the ys and faces have not changed
+        np.testing.assert_raises(AssertionError, geo_test.check_ys_and_faces_have_not_changed, new_tets_test, old_geo_test)
+
+    def test_check_ys_and_faces_have_changed_faces(self):
+        """
+        Check if the ys and faces have not changed
+        :return:
+        """
+        # Load data
+        old_geo_test, _, mat_info = load_data('check_ys_and_faces_have_not_changed_wingdisc.mat')
+        new_tets_test = mat_info['newTets'] - 1
+        geo_test = Geo(mat_info['Geo_new'])
+
+        geo_test.Cells[2].Faces[0].Centre[0] = -100000
+
+        # Check if the ys and faces have not changed
+        geo_test.check_ys_and_faces_have_not_changed(new_tets_test, old_geo_test)
+
+        np.testing.assert_equal(old_geo_test.Cells[2].Faces[0].Centre[0], geo_test.Cells[2].Faces[0].Centre[0])
