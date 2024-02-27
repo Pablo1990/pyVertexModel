@@ -42,9 +42,10 @@ def check_if_cells_are_the_same(geo_expected, geo_test):
         # Check if the centres are the same
         assert_array1D(centres_test, centres_expected)
 
-        for j in range(len(geo_test.Cells[i].Faces)):
-            np.testing.assert_equal(geo_test.Cells[i].Faces[j].globalIds,
-                                           geo_expected.Cells[i].Faces[j].globalIds)
+        # Check if the faces have the same global ids
+        test_faces = [geo_test.Cells[i].Faces[j].globalIds for j in range(len(geo_test.Cells[i].Faces))]
+        expected_faces = [geo_expected.Cells[i].Faces[j].globalIds for j in range(len(geo_expected.Cells[i].Faces))]
+        np.testing.assert_equal(test_faces, expected_faces)
 
 
 class TestGeo(Tests):
@@ -233,6 +234,7 @@ class TestGeo(Tests):
         _, set_test, _ = load_data('add_tetrahedra_wingdisc.mat')
         _, _, mat_info = load_data('add_tetrahedra_wingdisc_expected.mat')
         geo_test = Geo(mat_info['Geo_new'])
+
         geo_test.rebuild(geo_test.copy(), set_test)
 
         _, _, mat_info = load_data('rebuild_wingdisc_expected.mat')
