@@ -228,6 +228,9 @@ class Remodelling:
                 segment_features = self.check_edges_to_intercalate(edge_lengths_bottom, num_cell, segment_features,
                                                                    self.Geo.XgBottom[0])
 
+        if segment_features.empty:
+            return segment_features
+        
         segment_features_filtered = segment_features[segment_features.notnull()].sort_values(by=['edge_length'],
                                                                                              ascending=True)
 
