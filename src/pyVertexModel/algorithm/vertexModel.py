@@ -205,7 +205,7 @@ class VertexModel:
             # REMODELLING
             if self.set.Remodelling and abs(self.t - self.tr) >= self.set.RemodelingFrequency:
                 remodel_obj = Remodelling(self.geo, self.geo_n, self.geo_0, self.set, self.Dofs)
-                remodel_obj.remodel_mesh()
+                remodel_obj.remodel_mesh(self.numStep)
                 self.tr = self.t
 
             # Append Energies

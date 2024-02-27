@@ -236,7 +236,7 @@ class Set:
         # Soft < 0
         # Stiff > 0
         self.Remodelling = 1
-        self.RemodelStiffness = 0
+        self.RemodelStiffness = 0.7
         self.lambdaS1 = 10
         self.lambdaS2 = self.lambdaS1 / 10
         self.lambdaS3 = self.lambdaS1 / 10

@@ -98,7 +98,7 @@ class Remodelling:
         self.Geo_n = Geo_n
         self.Geo_0 = Geo_0
 
-    def remodel_mesh(self):
+    def remodel_mesh(self, num_step):
         """
         Remodel the mesh.
         :return:
@@ -152,11 +152,12 @@ class Remodelling:
                     break
 
             if hasConverged:
+                # TODO:
                 # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr + 1)
-                gNodeNeighbours = [get_node_neighbours(self.Geo, segmentFeatures[numRow, 1]) for numRow in
-                                   range(segmentFeatures.shape[0])]
-                gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
-                cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
+                #gNodeNeighbours = [get_node_neighbours(self.Geo, ghost_node_tried) for ghost_node_tried in
+                #                   ghost_nodes_tried]
+                #gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
+                #cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
                 # numClose = 0.5
                 # Geo, geo_n = moveVerticesCloserToRefPoint(Geo, geo_n, numClose, cellNodesShared, cellToSplitFrom,
                 #                                          ghostNode, Tnew, Set)
@@ -176,6 +177,8 @@ class Remodelling:
                     newYgIds = np.unique(np.concatenate((newYgIds, self.Geo.AssemblegIds)))
                     self.Geo.update_measures()
                     hasConverged = 1
+                    logger.info(f'=>> Full-Flip accepted')
+                    self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step + 1)
             else:
                 # Go back to initial state
                 self.Geo = Geo_backup.copy()
@@ -183,9 +186,6 @@ class Remodelling:
                 self.Dofs = Dofs_backup.copy()
                 self.Geo_0 = Geo_0_backup.copy()
                 logger.info('=>> Full-Flip rejected: did not converge2')
-
-            # TODO: CREATE VTK FILES OR ALTERNATIVE
-            # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr + 1)
 
             # Remove the segment feature that has been checked
             for ghost_node_tried in ghost_nodes_tried:
