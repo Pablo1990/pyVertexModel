@@ -129,10 +129,10 @@ def check_faces_unchanged(c_cell, cell_new, interface_type, new_tets):
     """
     for c_face in c_cell.Faces:
         if c_face.InterfaceType != interface_type and c_cell.ID not in new_tets:
-            id_with_new = np.array([np.all(np.isin(face_new.ij, c_face.ij)) for face_new in cell_new.Faces])
+            id_with_new = [np.all(np.isin(face_new.ij, c_face.ij)) for face_new in cell_new.Faces]
             assert sum(id_with_new) == 1
 
-            if cell_new.Faces[id_with_new].Centre != c_face.Centre:
+            if cell_new.Faces[np.where(id_with_new)[0][0]].Centre != c_face.Centre:
                 cell_new.Faces[id_with_new].Centre = c_face.Centre
 
             assert cell_new.Faces[id_with_new].Centre == c_face.Centre
@@ -597,8 +597,10 @@ class Geo:
             tets_to_check = tets_to_check_in(current_cell, xg_boundary)
             tets_to_check_new = tets_to_check_in(cell_new, xg_boundary)
 
-            old_geo_ys = old_geo.Cells[cell_id].Y[tets_to_check & any(node in tet for node in old_geo.XgID for tet in old_geo.Cells[cell_id].T)]
-            new_geo_ys = self.Cells[cell_id].Y[tets_to_check_new & any(node in tet for node in old_geo.XgID for tet in self.Cells[cell_id].T)]
+            old_geo_ys = old_geo.Cells[cell_id].Y[
+                tets_to_check & any(node in tet for node in old_geo.XgID for tet in old_geo.Cells[cell_id].T)]
+            new_geo_ys = self.Cells[cell_id].Y[
+                tets_to_check_new & any(node in tet for node in old_geo.XgID for tet in self.Cells[cell_id].T)]
             assert np.all(old_geo_ys == new_geo_ys)
 
             check_faces_unchanged(current_cell, cell_new, interface_type, new_tets)
