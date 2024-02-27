@@ -174,17 +174,11 @@ class VertexModel:
         If the iteration did not converge, the algorithm will try to relax the value of nu and dt.
         :return:
         """
-        # TODO
-        # self.backupVars.Geo_b.log = self.Geo.log
         self.geo = self.backupVars['Geo_b'].copy()
         self.tr = self.backupVars['tr_b']
         self.Dofs = self.backupVars['Dofs'].copy()
-        self.geo_n = self.geo.copy()
+        self.geo_n = self.backupVars['Geo_b'].copy()
         self.relaxingNu = False
-        # if self.set.iter == self.set.MaxIter0:
-        #     self.set.MaxIter = self.set.MaxIter0 * 1.1
-        #     self.set.nu = 10 * self.set.nu0
-        # else:
         if self.set.iter >= self.set.MaxIter and self.set.dt / self.set.dt0 > 1 / 100:
             self.set.MaxIter = self.set.MaxIter0
             self.set.nu = self.set.nu0
