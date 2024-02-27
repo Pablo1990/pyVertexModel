@@ -14,7 +14,7 @@ def get_cells_by_status(cells, status):
     return [c_cell.ID for c_cell in cells if c_cell.AliveStatus == status]
 
 
-def tets_to_check(c_cell, xg_boundary):
+def tets_to_check_in(c_cell, xg_boundary):
     return [not any(n in tet for n in xg_boundary) for tet in c_cell.T]
 
 
@@ -116,6 +116,28 @@ def get_node_neighbours_per_domain(geo, node, node_of_domain, main_node=None):
     node_neighbours = node_neighbours[node_neighbours != node]
 
     return node_neighbours
+
+
+def check_faces_unchanged(c_cell, cell_new, interface_type, new_tets):
+    """
+    Check that the faces have not changed
+    :param c_cell:
+    :param cell_new:
+    :param interface_type:
+    :param new_tets:
+    :return:
+    """
+    for c_face in c_cell.Faces:
+        if c_face.InterfaceType != interface_type and c_cell.ID not in new_tets:
+            id_with_new = [np.isin(face_new.ij, c_face.ij) for face_new in cell_new.Faces]
+            assert sum(id_with_new) == 1
+
+            face_index = id_with_new.index(True)
+
+            if cell_new.Faces[face_index].Centre != c_face.Centre:
+                cell_new.Faces[face_index].Centre = c_face.Centre
+
+            assert cell_new.Faces[face_index].Centre == c_face.Centre
 
 
 class Geo:
@@ -556,40 +578,7 @@ class Geo:
         count_top = sum(any(tet in n for tet in self.XgTop) for n in new_tets)
         return 2 if count_bottom > count_top else 0
 
-    def check_vertices_unchanged(self, c_cell, cell_new, tets_check):
-        """
-        Check that the vertices have not changed
-        :param c_cell:
-        :param cell_new:
-        :param tets_check:
-        :return:
-        """
-        y_old = [c_cell.Y[i] for i, check in enumerate(tets_check) if check for tet in c_cell.T
-                 if any(n in tet for n in self.XgID)]
-        y_new = [cell_new.Y[i] for i, check in enumerate(tets_check) if check for tet in cell_new.T
-                 if any(n in tet for n in self.XgID)]
-
-        assert y_old.__eq__(y_new)
-
-    def check_faces_unchanged(self, c_cell, cell_new, interface_type, new_tets):
-        """
-        Check that the faces have not changed
-        :param c_cell:
-        :param cell_new:
-        :param interface_type:
-        :param new_tets:
-        :return:
-        """
-        for c_face in c_cell.Faces:
-            if c_face.InterfaceType != interface_type and c_cell.ID not in new_tets:
-                id_with_new = [np.isin(face_new.ij, c_face.ij) for face_new in cell_new.Faces]
-                assert sum(id_with_new) == 1
-                face_index = id_with_new.index(True)
-                if cell_new.Faces[face_index].Centre != c_face.Centre:
-                    cell_new.Faces[face_index].Centre = c_face.Centre
-                assert cell_new.Faces[face_index].Centre == c_face.Centre
-
-    def check_ys_and_faces_have_not_changed(self, new_tets, geo_new):
+    def check_ys_and_faces_have_not_changed(self, new_tets, old_geo):
         """
         Check that the Ys and faces have not changed
         :param new_tets:
@@ -597,24 +586,24 @@ class Geo:
         :return:
         """
 
-        non_dead_cells = get_cells_by_status(self.Cells, None)
-        alive_cells = get_cells_by_status(self.Cells, 1)
-        debris_cells = get_cells_by_status(self.Cells, 0)
+        non_dead_cells = get_cells_by_status(old_geo.Cells, None)
+        alive_cells = get_cells_by_status(old_geo.Cells, 1)
+        debris_cells = get_cells_by_status(old_geo.Cells, 0)
 
         for cell_id in alive_cells + debris_cells:
-            interface_type = self.calculate_interface_type(new_tets)
-            current_cell = self.Cells[cell_id]
-            cell_new = geo_new.Cells[cell_id]
+            interface_type = old_geo.calculate_interface_type(new_tets)
+            current_cell = old_geo.Cells[cell_id]
+            cell_new = self.Cells[cell_id]
 
-            xg_boundary = self.XgBottom if interface_type == 2 else self.XgTop
-            tets_check = tets_to_check(current_cell, xg_boundary)
-            tets_check_new = tets_to_check(cell_new, xg_boundary)
+            xg_boundary = old_geo.XgBottom if interface_type == 2 else old_geo.XgTop
+            tets_to_check = tets_to_check_in(current_cell, xg_boundary)
+            tets_to_check_new = tets_to_check_in(cell_new, xg_boundary)
 
-            # TODO: CHECK BOTH FUNCTIONS
-            # check_vertices_unchanged(current_cell, cell_new, tets_check)
-            # check_faces_unchanged(current_cell, cell_new, interface_type)
+            old_geo_ys = old_geo.Cells[cell_id].Y[tets_to_check and any(node in tet for node in old_geo.XgID for tet in old_geo.Cells[cell_id].T)]
+            new_geo_ys = self.Cells[cell_id].Y[tets_to_check_new and any(node in tet for node in old_geo.XgID for tet in self.Cells[cell_id].T)]
+            assert np.all(old_geo_ys == new_geo_ys)
 
-        return geo_new
+            check_faces_unchanged(current_cell, cell_new, interface_type, new_tets)
 
     def add_and_rebuild_cells(self, old_geo, old_tets, new_tets, y_new, set, update_measurements):
         """
@@ -633,7 +622,7 @@ class Geo:
         self.rebuild(self.copy(), set)
         self.build_global_ids()
 
-        geo_new = self.check_ys_and_faces_have_not_changed(new_tets, old_geo)
+        self.check_ys_and_faces_have_not_changed(new_tets, old_geo)
 
         # if update_measurements
         if update_measurements:
@@ -641,8 +630,7 @@ class Geo:
 
         # Check here how many neighbours they're losing and winning and change the number of lambdaA_perc accordingly
         neighbours_init = [len(get_node_neighbours(old_geo, c_cell.ID)) for c_cell in old_geo.Cells[:old_geo.nCells]]
-
-        neighbours_end = [len(get_node_neighbours(geo_new, c_cell.ID)) for c_cell in geo_new.Cells[:geo_new.nCells]]
+        neighbours_end = [len(get_node_neighbours(self, c_cell.ID)) for c_cell in self.Cells[:self.nCells]]
 
         difference = [neighbours_init[i] - neighbours_end[i] for i in range(old_geo.nCells)]
 
