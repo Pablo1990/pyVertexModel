@@ -200,6 +200,8 @@ class Remodelling:
             # Remove the rows that have been checked from segmentFeatures_all
             segmentFeatures_all = segmentFeatures_all.drop(rowsToRemove)
 
+        return self.Geo, self.Geo_n
+
     def get_tris_to_remodel_ordered(self):
         """
         Obtain the edges that are going to be remodeled.
@@ -230,7 +232,7 @@ class Remodelling:
 
         if segment_features.empty:
             return segment_features
-        
+
         segment_features_filtered = segment_features[segment_features.notnull()].sort_values(by=['edge_length'],
                                                                                              ascending=True)
 
