@@ -50,7 +50,8 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
     else:
         logger.info(f'=====>> Local Problem converged in {c_set.iter} iterations.')
         did_not_converge = False
-        geo.remodelling = False
+
+    geo.remodelling = False
 
     c_set.max_iter = c_set.MaxIter0
     c_set.nu = original_nu
