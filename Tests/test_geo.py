@@ -245,5 +245,5 @@ class TestGeo(Tests):
         Test the function add_and_rebuild_cells
         :return:
         """
-        pass
+        assert False, 'Not implemented'
 
