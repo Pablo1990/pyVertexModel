@@ -100,7 +100,8 @@ class DegreesOfFreedom:
         for num_cell in id_tnew_cells:
             cell = geo.Cells[num_cell]
             news = np.sum(np.isin(cell.T, geo.XgID), axis=1) > 2
-            news[np.sum(np.isin(cell.T, id_tnew_cells), axis=1) == 2] = True
+            news[(np.sum(np.isin(cell.T, id_tnew_cells), axis=1) == 2) &
+                 (np.sum(np.isin(cell.T, geo.XgID), axis=1) == 2)] = True
             news[np.sum(np.isin(cell.T, id_tnew_cells), axis=1) >= 3] = True
 
             if np.sum(np.isin(t_new, geo.XgBottom)) > np.sum(np.isin(t_new, geo.XgTop)):

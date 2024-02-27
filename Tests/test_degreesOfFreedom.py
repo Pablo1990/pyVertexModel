@@ -32,8 +32,9 @@ class TestDofs(Tests):
         dof_test = DegreesOfFreedom()
         dof_test.get_remodel_dofs(t_new_test, geo_test)
 
-        dofs_expected = mat_info['remodel_dofs'] - 1
+        dofs_expected = np.array(mat_info['remodel_dofs'][0, :] - 1, dtype=int)
+        dofs_remodel_test = np.array(np.where(dof_test.remodel)[0], dtype=int)
 
-        np.testing.assert_array_equal(np.where(dof_test.remodel)[0], dofs_expected)
+        np.testing.assert_array_equal(dofs_remodel_test, dofs_expected)
 
 
