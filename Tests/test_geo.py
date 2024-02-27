@@ -242,6 +242,21 @@ class TestGeo(Tests):
 
         check_if_cells_are_the_same(geo_test, geo_expected)
 
+    def test_build_global_ids_wingdisc(self):
+        """
+        Test the function build_global_ids
+        :return:
+        """
+        # Load data
+        _, _, mat_info = load_data('rebuild_wingdisc_expected.mat')
+        geo_test = Geo(mat_info['Geo_new'])
+        geo_test.build_global_ids()
+
+        _, _, mat_info = load_data('build_globald_ids_wingdisc_expected.mat')
+        geo_expected = Geo(mat_info['Geo_new'])
+
+        check_if_cells_are_the_same(geo_test, geo_expected)
+
     def test_add_and_rebuild_cells(self):
         """
         Test the function add_and_rebuild_cells
