@@ -62,8 +62,15 @@ def ismember_rows(a, b):
     """
 
     # Creating a structured array for efficient comparison
-    void_a = np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
-    void_b = np.ascontiguousarray(b).view(np.dtype((np.void, b.dtype.itemsize * b.shape[1])))
+    if a.ndim == 1:
+        void_a = np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[0])))
+    else:
+        void_a = np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
+
+    if b.ndim == 1:
+        void_b = np.ascontiguousarray(b).view(np.dtype((np.void, b.dtype.itemsize * b.shape[0])))
+    else:
+        void_b = np.ascontiguousarray(b).view(np.dtype((np.void, b.dtype.itemsize * b.shape[1])))
 
     # Using numpy's in1d method for finding the presence of 'a' rows in 'b'
     bool_array = np.in1d(void_a, void_b)

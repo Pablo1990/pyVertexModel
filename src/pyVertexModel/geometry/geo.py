@@ -685,9 +685,9 @@ class Geo:
                     if ~any(np.isin(newTet, self.XgID)) and np.any(np.isin(self.Cells[numNode].T, newTet).all(axis=1)):
                         np.isin(self.Cells[numNode].T, newTet).all(axis=1)
                         self.Cells[numNode].Y = self.Cells[numNode].Y[
-                            ~np.isin(np.sort(self.Cells[numNode].T, axis=1), np.sort(newTet))]
+                            ~ismember_rows(self.Cells[numNode].T, newTet)[0]]
                         self.Cells[numNode].T = self.Cells[numNode].T[
-                            ~np.isin(np.sort(self.Cells[numNode].T, axis=1), np.sort(newTet))]
+                            ~ismember_rows(self.Cells[numNode].T, newTet)[0]]
                     else:
                         if len(self.Cells[numNode].T) == 0 or ~np.any(
                                 np.isin(self.Cells[numNode].T, newTet).all(axis=1)):
