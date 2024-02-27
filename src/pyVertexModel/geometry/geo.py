@@ -129,13 +129,15 @@ def check_faces_unchanged(c_cell, cell_new, interface_type, new_tets):
     """
     for c_face in c_cell.Faces:
         if c_face.InterfaceType != interface_type and c_cell.ID not in new_tets:
-            id_with_new = [np.all(np.isin(face_new.ij, c_face.ij)) for face_new in cell_new.Faces]
+            id_with_new = np.array([np.all(np.isin(face_new.ij, c_face.ij)) for face_new in cell_new.Faces])
             assert sum(id_with_new) == 1
 
-            if cell_new.Faces[np.where(id_with_new)[0][0]].Centre != c_face.Centre:
-                cell_new.Faces[id_with_new].Centre = c_face.Centre
+            id_with_new_index = np.where(id_with_new)[0][0]
 
-            assert cell_new.Faces[id_with_new].Centre == c_face.Centre
+            if np.any(cell_new.Faces[id_with_new_index].Centre != c_face.Centre):
+                cell_new.Faces[id_with_new_index].Centre = c_face.Centre
+
+            assert np.all(cell_new.Faces[id_with_new_index].Centre == c_face.Centre)
 
 
 class Geo:
