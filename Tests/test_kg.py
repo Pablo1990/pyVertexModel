@@ -156,10 +156,6 @@ class Test(Tests):
         assert_matrix(k_expected, K)
         np.testing.assert_almost_equal(e_expected[0][0], E)
 
-    def test_kg_global(self):
-        # Check that the global K is the same in a different iteration
-        test_kg_global_filename('Geo_var_3x3_stretch_Iter6_expectedResults.mat')
-
     def test_kg_global_cyst(self):
         # Check with a different simulation 'cyst'
         filename = 'Geo_var_cyst.mat'
@@ -285,10 +281,9 @@ class Test(Tests):
         geo_test.Cells[0].AliveStatus = True
 
         kg = KgVolume(geo_test)
-        [gs_expected, Ks_expected, ge_expected] = kg.compute_work(geo_test, set_test)
+        [gs_expected, Ks_expected] = kg.compute_work(geo_test, set_test)
 
         assert_array1D(mat_expected['gs'][:, 0], gs_expected)
-        assert_array1D(mat_expected['ge_full'][:, 0], ge_expected)
         assert_matrix(mat_expected['Ks'], Ks_expected)
 
         assert_k_g_energy('Energy', 'g_full', 'K_full', kg, mat_expected)

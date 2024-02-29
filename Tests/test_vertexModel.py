@@ -194,6 +194,7 @@ class TestVertexModel(Tests):
 
         geo_test.Cells[0].Y[0, 0] = np.Inf
         geo_test.Cells[0].Faces[0].Centre[0] = np.Inf
+        v_model_test.set.last_t_converged = 0.5
 
         # Check if the cells are initialized correctly
         check_if_cells_are_the_same(geo_original, v_model_test.geo)
