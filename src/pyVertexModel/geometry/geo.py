@@ -660,14 +660,16 @@ class Geo:
         for newTet in newTets:
             if any(~np.isin(newTet, self.XgID)):
                 for numNode in newTet:
-                    if ~any(np.isin(newTet, self.XgID)) and np.any(np.isin(self.Cells[numNode].T, newTet).all(axis=1)):
+                    if (not any(np.isin(newTet, self.XgID)) and
+                            ismember_rows(np.array(newTet, dtype=self.Cells[numNode].T.dtype),
+                                          self.Cells[numNode].T)[0][0]):
                         np.isin(self.Cells[numNode].T, newTet).all(axis=1)
                         self.Cells[numNode].Y = self.Cells[numNode].Y[
                             ~ismember_rows(self.Cells[numNode].T, newTet)[0]]
                         self.Cells[numNode].T = self.Cells[numNode].T[
                             ~ismember_rows(self.Cells[numNode].T, newTet)[0]]
                     else:
-                        if len(self.Cells[numNode].T) == 0 or ~np.any(
+                        if len(self.Cells[numNode].T) == 0 or not np.any(
                                 np.isin(self.Cells[numNode].T, newTet).all(axis=1)):
                             self.Cells[numNode].T = np.append(self.Cells[numNode].T, [newTet], axis=0)
                             if self.Cells[numNode].AliveStatus is not None and Set is not None:
