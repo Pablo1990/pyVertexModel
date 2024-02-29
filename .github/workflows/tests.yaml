@@ -45,10 +45,3 @@ jobs:
       with:
         file: coverage.xml
 
-    - name: Love Test Report
-      uses: ellraiser/love-test-report@main
-      with:
-        name: Love Testsuite Linux
-        title: linux-test-report
-        path: report.md
-
