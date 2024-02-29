@@ -60,6 +60,12 @@ def ismember_rows(a, b):
     :param b: numpy.ndarray - The array to be checked in.
     :return: (numpy.ndarray, numpy.ndarray) - Tuple of boolean array and index array.
     """
+    # Checking if they have the 'uint32' dtype
+    if a.dtype != np.uint32:
+        a = a.astype(np.uint32)
+
+    if b.dtype != np.uint32:
+        b = b.astype(np.uint32)
 
     # Creating a structured array for efficient comparison
     if a.ndim == 1:

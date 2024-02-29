@@ -585,7 +585,8 @@ class Geo:
 
             for c_face in old_geo.Cells[cell_id].Faces:
                 if c_face.InterfaceType != interface_type and old_geo.Cells[cell_id].ID not in new_tets:
-                    id_with_new = np.array([np.all(np.isin(face_new.ij, c_face.ij)) for face_new in self.Cells[cell_id].Faces])
+                    id_with_new = np.array(
+                        [np.all(np.isin(face_new.ij, c_face.ij)) for face_new in self.Cells[cell_id].Faces])
                     assert sum(id_with_new) == 1
 
                     id_with_new_index = np.where(id_with_new)[0][0]
@@ -658,12 +659,10 @@ class Geo:
             Ynew = []
 
         for newTet in newTets:
-            if any(~np.isin(newTet, self.XgID)):
+            if np.any(~np.isin(newTet, self.XgID)):
                 for numNode in newTet:
-                    if (not any(np.isin(newTet, self.XgID)) and
-                            ismember_rows(np.array(newTet, dtype=self.Cells[numNode].T.dtype),
-                                          self.Cells[numNode].T)[0][0]):
-                        np.isin(self.Cells[numNode].T, newTet).all(axis=1)
+                    if (not np.any(np.isin(newTet, self.XgID)) and
+                            np.any(ismember_rows(self.Cells[numNode].T, newTet)[0])):
                         self.Cells[numNode].Y = self.Cells[numNode].Y[
                             ~ismember_rows(self.Cells[numNode].T, newTet)[0]]
                         self.Cells[numNode].T = self.Cells[numNode].T[
@@ -714,7 +713,7 @@ class Geo:
             else:
                 contributionOldYs = Set.contributionOldYs
 
-            if all(~np.isin(Tnew[numTet, :], np.concatenate([self.XgBottom, self.XgTop]))):
+            if np.all(~np.isin(Tnew[numTet, :], np.concatenate([self.XgBottom, self.XgTop]))):
                 Ynew.append(YnewlyComputed)
             else:
                 tetsToUse = np.sum(np.isin(allTs, Tnew[numTet, :]), axis=1) > 2
