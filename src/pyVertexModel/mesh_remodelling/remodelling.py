@@ -7,6 +7,7 @@ from src.pyVertexModel.algorithm.newtonRaphson import solve_remodeling_step
 from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 from src.pyVertexModel.geometry.geo import edgeValence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import YFlipNM, post_flip
+from src.pyVertexModel.util.utils import ismember_rows
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -100,11 +101,10 @@ def move_vertices_closer_to_ref_point(Geo, Geo_n, close_to_new_point, cell_nodes
         all_T_filtered = all_T[np.any(np.isin(all_T, Geo.XgTop), axis=1)]
 
     possible_ref_tets = all_T_filtered[np.sum(np.isin(all_T_filtered, cell_nodes_shared), axis=1) == 3]
-    possible_ref_tets = np.unique(
-        np.sort(possible_ref_tets[np.sum(np.isin(possible_ref_tets, cell_nodes_shared), axis=1) == 3], axis=1), axis=0)
+    possible_ref_tets = np.unique(np.sort(possible_ref_tets, axis=1), axis=0)
     ref_tet = np.any(np.isin(possible_ref_tets, cell_to_split_from), axis=1)
-    ref_point_closer = Geo.Cells[cell_to_split_from].Y[
-        np.isin(np.sort(Geo.Cells[cell_to_split_from].T, axis=1), possible_ref_tets[ref_tet], axis=0)]
+    ref_point_closer = Geo.Cells[cell_to_split_from].Y[ismember_rows(Geo.Cells[cell_to_split_from].T,
+                                                                     possible_ref_tets[ref_tet])[0]]
 
     if np.sum(ref_tet) > 1:
         if 'Bubbles_Cyst' in Set.InputGeo:
@@ -115,20 +115,15 @@ def move_vertices_closer_to_ref_point(Geo, Geo_n, close_to_new_point, cell_nodes
     vertices_to_change = np.sort(Tnew, axis=1)
 
     if possible_ref_tets.shape[0] <= 1:
-        Geo_new = Geo
-        return Geo_new, Geo_n
+        return Geo, Geo_n
 
     cells_to_get_further = np.intersect1d(possible_ref_tets[0], possible_ref_tets[1])
     cells_to_get_closer = np.setdiff1d(cell_nodes_shared, cells_to_get_further)
     cells_to_get_closer = cells_to_get_closer[[Geo.Cells[cell].AliveStatus for cell in cells_to_get_closer] == 1]
 
     ref_point_further = np.mean(Geo.Cells[cells_to_get_further[0]].Y[
-                                    np.isin(np.sort(Geo.Cells[cells_to_get_further[0]].T, axis=1), possible_ref_tets,
-                                            axis=0)], axis=0)
+                                    ismember_rows(Geo.Cells[cells_to_get_further[0]].T, possible_ref_tets)[0]], axis=0)
     far_from_new_point = close_to_new_point
-
-    movement_by_cell = [None] * len(cell_nodes_shared)
-    distance_to_ref_point_by_cell = [None] * len(cell_nodes_shared)
 
     for tet_to_check in vertices_to_change:
         if np.any(np.isin(tet_to_check, cells_to_get_closer)):
@@ -204,37 +199,8 @@ class Remodelling:
             # Get the first segment feature
             segmentFeatures = segmentFeatures_all.iloc[0]
 
-            cellNode = segmentFeatures['num_cell']
-            ghostNode = segmentFeatures['node_pair_g']
-            cellToIntercalateWith = segmentFeatures['cell_intercalate']
-            cellToSplitFrom = segmentFeatures['cell_to_split_from']
-
-            hasConverged = True
-            allTnew = None
-            ghost_nodes_tried = []
-
-            while hasConverged:
-                nodesPair = np.array([cellNode, ghostNode])
-                ghost_nodes_tried.append(ghostNode)
-                logger.info(f"Remodeling: {cellNode} - {ghostNode}")
-
-                valenceSegment, oldTets, oldYs = edgeValence(self.Geo, nodesPair)
-
-                if sum(np.isin(self.Geo.non_dead_cells, oldTets.flatten())) > 2:
-                    newYgIds, hasConverged, Tnew = self.FlipNM(nodesPair,
-                                                               cellToIntercalateWith,
-                                                               oldTets, oldYs,
-                                                               newYgIds)
-                    if Tnew is not None:
-                        allTnew = Tnew if allTnew is None else np.vstack((allTnew, Tnew))
-
-                sharedNodesStill = get_node_neighbours_per_domain(self.Geo, cellNode, ghostNode, cellToSplitFrom)
-
-                if any(np.isin(sharedNodesStill, self.Geo.XgID)) and hasConverged:
-                    sharedNodesStill_g = sharedNodesStill[np.isin(sharedNodesStill, self.Geo.XgID)]
-                    ghostNode = sharedNodesStill_g[0]
-                else:
-                    break
+            allTnew, cellToSplitFrom, ghostNode, ghost_nodes_tried, hasConverged, newYgIds = self.intercalate_cells(
+                newYgIds, segmentFeatures)
 
             if hasConverged:
                 # TODO:
@@ -247,7 +213,7 @@ class Remodelling:
                 self.Geo, self.Geo_n = (
                     move_vertices_closer_to_ref_point(self.Geo, self.Geo_n, numClose, cellNodesShared, cellToSplitFrom,
                                                       ghostNode, allTnew, self.Set))
-                # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr + 1)
+                self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step + 1)
 
                 self.Dofs.get_dofs(self.Geo, self.Set)
                 self.Geo = self.Dofs.get_remodel_dofs(allTnew, self.Geo)
@@ -287,6 +253,38 @@ class Remodelling:
             segmentFeatures_all = segmentFeatures_all.drop(rowsToRemove)
 
         return self.Geo, self.Geo_n
+
+    def intercalate_cells(self, newYgIds, segmentFeatures):
+        cellNode = segmentFeatures['num_cell']
+        ghostNode = segmentFeatures['node_pair_g']
+        cellToIntercalateWith = segmentFeatures['cell_intercalate']
+        cellToSplitFrom = segmentFeatures['cell_to_split_from']
+        hasConverged = True
+        allTnew = None
+        ghost_nodes_tried = []
+        while hasConverged:
+            nodesPair = np.array([cellNode, ghostNode])
+            ghost_nodes_tried.append(ghostNode)
+            logger.info(f"Remodeling: {cellNode} - {ghostNode}")
+
+            valenceSegment, oldTets, oldYs = edgeValence(self.Geo, nodesPair)
+
+            if sum(np.isin(self.Geo.non_dead_cells, oldTets.flatten())) > 2:
+                newYgIds, hasConverged, Tnew = self.FlipNM(nodesPair,
+                                                           cellToIntercalateWith,
+                                                           oldTets, oldYs,
+                                                           newYgIds)
+                if Tnew is not None:
+                    allTnew = Tnew if allTnew is None else np.vstack((allTnew, Tnew))
+
+            sharedNodesStill = get_node_neighbours_per_domain(self.Geo, cellNode, ghostNode, cellToSplitFrom)
+
+            if any(np.isin(sharedNodesStill, self.Geo.XgID)) and hasConverged:
+                sharedNodesStill_g = sharedNodesStill[np.isin(sharedNodesStill, self.Geo.XgID)]
+                ghostNode = sharedNodesStill_g[0]
+            else:
+                break
+        return allTnew, cellToSplitFrom, ghostNode, ghost_nodes_tried, hasConverged, newYgIds
 
     def get_tris_to_remodel_ordered(self):
         """
