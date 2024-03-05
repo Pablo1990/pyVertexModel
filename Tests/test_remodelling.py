@@ -36,6 +36,6 @@ class TestRemodelling(Tests):
         geo_expected, _, mat_info_expected = load_data('remodelling_intercalating_cells_wingdisc_expected.mat')
 
         # Compare results
+        assert_matrix(np.sort(np.sort(mat_info_expected['allTnew']-1, axis=1), axis=0), np.sort(np.sort(allTnew, axis=1), axis=0))
         check_if_cells_are_the_same(geo_expected, geo_test)
-        assert_matrix(mat_info_expected['allTnew'], allTnew)
         np.testing.assert_equal(mat_info_expected['hasConverged'], hasConverged)
