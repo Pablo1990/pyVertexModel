@@ -18,7 +18,7 @@ class TestRemodelling(Tests):
         geo_n_test = Geo(mat_info['Geo_n'])
         geo_0_test = Geo(mat_info['Geo_0'])
         dofs = DegreesOfFreedom(mat_info['Dofs'])
-        newYgIds = mat_info['newYgIds']
+        newYgIds = []
         segmentFeatures = {
             'cell_intercalate': 4,
             'cell_to_split_from': 0,
