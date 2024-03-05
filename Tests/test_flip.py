@@ -93,7 +93,31 @@ class TestFlip(Tests):
         newYgIds = []
         segmentToChange = mat_info['segmentToChange'][0] - 1
 
-        _, _, geo_expected, _, _, _ = post_flip(Tnew, Ynew, oldTets, geo_test, geo_n, geo_0, Dofs, newYgIds, set_test,
+        _, _, geo_expected, _, _, _ = post_flip(Tnew, Ynew, oldTets, geo_test.copy(), geo_n, geo_0, Dofs, newYgIds, set_test,
+                                                '-', segmentToChange)
+
+        # Compare results
+        check_if_cells_are_the_same(geo_expected, geo_test)
+
+    def test_post_flip_2(self):
+        """
+        Test if post flip function works correctly
+        :return:
+        """
+        # Load data
+        geo_test, set_test, mat_info = load_data('post_flip_wingdisc_2.mat')
+        geo_expected, _, _ = load_data('post_flip_wingdisc_2_expected.mat')
+
+        Tnew = mat_info['Tnew'] - 1
+        Ynew = None
+        oldTets = mat_info['oldTets'] - 1
+        geo_n = Geo(mat_info['Geo_n'])
+        geo_0 = Geo(mat_info['Geo_0'])
+        Dofs = DegreesOfFreedom(mat_info['Dofs'])
+        newYgIds = []
+        segmentToChange = mat_info['segmentToChange'][0] - 1
+
+        _, _, geo_expected, _, _, _ = post_flip(Tnew, Ynew, oldTets, geo_test.copy(), geo_n, geo_0, Dofs, newYgIds, set_test,
                                                 '-', segmentToChange)
 
         # Compare results
