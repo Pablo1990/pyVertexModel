@@ -120,6 +120,7 @@ class VertexModel:
             cell.Area0 = None
         self.backupVars = {
             'Geo_b': self.geo,
+            'Geo_n_b': self.geo_n,
             'tr_b': self.tr,
             'Dofs': self.Dofs
         }
@@ -177,7 +178,7 @@ class VertexModel:
         self.geo = self.backupVars['Geo_b'].copy()
         self.tr = self.backupVars['tr_b']
         self.Dofs = self.backupVars['Dofs'].copy()
-        self.geo_n = self.backupVars['Geo_b'].copy()
+        self.geo_n = self.backupVars['Geo_n_b'].copy()
         self.relaxingNu = False
         if self.set.iter >= self.set.MaxIter and self.set.dt / self.set.dt0 > 1 / 100:
             self.set.MaxIter = self.set.MaxIter0
@@ -262,6 +263,7 @@ class VertexModel:
             self.numStep = self.numStep + 1
             self.backupVars = {
                 'Geo_b': self.geo.copy(),
+                'Geo_n_b': self.geo_n.copy(),
                 'tr_b': self.tr,
                 'Dofs': self.Dofs.copy()
             }
