@@ -78,6 +78,91 @@ def add_edge_to_intercalate(geo, num_cell, segment_features, edge_lengths_top, e
     return segment_features
 
 
+def move_vertices_closer_to_ref_point(Geo, Geo_n, close_to_new_point, cell_nodes_shared, cell_to_split_from, ghost_node,
+                                      Tnew, Set):
+    """
+    Move the vertices closer to the reference point.
+    :param Geo:
+    :param Geo_n:
+    :param close_to_new_point:
+    :param cell_nodes_shared:
+    :param cell_to_split_from:
+    :param ghost_node:
+    :param Tnew:
+    :param Set:
+    :return:
+    """
+
+    all_T = np.vstack([cell.T for cell in Geo.Cells if cell.AliveStatus is not None])
+    if ghost_node in Geo.XgBottom:
+        all_T_filtered = all_T[np.any(np.isin(all_T, Geo.XgBottom), axis=1)]
+    elif ghost_node in Geo.XgTop:
+        all_T_filtered = all_T[np.any(np.isin(all_T, Geo.XgTop), axis=1)]
+
+    possible_ref_tets = all_T_filtered[np.sum(np.isin(all_T_filtered, cell_nodes_shared), axis=1) == 3]
+    possible_ref_tets = np.unique(
+        np.sort(possible_ref_tets[np.sum(np.isin(possible_ref_tets, cell_nodes_shared), axis=1) == 3], axis=1), axis=0)
+    ref_tet = np.any(np.isin(possible_ref_tets, cell_to_split_from), axis=1)
+    ref_point_closer = Geo.Cells[cell_to_split_from].Y[
+        np.isin(np.sort(Geo.Cells[cell_to_split_from].T, axis=1), possible_ref_tets[ref_tet], axis=0)]
+
+    if np.sum(ref_tet) > 1:
+        if 'Bubbles_Cyst' in Set.InputGeo:
+            return Geo, Geo_n
+        else:
+            raise Exception('moveVerticesCloserToRefPoint_line17')
+
+    vertices_to_change = np.sort(Tnew, axis=1)
+
+    if possible_ref_tets.shape[0] <= 1:
+        Geo_new = Geo
+        return Geo_new, Geo_n
+
+    cells_to_get_further = np.intersect1d(possible_ref_tets[0], possible_ref_tets[1])
+    cells_to_get_closer = np.setdiff1d(cell_nodes_shared, cells_to_get_further)
+    cells_to_get_closer = cells_to_get_closer[[Geo.Cells[cell].AliveStatus for cell in cells_to_get_closer] == 1]
+
+    ref_point_further = np.mean(Geo.Cells[cells_to_get_further[0]].Y[
+                                    np.isin(np.sort(Geo.Cells[cells_to_get_further[0]].T, axis=1), possible_ref_tets,
+                                            axis=0)], axis=0)
+    far_from_new_point = close_to_new_point
+
+    movement_by_cell = [None] * len(cell_nodes_shared)
+    distance_to_ref_point_by_cell = [None] * len(cell_nodes_shared)
+
+    for tet_to_check in vertices_to_change:
+        if np.any(np.isin(tet_to_check, cells_to_get_closer)):
+            getting_closer = 1
+        else:
+            getting_closer = 0
+        for node_in_tet in tet_to_check:
+            if node_in_tet not in Geo.XgID:
+                new_point = Geo.Cells[node_in_tet].Y[
+                    np.isin(np.sort(Geo.Cells[node_in_tet].T, axis=1), tet_to_check, axis=0)]
+                if getting_closer:
+                    avg_point = ref_point_closer * (1 - close_to_new_point) + new_point * close_to_new_point
+                else:
+                    avg_point = ref_point_further * (1 - far_from_new_point) + new_point * far_from_new_point
+                Geo.Cells[node_in_tet].Y[
+                    np.isin(np.sort(Geo.Cells[node_in_tet].T, axis=1), tet_to_check, axis=0)] = avg_point
+
+    for current_cell in cell_nodes_shared:
+        middle_vertex_tet = np.all(np.isin(Geo.Cells[current_cell].T, cell_nodes_shared), axis=1)
+        Geo.Cells[current_cell].Y[middle_vertex_tet] = ref_point_closer * (1 - close_to_new_point) + \
+                                                       Geo.Cells[current_cell].Y[middle_vertex_tet] * close_to_new_point
+
+    old_geo = Geo.copy()
+    Geo.build_x_from_y(Geo_n)
+    Geo.rebuild(Set)
+    Geo.build_global_ids()
+    Geo.check_ys_and_faces_have_not_changed(vertices_to_change, old_geo)
+    Geo.update_measures()
+
+    # TODO: Is updating Geo_n necessary?
+
+    return Geo, Geo_n
+
+
 class Remodelling:
     """
     Class that contains the information of the remodelling process.
@@ -154,13 +239,13 @@ class Remodelling:
             if hasConverged:
                 # TODO:
                 # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr + 1)
-                #gNodeNeighbours = [get_node_neighbours(self.Geo, ghost_node_tried) for ghost_node_tried in
-                #                   ghost_nodes_tried]
-                #gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
-                #cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
-                # numClose = 0.5
-                # Geo, geo_n = moveVerticesCloserToRefPoint(Geo, geo_n, numClose, cellNodesShared, cellToSplitFrom,
-                #                                          ghostNode, Tnew, Set)
+                gNodeNeighbours = [get_node_neighbours(self.Geo, ghost_node_tried) for ghost_node_tried in
+                                   ghost_nodes_tried]
+                gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
+                cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
+                numClose = 0.5
+                Geo, geo_n = move_vertices_closer_to_ref_point(Geo, geo_n, numClose, cellNodesShared, cellToSplitFrom,
+                                                               ghostNode, Tnew, Set)
                 # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr + 1)
 
                 self.Dofs.get_dofs(self.Geo, self.Set)
