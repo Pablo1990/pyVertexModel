@@ -58,6 +58,9 @@ class VertexModel:
 
         self.relaxingNu = False
         self.EnergiesPerTimeStep = []
+        self.t = 0
+        self.tr = 0
+        self.numStep = 1
 
     @abstractmethod
     def initialize(self):
@@ -102,8 +105,6 @@ class VertexModel:
             self.Dofs.get_dofs(self.geo, self.set)
 
         self.geo.Remodelling = False
-        self.t = 0
-        self.tr = 0
         self.geo_0 = self.geo.copy()
 
         # Removing info of unused features from geo_0
@@ -124,12 +125,11 @@ class VertexModel:
             'tr_b': self.tr,
             'Dofs': self.Dofs
         }
-        self.numStep = 1
 
         # save_state(self, os.path.join(self.set.OutputFolder, 'data_step_0.pkl'))
 
         # Create VTK files for initial state
-        self.geo.create_vtk_cell(self.geo_0, self.set, 0)
+        self.geo.create_vtk_cell(self.geo_0, self.set, self.numStep)
 
         while self.t <= self.set.tend and not self.didNotConverge:
             self.set.currentT = self.t
