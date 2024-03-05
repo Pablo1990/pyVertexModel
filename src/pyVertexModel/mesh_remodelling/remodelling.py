@@ -276,6 +276,8 @@ class Remodelling:
                                                            newYgIds)
                 if Tnew is not None:
                     allTnew = Tnew if allTnew is None else np.vstack((allTnew, Tnew))
+            else:
+                hasConverged = False
 
             sharedNodesStill = get_node_neighbours_per_domain(self.Geo, cellNode, ghostNode, cellToSplitFrom)
 
