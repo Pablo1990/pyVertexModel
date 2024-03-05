@@ -39,3 +39,4 @@ class TestRemodelling(Tests):
         assert_matrix(np.sort(np.sort(mat_info_expected['allTnew']-1, axis=1), axis=0), np.sort(np.sort(allTnew, axis=1), axis=0))
         check_if_cells_are_the_same(geo_expected, geo_test)
         np.testing.assert_equal(mat_info_expected['hasConverged'], hasConverged)
+
