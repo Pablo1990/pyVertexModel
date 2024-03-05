@@ -578,9 +578,9 @@ class Geo:
             tets_to_check_new = tets_to_check_in(cell_new, xg_boundary)
 
             old_geo_ys = old_geo.Cells[cell_id].Y[
-                tets_to_check & any(node in tet for node in old_geo.XgID for tet in old_geo.Cells[cell_id].T)]
+                tets_to_check & [np.any(np.isin(tet, old_geo.XgID)) for tet in old_geo.Cells[cell_id].T]]
             new_geo_ys = self.Cells[cell_id].Y[
-                tets_to_check_new & any(node in tet for node in old_geo.XgID for tet in self.Cells[cell_id].T)]
+                tets_to_check_new & [np.any(np.isin(tet, self.XgID)) for tet in self.Cells[cell_id].T]]
             assert np.all(old_geo_ys == new_geo_ys)
 
             for c_face in old_geo.Cells[cell_id].Faces:
