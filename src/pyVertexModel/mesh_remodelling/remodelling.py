@@ -244,8 +244,9 @@ class Remodelling:
                 gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
                 cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
                 numClose = 0.5
-                Geo, geo_n = move_vertices_closer_to_ref_point(Geo, geo_n, numClose, cellNodesShared, cellToSplitFrom,
-                                                               ghostNode, Tnew, Set)
+                self.Geo, self.Geo_n = (
+                    move_vertices_closer_to_ref_point(self.Geo, self.Geo_n, numClose, cellNodesShared, cellToSplitFrom,
+                                                      ghostNode, allTnew, self.Set))
                 # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr + 1)
 
                 self.Dofs.get_dofs(self.Geo, self.Set)
