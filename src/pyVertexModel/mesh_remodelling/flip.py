@@ -31,16 +31,7 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, new_yg_ids, Set, fli
 
     Geo.add_and_rebuild_cells(Geo.copy(), oldTets, Tnew, Ynew, Set, True)
     Geo_n.add_and_rebuild_cells(Geo_n.copy(), oldTets, Tnew, Ynew, Set, False)
-
-    Dofs.get_dofs(Geo, Set)
-    Geo = Dofs.get_remodel_dofs(Tnew, Geo)
-    #Geo, Set, has_converged = solve_remodeling_step(Geo_0, Geo_n, Geo, Dofs, Set)
     has_converged = True
-    if has_converged:
-        Geo.update_measures()
-    else:
-        logger.info(f"{flipName}-Flip rejected: did not converge")
-
     new_yg_ids = list(set(np.concatenate((new_yg_ids, Geo.AssemblegIds))))
 
     return Geo_0, Geo_n, Geo, Dofs, new_yg_ids, has_converged

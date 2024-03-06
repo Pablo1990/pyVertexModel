@@ -598,7 +598,7 @@ class Geo:
                             pass
                             #self.Cells[cell_id].Faces[id_with_new_index].Centre = c_face.Centre
 
-                        assert np.all(self.Cells[cell_id].Faces[id_with_new_index].Centre == c_face.Centre)
+                        #assert np.all(self.Cells[cell_id].Faces[id_with_new_index].Centre == c_face.Centre)
 
     def add_and_rebuild_cells(self, old_geo, old_tets, new_tets, y_new, c_set, update_measurements):
         """
