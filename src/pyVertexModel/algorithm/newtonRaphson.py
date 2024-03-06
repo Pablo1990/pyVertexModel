@@ -9,7 +9,7 @@ from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
 from src.pyVertexModel.Kg.kgTriEnergyBarrier import KgTriEnergyBarrier
 from src.pyVertexModel.Kg.kgViscosity import KgViscosity
 from src.pyVertexModel.Kg.kgVolume import KgVolume
-from src.pyVertexModel.algorithm.vertexModel import save_backup_vars, load_backup_vars
+from src.pyVertexModel.util.utils import save_backup_vars, load_backup_vars
 
 logger = logging.getLogger("pyVertexModel")
 

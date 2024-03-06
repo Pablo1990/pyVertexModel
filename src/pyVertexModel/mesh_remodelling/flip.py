@@ -37,10 +37,9 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, new_yg_ids, Set, fli
     Geo, Set, did_not_converge = solve_remodeling_step(Geo_0, Geo_n, Geo, Dofs, Set)
     if did_not_converge:
         logger.info(f"{flipName}-Flip rejected: did not converge")
-        return Geo_0, Geo_n, Geo, Dofs, new_yg_ids, did_not_converge
-
-    Geo.update_measures()
-    new_yg_ids = list(set(np.concatenate((new_yg_ids, Geo.AssemblegIds))))
+    else:
+        Geo.update_measures()
+        new_yg_ids = list(set(np.concatenate((new_yg_ids, Geo.AssemblegIds))))
 
     return Geo_0, Geo_n, Geo, Dofs, new_yg_ids, did_not_converge
 

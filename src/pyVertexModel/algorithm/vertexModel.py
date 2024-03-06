@@ -14,22 +14,6 @@ from src.pyVertexModel.util.utils import save_state
 logger = logging.getLogger("pyVertexModel")
 
 
-def load_backup_vars(backup_vars):
-    return (backup_vars['Geo_b'].copy(), backup_vars['Geo_n_b'].copy(), backup_vars['Geo_0_b'], backup_vars['tr_b'],
-            backup_vars['Dofs'].copy())
-
-
-def save_backup_vars(geo, geo_n, geo_0, tr, Dofs):
-    backup_vars = {
-        'Geo_b': geo,
-        'Geo_n_b': geo_n,
-        'Geo_0_b': geo_0,
-        'tr_b': tr,
-        'Dofs': Dofs
-    }
-    return backup_vars
-
-
 class VertexModel:
     """
     The main class for the vertex model simulation. It contains the methods for initializing the model,

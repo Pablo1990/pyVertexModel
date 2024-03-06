@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 
 from src.pyVertexModel.algorithm.newtonRaphson import solve_remodeling_step
-from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 from src.pyVertexModel.geometry.geo import edgeValence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import YFlipNM, post_flip
 from src.pyVertexModel.util.utils import ismember_rows
@@ -276,10 +275,10 @@ class Remodelling:
             valenceSegment, oldTets, oldYs = edgeValence(self.Geo, nodesPair)
 
             if sum(np.isin(self.Geo.non_dead_cells, oldTets.flatten())) > 2:
-                newYgIds, hasConverged, Tnew = self.FlipNM(nodesPair,
-                                                           cellToIntercalateWith,
-                                                           oldTets, oldYs,
-                                                           newYgIds)
+                newYgIds, hasConverged, Tnew = self.flip_nm(nodesPair,
+                                                            cellToIntercalateWith,
+                                                            oldTets, oldYs,
+                                                            newYgIds)
                 if Tnew is not None:
                     allTnew = Tnew if allTnew is None else np.vstack((allTnew, Tnew))
             else:
@@ -360,7 +359,7 @@ class Remodelling:
 
         return segment_features
 
-    def FlipNM(self, segment_to_change, cell_to_intercalate_with, old_tets, old_ys, new_yg_ids):
+    def flip_nm(self, segment_to_change, cell_to_intercalate_with, old_tets, old_ys, new_yg_ids):
         hasConverged = False
         flipName = 'N-M'
         t_new, y_new = YFlipNM(old_tets, cell_to_intercalate_with, old_ys, segment_to_change, self.Geo, self.Set)
