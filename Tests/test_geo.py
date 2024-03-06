@@ -112,11 +112,10 @@ class TestGeo(Tests):
         geo_test, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
 
         # Create a copy of geo to test against
-        geo_expected, _, _ = load_data('Geo_var_3x3_stretch.mat')
+        geo_expected, _, _ = load_data('rebuild_stretch_3x3_expected.mat')
 
         # Test if rebuild function does not change anything
         geo_test.rebuild(geo_test.copy(), set_test)
-        geo_test.build_global_ids()
 
         # Check if none of the measurements has changed
         check_if_cells_are_the_same(geo_expected, geo_test)
