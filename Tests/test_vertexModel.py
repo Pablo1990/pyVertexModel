@@ -277,7 +277,7 @@ class TestVertexModel(Tests):
             Twg_test, X_test = vModel_test.obtain_initial_x_and_tetrahedra('data/%s' % file_name)
 
         # Check if the test and expected are the same
-        assert_matrix(Twg_test, mat_info_expected['Twg'])
+        assert_matrix(Twg_test, mat_info_expected['Twg'] - 1)
         assert_matrix(X_test, mat_info_expected['X'])
 
     def test_create_tetrahedra(self):
