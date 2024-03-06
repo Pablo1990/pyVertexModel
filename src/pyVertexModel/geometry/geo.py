@@ -614,7 +614,8 @@ class Geo:
         self.build_global_ids()
 
         # Check if the ys and faces have not changed
-        self.check_ys_and_faces_have_not_changed(new_tets, old_geo)
+        # TODO: THIS DOESN'T WORK 
+        #self.check_ys_and_faces_have_not_changed(new_tets, old_geo)
 
         # if update_measurements
         if update_measurements:

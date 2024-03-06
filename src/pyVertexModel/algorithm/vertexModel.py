@@ -9,7 +9,7 @@ from src.pyVertexModel.geometry import degreesOfFreedom
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
 from src.pyVertexModel.parameters.set import Set
-from src.pyVertexModel.util.utils import save_state
+from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -119,7 +119,7 @@ class VertexModel:
             cell.Vol0 = None
             cell.Area = None
             cell.Area0 = None
-        self.backupVars = save_backup_vars()
+        self.backupVars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
 
         # save_state(self, os.path.join(self.set.OutputFolder, 'data_step_0.pkl'))
 
@@ -170,7 +170,7 @@ class VertexModel:
         If the iteration did not converge, the algorithm will try to relax the value of nu and dt.
         :return:
         """
-        self.geo, self.geo_n, self.tr, self.Dofs = load_backup_vars(self.backupVars)
+        self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs = load_backup_vars(self.backupVars)
         self.relaxingNu = False
         if self.set.iter >= self.set.MaxIter and self.set.dt / self.set.dt0 > 1 / 100:
             self.set.MaxIter = self.set.MaxIter0

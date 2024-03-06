@@ -216,9 +216,9 @@ class Remodelling:
 
                 self.Dofs.get_dofs(self.Geo, self.Set)
                 self.Geo = self.Dofs.get_remodel_dofs(allTnew, self.Geo)
-                self.Geo, Set, DidNotConverge = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
+                self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
                                                                       self.Set)
-                if DidNotConverge:
+                if has_converged is False:
                     self.Geo = Geo_backup.copy()
                     self.Geo_n = Geo_n_backup.copy()
                     self.Dofs = Dofs_backup.copy()
