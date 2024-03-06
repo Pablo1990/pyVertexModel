@@ -256,6 +256,7 @@ class VertexModel:
             self.backupVars = {
                 'Geo_b': self.geo.copy(),
                 'Geo_n_b': self.geo_n.copy(),
+                'Geo_0_b': self.geo_0.copy(),
                 'tr_b': self.tr,
                 'Dofs': self.Dofs.copy()
             }
