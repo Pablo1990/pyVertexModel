@@ -48,18 +48,18 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
 
     if gr > c_set.tol or dyr > c_set.tol or np.any(np.isnan(g[dofs.Free])) or np.any(np.isnan(dy[dofs.Free])):
         logger.info(f'Local Problem did not converge after {c_set.iter} iterations.')
-        did_not_converge = True
+        has_converged = False
         geo, geo_n, geo_0, _, dofs = load_backup_vars(backup_vars)
     else:
         logger.info(f'=====>> Local Problem converged in {c_set.iter} iterations.')
-        did_not_converge = False
+        has_converged = True
 
     geo.remodelling = False
 
     c_set.max_iter = c_set.MaxIter0
     c_set.nu = original_nu
 
-    return geo, c_set, did_not_converge
+    return geo, c_set, has_converged
 
 
 def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):

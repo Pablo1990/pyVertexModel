@@ -5,7 +5,7 @@ import pandas as pd
 
 from src.pyVertexModel.algorithm.newtonRaphson import solve_remodeling_step
 from src.pyVertexModel.geometry.geo import edgeValence, get_node_neighbours_per_domain, get_node_neighbours
-from src.pyVertexModel.mesh_remodelling.flip import YFlipNM, post_flip
+from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
 from src.pyVertexModel.util.utils import ismember_rows
 
 logger = logging.getLogger("pyVertexModel")
@@ -362,7 +362,7 @@ class Remodelling:
     def flip_nm(self, segment_to_change, cell_to_intercalate_with, old_tets, old_ys, new_yg_ids):
         hasConverged = False
         flipName = 'N-M'
-        t_new, y_new = YFlipNM(old_tets, cell_to_intercalate_with, old_ys, segment_to_change, self.Geo, self.Set)
+        t_new, y_new = y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, segment_to_change, self.Geo, self.Set)
 
         if t_new is not None:
             (self.Geo_0, self.Geo_n, self.Geo,

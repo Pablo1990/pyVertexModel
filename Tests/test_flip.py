@@ -5,7 +5,7 @@ from Tests.test_geo import check_if_cells_are_the_same
 from Tests.tests import Tests, load_data, assert_array1D
 from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 from src.pyVertexModel.geometry.geo import Geo
-from src.pyVertexModel.mesh_remodelling.flip import YFlipNM, YFlipNM_recursive, post_flip
+from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, y_flip_nm_recursive, post_flip
 
 
 class TestFlip(Tests):
@@ -26,7 +26,7 @@ class TestFlip(Tests):
         xs_to_disconnect = mat_info['segmentToChange'][0] - 1
 
         # Flip geometry
-        tnew_test, _ = YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, geo_test, set_test)
+        tnew_test, _ = y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, geo_test, set_test)
 
         # Compare results
         tnew_expected = mat_info['Tnew'] - 1
@@ -57,10 +57,10 @@ class TestFlip(Tests):
         Ynew = [None, None]
         parentNode = 0
         arrayPos = 2
-        _, Tnew, TRemoved, treeOfPossibilities, _ = YFlipNM_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys, geo_test,
-                                                                      possibleEdges,
-                                                                      xs_to_disconnect, treeOfPossibilities, parentNode,
-                                                                      arrayPos)
+        _, Tnew, TRemoved, treeOfPossibilities, _ = y_flip_nm_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys, geo_test,
+                                                                        possibleEdges,
+                                                                        xs_to_disconnect, treeOfPossibilities, parentNode,
+                                                                        arrayPos)
 
         # Compare results
         tnew_expected = list(mat_info_expected['Tnew'][0])

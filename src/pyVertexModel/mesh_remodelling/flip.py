@@ -34,17 +34,24 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, new_yg_ids, Set, fli
 
     Dofs.get_dofs(Geo, Set)
     Geo = Dofs.get_remodel_dofs(Tnew, Geo)
-    Geo, Set, did_not_converge = solve_remodeling_step(Geo_0, Geo_n, Geo, Dofs, Set)
-    if did_not_converge:
-        logger.info(f"{flipName}-Flip rejected: did not converge")
-    else:
+    Geo, Set, has_converged = solve_remodeling_step(Geo_0, Geo_n, Geo, Dofs, Set)
+    if has_converged:
         Geo.update_measures()
-        new_yg_ids = list(set(np.concatenate((new_yg_ids, Geo.AssemblegIds))))
+    else:
+        logger.info(f"{flipName}-Flip rejected: did not converge")
 
-    return Geo_0, Geo_n, Geo, Dofs, new_yg_ids, did_not_converge
+    new_yg_ids = list(set(np.concatenate((new_yg_ids, Geo.AssemblegIds))))
+
+    return Geo_0, Geo_n, Geo, Dofs, new_yg_ids, has_converged
 
 
-def DoFlip32(Y, X12):
+def do_flip32(Y, X12):
+    """
+    Do flip 32
+    :param Y:
+    :param X12:
+    :return:
+    """
     min_length = np.min([np.linalg.norm(Y[0] - Y[1]), np.linalg.norm(Y[2] - Y[1]), np.linalg.norm(Y[0] - Y[2])])
     perpend = np.cross(Y[0] - Y[1], Y[2] - Y[1])
     n_perpen = perpend / np.linalg.norm(perpend)
@@ -61,7 +68,15 @@ def DoFlip32(Y, X12):
     return Yn
 
 
-def YFlip32(Ys, Ts, YsToChange, Geo):
+def y_flip32(Ys, Ts, YsToChange, Geo):
+    """
+    Y flip 32
+    :param Ys:
+    :param Ts:
+    :param YsToChange:
+    :param Geo:
+    :return:
+    """
     n = list(set(Ts[YsToChange[0]]).intersection(Ts[YsToChange[1]], Ts[YsToChange[2]]))
     N = np.unique(Ts[YsToChange])  # all nodes
     N = N[~np.isin(N, n)]
@@ -77,12 +92,19 @@ def YFlip32(Ys, Ts, YsToChange, Geo):
     Xs = np.zeros((len(n), 3))
     for ni in range(len(n)):
         Xs[ni, :] = Geo.Cells[n[ni]].X
-    Ynew = DoFlip32(Ys[YsToChange], Xs)
+    Ynew = do_flip32(Ys[YsToChange], Xs)
 
     return Ynew, Tnew
 
 
-def DoFlip23(Yo, Geo, n3):
+def do_flip23(Yo, Geo, n3):
+    """
+    Do flip 23
+    :param Yo:
+    :param Geo:
+    :param n3:
+    :return:
+    """
     # the new vertices are placed at a distance "Length of the line to be
     # removed" from the "center of the line to be removed" in the direction of
     # the barycenter of the corresponding tet
@@ -108,7 +130,15 @@ def DoFlip23(Yo, Geo, n3):
     return Yn
 
 
-def YFlip23(Ys, Ts, YsToChange, Geo):
+def y_flip23(Ys, Ts, YsToChange, Geo):
+    """
+    Y flip 23
+    :param Ys:
+    :param Ts:
+    :param YsToChange:
+    :param Geo:
+    :return:
+    """
     n3 = Ts[YsToChange[0]][np.isin(Ts[YsToChange[0]], Ts[YsToChange[1]])]
     n1 = Ts[YsToChange[0]][~np.isin(Ts[YsToChange[0]], n3)]
     n2 = Ts[YsToChange[1]][~np.isin(Ts[YsToChange[1]], n3)]
@@ -126,19 +156,34 @@ def YFlip23(Ys, Ts, YsToChange, Geo):
     ghostNodes = np.isin(Tnew, Geo.XgID)
     ghostNodes = np.all(ghostNodes, axis=1)
 
-    Ynew = DoFlip23(Ys[YsToChange], Geo, n3)
+    Ynew = do_flip23(Ys[YsToChange], Geo, n3)
     Ynew = Ynew[~ghostNodes]
 
     return Ynew, Tnew
 
 
-def YFlipNM_recursive(TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, XsToDisconnect, treeOfPossibilities,
-                      parentNode, arrayPos):
+def y_flip_nm_recursive(TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, XsToDisconnect, treeOfPossibilities,
+                        parentNode, arrayPos):
+    """
+    Y flip NM recursive
+    :param TOld:
+    :param TRemoved:
+    :param Tnew:
+    :param Ynew:
+    :param oldYs:
+    :param Geo:
+    :param possibleEdges:
+    :param XsToDisconnect:
+    :param treeOfPossibilities:
+    :param parentNode:
+    :param arrayPos:
+    :return:
+    """
     endNode = 1
 
     Told_original = TOld.copy()
     if TOld.shape[0] == 3:
-        Ynew_c, Tnew_c = YFlip32(oldYs, TOld, [0, 1, 2], Geo)
+        Ynew_c, Tnew_c = y_flip32(oldYs, TOld, [0, 1, 2], Geo)
         TRemoved.insert(arrayPos, TOld)
         Tnew.insert(arrayPos, Tnew_c)
         Ynew.insert(arrayPos, Ynew_c)
@@ -153,7 +198,7 @@ def YFlipNM_recursive(TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, XsT
             # Valence == 1, is an edge that can be removed.
             # Valence == 2, a face can be removed.
             if valence == 2:
-                Ynew_23, Tnew_23 = YFlip23(oldYs, Told_original, tetIds, Geo)
+                Ynew_23, Tnew_23 = y_flip23(oldYs, Told_original, tetIds, Geo)
 
                 TRemoved.insert(arrayPos, Told_original[tetIds, :])
                 Tnew.insert(arrayPos, Tnew_23)
@@ -168,12 +213,12 @@ def YFlipNM_recursive(TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, XsT
                 # Update and get the tets that are associated to that edgeToDisconnect
                 # Valence should have decreased
                 _, TOld_new, _ = edgeValenceT(TOld, XsToDisconnect)
-                [Ynew, Tnew, TRemoved, treeOfPossibilities, arrayPos] = YFlipNM_recursive(TOld_new, TRemoved, Tnew,
-                                                                                          Ynew, oldYs, Geo,
-                                                                                          possibleEdges,
-                                                                                          XsToDisconnect,
-                                                                                          treeOfPossibilities, arrayPos,
-                                                                                          arrayPos + 1)
+                [Ynew, Tnew, TRemoved, treeOfPossibilities, arrayPos] = y_flip_nm_recursive(TOld_new, TRemoved, Tnew,
+                                                                                            Ynew, oldYs, Geo,
+                                                                                            possibleEdges,
+                                                                                            XsToDisconnect,
+                                                                                            treeOfPossibilities, arrayPos,
+                                                                                            arrayPos + 1)
 
     return Ynew, Tnew, TRemoved, treeOfPossibilities, arrayPos
 
@@ -220,9 +265,9 @@ def get_4_fold_tets(Geo):
     return tets
 
 
-def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, Set):
+def y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, Set):
     """
-
+    Y flip NM
     :param old_tets:
     :param cell_to_intercalate_with:
     :param old_ys:
@@ -270,10 +315,10 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
     parentNode = 0
     arrayPos = 2
     endNode = 1
-    _, Tnew, TRemoved, treeOfPossibilities, _ = YFlipNM_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys, Geo,
-                                                                  possibleEdges,
-                                                                  xs_to_disconnect, treeOfPossibilities, parentNode,
-                                                                  arrayPos)
+    _, Tnew, TRemoved, treeOfPossibilities, _ = y_flip_nm_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys, Geo,
+                                                                    possibleEdges,
+                                                                    xs_to_disconnect, treeOfPossibilities, parentNode,
+                                                                    arrayPos)
 
     logger.info(f"Number of possible combinations: {len(Tnew)}")
     new_tets_tree = get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercalate_with, endNode,
@@ -288,6 +333,13 @@ def YFlipNM(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, S
 
 
 def dfs(graph, start, end):
+    """
+    Depth first search
+    :param graph:
+    :param start:
+    :param end:
+    :return:
+    """
     stack = [(start, [start])]
     while stack:
         (node, path) = stack.pop()
@@ -363,6 +415,19 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
 
 
 def add_new_info(Tnew_23, Ynew_23, final_tets, final_ys, new_tets, new_ys, removed_tets, removed_ys, tetIds):
+    """
+    Add new info
+    :param Tnew_23:
+    :param Ynew_23:
+    :param final_tets:
+    :param final_ys:
+    :param new_tets:
+    :param new_ys:
+    :param removed_tets:
+    :param removed_ys:
+    :param tetIds:
+    :return:
+    """
     new_tets = np.append(new_tets, Tnew_23)
     new_ys = np.append(new_ys, Ynew_23)
     removed_tets = np.append(removed_tets, final_tets[tetIds, :])

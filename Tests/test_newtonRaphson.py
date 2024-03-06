@@ -1,7 +1,8 @@
 import numpy as np
 
 from Tests.tests import load_data, Tests, assert_array1D, assert_matrix
-from src.pyVertexModel.algorithm.newtonRaphson import line_search, newton_raphson, newton_raphson_iteration, ml_divide
+from src.pyVertexModel.algorithm.newtonRaphson import line_search, newton_raphson, newton_raphson_iteration, ml_divide, \
+    solve_remodeling_step
 from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.parameters.set import Set
@@ -10,6 +11,10 @@ from src.pyVertexModel.parameters.set import Set
 class TestNewtonRaphson(Tests):
 
     def test_newton_raphson_iteration(self):
+        """
+        Test the newton_raphson_iteration function.
+        :return:
+        """
         geo_test, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
 
         geo_n_test = Geo(mat_info['Geo_n'])
@@ -122,6 +127,10 @@ class TestNewtonRaphson(Tests):
         assert_array1D(g_expected, g_test)
 
     def test_newton_raphson(self):
+        """
+        Test the newton_raphson function.
+        :return:
+        """
         geo_test, set_test, mat_info = load_data('Newton_Raphson_3x3_stretch.mat')
         geo_expected, set_expected, mat_info_expected = load_data('Newton_Raphson_3x3_stretch_expected.mat')
         geo_n_test = Geo(mat_info['Geo_n'])
@@ -154,6 +163,10 @@ class TestNewtonRaphson(Tests):
         assert_array1D(g_expected, g_test)
 
     def test_line_search(self):
+        """
+        Test the line_search function.
+        :return:
+        """
         geo_test, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
         geo_expected, _, _ = load_data('Geo_var_3x3_stretch.mat')
 
@@ -193,6 +206,10 @@ class TestNewtonRaphson(Tests):
         np.testing.assert_almost_equal(alpha, mat_info['alpha'][0][0])
 
     def test_ml_divide(self):
+        """
+        Test the ml_divide function.
+        :return:
+        """
         geo_test, _, _ = load_data('Newton_Raphson_3x3_stretch.mat')
         _, _, mat_info_expected = load_data('Newton_Raphson_ml_divide_3x3_stretch_expected.mat', False)
         k_test = mat_info_expected['K']
@@ -203,3 +220,15 @@ class TestNewtonRaphson(Tests):
         dy_test[dofs_test.Free, 0] = ml_divide(k_test, dofs_test.Free, g_test)
 
         assert_array1D(dy_test, mat_info_expected['dy'])
+
+    def test_solve_remodelling_step(self):
+        """
+        Test the solve_remodelling_step function.
+        :return:
+        """
+        geo_test, set_test, mat_info = load_data('solve_remodelling_step.mat')
+        geo_n_test = Geo(mat_info['Geo_n'])
+        geo_0_test = Geo(mat_info['Geo_0'])
+        dofs_test = DegreesOfFreedom(mat_info['Dofs'])
+
+        geo_test, c_set, has_converged = solve_remodeling_step(geo_0_test, geo_n_test, geo_test, dofs_test, set_test)
