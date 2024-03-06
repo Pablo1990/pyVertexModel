@@ -17,11 +17,11 @@ def check_if_cells_are_the_same(geo_expected, geo_test):
     np.testing.assert_almost_equal(geo_test.numY, geo_expected.numY)
 
     # Put together all the vertices
-    Y_test = np.concatenate([geo_test.Cells[i].Y for i in range(geo_test.nCells)])
-    Y_expected = np.concatenate([geo_expected.Cells[i].Y for i in range(geo_expected.nCells)])
+    y_test = np.concatenate([geo_test.Cells[i].Y for i in range(geo_test.nCells)])
+    y_expected = np.concatenate([geo_expected.Cells[i].Y for i in range(geo_expected.nCells)])
 
     # Check if the Ys are the same
-    assert_matrix(Y_test, Y_expected)
+    assert_matrix(y_test, y_expected)
 
     # Put together all the volumes and areas
     vol_test = [geo_test.Cells[i].Vol for i in range(geo_test.nCells)]

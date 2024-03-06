@@ -255,6 +255,12 @@ class Remodelling:
         return self.Geo, self.Geo_n
 
     def intercalate_cells(self, newYgIds, segmentFeatures):
+        """
+        Intercalate cells.
+        :param newYgIds:
+        :param segmentFeatures:
+        :return:
+        """
         cellNode = segmentFeatures['num_cell']
         ghostNode = segmentFeatures['node_pair_g']
         cellToIntercalateWith = segmentFeatures['cell_intercalate']

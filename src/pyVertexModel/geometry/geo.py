@@ -482,70 +482,70 @@ class Geo:
         # for c in range(self.nCells):
         #    self.Cells[c].cglobalIds = c + self.numY + self.numF
 
-    def rebuild(self, oldGeo, Set):
+    def rebuild(self, old_geo, Set):
         """
         Rebuild the geometry
-        :param oldGeo:
+        :param old_geo:
         :param Set:
         :return:
         """
-        aliveCells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1]
-        debrisCells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
+        alive_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1]
+        debris_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
 
-        for cc in aliveCells + debrisCells:
-            Cell = self.Cells[cc]
-            Neigh_nodes = np.unique(Cell.T)
-            Neigh_nodes = Neigh_nodes[Neigh_nodes != cc]
+        for cc in alive_cells + debris_cells:
+            c_cell = self.Cells[cc]
+            neigh_nodes = np.unique(c_cell.T)
+            neigh_nodes = neigh_nodes[neigh_nodes != cc]
 
-            for j in range(len(Neigh_nodes)):
-                cj = Neigh_nodes[j]
+            for j in range(len(neigh_nodes)):
+                cj = neigh_nodes[j]
                 ij = [cc, cj]
-                face_ids = np.sum(np.isin(Cell.T, ij), axis=1) == 2
+                face_ids = np.sum(np.isin(c_cell.T, ij), axis=1) == 2
 
-                oldFaceExists = any([np.all(c_face.ij == ij) for c_face in oldGeo.Cells[cc].Faces])
+                old_face_exists = any([np.all(c_face.ij == ij) for c_face in old_geo.Cells[cc].Faces])
 
-                if oldFaceExists:
-                    oldFace = [c_face for c_face in oldGeo.Cells[cc].Faces if np.all(c_face.ij == ij)][0]
+                if old_face_exists:
+                    old_face = [c_face for c_face in old_geo.Cells[cc].Faces if np.all(c_face.ij == ij)][0]
 
                     # Check if the last of the old faces Tris' edge goes beyond the number of Ys
-                    all_tris = [max(tri.Edge) for tri in oldFace.Tris]
-                    if max(all_tris) >= Cell.Y.shape[0]:
-                        oldFace = None
+                    all_tris = [max(tri.Edge) for tri in old_face.Tris]
+                    if max(all_tris) >= c_cell.Y.shape[0]:
+                        old_face = None
                 else:
-                    oldFace = None
+                    old_face = None
 
-                if j >= len(Cell.Faces):
+                if j >= len(c_cell.Faces):
                     self.Cells[cc].Faces.append(face.Face())
                 else:
                     self.Cells[cc].Faces[j] = face.Face()
                 self.Cells[cc].Faces[j].build_face(cc, cj, face_ids, self.nCells, self.Cells[cc], self.XgID, Set,
-                                                   self.XgTop, self.XgBottom, oldFace)
+                                                   self.XgTop, self.XgBottom, old_face)
 
-                woundEdgeTris = []
+                wound_edge_tris = []
                 for tris_sharedCells in [tri.SharedByCells for tri in self.Cells[cc].Faces[j].Tris]:
-                    woundEdgeTris.append(any([self.Cells[c_cell].AliveStatus == 0 for c_cell in tris_sharedCells]))
+                    wound_edge_tris.append(any([self.Cells[c_cell].AliveStatus == 0 for c_cell in tris_sharedCells]))
 
-                if any(woundEdgeTris) and not oldFaceExists:
-                    for woundTriID in [i for i, x in enumerate(woundEdgeTris) if x]:
-                        woundTri = self.Cells[cc].Faces[j].Tris[woundTriID]
-                        all_tris = [tri for c_face in oldGeo.Cells[cc].Faces for tri in c_face.Tris]
-                        matchingTris = [tri for tri in all_tris if
-                                        set(tri.SharedByCells).intersection(set(woundTri.SharedByCells))]
+                if any(wound_edge_tris) and not old_face_exists:
+                    for woundTriID in [i for i, x in enumerate(wound_edge_tris) if x]:
+                        wound_tri = self.Cells[cc].Faces[j].Tris[woundTriID]
+                        all_tris = [tri for c_face in old_geo.Cells[cc].Faces for tri in c_face.Tris]
+                        matching_tris = [tri for tri in all_tris if
+                                        set(tri.SharedByCells).intersection(set(wound_tri.SharedByCells))]
 
-                        meanDistanceToTris = []
-                        for c_Edge in [tri.Edge for tri in matchingTris]:
-                            meanDistanceToTris.append(np.mean(
-                                np.linalg.norm(self.Cells[cc].Y[woundTri.Edge, :] - oldGeo.Cells[cc].Y[c_Edge, :],
+                        mean_distance_to_tris = []
+                        for c_Edge in [tri.Edge for tri in matching_tris]:
+                            mean_distance_to_tris.append(np.mean(
+                                np.linalg.norm(self.Cells[cc].Y[wound_tri.Edge, :] - old_geo.Cells[cc].Y[c_Edge, :],
                                                axis=1)))
 
-                        if meanDistanceToTris:
-                            matchingID = np.argmin(meanDistanceToTris)
-                            self.Cells[cc].Faces[j].Tris[woundTriID].EdgeLength_time = matchingTris[
-                                matchingID].EdgeLength_time
+                        if mean_distance_to_tris:
+                            matching_id = np.argmin(mean_distance_to_tris)
+                            self.Cells[cc].Faces[j].Tris[woundTriID].EdgeLength_time = matching_tris[
+                                matching_id].EdgeLength_time
                         else:
                             self.Cells[cc].Faces[j].Tris[woundTriID].EdgeLength_time = None
 
-            self.Cells[cc].Faces = self.Cells[cc].Faces[:len(Neigh_nodes)]
+            self.Cells[cc].Faces = self.Cells[cc].Faces[:len(neigh_nodes)]
 
     def calculate_interface_type(self, new_tets):
         """
