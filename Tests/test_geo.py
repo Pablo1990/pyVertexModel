@@ -261,5 +261,19 @@ class TestGeo(Tests):
         Test the function add_and_rebuild_cells
         :return:
         """
-        assert False, 'Not implemented'
+        # Load data
+        geo_test, set_test, mat_info = load_data('add_and_rebuild_cells_wingdisc.mat')
+        old_tets = mat_info['oldTets'] - 1
+        new_tets = mat_info['newTets'] - 1
+        y_new = []
+        update_measurements = True
+
+        geo_test.add_and_rebuild_cells(geo_test.copy(), old_tets, new_tets, y_new, set_test, update_measurements)
+
+        # Load expected data
+        _, _, mat_info = load_data('add_and_rebuild_cells_wingdisc_expected.mat')
+        geo_expected = Geo(mat_info['Geo_new'])
+
+        # Check if cells are the same
+        check_if_cells_are_the_same(geo_test, geo_expected)
 

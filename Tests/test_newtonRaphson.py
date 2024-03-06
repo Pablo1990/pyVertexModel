@@ -226,9 +226,11 @@ class TestNewtonRaphson(Tests):
         Test the solve_remodelling_step function.
         :return:
         """
-        geo_test, set_test, mat_info = load_data('solve_remodelling_step.mat')
+        geo_test, set_test, mat_info = load_data('solve_remodelling_step_wingdisc.mat')
         geo_n_test = Geo(mat_info['Geo_n'])
         geo_0_test = Geo(mat_info['Geo_0'])
         dofs_test = DegreesOfFreedom(mat_info['Dofs'])
 
         geo_test, c_set, has_converged = solve_remodeling_step(geo_0_test, geo_n_test, geo_test, dofs_test, set_test)
+
+        geo_expected, _, mat_info_expected = load_data('solve_remodelling_step_wingdisc_expected.mat')

@@ -10,7 +10,7 @@ from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, y_flip_nm_recursi
 
 class TestFlip(Tests):
 
-    def test_YFlipNM(self):
+    def test_y_flip_nm_cyst(self):
         """
         Test if YFlipNM function flips the geometry correctly
         :return:
@@ -32,7 +32,28 @@ class TestFlip(Tests):
         tnew_expected = mat_info['Tnew'] - 1
         assert_array1D(np.sort(np.sort(tnew_expected, axis=1), axis=0), np.sort(np.sort(tnew_test, axis=1), axis=0))
 
-    def test_YFlipNM_recursive(self):
+    def test_y_flip_nm_wingdisc(self):
+        """
+        Test if YFlipNM function flips the geometry correctly
+        :return:
+        """
+        # Load data
+        geo_test, set_test, mat_info = load_data('flipNM_wingdisc.mat')
+
+        # Get additional data
+        old_tets = mat_info['oldTets'] - 1
+        cell_to_intercalate_with = mat_info['cellToIntercalateWith'][0][0] - 1
+        old_ys = mat_info['oldYs']
+        xs_to_disconnect = mat_info['segmentToChange'][0] - 1
+
+        # Flip geometry
+        tnew_test, _ = y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, geo_test, set_test)
+
+        # Compare results
+        tnew_expected = mat_info['Tnew'] - 1
+        assert_array1D(np.sort(np.sort(tnew_expected, axis=1), axis=0), np.sort(np.sort(tnew_test, axis=1), axis=0))
+
+    def test_y_flip_nm_recursive(self):
         """
         Test if YFlipNM recursive function flips the geometry correctly
         :return:
@@ -57,9 +78,11 @@ class TestFlip(Tests):
         Ynew = [None, None]
         parentNode = 0
         arrayPos = 2
-        _, Tnew, TRemoved, treeOfPossibilities, _ = y_flip_nm_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys, geo_test,
+        _, Tnew, TRemoved, treeOfPossibilities, _ = y_flip_nm_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys,
+                                                                        geo_test,
                                                                         possibleEdges,
-                                                                        xs_to_disconnect, treeOfPossibilities, parentNode,
+                                                                        xs_to_disconnect, treeOfPossibilities,
+                                                                        parentNode,
                                                                         arrayPos)
 
         # Compare results
@@ -94,7 +117,7 @@ class TestFlip(Tests):
         segmentToChange = mat_info['segmentToChange'][0] - 1
 
         _, _, geo_test, _, _, _ = post_flip(Tnew, Ynew, oldTets, geo_test, geo_n, geo_0, Dofs, newYgIds, set_test,
-                                                '-', segmentToChange)
+                                            '-', segmentToChange)
 
         # Compare results
         check_if_cells_are_the_same(geo_expected, geo_test)
@@ -118,7 +141,7 @@ class TestFlip(Tests):
         segmentToChange = mat_info['segmentToChange'][0] - 1
 
         _, _, geo_test, _, _, _ = post_flip(Tnew, Ynew, oldTets, geo_test, geo_n, geo_0, Dofs, newYgIds, set_test,
-                                                '-', segmentToChange)
+                                            '-', segmentToChange)
 
         # Compare results
         check_if_cells_are_the_same(geo_expected, geo_test)
