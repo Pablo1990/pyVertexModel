@@ -93,7 +93,7 @@ class TestFlip(Tests):
         newYgIds = []
         segmentToChange = mat_info['segmentToChange'][0] - 1
 
-        _, _, geo_expected, _, _, _ = post_flip(Tnew, Ynew, oldTets, geo_test.copy(), geo_n, geo_0, Dofs, newYgIds, set_test,
+        _, _, geo_test, _, _, _ = post_flip(Tnew, Ynew, oldTets, geo_test, geo_n, geo_0, Dofs, newYgIds, set_test,
                                                 '-', segmentToChange)
 
         # Compare results
@@ -117,7 +117,7 @@ class TestFlip(Tests):
         newYgIds = []
         segmentToChange = mat_info['segmentToChange'][0] - 1
 
-        _, _, geo_expected, _, _, _ = post_flip(Tnew, Ynew, oldTets, geo_test.copy(), geo_n, geo_0, Dofs, newYgIds, set_test,
+        _, _, geo_test, _, _, _ = post_flip(Tnew, Ynew, oldTets, geo_test, geo_n, geo_0, Dofs, newYgIds, set_test,
                                                 '-', segmentToChange)
 
         # Compare results
