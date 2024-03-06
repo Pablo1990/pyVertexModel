@@ -597,20 +597,20 @@ class Geo:
 
                     assert np.all(self.Cells[cell_id].Faces[id_with_new_index].Centre == c_face.Centre)
 
-    def add_and_rebuild_cells(self, old_geo, old_tets, new_tets, y_new, set, update_measurements):
+    def add_and_rebuild_cells(self, old_geo, old_tets, new_tets, y_new, c_set, update_measurements):
         """
         Add and rebuild the cells
         :param old_geo:
         :param old_tets:
         :param new_tets:
         :param y_new:
-        :param set:
+        :param c_set:
         :param update_measurements:
         :return:
         """
         self.remove_tetrahedra(old_tets)
-        self.add_tetrahedra(old_geo, new_tets, y_new, set)
-        self.rebuild(self.copy(), set)
+        self.add_tetrahedra(old_geo, new_tets, y_new, c_set)
+        self.rebuild(self.copy(), c_set)
         self.build_global_ids()
 
         # Check if the ys and faces have not changed
