@@ -185,6 +185,7 @@ class TestVertexModel(Tests):
         v_model_test.backupVars = {
             'Geo_b': geo_test,
             'Geo_n_b': geo_test,
+            'Geo_0_b': geo_test,
             'tr_b': 0,
             'Dofs': DegreesOfFreedom(mat_info['Dofs']).copy(),
         }

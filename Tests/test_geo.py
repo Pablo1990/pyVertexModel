@@ -47,6 +47,10 @@ def check_if_cells_are_the_same(geo_expected, geo_test):
         expected_faces = [geo_expected.Cells[i].Faces[j].globalIds for j in range(len(geo_expected.Cells[i].Faces))]
         np.testing.assert_equal(test_faces, expected_faces)
 
+    # Check Xs of each cell
+    for i in range(len(geo_test.Cells)):
+        assert_matrix(geo_test.Cells[i].X, geo_expected.Cells[i].X)
+
 
 class TestGeo(Tests):
     def test_update_vertices(self):
@@ -289,9 +293,8 @@ class TestGeo(Tests):
         geo_test.build_x_from_y(geo_n_test)
 
         # Load expected data
-        _, _, mat_info = load_data('build_x_from_y_wingdisc_expected.mat')
-        x_expected = mat_info['X']
+        geo_expected, _, mat_info = load_data('build_x_from_y_wingdisc_expected.mat')
 
         # Check if x is the same
-        assert_matrix(geo_test.X, x_expected)
+        check_if_cells_are_the_same(geo_test, geo_expected)
 
