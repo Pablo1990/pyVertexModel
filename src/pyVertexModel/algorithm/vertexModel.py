@@ -14,6 +14,22 @@ from src.pyVertexModel.util.utils import save_state
 logger = logging.getLogger("pyVertexModel")
 
 
+def load_backup_vars(backup_vars):
+    return (backup_vars['Geo_b'].copy(), backup_vars['Geo_n_b'].copy(), backup_vars['Geo_0_b'], backup_vars['tr_b'],
+            backup_vars['Dofs'].copy())
+
+
+def save_backup_vars(geo, geo_n, geo_0, tr, Dofs):
+    backup_vars = {
+        'Geo_b': geo,
+        'Geo_n_b': geo_n,
+        'Geo_0_b': geo_0,
+        'tr_b': tr,
+        'Dofs': Dofs
+    }
+    return backup_vars
+
+
 class VertexModel:
     """
     The main class for the vertex model simulation. It contains the methods for initializing the model,
@@ -119,12 +135,7 @@ class VertexModel:
             cell.Vol0 = None
             cell.Area = None
             cell.Area0 = None
-        self.backupVars = {
-            'Geo_b': self.geo,
-            'Geo_n_b': self.geo_n,
-            'tr_b': self.tr,
-            'Dofs': self.Dofs
-        }
+        self.backupVars = save_backup_vars()
 
         # save_state(self, os.path.join(self.set.OutputFolder, 'data_step_0.pkl'))
 
@@ -175,10 +186,7 @@ class VertexModel:
         If the iteration did not converge, the algorithm will try to relax the value of nu and dt.
         :return:
         """
-        self.geo = self.backupVars['Geo_b'].copy()
-        self.tr = self.backupVars['tr_b']
-        self.Dofs = self.backupVars['Dofs'].copy()
-        self.geo_n = self.backupVars['Geo_n_b'].copy()
+        self.geo, self.geo_n, self.tr, self.Dofs = load_backup_vars(self.backupVars)
         self.relaxingNu = False
         if self.set.iter >= self.set.MaxIter and self.set.dt / self.set.dt0 > 1 / 100:
             self.set.MaxIter = self.set.MaxIter0

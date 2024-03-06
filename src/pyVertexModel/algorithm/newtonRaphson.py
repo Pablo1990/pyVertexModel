@@ -9,6 +9,7 @@ from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
 from src.pyVertexModel.Kg.kgTriEnergyBarrier import KgTriEnergyBarrier
 from src.pyVertexModel.Kg.kgViscosity import KgViscosity
 from src.pyVertexModel.Kg.kgVolume import KgVolume
+from src.pyVertexModel.algorithm.vertexModel import save_backup_vars, load_backup_vars
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -24,6 +25,7 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
     :param c_set:
     :return:
     """
+    backup_vars = save_backup_vars(geo, geo_n, geo_0, -1, dofs)
 
     logger.info('=====>> Solving Local Problem....')
     geo.remodelling = True
@@ -47,6 +49,7 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
     if gr > c_set.tol or dyr > c_set.tol or np.any(np.isnan(g[dofs.Free])) or np.any(np.isnan(dy[dofs.Free])):
         logger.info(f'Local Problem did not converge after {c_set.iter} iterations.')
         did_not_converge = True
+        geo, geo_n, geo_0, _, dofs = load_backup_vars(backup_vars)
     else:
         logger.info(f'=====>> Local Problem converged in {c_set.iter} iterations.')
         did_not_converge = False

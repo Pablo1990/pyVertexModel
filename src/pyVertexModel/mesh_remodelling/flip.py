@@ -12,39 +12,37 @@ from src.pyVertexModel.util.utils import ismember_rows
 logger = logging.getLogger("pyVertexModel")
 
 
-def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, newYgIds, Set, flipName, segmentToChange):
+def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, new_yg_ids, Set, flipName, segmentToChange):
     """
-    Summary of this function goes here
-    Detailed explanation goes here
+    Post flip function
+    :param Tnew:
+    :param Ynew:
+    :param oldTets:
+    :param Geo:
+    :param Geo_n:
+    :param Geo_0:
+    :param Dofs:
+    :param new_yg_ids:
+    :param Set:
+    :param flipName:
+    :param segmentToChange:
+    :return:
     """
-
-    hasConverged = 0
-    Geo_backup = Geo.copy()
-    Geo_n_backup = Geo_n.copy()
-    Geo_0_backup = Geo_0.copy()
-    Dofs_backup = Dofs.copy()
 
     Geo.add_and_rebuild_cells(Geo.copy(), oldTets, Tnew, Ynew, Set, True)
     Geo_n.add_and_rebuild_cells(Geo_n.copy(), oldTets, Tnew, Ynew, Set, False)
 
     Dofs.get_dofs(Geo, Set)
     Geo = Dofs.get_remodel_dofs(Tnew, Geo)
-    Geo, Set, DidNotConverge = solve_remodeling_step(Geo_0, Geo_n, Geo, Dofs, Set)
-    if DidNotConverge:
-        Geo = Geo_backup.copy()
-        Geo_n = Geo_n_backup.copy()
-        Geo_0 = Geo_0_backup.copy()
-        Dofs = Dofs_backup.copy()
+    Geo, Set, did_not_converge = solve_remodeling_step(Geo_0, Geo_n, Geo, Dofs, Set)
+    if did_not_converge:
         logger.info(f"{flipName}-Flip rejected: did not converge")
-        return Geo_0, Geo_n, Geo, Dofs, newYgIds, hasConverged
+        return Geo_0, Geo_n, Geo, Dofs, new_yg_ids, did_not_converge
 
     Geo.update_measures()
+    new_yg_ids = list(set(np.concatenate((new_yg_ids, Geo.AssemblegIds))))
 
-    newYgIds = list(set(np.concatenate((newYgIds, Geo.AssemblegIds))))
-
-    hasConverged = True
-
-    return Geo_0, Geo_n, Geo, Dofs, newYgIds, hasConverged
+    return Geo_0, Geo_n, Geo, Dofs, new_yg_ids, did_not_converge
 
 
 def DoFlip32(Y, X12):
