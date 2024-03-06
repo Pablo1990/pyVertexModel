@@ -353,19 +353,19 @@ class Geo:
         :return:        The new X of the current geometry
         """
         # Obtain IDs from alive cells
-        aliveCells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]
+        alive_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]
 
         # Obtain cells that are not border cells or border ghost nodes
-        allCellsToUpdate = [c.ID for c in self.Cells if c.ID not in self.BorderCells or
-                            c.ID not in self.BorderGhostNodes]
+        all_cells_to_update = [c.ID for c in self.Cells if c.ID not in self.BorderCells or
+                               c.ID not in self.BorderGhostNodes]
 
-        for c in allCellsToUpdate:
+        for c in all_cells_to_update:
             if self.Cells[c].T is not None:
                 if c in self.XgID:
                     dY = np.zeros((self.Cells[c].T.shape[0], 3))
                     for tet in range(self.Cells[c].T.shape[0]):
                         gTet = geo_n.Cells[c].T[tet]
-                        gTet_Cells = [c_cell for c_cell in gTet if c_cell in aliveCells]
+                        gTet_Cells = [c_cell for c_cell in gTet if c_cell in alive_cells]
                         cm = gTet_Cells[0]
                         c_cell = self.Cells[cm]
                         c_cell_n = geo_n.Cells[cm]
@@ -530,7 +530,7 @@ class Geo:
                         wound_tri = self.Cells[cc].Faces[j].Tris[woundTriID]
                         all_tris = [tri for c_face in old_geo.Cells[cc].Faces for tri in c_face.Tris]
                         matching_tris = [tri for tri in all_tris if
-                                        set(tri.SharedByCells).intersection(set(wound_tri.SharedByCells))]
+                                         set(tri.SharedByCells).intersection(set(wound_tri.SharedByCells))]
 
                         mean_distance_to_tris = []
                         for c_Edge in [tri.Edge for tri in matching_tris]:
@@ -584,18 +584,19 @@ class Geo:
                 tets_to_check_new & [np.any(np.isin(tet, self.XgID)) for tet in self.Cells[cell_id].T]]
             assert np.all(old_geo_ys == new_geo_ys)
 
-            for c_face in old_geo.Cells[cell_id].Faces:
-                if c_face.InterfaceType != interface_type and old_geo.Cells[cell_id].ID not in new_tets:
-                    id_with_new = np.array(
-                        [np.all(np.isin(face_new.ij, c_face.ij)) for face_new in self.Cells[cell_id].Faces])
-                    assert sum(id_with_new) == 1
+            if cell_id not in new_tets:
+                for c_face in old_geo.Cells[cell_id].Faces:
+                    if c_face.InterfaceType != interface_type:
+                        id_with_new = np.array(
+                            [np.all(np.isin(face_new.ij, c_face.ij)) for face_new in self.Cells[cell_id].Faces])
+                        assert sum(id_with_new) == 1
 
-                    id_with_new_index = np.where(id_with_new)[0][0]
+                        id_with_new_index = np.where(id_with_new)[0][0]
 
-                    if np.any(self.Cells[cell_id].Faces[id_with_new_index].Centre != c_face.Centre):
-                        self.Cells[cell_id].Faces[id_with_new_index].Centre = c_face.Centre
+                        if self.Cells[cell_id].Faces[id_with_new_index].Centre is c_face.Centre:
+                            self.Cells[cell_id].Faces[id_with_new_index].Centre = c_face.Centre
 
-                    assert np.all(self.Cells[cell_id].Faces[id_with_new_index].Centre == c_face.Centre)
+                        assert np.all(self.Cells[cell_id].Faces[id_with_new_index].Centre == c_face.Centre)
 
     def add_and_rebuild_cells(self, old_geo, old_tets, new_tets, y_new, c_set, update_measurements):
         """
@@ -614,8 +615,8 @@ class Geo:
         self.build_global_ids()
 
         # Check if the ys and faces have not changed
-        # TODO: THIS DOESN'T WORK 
-        #self.check_ys_and_faces_have_not_changed(new_tets, old_geo)
+        # TODO: THIS DOESN'T WORK
+        self.check_ys_and_faces_have_not_changed(new_tets, old_geo)
 
         # if update_measurements
         if update_measurements:

@@ -277,3 +277,20 @@ class TestGeo(Tests):
         # Check if cells are the same
         check_if_cells_are_the_same(geo_test, geo_expected)
 
+    def test_build_x_from_y(self):
+        """
+        Test the function build_x_from_y
+        :return:
+        """
+        # Load data
+        geo_test, _, mat_info = load_data('build_x_from_y_wingdisc.mat')
+        geo_n_test = Geo(mat_info['Geo_n'])
+        geo_test.build_x_from_y(geo_n_test)
+
+        # Load expected data
+        _, _, mat_info = load_data('build_x_from_y_wingdisc_expected.mat')
+        x_expected = mat_info['X']
+
+        # Check if x is the same
+        assert_matrix(geo_test.X, x_expected)
+
