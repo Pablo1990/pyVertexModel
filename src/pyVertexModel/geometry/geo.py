@@ -584,6 +584,7 @@ class Geo:
                 tets_to_check_new & [np.any(np.isin(tet, self.XgID)) for tet in self.Cells[cell_id].T]]
             assert np.all(old_geo_ys == new_geo_ys)
 
+            # TODO: THIS IS CHANGING FACE CENTRES AND GETTING WRONG
             if cell_id not in new_tets:
                 for c_face in old_geo.Cells[cell_id].Faces:
                     if c_face.InterfaceType != interface_type:
@@ -594,7 +595,8 @@ class Geo:
                         id_with_new_index = np.where(id_with_new)[0][0]
 
                         if self.Cells[cell_id].Faces[id_with_new_index].Centre is not c_face.Centre:
-                            self.Cells[cell_id].Faces[id_with_new_index].Centre = c_face.Centre
+                            pass
+                            #self.Cells[cell_id].Faces[id_with_new_index].Centre = c_face.Centre
 
                         assert np.all(self.Cells[cell_id].Faces[id_with_new_index].Centre == c_face.Centre)
 
