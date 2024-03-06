@@ -593,7 +593,7 @@ class Geo:
 
                         id_with_new_index = np.where(id_with_new)[0][0]
 
-                        if self.Cells[cell_id].Faces[id_with_new_index].Centre is c_face.Centre:
+                        if self.Cells[cell_id].Faces[id_with_new_index].Centre is not c_face.Centre:
                             self.Cells[cell_id].Faces[id_with_new_index].Centre = c_face.Centre
 
                         assert np.all(self.Cells[cell_id].Faces[id_with_new_index].Centre == c_face.Centre)

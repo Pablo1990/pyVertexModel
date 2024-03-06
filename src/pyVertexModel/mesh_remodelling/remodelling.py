@@ -114,6 +114,7 @@ def move_vertices_closer_to_ref_point(Geo, Geo_n, close_to_new_point, cell_nodes
     vertices_to_change = np.sort(Tnew, axis=1)
 
     if possible_ref_tets.shape[0] <= 1:
+        logger.warning('Vertices not moved closer to ref point')
         return Geo, Geo_n
 
     cells_to_get_further = np.intersect1d(possible_ref_tets[0], possible_ref_tets[1])

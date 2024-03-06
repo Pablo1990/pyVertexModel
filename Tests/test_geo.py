@@ -175,7 +175,8 @@ class TestGeo(Tests):
         geo_test.Cells[0].Y[0, 1] = -100000
 
         # Check if the ys and faces have not changed
-        np.testing.assert_raises(AssertionError, geo_test.check_ys_and_faces_have_not_changed, new_tets_test, old_geo_test)
+        np.testing.assert_raises(AssertionError, geo_test.check_ys_and_faces_have_not_changed, new_tets_test,
+                                 old_geo_test)
 
     def test_check_ys_and_faces_have_changed_faces(self):
         """
