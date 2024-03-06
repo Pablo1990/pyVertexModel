@@ -387,6 +387,8 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
             new_vol = np.sum(volumes[norm_vols > 0.05])
             old_vol = sum(compute_tet_volume(tet, Geo) for tet in old_tets)
             current_vol_diff = abs(new_vol - old_vol) / old_vol
+            # TODO: DUE TO RANDOM VARIATIONS IN VOLUME YOU CAN GET WRONG RESULTS WITH WRONG TETRAHEDRA. There are times
+            #  when I get the overlapping edges and others that I get the vertices/face centres wrongly positioned
             if current_vol_diff < vol_diff:
                 try:
                     if intercalation_flip:

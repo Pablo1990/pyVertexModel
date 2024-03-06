@@ -585,7 +585,6 @@ class Geo:
                 tets_to_check_new & [np.any(np.isin(tet, self.XgID)) for tet in self.Cells[cell_id].T]]
             assert np.all(old_geo_ys == new_geo_ys)
 
-            # TODO: THIS IS CHANGING FACE CENTRES AND GETTING WRONG
             if cell_id not in new_tets:
                 for c_face in old_geo.Cells[cell_id].Faces:
                     if c_face.InterfaceType != interface_type:
@@ -596,10 +595,9 @@ class Geo:
                         id_with_new_index = np.where(id_with_new)[0][0]
 
                         if self.Cells[cell_id].Faces[id_with_new_index].Centre is not c_face.Centre:
-                            pass
-                            #self.Cells[cell_id].Faces[id_with_new_index].Centre = c_face.Centre
+                            self.Cells[cell_id].Faces[id_with_new_index].Centre = c_face.Centre
 
-                        #assert np.all(self.Cells[cell_id].Faces[id_with_new_index].Centre == c_face.Centre)
+                        assert np.all(self.Cells[cell_id].Faces[id_with_new_index].Centre == c_face.Centre)
 
     def add_and_rebuild_cells(self, old_geo, old_tets, new_tets, y_new, c_set, update_measurements):
         """
@@ -618,7 +616,6 @@ class Geo:
         self.build_global_ids()
 
         # Check if the ys and faces have not changed
-        # TODO: THIS DOESN'T WORK
         self.check_ys_and_faces_have_not_changed(new_tets, old_geo)
 
         # if update_measurements

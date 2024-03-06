@@ -231,7 +231,7 @@ class Set:
         self.cLineTension = 0.05
         self.purseStringStrength = 12
 
-        self.noiseContractility = 0.02
+        self.noiseContractility = 0.0
         #self.DelayedAdditionalContractility = 0
         # Soft < 0
         # Stiff > 0
