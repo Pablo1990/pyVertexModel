@@ -142,7 +142,7 @@ class TestGeo(Tests):
         set_test.TotalCells = 32
 
         # Extrapolating ys
-        geo_test = extrapolate_ys_faces_ellipsoid(geo_expected, set_test)
+        geo_test = extrapolate_ys_faces_ellipsoid(geo_expected.copy(), set_test)
 
         # Load data
         geo_expected, _, _ = load_data('geo_cyst_expected_extrapolatedYs.mat')
