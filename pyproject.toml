@@ -35,6 +35,11 @@ paths.source = [
     ".tox*/*/lib/python*/site-packages",
     ".tox*\\*\\Lib\\site-packages",
 ]
+[tool.coverage.run]
+omit = [
+    "src/pyVertexModel/main.py",
+    "src/pyVertexModel/parameters/*",
+]
 [tool.pytest.ini_options]
 addopts = "--color=yes -v"
 testpaths = [

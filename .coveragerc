@@ -1,4 +1,0 @@
-[run]
-omit =
-    src/pyVertexModel/main.py
-    src/pyVertexModel/parameters/*
