@@ -165,6 +165,9 @@ class VertexModel:
         else:
             self.iteration_did_not_converged()
 
+        # TODO: WHY DO WE NEED TO UPDATE THE DOFS GEO IF HASN'T CHANGED?
+        self.Dofs.get_dofs(self.geo, self.set)
+
     def iteration_did_not_converged(self):
         """
         If the iteration did not converge, the algorithm will try to relax the value of nu and dt.

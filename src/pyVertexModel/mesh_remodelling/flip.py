@@ -376,11 +376,11 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
         if np.all(np.sum(np.isin(new_tets, Geo.XgID), axis=1) < 4):
             if intercalation_flip:
                 Xs_c = Xs[~np.isin(Xs, ghost_nodes_without_debris)]
-                if ~ismember_rows(Xs_c, new_tets)[0][0]:
+                if ~ismember_rows(Xs_c, np.vstack([new_tets, tets4_cells]))[0][0]:
                     new_tets = np.append(new_tets, [Xs_c], axis=0)
 
             current_won_valence = np.sum(np.isin(new_tets, cell_to_intercalate_with)) / len(new_tets)
-
+            # TODO: HOW CAN WE IMPROVE THIS? WOULD IT BE WORTH TO CHECK THE CELLS THAT HAVE TO INTERCALATE?
             if current_won_valence >= cell_winning:
                 volumes = [compute_tet_volume(tet, Geo) for tet in new_tets]
                 new_vol = np.sum(volumes)
@@ -393,7 +393,6 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
                     # TODO: DUE TO RANDOM VARIATIONS IN VOLUME YOU CAN GET WRONG RESULTS WITH WRONG TETRAHEDRA. There are times
                     #  when I get the overlapping edges and others that I get the vertices/face centres wrongly positioned
                     try:
-
                         Geo_new = Geo.copy()
                         Geo_new.remove_tetrahedra(old_tets)
                         Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), None, Set)

@@ -203,17 +203,16 @@ class Remodelling:
                 newYgIds, segmentFeatures)
 
             if hasConverged:
-                # TODO:
-                # PostProcessingVTK(Geo, geo_0, Set, Set.iIncr + 1)
+                self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step)
                 gNodeNeighbours = [get_node_neighbours(self.Geo, ghost_node_tried) for ghost_node_tried in
                                    ghost_nodes_tried]
                 gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
                 cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
                 numClose = 0.5
-                self.Geo, self.Geo_n = (
-                    move_vertices_closer_to_ref_point(self.Geo, self.Geo_n, numClose, cellNodesShared, cellToSplitFrom,
-                                                      ghostNode, allTnew, self.Set))
-                self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step + 1)
+                # self.Geo, self.Geo_n = (
+                #     move_vertices_closer_to_ref_point(self.Geo, self.Geo_n, numClose, cellNodesShared, cellToSplitFrom,
+                #                                       ghostNode, allTnew, self.Set))
+                self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step)
 
                 self.Dofs.get_dofs(self.Geo, self.Set)
                 self.Geo = self.Dofs.get_remodel_dofs(allTnew, self.Geo)
@@ -228,7 +227,6 @@ class Remodelling:
                 else:
                     newYgIds = np.unique(np.concatenate((newYgIds, self.Geo.AssemblegIds)))
                     self.Geo.update_measures()
-                    hasConverged = 1
                     logger.info(f'=>> Full-Flip accepted')
                     self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step + 1)
             else:
