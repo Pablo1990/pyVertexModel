@@ -105,3 +105,27 @@ def ismember_rows(a, b):
     index_array = np.array([np.where(void_b == row)[0][0] if row in void_b else -1 for row in void_a])
 
     return bool_array, index_array
+
+
+# def visualize_tetrahedra(tetrahedra, vertices):
+#     """
+#     Function to visualize the tetrahedra in a 3D plot.
+#     :param tetrahedra: numpy.ndarray - The array of tetrahedra.
+#     :param vertices: numpy.ndarray - The array of vertices.
+#     :return: None
+#     """
+#
+#     ipv.figure()
+#
+#     for tetra in tetrahedra:
+#         verts = [vertices[tetra[i]] for i in range(4)]
+#         ipv.plot_trisurf([verts[0][0], verts[1][0], verts[2][0]], [verts[0][1], verts[1][1], verts[2][1]],
+#                          [verts[0][2], verts[1][2], verts[2][2]], color='orange')
+#         ipv.plot_trisurf([verts[0][0], verts[1][0], verts[3][0]], [verts[0][1], verts[1][1], verts[3][1]],
+#                          [verts[0][2], verts[1][2], verts[3][2]], color='orange')
+#         ipv.plot_trisurf([verts[0][0], verts[2][0], verts[3][0]], [verts[0][1], verts[2][1], verts[3][1]],
+#                          [verts[0][2], verts[2][2], verts[3][2]], color='orange')
+#         ipv.plot_trisurf([verts[1][0], verts[2][0], verts[3][0]], [verts[1][1], verts[2][1], verts[3][1]],
+#                          [verts[1][2], verts[2][2], verts[3][2]], color='orange')
+#
+#     ipv.show()
