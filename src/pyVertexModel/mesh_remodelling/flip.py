@@ -393,6 +393,7 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
                 try:
                     if intercalation_flip:
                         Xs_c = Xs[~np.isin(Xs, ghost_nodes_without_debris)]
+                        if ~ismember_rows(Xs_c, new_tets)[0][0]:
                         new_tets = np.append(new_tets, [Xs_c], axis=0)
 
                     Geo_new = Geo.copy()
