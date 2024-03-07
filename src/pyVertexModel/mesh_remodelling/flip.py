@@ -373,34 +373,37 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
             new_tets = new_tets[~ismember_rows(np.sort(new_tets, 1), np.sort(toRemove, 1))[0]]
             new_tets = np.vstack((new_tets, toAdd))
 
-        if intercalation_flip:
-            Xs_c = Xs[~np.isin(Xs, ghost_nodes_without_debris)]
-            if ~ismember_rows(Xs_c, new_tets)[0][0]:
-                new_tets = np.append(new_tets, [Xs_c], axis=0)
+        if np.all(np.sum(np.isin(new_tets, Geo.XgID), axis=1) < 4):
+            if intercalation_flip:
+                Xs_c = Xs[~np.isin(Xs, ghost_nodes_without_debris)]
+                if ~ismember_rows(Xs_c, new_tets)[0][0]:
+                    new_tets = np.append(new_tets, [Xs_c], axis=0)
 
-        current_won_valence = np.sum(np.isin(new_tets, cell_to_intercalate_with)) / len(new_tets)
+            current_won_valence = np.sum(np.isin(new_tets, cell_to_intercalate_with)) / len(new_tets)
 
-        if current_won_valence >= cell_winning:
-            volumes = [compute_tet_volume(tet, Geo) for tet in new_tets]
-            current_vol_diff = np.sum(volumes)
+            if current_won_valence >= cell_winning:
+                volumes = [compute_tet_volume(tet, Geo) for tet in new_tets]
+                new_vol = np.sum(volumes)
+                old_vol = sum(compute_tet_volume(tet, Geo) for tet in old_tets)
+                current_vol_diff = abs(new_vol - old_vol) / old_vol
 
-            #visualize_tetrahedra(new_tets, [Geo.Cells[c_cell].X for c_cell in range(len(Geo.Cells))])
+                #visualize_tetrahedra(new_tets, [Geo.Cells[c_cell].X for c_cell in range(len(Geo.Cells))])
 
-            if current_vol_diff < vol_diff:
-                # TODO: DUE TO RANDOM VARIATIONS IN VOLUME YOU CAN GET WRONG RESULTS WITH WRONG TETRAHEDRA. There are times
-                #  when I get the overlapping edges and others that I get the vertices/face centres wrongly positioned
-                try:
+                if current_vol_diff < vol_diff:
+                    # TODO: DUE TO RANDOM VARIATIONS IN VOLUME YOU CAN GET WRONG RESULTS WITH WRONG TETRAHEDRA. There are times
+                    #  when I get the overlapping edges and others that I get the vertices/face centres wrongly positioned
+                    try:
 
-                    Geo_new = Geo.copy()
-                    Geo_new.remove_tetrahedra(old_tets)
-                    Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), None, Set)
-                    Geo_new.rebuild(Geo_new.copy(), Set)
-                    new_tets_tree = new_tets
-                    cell_winning = current_won_valence
-                    vol_diff = current_vol_diff
-                    logger.info(f"New combination found: {current_won_valence} {current_vol_diff}")
-                except Exception as ex:
-                    logger.warning(f"Exception on flip remodelling: {ex}")
+                        Geo_new = Geo.copy()
+                        Geo_new.remove_tetrahedra(old_tets)
+                        Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), None, Set)
+                        Geo_new.rebuild(Geo_new.copy(), Set)
+                        new_tets_tree = new_tets
+                        cell_winning = current_won_valence
+                        vol_diff = current_vol_diff
+                        logger.info(f"New combination found: {current_won_valence} {current_vol_diff}")
+                    except Exception as ex:
+                        logger.warning(f"Exception on flip remodelling: {ex}")
     return new_tets_tree
 
 
