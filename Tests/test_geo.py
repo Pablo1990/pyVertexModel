@@ -2,7 +2,7 @@ import numpy as np
 
 from Tests.tests import Tests, load_data, assert_matrix, assert_array1D
 from src.pyVertexModel.algorithm.vertexModelBubbles import extrapolate_ys_faces_ellipsoid
-from src.pyVertexModel.geometry.geo import Geo
+from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain
 
 
 def check_if_cells_are_the_same(geo_expected, geo_test):
@@ -297,4 +297,22 @@ class TestGeo(Tests):
 
         # Check if x is the same
         check_if_cells_are_the_same(geo_test, geo_expected)
+
+    def test_get_node_neighbours_per_domain(self):
+        """
+        Test the function get_node_neighbours_per_domain
+        :return:
+        """
+        # Load data
+        geo_test, _, mat_info = load_data('get_node_neighbours_per_domain_wingdisc.mat')
+        node = mat_info['cellNode'][0][0] - 1
+        node_of_domain = mat_info['ghostNode'][0][0] - 1
+        main_node = mat_info['cellToSplitFrom'][0][0] - 1
+        node_neighbours_test = get_node_neighbours_per_domain(geo_test, node, node_of_domain, main_node)
+
+        # Load expected data
+        node_neighbours_expected = mat_info['sharedNodesStill'] - 1
+
+        # Check if node neighbours are the same
+        assert_array1D(node_neighbours_test, np.concatenate(node_neighbours_expected))
 
