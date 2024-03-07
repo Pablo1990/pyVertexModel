@@ -294,11 +294,7 @@ def y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo,
 
     # Step 4: Propagate the change to get the remaining tets
     # Based on https://dl.acm.org/doi/pdf/10.1145/2629697
-    max_pairs_of_edges = old_tets.shape[0] - 3
-    # Get all the unique pair of nodes (edges) that can be removed from the mesh
-    possibleEdgesToRemove = list(combinations(possibleEdges, max_pairs_of_edges))
 
-    # Step 5: For each combination of edges to remove, check if it is valid
     treeOfPossibilities = nx.DiGraph()
     treeOfPossibilities.add_node(2)
     TRemoved = [None, None]
@@ -312,6 +308,7 @@ def y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo,
                                                                     xs_to_disconnect, treeOfPossibilities, parentNode,
                                                                     arrayPos)
 
+    # Step 5: For each combination of edges to remove, check if it is valid
     logger.info(f"Number of possible combinations: {len(Tnew)}")
     new_tets_tree = get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercalate_with, endNode,
                                                   ghost_nodes_without_debris, intercalation_flip, old_tets, parentNode,
