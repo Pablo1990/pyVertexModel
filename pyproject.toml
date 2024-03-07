@@ -29,16 +29,14 @@ dependencies = [
 report = {skip_covered = true, sort = "cover"}
 run = {branch = true, parallel = true, source = [
     "pyVertexModel",
+], omit = [
+    "src/pyVertexModel/main.py",
+    "src/pyVertexModel/parameters/*",
 ]}
 paths.source = [
     "src",
     ".tox*/*/lib/python*/site-packages",
     ".tox*\\*\\Lib\\site-packages",
-]
-[tool.coverage.run]
-omit = [
-    "src/pyVertexModel/main.py",
-    "src/pyVertexModel/parameters/*",
 ]
 [tool.pytest.ini_options]
 addopts = "--color=yes -v"
