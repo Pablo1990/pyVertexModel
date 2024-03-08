@@ -6,7 +6,7 @@ import numpy as np
 from scipy.spatial import Delaunay
 
 from src.pyVertexModel.algorithm.newtonRaphson import solve_remodeling_step
-from src.pyVertexModel.geometry.geo import edgeValenceT
+from src.pyVertexModel.geometry.geo import edgeValenceT, edgeValence
 from src.pyVertexModel.util.utils import ismember_rows
 
 logger = logging.getLogger("pyVertexModel")
@@ -257,7 +257,7 @@ def get_4_fold_tets(Geo):
     return tets
 
 
-def y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, Set):
+def y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo, Set, cell_to_split_from):
     """
     Y flip NM
     :param old_tets:
@@ -312,7 +312,8 @@ def y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo,
     logger.info(f"Number of possible combinations: {len(Tnew)}")
     new_tets_tree = get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercalate_with, endNode,
                                                   ghost_nodes_without_debris, intercalation_flip, old_tets, parentNode,
-                                                  tets4_cells, treeOfPossibilities)
+                                                  tets4_cells, treeOfPossibilities, xs_to_disconnect,
+                                                  cell_to_split_from)
 
     # Get the last combination from new_tets_tree
     Tnew = new_tets_tree
@@ -341,7 +342,7 @@ def dfs(graph, start, end):
 
 def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercalate_with, endNode,
                                   ghost_nodes_without_debris, intercalation_flip, old_tets, parentNode, tets4_cells,
-                                  treeOfPossibilities):
+                                  treeOfPossibilities, xs_to_disconnect, cell_to_split_from):
     """
     Get the best combination of new tets
     :param Geo:
@@ -362,6 +363,9 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
     new_tets_tree = None
     vol_diff = np.inf
     cell_winning = -np.inf
+    valence_segment = np.inf
+
+    xs_to_disconnect_cells = xs_to_disconnect[~np.isin(xs_to_disconnect, Geo.XgID)]
 
     for c_path in dfs(treeOfPossibilities, parentNode, endNode):
         c_path = np.array(c_path)
@@ -380,8 +384,10 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
                     new_tets = np.append(new_tets, [Xs_c], axis=0)
 
             current_won_valence = np.sum(np.isin(new_tets, cell_to_intercalate_with)) / len(new_tets)
+            current_valence_segment, _, _ = (
+                edgeValenceT(new_tets, [xs_to_disconnect_cells, cell_to_split_from]))
             # TODO: HOW CAN WE IMPROVE THIS? WOULD IT BE WORTH TO CHECK THE CELLS THAT HAVE TO INTERCALATE?
-            if current_won_valence >= cell_winning:
+            if current_valence_segment <= valence_segment: # current_won_valence >= cell_winning
                 volumes = [compute_tet_volume(tet, Geo) for tet in new_tets]
                 new_vol = np.sum(volumes)
                 old_vol = sum(compute_tet_volume(tet, Geo) for tet in old_tets)
@@ -400,6 +406,7 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
                         new_tets_tree = new_tets
                         cell_winning = current_won_valence
                         vol_diff = current_vol_diff
+                        valence_segment = current_valence_segment
                         logger.info(f"New combination found: {current_won_valence} {current_vol_diff}")
                     except Exception as ex:
                         logger.warning(f"Exception on flip remodelling: {ex}")
