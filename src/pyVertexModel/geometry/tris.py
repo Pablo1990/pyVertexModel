@@ -57,3 +57,18 @@ class Tris:
                            np.linalg.norm(Ys[self.Edge[1], :] - face_centre)]
         AspectRatio = compute_tri_aspect_ratio([EdgeLength] + LengthsToCentre)
         return EdgeLength, LengthsToCentre, AspectRatio
+
+    def copy(self):
+        """
+        Copy the instance of the Tris class.
+        :return:
+        """
+        copied_tris = Tris()
+        copied_tris.Edge = self.Edge
+        copied_tris.SharedByCells = self.SharedByCells
+        copied_tris.EdgeLength = self.EdgeLength
+        copied_tris.LengthsToCentre = self.LengthsToCentre
+        copied_tris.AspectRatio = self.AspectRatio
+        copied_tris.EdgeLength_time = self.EdgeLength_time
+        copied_tris.ContractilityValue = self.ContractilityValue
+        return copied_tris

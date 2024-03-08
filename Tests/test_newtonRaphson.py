@@ -1,5 +1,6 @@
 import numpy as np
 
+from Tests.test_geo import check_if_cells_are_the_same
 from Tests.tests import load_data, Tests, assert_array1D, assert_matrix
 from src.pyVertexModel.algorithm.newtonRaphson import line_search, newton_raphson, newton_raphson_iteration, ml_divide, \
     solve_remodeling_step
@@ -234,3 +235,5 @@ class TestNewtonRaphson(Tests):
         geo_test, c_set, has_converged = solve_remodeling_step(geo_0_test, geo_n_test, geo_test, dofs_test, set_test)
 
         geo_expected, _, mat_info_expected = load_data('solve_remodelling_step_wingdisc_expected.mat')
+
+        check_if_cells_are_the_same(geo_expected, geo_test)

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from src.pyVertexModel.algorithm.newtonRaphson import solve_remodeling_step
-from src.pyVertexModel.geometry.geo import edgeValence, get_node_neighbours_per_domain, get_node_neighbours
+from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
 from src.pyVertexModel.util.utils import ismember_rows, save_backup_vars, load_backup_vars
 
@@ -265,7 +265,7 @@ class Remodelling:
             ghost_nodes_tried.append(ghost_node)
             logger.info(f"Remodeling: {cell_node} - {ghost_node}")
 
-            valence_segment, old_tets, old_ys = edgeValence(self.Geo, nodes_pair)
+            valence_segment, old_tets, old_ys = edge_valence(self.Geo, nodes_pair)
 
             if sum(np.isin(self.Geo.non_dead_cells, old_tets.flatten())) > 2:
                 newYgIds, has_converged, Tnew = self.flip_nm(nodes_pair,

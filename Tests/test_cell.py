@@ -2,6 +2,7 @@ import numpy as np
 
 from Tests.test_geo import check_if_cells_are_the_same
 from Tests.tests import Tests, load_data
+from src.pyVertexModel.geometry.cell import Cell
 
 
 class TestCell(Tests):
@@ -42,3 +43,36 @@ class TestCell(Tests):
 
         # Check if the cells are the same
         check_if_cells_are_the_same(geo_expected, geo_test)
+
+    def test_copy(self):
+        # Create an instance of the Cell class
+        original_cell = Cell()
+        original_cell.Y = np.array([1, 2, 3])
+        original_cell.globalIds = np.array([4, 5, 6])
+        original_cell.Area = 7.0
+        original_cell.Area0 = 8.0
+        original_cell.Vol = 9.0
+        original_cell.Vol0 = 10.0
+        original_cell.AliveStatus = 11
+        original_cell.substrate_g = 12
+        original_cell.lambdaB_perc = 13
+        original_cell.ID = 14
+        original_cell.X = np.array([15, 16, 17])
+        original_cell.T = np.array([18, 19, 20])
+
+        # Call the copy method
+        copied_cell = original_cell.copy()
+
+        # Assert that the attributes of the original and copied instances are the same
+        self.assertTrue(np.array_equal(original_cell.Y, copied_cell.Y))
+        self.assertTrue(np.array_equal(original_cell.globalIds, copied_cell.globalIds))
+        self.assertEqual(original_cell.Area, copied_cell.Area)
+        self.assertEqual(original_cell.Area0, copied_cell.Area0)
+        self.assertEqual(original_cell.Vol, copied_cell.Vol)
+        self.assertEqual(original_cell.Vol0, copied_cell.Vol0)
+        self.assertEqual(original_cell.AliveStatus, copied_cell.AliveStatus)
+        self.assertEqual(original_cell.substrate_g, copied_cell.substrate_g)
+        self.assertEqual(original_cell.lambdaB_perc, copied_cell.lambdaB_perc)
+        self.assertEqual(original_cell.ID, copied_cell.ID)
+        self.assertTrue(np.array_equal(original_cell.X, copied_cell.X))
+        self.assertTrue(np.array_equal(original_cell.T, copied_cell.T))

@@ -18,7 +18,7 @@ def tets_to_check_in(c_cell, xg_boundary):
     return np.array([not any(n in tet for n in xg_boundary) for tet in c_cell.T], dtype=bool)
 
 
-def edgeValence(geo, nodesEdge):
+def edge_valence(geo, nodesEdge):
     """
 
     :param geo:
@@ -41,7 +41,7 @@ def edgeValence(geo, nodesEdge):
     return valence, sharedTets, sharedYs
 
 
-def edgeValenceT(tets, nodesEdge):
+def edge_valence_t(tets, nodesEdge):
     """
 
     :param tets:

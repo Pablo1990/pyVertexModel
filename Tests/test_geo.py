@@ -14,7 +14,7 @@ def check_if_cells_are_the_same(geo_expected, geo_test):
     """
 
     # Check if numY and numF are the same
-    np.testing.assert_almost_equal(geo_test.numY, geo_expected.numY)
+    np.testing.assert_equal(geo_test.numY, geo_expected.numY)
 
     # Put together all the vertices
     y_test = np.concatenate([geo_test.Cells[i].Y for i in range(geo_test.nCells)])

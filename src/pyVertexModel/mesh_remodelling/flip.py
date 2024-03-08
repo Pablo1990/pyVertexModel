@@ -6,7 +6,7 @@ import numpy as np
 from scipy.spatial import Delaunay
 
 from src.pyVertexModel.algorithm.newtonRaphson import solve_remodeling_step
-from src.pyVertexModel.geometry.geo import edgeValenceT, edgeValence
+from src.pyVertexModel.geometry.geo import edge_valence_t, edge_valence
 from src.pyVertexModel.util.utils import ismember_rows
 
 logger = logging.getLogger("pyVertexModel")
@@ -185,7 +185,7 @@ def y_flip_nm_recursive(TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, X
     else:
         # https://link.springer.com/article/10.1007/s00366-016-0480-z#Fig2
         for numPair in range(possibleEdges.shape[0]):
-            valence, sharedTets, tetIds = edgeValenceT(Told_original, possibleEdges[numPair, :])
+            valence, sharedTets, tetIds = edge_valence_t(Told_original, possibleEdges[numPair, :])
 
             # Valence == 1, is an edge that can be removed.
             # Valence == 2, a face can be removed.
@@ -204,7 +204,7 @@ def y_flip_nm_recursive(TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, X
 
                 # Update and get the tets that are associated to that edgeToDisconnect
                 # Valence should have decreased
-                _, TOld_new, _ = edgeValenceT(TOld, XsToDisconnect)
+                _, TOld_new, _ = edge_valence_t(TOld, XsToDisconnect)
                 [Ynew, Tnew, TRemoved, treeOfPossibilities, arrayPos] = y_flip_nm_recursive(TOld_new, TRemoved, Tnew,
                                                                                             Ynew, oldYs, Geo,
                                                                                             possibleEdges,
@@ -364,6 +364,7 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
     vol_diff = np.inf
     cell_winning = -np.inf
     valence_segment = np.inf
+    geo_valence_segment = np.inf
 
     xs_to_disconnect_cells = xs_to_disconnect[~np.isin(xs_to_disconnect, Geo.XgID)]
 
@@ -385,32 +386,40 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
 
             current_won_valence = np.sum(np.isin(new_tets, cell_to_intercalate_with)) / len(new_tets)
             current_valence_segment, _, _ = (
-                edgeValenceT(new_tets, [xs_to_disconnect_cells, cell_to_split_from]))
+                edge_valence_t(new_tets, [xs_to_disconnect_cells, cell_to_split_from]))
             # TODO: HOW CAN WE IMPROVE THIS? WOULD IT BE WORTH TO CHECK THE CELLS THAT HAVE TO INTERCALATE?
-            if current_valence_segment <= valence_segment: # current_won_valence >= cell_winning
+            if current_valence_segment <= valence_segment and current_won_valence >= cell_winning:
                 volumes = [compute_tet_volume(tet, Geo) for tet in new_tets]
                 new_vol = np.sum(volumes)
                 old_vol = sum(compute_tet_volume(tet, Geo) for tet in old_tets)
                 current_vol_diff = abs(new_vol - old_vol) / old_vol
 
-                #visualize_tetrahedra(new_tets, [Geo.Cells[c_cell].X for c_cell in range(len(Geo.Cells))])
+                #if current_vol_diff < vol_diff:
+                # TODO: DUE TO RANDOM VARIATIONS IN VOLUME YOU CAN GET WRONG RESULTS WITH WRONG TETRAHEDRA. There are times
+                #  when I get the overlapping edges and others that I get the vertices/face centres wrongly positioned
+                try:
+                    Geo_new = Geo.copy()
+                    Geo_new.remove_tetrahedra(old_tets)
+                    Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), None, Set)
+                    Geo_new.rebuild(Geo_new.copy(), Set)
+                    current_geo_valence_segment, _, _ = (
+                        edge_valence(Geo_new, [xs_to_disconnect_cells[0], cell_to_split_from]))
 
-                if current_vol_diff < vol_diff:
-                    # TODO: DUE TO RANDOM VARIATIONS IN VOLUME YOU CAN GET WRONG RESULTS WITH WRONG TETRAHEDRA. There are times
-                    #  when I get the overlapping edges and others that I get the vertices/face centres wrongly positioned
-                    try:
-                        Geo_new = Geo.copy()
-                        Geo_new.remove_tetrahedra(old_tets)
-                        Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), None, Set)
-                        Geo_new.rebuild(Geo_new.copy(), Set)
+                    vol_new = Geo_new.Cells[xs_to_disconnect_cells[0]].compute_volume()
+                    vol_old = Geo.Cells[xs_to_disconnect_cells[0]].compute_volume()
+
+                    # = abs(vol_new - vol_old) / vol_old
+
+                    if current_geo_valence_segment < geo_valence_segment:
                         new_tets_tree = new_tets
+                        geo_valence_segment = current_geo_valence_segment
                         cell_winning = current_won_valence
                         vol_diff = current_vol_diff
                         valence_segment = current_valence_segment
                         logger.info(f"New combination found: {current_won_valence} {current_vol_diff} "
-                                    f"{current_valence_segment}")
-                    except Exception as ex:
-                        logger.warning(f"Exception on flip remodelling: {ex}")
+                                    f"{current_valence_segment} {geo_valence_segment}")
+                except Exception as ex:
+                    logger.warning(f"Exception on flip remodelling: {ex}")
     return new_tets_tree
 
 

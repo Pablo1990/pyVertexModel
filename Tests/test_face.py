@@ -76,3 +76,38 @@ class TestFace(Tests):
         assert_matrix(geo_test.Cells[c].Faces[j].Area, face_expected.Area)
         assert_matrix(geo_test.Cells[c].Faces[j].Area0, face_expected.Area0)
         assert_matrix(geo_test.Cells[c].Faces[j].InterfaceType, face_expected.InterfaceType)
+
+    def test_copy(self):
+        """
+        Test the copy method of the Face class
+        :return:
+        """
+        # Create an instance of the Face class
+        original_face = Face()
+        original_face.Aspect_Ratio = 1.0
+        original_face.Perimeter = 2.0
+        original_face.Tris = [np.array([1, 2, 3])]
+        original_face.InterfaceType = 'Top'
+        original_face.ij = np.array([4, 5])
+        original_face.globalIds = np.array([6, 7, 8])
+        original_face.Centre = np.array([9, 10, 11])
+        original_face.Area = 12.0
+        original_face.Area0 = 13.0
+        valueset = [0, 1, 2]
+        catnames = ['Top', 'CellCell', 'Bottom']
+        self.InterfaceType_allValues = dict(zip(valueset, catnames))
+
+        # Call the copy method
+        copied_face = original_face.copy()
+
+        # Assert that the attributes of the original and copied instances are the same
+        self.assertEqual(original_face.Aspect_Ratio, copied_face.Aspect_Ratio)
+        self.assertEqual(original_face.Perimeter, copied_face.Perimeter)
+        self.assertTrue(np.array_equal(original_face.Tris, copied_face.Tris))
+        self.assertEqual(original_face.InterfaceType, copied_face.InterfaceType)
+        self.assertTrue(np.array_equal(original_face.ij, copied_face.ij))
+        self.assertTrue(np.array_equal(original_face.globalIds, copied_face.globalIds))
+        self.assertTrue(np.array_equal(original_face.Centre, copied_face.Centre))
+        self.assertEqual(original_face.Area, copied_face.Area)
+        self.assertEqual(original_face.Area0, copied_face.Area0)
+        self.assertEqual(original_face.InterfaceType_allValues, copied_face.InterfaceType_allValues)

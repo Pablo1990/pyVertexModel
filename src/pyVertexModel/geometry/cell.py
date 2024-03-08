@@ -42,10 +42,9 @@ class Cell:
 
     def __init__(self, mat_file=None):
         """
-
+        Constructor of the class
         :param mat_file:
         """
-
         self.SubstrateLambda = None
         self.InternalLambda = None
         self.ExternalLambda = None
@@ -90,9 +89,9 @@ class Cell:
         :return:
         """
         new_cell = Cell()
-        new_cell.Y = copy.deepcopy(self.Y)
-        new_cell.globalIds = copy.deepcopy(self.globalIds)
-        new_cell.Faces = copy.deepcopy(self.Faces)
+        new_cell.Y = self.Y
+        new_cell.globalIds = self.globalIds
+        new_cell.Faces = [f.copy() for f in self.Faces]
         new_cell.Area = self.Area
         new_cell.Area0 = self.Area0
         new_cell.Vol = self.Vol
@@ -101,8 +100,8 @@ class Cell:
         new_cell.substrate_g = self.substrate_g
         new_cell.lambdaB_perc = self.lambdaB_perc
         new_cell.ID = self.ID
-        new_cell.X = copy.deepcopy(self.X)
-        new_cell.T = copy.deepcopy(self.T)
+        new_cell.X = self.X
+        new_cell.T = self.T
         return new_cell
 
     def compute_area(self, location_filter=None):
