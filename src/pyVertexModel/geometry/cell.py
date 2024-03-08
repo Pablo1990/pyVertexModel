@@ -114,7 +114,8 @@ class Cell:
         totalArea = 0.0
         for f in range(len(self.Faces)):
             if location_filter is not None:
-                if self.Faces[f].InterfaceType == self.Faces[f].InterfaceType_allValues[location_filter]:
+                if (self.Faces[f].InterfaceType == self.Faces[f].InterfaceType_allValues[location_filter] or
+                        self.Faces[f].InterfaceType == location_filter):
                     totalArea = totalArea + self.Faces[f].Area
             else:
                 totalArea = totalArea + self.Faces[f].Area
@@ -279,7 +280,8 @@ class Cell:
         neighbours = []
         for f in range(len(self.Faces)):
             if location_filter is not None:
-                if self.Faces[f].InterfaceType == self.Faces[f].InterfaceType_allValues[location_filter]:
+                if (self.Faces[f].InterfaceType == self.Faces[f].InterfaceType_allValues[location_filter] or
+                        self.Faces[f].InterfaceType == location_filter):
                     for t in range(len(self.Faces[f].Tris)):
                         neighbours.append(self.Faces[f].Tris[t].SharedByCells)
             else:
@@ -318,7 +320,8 @@ class Cell:
         perimeter = 0.0
         for f in range(len(self.Faces)):
             if filter_location is not None:
-                if self.Faces[f].InterfaceType == self.Faces[f].InterfaceType_allValues[filter_location]:
+                if (self.Faces[f].InterfaceType == self.Faces[f].InterfaceType_allValues[filter_location] or
+                        self.Faces[f].InterfaceType == filter_location):
                     perimeter = perimeter + self.Faces[f].compute_perimeter()
             else:
                 perimeter = perimeter + self.Faces[f].compute_perimeter()

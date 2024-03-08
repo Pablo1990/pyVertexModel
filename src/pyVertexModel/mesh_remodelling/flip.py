@@ -407,7 +407,8 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
                         cell_winning = current_won_valence
                         vol_diff = current_vol_diff
                         valence_segment = current_valence_segment
-                        logger.info(f"New combination found: {current_won_valence} {current_vol_diff}")
+                        logger.info(f"New combination found: {current_won_valence} {current_vol_diff} "
+                                    f"{current_valence_segment}")
                     except Exception as ex:
                         logger.warning(f"Exception on flip remodelling: {ex}")
     return new_tets_tree
