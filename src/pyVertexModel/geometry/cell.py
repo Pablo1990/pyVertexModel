@@ -111,17 +111,17 @@ class Cell:
         :param location_filter:
         :return:
         """
-        totalArea = 0.0
+        total_area = 0.0
         for f in range(len(self.Faces)):
             if location_filter is not None:
                 if (self.Faces[f].InterfaceType == self.Faces[f].InterfaceType_allValues[location_filter] or
                         self.Faces[f].InterfaceType == location_filter):
-                    totalArea = totalArea + self.Faces[f].Area
+                    total_area = total_area + self.Faces[f].Area
             else:
-                totalArea = totalArea + self.Faces[f].Area
+                total_area = total_area + self.Faces[f].Area
 
-        self.Area = totalArea
-        return totalArea
+        self.Area = total_area
+        return total_area
 
     def compute_volume(self):
         """
@@ -135,15 +135,15 @@ class Cell:
                 y1 = self.Y[c_face.Tris[t].Edge[0], :] - self.X
                 y2 = self.Y[c_face.Tris[t].Edge[1], :] - self.X
                 y3 = c_face.Centre - self.X
-                Ytri = np.array([y1, y2, y3])
+                ytri = np.array([y1, y2, y3])
 
-                currentV = np.linalg.det(Ytri) / 6
+                current_v = np.linalg.det(ytri) / 6
                 # If the volume is negative, switch two the other option
-                if currentV < 0:
-                    Ytri = np.array([y2, y1, y3])
-                    currentV = np.linalg.det(Ytri) / 6
+                if current_v < 0:
+                    ytri = np.array([y2, y1, y3])
+                    current_v = np.linalg.det(ytri) / 6
 
-                v += currentV
+                v += current_v
 
         self.Vol = v
         return v
@@ -213,12 +213,12 @@ class Cell:
                                                                  self.compute_perimeter(filter_location=0)),
                     '2d_circularity_bottom': compute_2D_circularity(self.compute_area(location_filter=2),
                                                                     self.compute_perimeter(filter_location=2)),
-                    '2D_aspect_ratio_top': self.compute_2D_aspect_ratio(filter_location=0),
-                    '2D_aspect_ratio_bottom': self.compute_2D_aspect_ratio(filter_location=2),
-                    '2D_aspect_ratio_cellcell': self.compute_2D_aspect_ratio(filter_location=1),
-                    '3D_aspect_ratio_0_1': self.compute_3D_aspect_ratio(),
-                    '3D_aspect_ratio_0_2': self.compute_3D_aspect_ratio(axis=(0, 2)),
-                    '3D_aspect_ratio_1_2': self.compute_3D_aspect_ratio(axis=(1, 2)),
+                    '2D_aspect_ratio_top': self.compute_2d_aspect_ratio(filter_location=0),
+                    '2D_aspect_ratio_bottom': self.compute_2d_aspect_ratio(filter_location=2),
+                    '2D_aspect_ratio_cellcell': self.compute_2d_aspect_ratio(filter_location=1),
+                    '3D_aspect_ratio_0_1': self.compute_3d_aspect_ratio(),
+                    '3D_aspect_ratio_0_2': self.compute_3d_aspect_ratio(axis=(0, 2)),
+                    '3D_aspect_ratio_1_2': self.compute_3d_aspect_ratio(axis=(1, 2)),
                     'Sphericity': self.compute_sphericity(),
                     'Elongation': self.compute_elongation(),
                     'Ellipticity': self.compute_ellipticity(),
@@ -342,14 +342,14 @@ class Cell:
         """
         return self.compute_length() / self.compute_height()
 
-    def compute_3D_aspect_ratio(self, axis=(0, 1)):
+    def compute_3d_aspect_ratio(self, axis=(0, 1)):
         """
         Compute the 3D aspect ratio of the cell
         :return:
         """
         return self.compute_principal_axis_length()[axis[0]] / self.compute_principal_axis_length()[axis[1]]
 
-    def compute_2D_aspect_ratio(self, filter_location=None):
+    def compute_2d_aspect_ratio(self, filter_location=None):
         """
         Compute the 2D aspect ratio of the cell
         :return:
