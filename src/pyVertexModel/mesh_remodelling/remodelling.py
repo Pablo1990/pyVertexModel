@@ -6,7 +6,7 @@ import pandas as pd
 from src.pyVertexModel.algorithm.newtonRaphson import solve_remodeling_step
 from src.pyVertexModel.geometry.geo import edgeValence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
-from src.pyVertexModel.util.utils import ismember_rows
+from src.pyVertexModel.util.utils import ismember_rows, save_backup_vars, load_backup_vars
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -190,11 +190,10 @@ class Remodelling:
         # Get edges to remodel
         segmentFeatures_all = self.get_tris_to_remodel_ordered()
 
+        # Save the current state
+        backup_vars = save_backup_vars(self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs)
+
         while segmentFeatures_all.empty is False:
-            Geo_backup = self.Geo.copy()
-            Geo_n_backup = self.Geo_n.copy()
-            Geo_0_backup = self.Geo_0.copy()
-            Dofs_backup = self.Dofs.copy()
 
             # Get the first segment feature
             segmentFeatures = segmentFeatures_all.iloc[0]
@@ -217,24 +216,19 @@ class Remodelling:
                 self.Dofs.get_dofs(self.Geo, self.Set)
                 self.Geo = self.Dofs.get_remodel_dofs(allTnew, self.Geo)
                 self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
-                                                                      self.Set)
+                                                                     self.Set)
                 if has_converged is False:
-                    self.Geo = Geo_backup.copy()
-                    self.Geo_n = Geo_n_backup.copy()
-                    self.Dofs = Dofs_backup.copy()
-                    self.Geo_0 = Geo_0_backup.copy()
+                    self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs = load_backup_vars(backup_vars)
                     logger.info(f'=>> Full-Flip rejected: did not converge1')
                 else:
                     newYgIds = np.unique(np.concatenate((newYgIds, self.Geo.AssemblegIds)))
                     self.Geo.update_measures()
                     logger.info(f'=>> Full-Flip accepted')
-                    self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step + 1)
+                    self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step)
+                    backup_vars = save_backup_vars(self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs)
             else:
                 # Go back to initial state
-                self.Geo = Geo_backup.copy()
-                self.Geo_n = Geo_n_backup.copy()
-                self.Dofs = Dofs_backup.copy()
-                self.Geo_0 = Geo_0_backup.copy()
+                self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs = load_backup_vars(backup_vars)
                 logger.info('=>> Full-Flip rejected: did not converge2')
 
             # Remove the segment feature that has been checked
@@ -259,38 +253,38 @@ class Remodelling:
         :param segmentFeatures:
         :return:
         """
-        cellNode = segmentFeatures['num_cell']
-        ghostNode = segmentFeatures['node_pair_g']
-        cellToIntercalateWith = segmentFeatures['cell_intercalate']
-        cellToSplitFrom = segmentFeatures['cell_to_split_from']
-        hasConverged = True
-        allTnew = None
+        cell_node = segmentFeatures['num_cell']
+        ghost_node = segmentFeatures['node_pair_g']
+        cell_to_intercalate_with = segmentFeatures['cell_intercalate']
+        cell_to_split_from = segmentFeatures['cell_to_split_from']
+        has_converged = True
+        all_tnew = None
         ghost_nodes_tried = []
-        while hasConverged:
-            nodesPair = np.array([cellNode, ghostNode])
-            ghost_nodes_tried.append(ghostNode)
-            logger.info(f"Remodeling: {cellNode} - {ghostNode}")
+        while has_converged:
+            nodes_pair = np.array([cell_node, ghost_node])
+            ghost_nodes_tried.append(ghost_node)
+            logger.info(f"Remodeling: {cell_node} - {ghost_node}")
 
-            valenceSegment, oldTets, oldYs = edgeValence(self.Geo, nodesPair)
+            valence_segment, old_tets, old_ys = edgeValence(self.Geo, nodes_pair)
 
-            if sum(np.isin(self.Geo.non_dead_cells, oldTets.flatten())) > 2:
-                newYgIds, hasConverged, Tnew = self.flip_nm(nodesPair,
-                                                            cellToIntercalateWith,
-                                                            oldTets, oldYs,
-                                                            newYgIds)
+            if sum(np.isin(self.Geo.non_dead_cells, old_tets.flatten())) > 2:
+                newYgIds, has_converged, Tnew = self.flip_nm(nodes_pair,
+                                                             cell_to_intercalate_with,
+                                                             old_tets, old_ys,
+                                                             newYgIds)
                 if Tnew is not None:
-                    allTnew = Tnew if allTnew is None else np.vstack((allTnew, Tnew))
+                    all_tnew = Tnew if all_tnew is None else np.vstack((all_tnew, Tnew))
             else:
-                hasConverged = False
+                has_converged = False
 
-            sharedNodesStill = get_node_neighbours_per_domain(self.Geo, cellNode, ghostNode, cellToSplitFrom)
+            shared_nodes_still = get_node_neighbours_per_domain(self.Geo, cell_node, ghost_node, cell_to_split_from)
 
-            if any(np.isin(sharedNodesStill, self.Geo.XgID)) and hasConverged:
-                sharedNodesStill_g = sharedNodesStill[np.isin(sharedNodesStill, self.Geo.XgID)]
-                ghostNode = sharedNodesStill_g[0]
+            if any(np.isin(shared_nodes_still, self.Geo.XgID)) and has_converged:
+                shared_nodes_still_g = shared_nodes_still[np.isin(shared_nodes_still, self.Geo.XgID)]
+                ghost_node = shared_nodes_still_g[0]
             else:
                 break
-        return allTnew, cellToSplitFrom, ghostNode, ghost_nodes_tried, hasConverged, newYgIds
+        return all_tnew, cell_to_split_from, ghost_node, ghost_nodes_tried, has_converged, newYgIds
 
     def get_tris_to_remodel_ordered(self):
         """

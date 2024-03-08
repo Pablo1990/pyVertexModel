@@ -11,11 +11,11 @@ def load_backup_vars(backup_vars):
 
 def save_backup_vars(geo, geo_n, geo_0, tr, dofs):
     backup_vars = {
-        'Geo_b': geo,
-        'Geo_n_b': geo_n,
-        'Geo_0_b': geo_0,
+        'Geo_b': geo.copy(),
+        'Geo_n_b': geo_n.copy(),
+        'Geo_0_b': geo_0.copy(),
         'tr_b': tr,
-        'Dofs': dofs
+        'Dofs': dofs.copy(),
     }
     return backup_vars
 
