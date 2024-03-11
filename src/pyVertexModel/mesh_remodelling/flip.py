@@ -5,8 +5,7 @@ import networkx as nx
 import numpy as np
 from scipy.spatial import Delaunay
 
-from src.pyVertexModel.algorithm.newtonRaphson import solve_remodeling_step
-from src.pyVertexModel.geometry.geo import edge_valence_t, edge_valence
+from src.pyVertexModel.geometry.geo import edge_valence_t
 from src.pyVertexModel.util.utils import ismember_rows
 
 logger = logging.getLogger("pyVertexModel")
@@ -361,10 +360,7 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
     :return:
     """
     new_tets_tree = None
-    vol_diff = np.inf
-    cell_winning = -np.inf
     valence_segment = np.inf
-    geo_valence_segment = np.inf
 
     xs_to_disconnect_cells = xs_to_disconnect[~np.isin(xs_to_disconnect, Geo.XgID)]
 
@@ -384,40 +380,18 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
                 if ~ismember_rows(Xs_c, np.vstack([new_tets, tets4_cells]))[0][0]:
                     new_tets = np.append(new_tets, [Xs_c], axis=0)
 
-            current_won_valence = np.sum(np.isin(new_tets, cell_to_intercalate_with)) / len(new_tets)
             current_valence_segment, _, _ = (
                 edge_valence_t(new_tets, [xs_to_disconnect_cells, cell_to_split_from]))
-            # TODO: HOW CAN WE IMPROVE THIS? WOULD IT BE WORTH TO CHECK THE CELLS THAT HAVE TO INTERCALATE?
-            if current_valence_segment <= valence_segment and current_won_valence >= cell_winning:
-                volumes = [compute_tet_volume(tet, Geo) for tet in new_tets]
-                new_vol = np.sum(volumes)
-                old_vol = sum(compute_tet_volume(tet, Geo) for tet in old_tets)
-                current_vol_diff = abs(new_vol - old_vol) / old_vol
-
-                #if current_vol_diff < vol_diff:
-                # TODO: DUE TO RANDOM VARIATIONS IN VOLUME YOU CAN GET WRONG RESULTS WITH WRONG TETRAHEDRA. There are times
-                #  when I get the overlapping edges and others that I get the vertices/face centres wrongly positioned
+            if current_valence_segment < valence_segment:
                 try:
                     Geo_new = Geo.copy()
                     Geo_new.remove_tetrahedra(old_tets)
                     Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), None, Set)
                     Geo_new.rebuild(Geo_new.copy(), Set)
-                    current_geo_valence_segment, _, _ = (
-                        edge_valence(Geo_new, [xs_to_disconnect_cells[0], cell_to_split_from]))
 
-                    vol_new = Geo_new.Cells[xs_to_disconnect_cells[0]].compute_volume()
-                    vol_old = Geo.Cells[xs_to_disconnect_cells[0]].compute_volume()
-
-                    # = abs(vol_new - vol_old) / vol_old
-
-                    if current_geo_valence_segment < geo_valence_segment:
-                        new_tets_tree = new_tets
-                        geo_valence_segment = current_geo_valence_segment
-                        cell_winning = current_won_valence
-                        vol_diff = current_vol_diff
-                        valence_segment = current_valence_segment
-                        logger.info(f"New combination found: {current_won_valence} {current_vol_diff} "
-                                    f"{current_valence_segment} {geo_valence_segment}")
+                    new_tets_tree = new_tets
+                    valence_segment = current_valence_segment
+                    logger.info(f"New combination found with valence segment: {valence_segment}")
                 except Exception as ex:
                     logger.warning(f"Exception on flip remodelling: {ex}")
     return new_tets_tree
