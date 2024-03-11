@@ -148,7 +148,7 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
 
     old_geo = Geo.copy()
     Geo.build_x_from_y(Geo)
-    Geo.rebuild(Set)
+    Geo.rebuild(old_geo, Set)
     Geo.build_global_ids()
     Geo.check_ys_and_faces_have_not_changed(vertices_to_change, old_geo)
 
