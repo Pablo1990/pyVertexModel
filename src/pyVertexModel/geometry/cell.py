@@ -5,6 +5,7 @@ import vtk
 from sklearn.decomposition import PCA
 
 from src.pyVertexModel.geometry import face
+from src.pyVertexModel.util.utils import copy_non_mutable_attributes
 
 
 def compute_2D_circularity(area, perimeter):
@@ -85,23 +86,15 @@ class Cell:
 
     def copy(self):
         """
-
+        Copy the cell
         :return:
         """
         new_cell = Cell()
-        new_cell.Y = self.Y
-        new_cell.globalIds = self.globalIds
+
+        copy_non_mutable_attributes(self, 'Faces', new_cell)
+
         new_cell.Faces = [f.copy() for f in self.Faces]
-        new_cell.Area = self.Area
-        new_cell.Area0 = self.Area0
-        new_cell.Vol = self.Vol
-        new_cell.Vol0 = self.Vol0
-        new_cell.AliveStatus = self.AliveStatus
-        new_cell.substrate_g = self.substrate_g
-        new_cell.lambdaB_perc = self.lambdaB_perc
-        new_cell.ID = self.ID
-        new_cell.X = self.X
-        new_cell.T = self.T
+
         return new_cell
 
     def compute_area(self, location_filter=None):
