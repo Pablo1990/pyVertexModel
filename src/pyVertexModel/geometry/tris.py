@@ -1,5 +1,7 @@
 import numpy as np
 
+from src.pyVertexModel.util.utils import copy_non_mutable_attributes
+
 
 def compute_tri_aspect_ratio(side_lengths):
     s = np.sum(side_lengths) / 2
@@ -64,11 +66,5 @@ class Tris:
         :return:
         """
         copied_tris = Tris()
-        copied_tris.Edge = self.Edge
-        copied_tris.SharedByCells = self.SharedByCells
-        copied_tris.EdgeLength = self.EdgeLength
-        copied_tris.LengthsToCentre = self.LengthsToCentre
-        copied_tris.AspectRatio = self.AspectRatio
-        copied_tris.EdgeLength_time = self.EdgeLength_time
-        copied_tris.ContractilityValue = self.ContractilityValue
+        copy_non_mutable_attributes(self, '', copied_tris)
         return copied_tris

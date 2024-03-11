@@ -1,3 +1,4 @@
+import copy
 import logging
 import os
 
@@ -5,7 +6,7 @@ import numpy as np
 import vtk
 
 from src.pyVertexModel.geometry import face, cell
-from src.pyVertexModel.util.utils import ismember_rows
+from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -184,11 +185,7 @@ class Geo:
         new_geo = Geo()
 
         # Copy the attributes
-        for attr in self.__dict__:
-            if attr == 'Cells':
-                new_geo.Cells = []
-            else:
-                setattr(new_geo, attr, getattr(self, attr))
+        copy_non_mutable_attributes(self, 'Cells', new_geo)
 
         for c_cell in self.Cells:
             new_geo.Cells.append(c_cell.copy())

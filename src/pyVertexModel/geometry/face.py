@@ -1,6 +1,7 @@
 import numpy as np
 
 from src.pyVertexModel.geometry import tris
+from src.pyVertexModel.util.utils import copy_non_mutable_attributes
 
 
 def get_key(dictionary, target_value):
@@ -226,13 +227,8 @@ class Face:
         :return:
         """
         new_face = Face()
-        new_face.Aspect_Ratio = self.Aspect_Ratio
-        new_face.Perimeter = self.Perimeter
+
+        copy_non_mutable_attributes(self, ['Tris'], new_face)
         new_face.Tris = [tri.copy() for tri in self.Tris]
-        new_face.InterfaceType = self.InterfaceType
-        new_face.ij = self.ij
-        new_face.globalIds = self.globalIds
-        new_face.Centre = self.Centre
-        new_face.Area = self.Area
-        new_face.Area0 = self.Area0
+
         return new_face

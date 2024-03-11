@@ -1,3 +1,4 @@
+import copy
 import lzma
 import pickle
 
@@ -129,3 +130,15 @@ def ismember_rows(a, b):
 #                          [verts[1][2], verts[2][2], verts[3][2]], color='orange')
 #
 #     ipv.show()
+
+def copy_non_mutable_attributes(class_to_change, attr_not_to_change, new_cell):
+    for attr, value in class_to_change.__dict__.items():
+        # check if attr is mutable
+        if attr == attr_not_to_change:
+            setattr(new_cell, attr, [])
+        if isinstance(value, list) or isinstance(value, dict):
+            setattr(new_cell, attr, copy.deepcopy(value))
+        elif hasattr(value, 'copy'):
+            setattr(new_cell, attr, value.copy())
+        else:
+            setattr(new_cell, attr, copy.copy(value))
