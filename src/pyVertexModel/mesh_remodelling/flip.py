@@ -388,6 +388,7 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
                     Geo_new.remove_tetrahedra(old_tets)
                     Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), None, Set)
                     Geo_new.rebuild(Geo_new.copy(), Set)
+                    Geo_new.build_global_ids()
 
                     new_tets_tree = new_tets
                     valence_segment = current_valence_segment
