@@ -78,8 +78,8 @@ def add_edge_to_intercalate(geo, num_cell, segment_features, edge_lengths_top, e
     return segment_features
 
 
-def move_vertices_closer_to_ref_point(Geo, Geo_n, close_to_new_point, cell_nodes_shared, cell_to_split_from, ghost_node,
-                                      Tnew, Set):
+def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared, cell_to_split_from, ghost_node, Tnew,
+                                      Set):
     """
     Move the vertices closer to the reference point.
     :param Geo:
@@ -107,7 +107,7 @@ def move_vertices_closer_to_ref_point(Geo, Geo_n, close_to_new_point, cell_nodes
 
     if np.sum(ref_tet) > 1:
         if 'Bubbles_Cyst' in Set.InputGeo:
-            return Geo, Geo_n
+            return Geo
         else:
             raise Exception('moveVerticesCloserToRefPoint_line17')
 
@@ -115,7 +115,7 @@ def move_vertices_closer_to_ref_point(Geo, Geo_n, close_to_new_point, cell_nodes
 
     if possible_ref_tets.shape[0] <= 1:
         logger.warning('Vertices not moved closer to ref point')
-        return Geo, Geo_n
+        return Geo
 
     cells_to_get_further = np.intersect1d(possible_ref_tets[0], possible_ref_tets[1])
     cells_to_get_closer = np.setdiff1d(cell_nodes_shared, cells_to_get_further)
@@ -133,13 +133,13 @@ def move_vertices_closer_to_ref_point(Geo, Geo_n, close_to_new_point, cell_nodes
         for node_in_tet in tet_to_check:
             if node_in_tet not in Geo.XgID:
                 new_point = Geo.Cells[node_in_tet].Y[
-                    np.isin(np.sort(Geo.Cells[node_in_tet].T, axis=1), tet_to_check, axis=0)]
+                    ismember_rows(Geo.Cells[node_in_tet].T, tet_to_check)[0]]
                 if getting_closer:
                     avg_point = ref_point_closer * (1 - close_to_new_point) + new_point * close_to_new_point
                 else:
                     avg_point = ref_point_further * (1 - far_from_new_point) + new_point * far_from_new_point
                 Geo.Cells[node_in_tet].Y[
-                    np.isin(np.sort(Geo.Cells[node_in_tet].T, axis=1), tet_to_check, axis=0)] = avg_point
+                    ismember_rows(Geo.Cells[node_in_tet].T, tet_to_check)[0]] = avg_point
 
     for current_cell in cell_nodes_shared:
         middle_vertex_tet = np.all(np.isin(Geo.Cells[current_cell].T, cell_nodes_shared), axis=1)
@@ -147,15 +147,12 @@ def move_vertices_closer_to_ref_point(Geo, Geo_n, close_to_new_point, cell_nodes
                                                        Geo.Cells[current_cell].Y[middle_vertex_tet] * close_to_new_point
 
     old_geo = Geo.copy()
-    Geo.build_x_from_y(Geo_n)
+    Geo.build_x_from_y(Geo)
     Geo.rebuild(Set)
     Geo.build_global_ids()
     Geo.check_ys_and_faces_have_not_changed(vertices_to_change, old_geo)
-    Geo.update_measures()
 
-    # TODO: Is updating Geo_n necessary?
-
-    return Geo, Geo_n
+    return Geo
 
 
 class Remodelling:
@@ -207,13 +204,21 @@ class Remodelling:
                                    ghost_nodes_tried]
                 gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
                 cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
-                numClose = 0.5
-                # self.Geo, self.Geo_n = (
-                #     move_vertices_closer_to_ref_point(self.Geo, self.Geo_n, numClose, cellNodesShared, cellToSplitFrom,
-                #                                       ghostNode, allTnew, self.Set))
+                numClose = 0.01
+                # TODO: IDEA: instead of moving geo vertices closer to the reference point, we could move the ones in
+                #  Geo_n closer to the reference point. Thus, we'd expect the vertices to be moving not too far from
+                #  those, but keeping a good geometry
+                self.Geo_n = (
+                    move_vertices_closer_to_ref_point(self.Geo_n, numClose,
+                                                      np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
+                                                      cellToSplitFrom,
+                                                      ghostNode, allTnew, self.Set))
                 self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step)
 
                 self.Dofs.get_dofs(self.Geo, self.Set)
+                # TODO: Solve remodelling step should obtain a geometry closer to the one before the flip with an almost
+                #  four-fold vertex. This is not happening. How can we move the vertices so that the geometry is closer
+                #  to the one before the flip? That will also help the next iteration to converge more easily.
                 self.Geo = self.Dofs.get_remodel_dofs(allTnew, self.Geo)
                 self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
                                                                      self.Set)
