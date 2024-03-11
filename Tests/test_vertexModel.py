@@ -14,6 +14,7 @@ from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import build_tr
     VertexModelVoronoiFromTimeImage, create_tetrahedra, add_tetrahedral_intercalations, build_2d_voronoi_from_image, \
     populate_vertices_info, calculate_vertices, get_four_fold_vertices, divide_quartets_neighbours, process_image
 from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
+from src.pyVertexModel.util.utils import save_backup_vars
 
 
 class TestVertexModel(Tests):
@@ -182,24 +183,16 @@ class TestVertexModel(Tests):
 
         # Test if initialize geometry function does not change anything
         v_model_test = VertexModelBubbles(set_test)
-        v_model_test.backupVars = {
-            'Geo_b': geo_test,
-            'Geo_n_b': geo_test,
-            'Geo_0_b': geo_test,
-            'tr_b': 0,
-            'Dofs': DegreesOfFreedom(mat_info['Dofs']).copy(),
-        }
-        v_model_test.set.iter = 1000000
-        v_model_test.set.MaxIter0 = v_model_test.set.iter
-
         v_model_test.geo = geo_test.copy()
+        check_if_cells_are_the_same(geo_original, v_model_test.geo)
 
+        # Save backup variables
         geo_test.Cells[0].Y[0, 0] = np.Inf
         geo_test.Cells[0].Faces[0].Centre[0] = np.Inf
+        v_model_test.backupVars = save_backup_vars(geo_test, geo_test, geo_test, 0, DegreesOfFreedom(mat_info['Dofs']))
+        v_model_test.set.iter = 1000000
+        v_model_test.set.MaxIter0 = v_model_test.set.iter
         v_model_test.set.last_t_converged = 0.5
-
-        # Check if the cells are initialized correctly
-        check_if_cells_are_the_same(geo_original, v_model_test.geo)
 
         v_model_test.iteration_did_not_converged()
 
