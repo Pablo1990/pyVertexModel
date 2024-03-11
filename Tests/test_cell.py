@@ -63,8 +63,10 @@ class TestCell(Tests):
         # Call the copy method
         copied_cell = original_cell.copy()
 
+        original_cell.Y = np.array([1, 2, 3])+1
+
         # Assert that the attributes of the original and copied instances are the same
-        self.assertTrue(np.array_equal(original_cell.Y, copied_cell.Y))
+        self.assertTrue(np.array_equal(np.array([1, 2, 3]), copied_cell.Y))
         self.assertTrue(np.array_equal(original_cell.globalIds, copied_cell.globalIds))
         self.assertEqual(original_cell.Area, copied_cell.Area)
         self.assertEqual(original_cell.Area0, copied_cell.Area0)

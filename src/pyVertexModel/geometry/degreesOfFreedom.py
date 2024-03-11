@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.pyVertexModel.util.utils import ismember_rows
+from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes
 
 
 class DegreesOfFreedom:
@@ -179,9 +179,7 @@ class DegreesOfFreedom:
         :return:
         """
         dof_copy = DegreesOfFreedom()
-        dof_copy.Free = self.Free.copy()
-        dof_copy.Fix = self.Fix.copy()
-        dof_copy.FixP = self.FixP.copy()
-        dof_copy.FixC = self.FixC.copy()
+
+        copy_non_mutable_attributes(self, '', dof_copy)
 
         return dof_copy
