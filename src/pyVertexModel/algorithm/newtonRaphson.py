@@ -35,7 +35,7 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
     c_set.nu = c_set.nu_LP_Initial * nu_factor
     c_set.MaxIter = c_set.MaxIter0 * 3
 
-    g, k, _ = KgGlobal(geo_0, geo_n, geo, c_set)
+    g, k, _, _ = KgGlobal(geo_0, geo_n, geo, c_set)
 
     dy = np.zeros(((geo.numY + geo.numF + geo.nCells) * 3, 1), dtype=np.float64)
     dyr = np.linalg.norm(dy[dofs.remodel, 0])
@@ -123,7 +123,7 @@ def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g
     t (float): The current time.
 
     Returns:
-    Energy (float): The total energy of the system after the current iteration.
+    energy_total (float): The total energy of the system after the current iteration.
     K (ndarray): The updated Jacobian matrix of the system.
     dyr (float): The norm of the change in the solution guess during the current iteration.
     g (ndarray): The updated gradient of the system.
@@ -138,7 +138,7 @@ def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g
     dy_reshaped = np.reshape(dy * alpha, (Geo.numF + Geo.numY + Geo.nCells, 3))
     Geo.update_vertices(dy_reshaped)
     Geo.update_measures()
-    g, K, Energy = KgGlobal(Geo_0, Geo_n, Geo, Set)
+    g, K, energy_total, _ = KgGlobal(Geo_0, Geo_n, Geo, Set)
 
     dyr = np.linalg.norm(dy[dof, 0])
     gr = np.linalg.norm(g[dof])
@@ -159,7 +159,7 @@ def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g
     ):
         Set.iter = Set.MaxIter
 
-    return Energy, K, dyr, g, gr, ig, aux_gr, dy
+    return energy_total, K, dyr, g, gr, ig, aux_gr, dy
 
 
 def ml_divide(K, dof, g):
@@ -235,7 +235,8 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set):
 
     g = kg_Vol.g + kg_Viscosity.g + kg_SA.g
     K = kg_Vol.K + kg_Viscosity.K + kg_SA.K
-    E = kg_Vol.energy + kg_Viscosity.energy + kg_SA.energy
+    energy_total = kg_Vol.energy + kg_Viscosity.energy + kg_SA.energy
+    energies = {"Volume": kg_Vol.energy, "Viscosity": kg_Viscosity.energy, "Surface": kg_SA.energy}
 
     # # TODO: Plane Elasticity
     # if Set.InPlaneElasticity:
@@ -254,7 +255,8 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set):
         kg_Tri.compute_work(Geo, Set)
         g += kg_Tri.g
         K += kg_Tri.K
-        E += kg_Tri.energy
+        energy_total += kg_Tri.energy
+        energies["TriEnergyBarrier"] = kg_Tri.energy
 
     # Triangle Energy Barrier Aspect Ratio
     if Set.EnergyBarrierAR:
@@ -262,7 +264,8 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set):
         kg_TriAR.compute_work(Geo, Set)
         g += kg_TriAR.g
         K += kg_TriAR.K
-        E += kg_TriAR.energy
+        energy_total += kg_TriAR.energy
+        energies["TriEnergyBarrier"] = kg_TriAR.energy
 
     # Propulsion Forces
     # TODO
@@ -273,7 +276,8 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set):
         kg_lt.compute_work(Geo, Set)
         g += kg_lt.g
         K += kg_lt.K
-        E += kg_lt.energy
+        energy_total += kg_lt.energy
+        energies["Contractility"] = kg_lt.energy
 
     # Substrate
     if Set.Substrate == 2:
@@ -281,9 +285,10 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set):
         kg_subs.compute_work(Geo, Set)
         g += kg_subs.g
         K += kg_subs.K
-        E += kg_subs.energy
+        energy_total += kg_subs.energy
+        energies["Substrate"] = kg_subs.energy
 
-    return g, K, E
+    return g, K, energy_total, energies
 
 
 def gGlobal(Geo_0, Geo_n, Geo, Set):

@@ -482,7 +482,7 @@ class TestVertexModel(Tests):
 
         vModel_test.set = set_test
 
-        g_test, K_test, energies_test = newtonRaphson.KgGlobal(vModel_test.geo_0, vModel_test.geo, vModel_test.geo,
+        g_test, K_test, energies_test, _ = newtonRaphson.KgGlobal(vModel_test.geo_0, vModel_test.geo, vModel_test.geo,
                                                     vModel_test.set)
 
         # Check if energies are the same

@@ -130,7 +130,10 @@ class VertexModel:
                 # up-to-date
                 self.geo.update_measures()
 
-            g, K, __ = newtonRaphson.KgGlobal(self.geo_0, self.geo_n, self.geo, self.set)
+            g, K, _, energies = newtonRaphson.KgGlobal(self.geo_0, self.geo_n, self.geo, self.set)
+            for key, energy in energies.items():
+                logger.info(f"{key}: {energy}")
+
             self.geo, g, __, __, self.set, gr, dyr, dy = newtonRaphson.newton_raphson(self.geo_0, self.geo_n, self.geo,
                                                                                       self.Dofs, self.set, K, g,
                                                                                       self.numStep, self.t)

@@ -18,7 +18,7 @@ def test_kg_global_filename(filename):
     geo_n_test = Geo(mat_info['Geo_n'])
     geo_0_test = Geo(mat_info['Geo_0'])
     # Compute the global K, and g
-    g, K, E = KgGlobal(geo_0_test, geo_n_test, geo_test, set_test)
+    g, K, E, _ = KgGlobal(geo_0_test, geo_n_test, geo_test, set_test)
     # Get the expected results from the mat file
     g_expected = mat_info['g'][:, 0]
     k_expected = mat_info['K']
@@ -140,7 +140,7 @@ class Test(Tests):
         geo_n_test = Geo(mat_info['Geo_n'])
         geo_0_test = Geo(mat_info['Geo_0'])
 
-        g, K, E = KgGlobal(geo_0_test, geo_n_test, geo_test, set_test)
+        g, K, E, _ = KgGlobal(geo_0_test, geo_n_test, geo_test, set_test)
 
         g_expected = (mat_expected['gs_full'] + mat_expected['gv_full'] + mat_expected['gf_full'] +
                       mat_expected['gBA_full'] + mat_expected['gBAR_full'] + mat_expected['gC_full'] +
