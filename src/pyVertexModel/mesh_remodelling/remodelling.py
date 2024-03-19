@@ -93,7 +93,7 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
     :return:
     """
 
-    all_T = np.vstack([cell.T for cell in Geo.Cells if cell.AliveStatus is not None])
+    all_T = np.vstack([cell.T for cell in Geo.Cells if cell.AliveStatus == 1])
     if ghost_node in Geo.XgBottom:
         all_T_filtered = all_T[np.any(np.isin(all_T, Geo.XgBottom), axis=1)]
     elif ghost_node in Geo.XgTop:
@@ -119,10 +119,12 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
 
     cells_to_get_further = np.intersect1d(possible_ref_tets[0], possible_ref_tets[1])
     cells_to_get_closer = np.setdiff1d(cell_nodes_shared, cells_to_get_further)
-    cells_to_get_closer = cells_to_get_closer[[Geo.Cells[cell].AliveStatus for cell in cells_to_get_closer] == 1]
+    cells_to_get_closer = cells_to_get_closer[[Geo.Cells[cell].AliveStatus is not None for cell in cells_to_get_closer]]
 
     ref_point_further = np.mean(Geo.Cells[cells_to_get_further[0]].Y[
                                     ismember_rows(Geo.Cells[cells_to_get_further[0]].T, possible_ref_tets)[0]], axis=0)
+
+    ref_point_further = ref_point_closer
     far_from_new_point = close_to_new_point
 
     for tet_to_check in vertices_to_change:
@@ -199,7 +201,6 @@ class Remodelling:
                 newYgIds, segmentFeatures)
 
             if hasConverged:
-                self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step)
                 gNodeNeighbours = [get_node_neighbours(self.Geo, ghost_node_tried) for ghost_node_tried in
                                    ghost_nodes_tried]
                 gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
@@ -208,6 +209,7 @@ class Remodelling:
                 # Instead of moving geo vertices closer to the reference point, we move the ones in Geo_n closer to the
                 # reference point. Thus, we'd expect the vertices to be moving not too far from those, but keeping a
                 # good geometry. This function is working.
+                self.Geo_n = self.Geo.copy(update_measurements=False)
                 self.Geo_n = (
                     move_vertices_closer_to_ref_point(self.Geo_n, numClose,
                                                       np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),

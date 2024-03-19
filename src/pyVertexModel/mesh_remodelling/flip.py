@@ -29,7 +29,6 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, new_yg_ids, Set, fli
     """
 
     Geo.add_and_rebuild_cells(Geo.copy(), oldTets, Tnew, Ynew, Set, True)
-    Geo_n.add_and_rebuild_cells(Geo_n.copy(), oldTets, Tnew, Ynew, Set, False)
     has_converged = True
     new_yg_ids = list(set(np.concatenate((new_yg_ids, Geo.AssemblegIds))))
 
