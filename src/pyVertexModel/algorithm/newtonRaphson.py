@@ -28,6 +28,7 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
     logger.info('=====>> Solving Local Problem....')
     geo.remodelling = True
     original_nu = c_set.nu
+    original_nu0 = c_set.nu0
 
     nu_factor = 0.5
     c_set.nu0 = c_set.nu * nu_factor
@@ -56,6 +57,7 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
 
     c_set.MaxIter = c_set.MaxIter0
     c_set.nu = original_nu
+    c_set.nu0 = original_nu0
 
     return geo, c_set, has_converged
 
