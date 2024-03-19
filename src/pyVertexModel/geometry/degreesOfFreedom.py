@@ -95,7 +95,8 @@ class DegreesOfFreedom:
 
         id_tnew = np.unique(t_new)
         id_tnew_cells = np.setdiff1d(id_tnew, geo.XgID)
-        id_tnew_cells = [cell_id for cell_id in id_tnew_cells if geo.Cells[cell_id].AliveStatus is not None]
+        # We don't want the debris cells to move
+        id_tnew_cells = [cell_id for cell_id in id_tnew_cells if geo.Cells[cell_id].AliveStatus == 1]
 
         for num_cell in id_tnew_cells:
             cell = geo.Cells[num_cell]
