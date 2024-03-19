@@ -31,7 +31,7 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
 
     c_set.nu0 = c_set.nu
     c_set.nu = c_set.nu_LP_Initial
-    c_set.max_iter = c_set.MaxIter0 * 3
+    c_set.MaxIter = c_set.MaxIter0 * 3
 
     g, k, _ = KgGlobal(geo_0, geo_n, geo, c_set)
 
@@ -53,7 +53,7 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
 
     geo.remodelling = False
 
-    c_set.max_iter = c_set.MaxIter0
+    c_set.MaxIter = c_set.MaxIter0
     c_set.nu = original_nu
 
     return geo, c_set, has_converged
