@@ -215,7 +215,6 @@ class Remodelling:
                                                       np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
                                                       cellToSplitFrom,
                                                       ghostNode, allTnew, self.Set))
-                self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step)
 
                 self.Dofs.get_dofs(self.Geo, self.Set)
                 # TODO: Solve remodelling step should obtain a geometry closer to the one before the flip with an almost
@@ -232,6 +231,7 @@ class Remodelling:
                     self.Geo.update_measures()
                     logger.info(f'=>> Full-Flip accepted')
                     self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step)
+                    self.Geo_n = self.Geo.copy(update_measurements=False)
                     backup_vars = save_backup_vars(self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs)
             else:
                 # Go back to initial state
