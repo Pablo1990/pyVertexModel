@@ -205,9 +205,9 @@ class Remodelling:
                 gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
                 cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
                 numClose = 0.01
-                # TODO: IDEA: instead of moving geo vertices closer to the reference point, we could move the ones in
-                #  Geo_n closer to the reference point. Thus, we'd expect the vertices to be moving not too far from
-                #  those, but keeping a good geometry
+                # Instead of moving geo vertices closer to the reference point, we move the ones in Geo_n closer to the
+                # reference point. Thus, we'd expect the vertices to be moving not too far from those, but keeping a
+                # good geometry. This function is working.
                 self.Geo_n = (
                     move_vertices_closer_to_ref_point(self.Geo_n, numClose,
                                                       np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
