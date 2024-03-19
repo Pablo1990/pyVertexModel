@@ -29,8 +29,9 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
     geo.remodelling = True
     original_nu = c_set.nu
 
-    c_set.nu0 = c_set.nu
-    c_set.nu = c_set.nu_LP_Initial
+    nu_factor = 0.5
+    c_set.nu0 = c_set.nu * nu_factor
+    c_set.nu = c_set.nu_LP_Initial * nu_factor
     c_set.MaxIter = c_set.MaxIter0 * 3
 
     g, k, _ = KgGlobal(geo_0, geo_n, geo, c_set)
