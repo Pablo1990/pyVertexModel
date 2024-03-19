@@ -177,7 +177,7 @@ class Geo:
                 for c_cell in mat_file['Cells'][0][0][0]:
                     self.Cells.append(cell.Cell(c_cell))
 
-    def copy(self):
+    def copy(self, update_measurements=True):
         """
         Copy the geometry
         :return:
@@ -189,6 +189,11 @@ class Geo:
 
         for c_cell in self.Cells:
             new_geo.Cells.append(c_cell.copy())
+            if update_measurements is False:
+                new_geo.Cells[-1].Vol = None
+                new_geo.Cells[-1].Vol0 = None
+                new_geo.Cells[-1].Area = None
+                new_geo.Cells[-1].Area0 = None
 
         return new_geo
 

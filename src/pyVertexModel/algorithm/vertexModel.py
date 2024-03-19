@@ -105,20 +105,8 @@ class VertexModel:
             self.Dofs.get_dofs(self.geo, self.set)
 
         self.geo.Remodelling = False
-        self.geo_0 = self.geo.copy()
-
-        # Removing info of unused features from geo_0
-        for cell in self.geo_0.Cells:
-            cell.Vol = None
-            cell.Vol0 = None
-            cell.Area = None
-            cell.Area0 = None
-        self.geo_n = self.geo.copy()
-        for cell in self.geo_n.Cells:
-            cell.Vol = None
-            cell.Vol0 = None
-            cell.Area = None
-            cell.Area0 = None
+        self.geo_0 = self.geo.copy(update_measurements=False)
+        self.geo_n = self.geo.copy(update_measurements=False)
         self.backupVars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
 
         # save_state(self, os.path.join(self.set.OutputFolder, 'data_step_0.pkl'))
