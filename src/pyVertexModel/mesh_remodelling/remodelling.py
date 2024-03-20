@@ -111,6 +111,13 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
         else:
             raise Exception('moveVerticesCloserToRefPoint_line17')
 
+    #Tnew = all_T_filtered[np.sum(np.isin(all_T_filtered, cell_nodes_shared), axis=1) > 0]
+    for c_cell in cell_nodes_shared:
+        for tet in Geo.Cells[c_cell].T:
+            c_tet = tet[np.isin(tet, Geo.XgID)]
+            if np.all(np.isin(c_tet, cell_nodes_shared)):
+                Tnew = np.vstack((Tnew, tet))
+
     vertices_to_change = np.sort(Tnew, axis=1)
 
     if possible_ref_tets.shape[0] <= 1:
@@ -134,9 +141,10 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
             if node_in_tet not in Geo.XgID:
                 new_point = Geo.Cells[node_in_tet].Y[
                     ismember_rows(Geo.Cells[node_in_tet].T, tet_to_check)[0]]
-                distance = compute_distance_3d(ref_point_closer, new_point)
-                if distance > max_distance:
-                    max_distance = distance
+                if new_point.shape[0] > 0:
+                    distance = compute_distance_3d(ref_point_closer[0], new_point[0])
+                    if distance > max_distance:
+                        max_distance = distance
 
     for tet_to_check in vertices_to_change:
         if np.any(np.isin(tet_to_check, cells_to_get_closer)):
@@ -147,20 +155,20 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
             if node_in_tet not in Geo.XgID:
                 new_point = Geo.Cells[node_in_tet].Y[
                     ismember_rows(Geo.Cells[node_in_tet].T, tet_to_check)[0]]
+                if new_point.shape[0] > 0:
+                    # Create a gradient to move the vertices closer to the reference point, so that vertices far from
+                    # the reference point are moved more.
+                    distance = compute_distance_3d(ref_point_closer[0], new_point[0])
+                    weight = (1 - (distance / max_distance) ** 2) * close_to_new_point
 
-                # Create a gradient to move the vertices closer to the reference point, so that vertices far from the
-                # reference point are moved more.
-                distance = compute_distance_3d(ref_point_closer, new_point)
-                weight = distance / max_distance * close_to_new_point
-
-                if getting_closer:
-                    avg_point = ref_point_closer * (1 - weight) + new_point * weight
-                    #avg_point = ref_point_closer * (1 - close_to_new_point) + new_point * close_to_new_point
-                else:
-                    avg_point = ref_point_further * (1 - weight) + new_point * weight
-                    #avg_point = ref_point_further * (1 - far_from_new_point) + new_point * far_from_new_point
-                Geo.Cells[node_in_tet].Y[
-                    ismember_rows(Geo.Cells[node_in_tet].T, tet_to_check)[0]] = avg_point
+                    if getting_closer:
+                        avg_point = ref_point_closer * (1 - weight) + new_point * weight
+                        # avg_point = ref_point_closer * (1 - close_to_new_point) + new_point * close_to_new_point
+                    else:
+                        avg_point = ref_point_further * (1 - weight) + new_point * weight
+                        # avg_point = ref_point_further * (1 - far_from_new_point) + new_point * far_from_new_point
+                    Geo.Cells[node_in_tet].Y[
+                        ismember_rows(Geo.Cells[node_in_tet].T, tet_to_check)[0]] = avg_point
 
     for current_cell in cell_nodes_shared:
         middle_vertex_tet = np.all(np.isin(Geo.Cells[current_cell].T, cell_nodes_shared), axis=1)
