@@ -182,6 +182,8 @@ class VertexModel:
         if self.set.nu / self.set.nu0 == 1:
             # STEP has converged
             logger.info(f"STEP {str(self.set.i_incr)} has converged ...")
+            save_state(self, os.path.join(self.set.OutputFolder,
+                                          'data_step_before_remodelling_' + str(self.numStep) + '.pkl'))
 
             # REMODELLING
             if self.set.Remodelling and abs(self.t - self.tr) >= self.set.RemodelingFrequency:
