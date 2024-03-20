@@ -1,5 +1,6 @@
 import copy
 import lzma
+import math
 import pickle
 
 import numpy as np
@@ -108,29 +109,6 @@ def ismember_rows(a, b):
     return bool_array, index_array
 
 
-# def visualize_tetrahedra(tetrahedra, vertices):
-#     """
-#     Function to visualize the tetrahedra in a 3D plot.
-#     :param tetrahedra: numpy.ndarray - The array of tetrahedra.
-#     :param vertices: numpy.ndarray - The array of vertices.
-#     :return: None
-#     """
-#
-#     ipv.figure()
-#
-#     for tetra in tetrahedra:
-#         verts = [vertices[tetra[i]] for i in range(4)]
-#         ipv.plot_trisurf([verts[0][0], verts[1][0], verts[2][0]], [verts[0][1], verts[1][1], verts[2][1]],
-#                          [verts[0][2], verts[1][2], verts[2][2]], color='orange')
-#         ipv.plot_trisurf([verts[0][0], verts[1][0], verts[3][0]], [verts[0][1], verts[1][1], verts[3][1]],
-#                          [verts[0][2], verts[1][2], verts[3][2]], color='orange')
-#         ipv.plot_trisurf([verts[0][0], verts[2][0], verts[3][0]], [verts[0][1], verts[2][1], verts[3][1]],
-#                          [verts[0][2], verts[2][2], verts[3][2]], color='orange')
-#         ipv.plot_trisurf([verts[1][0], verts[2][0], verts[3][0]], [verts[1][1], verts[2][1], verts[3][1]],
-#                          [verts[1][2], verts[2][2], verts[3][2]], color='orange')
-#
-#     ipv.show()
-
 def copy_non_mutable_attributes(class_to_change, attr_not_to_change, new_cell):
     for attr, value in class_to_change.__dict__.items():
         # check if attr is mutable
@@ -142,3 +120,7 @@ def copy_non_mutable_attributes(class_to_change, attr_not_to_change, new_cell):
             setattr(new_cell, attr, value.copy())
         else:
             setattr(new_cell, attr, copy.copy(value))
+
+
+def compute_distance_3d(point1, point2):
+    return math.sqrt((point2[0] - point1[0]) ** 2 + (point2[1] - point1[1]) ** 2 + (point2[2] - point1[2]) ** 2)

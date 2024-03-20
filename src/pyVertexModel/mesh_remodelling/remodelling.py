@@ -6,7 +6,7 @@ import pandas as pd
 from src.pyVertexModel.algorithm.newtonRaphson import solve_remodeling_step
 from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
-from src.pyVertexModel.util.utils import ismember_rows, save_backup_vars, load_backup_vars
+from src.pyVertexModel.util.utils import ismember_rows, save_backup_vars, load_backup_vars, compute_distance_3d
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -127,6 +127,17 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
     ref_point_further = ref_point_closer
     far_from_new_point = close_to_new_point
 
+    # Get the max distance from the reference point to the vertices in the cells to get closer
+    max_distance = 0
+    for tet_to_check in vertices_to_change:
+        for node_in_tet in tet_to_check:
+            if node_in_tet not in Geo.XgID:
+                new_point = Geo.Cells[node_in_tet].Y[
+                    ismember_rows(Geo.Cells[node_in_tet].T, tet_to_check)[0]]
+                distance = compute_distance_3d(ref_point_closer, new_point)
+                if distance > max_distance:
+                    max_distance = distance
+
     for tet_to_check in vertices_to_change:
         if np.any(np.isin(tet_to_check, cells_to_get_closer)):
             getting_closer = 1
@@ -136,10 +147,18 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
             if node_in_tet not in Geo.XgID:
                 new_point = Geo.Cells[node_in_tet].Y[
                     ismember_rows(Geo.Cells[node_in_tet].T, tet_to_check)[0]]
+
+                # Create a gradient to move the vertices closer to the reference point, so that vertices far from the
+                # reference point are moved more.
+                distance = compute_distance_3d(ref_point_closer, new_point)
+                weight = distance / max_distance * close_to_new_point
+
                 if getting_closer:
-                    avg_point = ref_point_closer * (1 - close_to_new_point) + new_point * close_to_new_point
+                    avg_point = ref_point_closer * (1 - weight) + new_point * weight
+                    #avg_point = ref_point_closer * (1 - close_to_new_point) + new_point * close_to_new_point
                 else:
-                    avg_point = ref_point_further * (1 - far_from_new_point) + new_point * far_from_new_point
+                    avg_point = ref_point_further * (1 - weight) + new_point * weight
+                    #avg_point = ref_point_further * (1 - far_from_new_point) + new_point * far_from_new_point
                 Geo.Cells[node_in_tet].Y[
                     ismember_rows(Geo.Cells[node_in_tet].T, tet_to_check)[0]] = avg_point
 
@@ -205,13 +224,13 @@ class Remodelling:
                                    ghost_nodes_tried]
                 gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
                 cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
-                numClose = 0.1
+                how_close_to_vertex = 0.3
                 # Instead of moving geo vertices closer to the reference point, we move the ones in Geo_n closer to the
                 # reference point. Thus, we'd expect the vertices to be moving not too far from those, but keeping a
                 # good geometry. This function is working.
                 self.Geo_n = self.Geo.copy(update_measurements=False)
                 self.Geo_n = (
-                    move_vertices_closer_to_ref_point(self.Geo_n, numClose,
+                    move_vertices_closer_to_ref_point(self.Geo_n, how_close_to_vertex,
                                                       np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
                                                       cellToSplitFrom,
                                                       ghostNode, allTnew, self.Set))
