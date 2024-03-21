@@ -238,6 +238,12 @@ class Remodelling:
                                                       cellToSplitFrom,
                                                       ghostNode, allTnew, self.Set, strong_gradient))
 
+                self.Geo = (
+                    move_vertices_closer_to_ref_point(self.Geo, how_close_to_vertex,
+                                                      np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
+                                                      cellToSplitFrom,
+                                                      ghostNode, allTnew, self.Set, strong_gradient))
+
                 self.Geo_n.create_vtk_cell(self.Geo_0, self.Set, num_step)
                 self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
                                                                      self.Set)
