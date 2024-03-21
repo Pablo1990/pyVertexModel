@@ -138,7 +138,8 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
             new_point = c_cell.Y[vertex_to_change]
             # Create a gradient to move the vertices closer to the reference point, so that vertices far from
             # the reference point are moved more.
-            weight = close_to_new_point
+            distance = compute_distance_3d(ref_point_closer[0], new_point)
+            weight = close_to_new_point * (distance / max_distance) ** strong_gradient
             avg_point = ref_point_closer * (1 - weight) + new_point * weight
             Geo.Cells[num_cell].Y[vertex_to_change] = avg_point
 
@@ -147,7 +148,8 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
             if np.all(np.isin(face_r.ij, c_cell.T[c_cell.vertices_to_change])):
                 if face_r.InterfaceType == interface_type and np.all(np.isin(face_r.ij, Tnew)):
                     face_centre = face_r.Centre
-                    weight = close_to_new_point
+                    distance = compute_distance_3d(ref_point_closer[0], face_centre)
+                    weight = close_to_new_point * (distance / max_distance) ** strong_gradient
                     Geo.Cells[num_cell].Faces[face_id].Centre = (
                             ref_point_closer[0] * (1 - weight) + face_centre * weight)
 
@@ -224,7 +226,7 @@ class Remodelling:
                                    ghost_nodes_tried]
                 gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
                 cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
-                how_close_to_vertex = 0.3
+                how_close_to_vertex = 0.7
                 strong_gradient = 1
                 # Instead of moving geo vertices closer to the reference point, we move the ones in Geo_n closer to the
                 # reference point. Thus, we'd expect the vertices to be moving not too far from those, but keeping a
@@ -232,12 +234,6 @@ class Remodelling:
                 self.Geo_n = self.Geo.copy(update_measurements=False)
                 self.Geo_n = (
                     move_vertices_closer_to_ref_point(self.Geo_n, how_close_to_vertex,
-                                                      np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
-                                                      cellToSplitFrom,
-                                                      ghostNode, allTnew, self.Set, strong_gradient))
-
-                self.Geo = (
-                    move_vertices_closer_to_ref_point(self.Geo, how_close_to_vertex,
                                                       np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
                                                       cellToSplitFrom,
                                                       ghostNode, allTnew, self.Set, strong_gradient))
