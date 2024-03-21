@@ -222,7 +222,7 @@ class Set:
 
         self.nu = 5000
         self.Nincr = 61
-        self.lambdaB = 1
+        self.lambdaB = 5
         self.Beta = 1
 
         self.lambdaR = 0.3

@@ -3,6 +3,7 @@ import logging
 import numpy as np
 import pandas as pd
 
+from src.pyVertexModel.algorithm import newtonRaphson
 from src.pyVertexModel.algorithm.newtonRaphson import solve_remodeling_step
 from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
@@ -166,7 +167,7 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
     Geo.build_x_from_y(Geo)
     Geo.rebuild(old_geo, Set)
     Geo.build_global_ids()
-    #Geo.check_ys_and_faces_have_not_changed(vertices_to_change, old_geo)
+    Geo.check_ys_and_faces_have_not_changed(vertices_to_change, old_geo)
 
     return Geo
 
@@ -226,8 +227,10 @@ class Remodelling:
                                    ghost_nodes_tried]
                 gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
                 cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
-                how_close_to_vertex = 0.7
-                strong_gradient = 1
+
+                # Best parameters according to energy, not visually
+                how_close_to_vertex = 1
+                strong_gradient = 0
                 # Instead of moving geo vertices closer to the reference point, we move the ones in Geo_n closer to the
                 # reference point. Thus, we'd expect the vertices to be moving not too far from those, but keeping a
                 # good geometry. This function is working.
@@ -239,7 +242,7 @@ class Remodelling:
                                                       ghostNode, allTnew, self.Set, strong_gradient))
 
                 self.Geo = (
-                    move_vertices_closer_to_ref_point(self.Geo, how_close_to_vertex,
+                    move_vertices_closer_to_ref_point(self.Geo, 1,
                                                       np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
                                                       cellToSplitFrom,
                                                       ghostNode, allTnew, self.Set, strong_gradient))
