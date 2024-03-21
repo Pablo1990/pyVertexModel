@@ -140,22 +140,19 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
                 if new_point.shape[0] > 0:
                     # Create a gradient to move the vertices closer to the reference point, so that vertices far from
                     # the reference point are moved more.
-                    distance = compute_distance_3d(ref_point_closer[0], new_point[0])
-                    weight = (1 - (distance / max_distance) ** strong_gradient) * close_to_new_point
-
+                    weight = close_to_new_point
                     avg_point = ref_point_closer * (1 - weight) + new_point * weight
-
                     Geo.Cells[node_in_tet].Y[
                         ismember_rows(Geo.Cells[node_in_tet].T, tet_to_check)[0]] = avg_point
 
     # Move the faces that share the ghost node closer to the reference point
     for current_cell in cell_nodes_shared:
         for face_id, face in enumerate(Geo.Cells[current_cell].Faces):
-            if face.InterfaceType == interface_type:
+            if face.InterfaceType == interface_type and np.all(np.isin(face.ij, Tnew)):
                 face_centre = face.Centre
-                distance = compute_distance_3d(ref_point_closer[0], face_centre)
-                weight = (1 - (distance / max_distance) ** strong_gradient) * close_to_new_point
-                Geo.Cells[current_cell].Faces[face_id].Centre = ref_point_closer[0] * (1 - weight) + face_centre * weight
+                weight = close_to_new_point
+                Geo.Cells[current_cell].Faces[face_id].Centre = (
+                        ref_point_closer[0] * (1 - weight) + face_centre * weight)
 
     # Move the middle vertex of the tetrahedra that share the ghost node closer to the reference point
     for current_cell in cell_nodes_shared:
@@ -163,8 +160,7 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
         if middle_vertex_tet.sum() == 0:
             continue
 
-        distance = compute_distance_3d(ref_point_closer[0], Geo.Cells[current_cell].Y[middle_vertex_tet])
-        weight = (1 - (distance / max_distance) ** strong_gradient) * close_to_new_point
+        weight = close_to_new_point
         Geo.Cells[current_cell].Y[middle_vertex_tet] = ref_point_closer * (1 - weight) + \
                                                        Geo.Cells[current_cell].Y[middle_vertex_tet] * weight
 
@@ -225,8 +221,8 @@ class Remodelling:
                                    ghost_nodes_tried]
                 gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
                 cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
-                how_close_to_vertex = 0.5
-                strong_gradient = 2
+                how_close_to_vertex = 0.3
+                strong_gradient = 1
                 # Instead of moving geo vertices closer to the reference point, we move the ones in Geo_n closer to the
                 # reference point. Thus, we'd expect the vertices to be moving not too far from those, but keeping a
                 # good geometry. This function is working.
