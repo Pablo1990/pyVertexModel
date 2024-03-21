@@ -58,6 +58,7 @@ class Cell:
         self.Vol = None
         self.Vol0 = None
         self.AliveStatus = None
+        self.vertices_to_change = None
         # TODO: Save contractile forces (g) to output
         self.substrate_g = None
         self.lambdaB_perc = 1

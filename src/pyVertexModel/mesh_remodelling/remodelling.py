@@ -121,45 +121,41 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
 
     # Get the max distance from the reference point to the vertices in the cells to get closer
     max_distance = 0
-    for tet_to_check in vertices_to_change:
-        for node_in_tet in tet_to_check:
-            if node_in_tet not in Geo.XgID:
-                new_point = Geo.Cells[node_in_tet].Y[
-                    ismember_rows(Geo.Cells[node_in_tet].T, tet_to_check)[0]]
-                if new_point.shape[0] > 0:
-                    distance = compute_distance_3d(ref_point_closer[0], new_point[0])
-                    if distance > max_distance:
-                        max_distance = distance
+    for num_cell, c_cell in enumerate(Geo.Cells):
+        if c_cell.vertices_to_change is None:
+            continue
+        for vertex_to_change in c_cell.vertices_to_change:
+            new_point = c_cell.Y[vertex_to_change]
+            distance = compute_distance_3d(ref_point_closer[0], new_point)
+            if distance > max_distance:
+                max_distance = distance
 
     # Move the vertices closer to the reference point
-    for tet_to_check in vertices_to_change:
-        for node_in_tet in tet_to_check:
-            if node_in_tet not in Geo.XgID:
-                new_point = Geo.Cells[node_in_tet].Y[
-                    ismember_rows(Geo.Cells[node_in_tet].T, tet_to_check)[0]]
-                if new_point.shape[0] > 0:
-                    # Create a gradient to move the vertices closer to the reference point, so that vertices far from
-                    # the reference point are moved more.
-                    weight = close_to_new_point
-                    avg_point = ref_point_closer * (1 - weight) + new_point * weight
-                    Geo.Cells[node_in_tet].Y[
-                        ismember_rows(Geo.Cells[node_in_tet].T, tet_to_check)[0]] = avg_point
+    for num_cell, c_cell in enumerate(Geo.Cells):
+        if c_cell.vertices_to_change is None:
+            continue
+        for vertex_to_change in c_cell.vertices_to_change:
+            new_point = c_cell.Y[vertex_to_change]
+            # Create a gradient to move the vertices closer to the reference point, so that vertices far from
+            # the reference point are moved more.
+            weight = close_to_new_point
+            avg_point = ref_point_closer * (1 - weight) + new_point * weight
+            Geo.Cells[num_cell].Y[vertex_to_change] = avg_point
 
-    # Move the faces that share the ghost node closer to the reference point
-    for current_cell in cell_nodes_shared:
-        for face_id, face in enumerate(Geo.Cells[current_cell].Faces):
-            if face.InterfaceType == interface_type and np.all(np.isin(face.ij, Tnew)):
-                face_centre = face.Centre
-                weight = close_to_new_point
-                Geo.Cells[current_cell].Faces[face_id].Centre = (
-                        ref_point_closer[0] * (1 - weight) + face_centre * weight)
+        # Move the faces that share the ghost node closer to the reference point
+        for face_id, face_r in enumerate(c_cell.Faces):
+            if np.all(np.isin(face_r.ij, c_cell.T[c_cell.vertices_to_change])):
+                if face_r.InterfaceType == interface_type and np.all(np.isin(face_r.ij, Tnew)):
+                    face_centre = face_r.Centre
+                    weight = close_to_new_point
+                    Geo.Cells[num_cell].Faces[face_id].Centre = (
+                            ref_point_closer[0] * (1 - weight) + face_centre * weight)
 
     # Move the middle vertex of the tetrahedra that share the ghost node closer to the reference point
     for current_cell in cell_nodes_shared:
         middle_vertex_tet = np.all(np.isin(Geo.Cells[current_cell].T, cell_nodes_shared), axis=1)
         if middle_vertex_tet.sum() == 0:
             continue
-
         weight = close_to_new_point
         Geo.Cells[current_cell].Y[middle_vertex_tet] = ref_point_closer * (1 - weight) + \
                                                        Geo.Cells[current_cell].Y[middle_vertex_tet] * weight
@@ -168,7 +164,7 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
     Geo.build_x_from_y(Geo)
     Geo.rebuild(old_geo, Set)
     Geo.build_global_ids()
-    Geo.check_ys_and_faces_have_not_changed(vertices_to_change, old_geo)
+    #Geo.check_ys_and_faces_have_not_changed(vertices_to_change, old_geo)
 
     return Geo
 
@@ -217,6 +213,13 @@ class Remodelling:
                 newYgIds, segmentFeatures)
 
             if hasConverged:
+                # Get the degrees of freedom for the remodelling
+                self.Dofs.get_dofs(self.Geo, self.Set)
+                # TODO: Solve remodelling step should obtain a geometry closer to the one before the flip with an almost
+                #  four-fold vertex. This is not happening. How can we move the vertices so that the geometry is closer
+                #  to the one before the flip? That will also help the next iteration to converge more easily.
+                self.Geo = self.Dofs.get_remodel_dofs(allTnew, self.Geo)
+
                 gNodeNeighbours = [get_node_neighbours(self.Geo, ghost_node_tried) for ghost_node_tried in
                                    ghost_nodes_tried]
                 gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
@@ -240,11 +243,6 @@ class Remodelling:
                                                       ghostNode, allTnew, self.Set, strong_gradient))
 
                 self.Geo_n.create_vtk_cell(self.Geo_0, self.Set, num_step)
-                self.Dofs.get_dofs(self.Geo, self.Set)
-                # TODO: Solve remodelling step should obtain a geometry closer to the one before the flip with an almost
-                #  four-fold vertex. This is not happening. How can we move the vertices so that the geometry is closer
-                #  to the one before the flip? That will also help the next iteration to converge more easily.
-                self.Geo = self.Dofs.get_remodel_dofs(allTnew, self.Geo)
                 self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
                                                                      self.Set)
                 if has_converged is False:

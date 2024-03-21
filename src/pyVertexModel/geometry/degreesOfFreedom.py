@@ -98,25 +98,30 @@ class DegreesOfFreedom:
         id_tnew_cells = [cell_id for cell_id in id_tnew_cells if geo.Cells[cell_id].AliveStatus is not None]
         id_tnew_cells_no_debris = [cell_id for cell_id in id_tnew_cells if geo.Cells[cell_id].AliveStatus == 1]
 
-        for num_cell in id_tnew_cells_no_debris:
-            cell = geo.Cells[num_cell]
+        for num_cell, _ in enumerate(geo.Cells):
+            if num_cell in id_tnew_cells_no_debris:
+                cell = geo.Cells[num_cell]
 
-            news = np.sum(np.isin(cell.T, geo.XgID), axis=1) >= 3
-            news[(np.sum(np.isin(cell.T, id_tnew_cells), axis=1) == 2) &
-                 (np.sum(np.isin(cell.T, geo.XgID), axis=1) == 2)] = True
-            news[np.sum(np.isin(cell.T, id_tnew_cells_no_debris), axis=1) >= 3] = True
+                news = np.sum(np.isin(cell.T, geo.XgID), axis=1) >= 3
+                news[(np.sum(np.isin(cell.T, id_tnew_cells), axis=1) == 2) &
+                     (np.sum(np.isin(cell.T, geo.XgID), axis=1) == 2)] = True
+                news[np.sum(np.isin(cell.T, id_tnew_cells_no_debris), axis=1) >= 3] = True
 
-            if np.sum(np.isin(t_new, geo.XgBottom)) > np.sum(np.isin(t_new, geo.XgTop)):
-                news[np.any(np.isin(cell.T, geo.XgTop), axis=1)] = False
+                if np.sum(np.isin(t_new, geo.XgBottom)) > np.sum(np.isin(t_new, geo.XgTop)):
+                    news[np.any(np.isin(cell.T, geo.XgTop), axis=1)] = False
+                else:
+                    news[np.any(np.isin(cell.T, geo.XgBottom), axis=1)] = False
+
+                for globalId in cell.globalIds[news]:
+                    self.remodel[(dim * globalId): (dim * (globalId + 1))] = 1
+
+                for face_r in cell.Faces:
+                    if np.all(np.isin(face_r.ij, cell.T[news])):
+                        self.remodel[(dim * face_r.globalIds): (dim * (face_r.globalIds + 1))] = 1
+
+                geo.Cells[num_cell].vertices_to_change = np.where(news)[0]
             else:
-                news[np.any(np.isin(cell.T, geo.XgBottom), axis=1)] = False
-
-            for globalId in cell.globalIds[news]:
-                self.remodel[(dim * globalId): (dim * (globalId + 1))] = 1
-
-            for face_r in cell.Faces:
-                if np.all(np.isin(face_r.ij, cell.T[news])):
-                    self.remodel[(dim * face_r.globalIds): (dim * (face_r.globalIds + 1))] = 1
+                geo.Cells[num_cell].vertices_to_change = None
 
         geo.AssemblegIds = np.array(np.where(self.remodel)[0], dtype=int)
 
