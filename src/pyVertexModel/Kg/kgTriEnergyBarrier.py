@@ -10,7 +10,7 @@ class KgTriEnergyBarrier(Kg):
     def compute_work(self, Geo, Set, Geo_n=None, calculate_K=True):
         start = time.time()
         self.energy = 0
-        for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus]:
+        for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
             if Geo.remodelling and c not in Geo.AssembleNodes:
                 continue
 

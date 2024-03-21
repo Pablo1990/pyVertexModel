@@ -36,8 +36,8 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
     c_set.nu0 = c_set.nu * nu_factor
     c_set.nu = c_set.nu_LP_Initial * nu_factor
     c_set.MaxIter = c_set.MaxIter0 * 3
-    c_set.lambdaB = c_set.lambdaB * 0.9
-    c_set.Beta = c_set.Beta * 0.5
+    c_set.lambdaB = c_set.lambdaB * 1
+    c_set.Beta = c_set.Beta * 1
 
     g, k, _, _ = KgGlobal(geo_0, geo_n, geo, c_set)
 

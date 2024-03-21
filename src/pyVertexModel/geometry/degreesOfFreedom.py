@@ -95,15 +95,16 @@ class DegreesOfFreedom:
 
         id_tnew = np.unique(t_new)
         id_tnew_cells = np.setdiff1d(id_tnew, geo.XgID)
-        # We don't want the debris cells to move
-        id_tnew_cells = [cell_id for cell_id in id_tnew_cells if geo.Cells[cell_id].AliveStatus == 1]
+        id_tnew_cells = [cell_id for cell_id in id_tnew_cells if geo.Cells[cell_id].AliveStatus is not None]
+        id_tnew_cells_no_debris = [cell_id for cell_id in id_tnew_cells if geo.Cells[cell_id].AliveStatus == 1]
 
-        for num_cell in id_tnew_cells:
+        for num_cell in id_tnew_cells_no_debris:
             cell = geo.Cells[num_cell]
-            news = np.sum(np.isin(cell.T, geo.XgID), axis=1) > 2
+
+            news = np.sum(np.isin(cell.T, geo.XgID), axis=1) >= 3
             news[(np.sum(np.isin(cell.T, id_tnew_cells), axis=1) == 2) &
                  (np.sum(np.isin(cell.T, geo.XgID), axis=1) == 2)] = True
-            news[np.sum(np.isin(cell.T, id_tnew_cells), axis=1) >= 3] = True
+            news[np.sum(np.isin(cell.T, id_tnew_cells_no_debris), axis=1) >= 3] = True
 
             if np.sum(np.isin(t_new, geo.XgBottom)) > np.sum(np.isin(t_new, geo.XgTop)):
                 news[np.any(np.isin(cell.T, geo.XgTop), axis=1)] = False
@@ -114,8 +115,7 @@ class DegreesOfFreedom:
                 self.remodel[(dim * globalId): (dim * (globalId + 1))] = 1
 
             for face_r in cell.Faces:
-                face_tets = cell.T[np.unique([tri.Edge for tri in face_r.Tris])]
-                if np.any(ismember_rows(face_tets, cell.T[news])[0]):
+                if np.all(np.isin(face_r.ij, cell.T[news])):
                     self.remodel[(dim * face_r.globalIds): (dim * (face_r.globalIds + 1))] = 1
 
         geo.AssemblegIds = np.array(np.where(self.remodel)[0], dtype=int)

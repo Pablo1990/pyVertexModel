@@ -38,7 +38,7 @@ class KgVolume(Kg):
 
         # Loop over Cells
         # Analytical residual g and Jacobian K
-        for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus]:
+        for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
             if Geo.remodelling and c not in Geo.AssembleNodes:
                 continue
 
