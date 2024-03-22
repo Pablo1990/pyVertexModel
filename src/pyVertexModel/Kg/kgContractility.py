@@ -137,7 +137,7 @@ class KgContractility(Kg):
                         y_1 = cell.Y[currentTri.Edge[0]]
                         y_2 = cell.Y[currentTri.Edge[1]]
 
-                        if Geo.remodelling and not np.any(np.isin([currentTri.Edge[0], currentTri.Edge[1]],
+                        if Geo.remodelling and not np.any(np.isin(cell.globalIds[currentTri.Edge],
                                                                   Geo.Cells[c].vertices_and_faces_to_remodel)):
                             continue
 
