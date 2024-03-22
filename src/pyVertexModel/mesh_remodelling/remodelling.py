@@ -233,12 +233,19 @@ class Remodelling:
                 cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
 
                 # Best parameters according to energy, not visually
-                how_close_to_vertex = 0.6
+                how_close_to_vertex = 0.5
                 strong_gradient = 1
                 # Instead of moving geo vertices closer to the reference point, we move the ones in Geo_n closer to the
                 # reference point. Thus, we'd expect the vertices to be moving not too far from those, but keeping a
                 # good geometry. This function is working.
                 self.Geo_n = self.Geo.copy(update_measurements=False)
+                self.Geo = (
+                    move_vertices_closer_to_ref_point(self.Geo, how_close_to_vertex,
+                                                      np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
+                                                      cellToSplitFrom,
+                                                      ghostNode, allTnew, self.Set, strong_gradient))
+
+                how_close_to_vertex = 0.5
                 self.Geo_n = (
                     move_vertices_closer_to_ref_point(self.Geo_n, how_close_to_vertex,
                                                       np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
@@ -246,12 +253,6 @@ class Remodelling:
                                                       ghostNode, allTnew, self.Set, strong_gradient))
 
                 self.Geo_n.create_vtk_cell(self.Geo_0, self.Set, num_step)
-
-                self.Geo = (
-                    move_vertices_closer_to_ref_point(self.Geo, how_close_to_vertex,
-                                                      np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
-                                                      cellToSplitFrom,
-                                                      ghostNode, allTnew, self.Set, strong_gradient))
 
                 self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
                                                                      self.Set)

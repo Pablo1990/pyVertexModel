@@ -158,7 +158,7 @@ class Set:
         Update derived parameters
         :return:
         """
-        self.define_if_not_defined("Nincr", self.tend * 2)
+        self.define_if_not_defined("Nincr", self.tend)
         self.define_if_not_defined("dt", self.tend / self.Nincr)
         self.define_if_not_defined("RemodelingFrequency", self.tend / self.Nincr)
         self.define_if_not_defined("lambdaS2", self.lambdaS1 * 0.1)
@@ -215,13 +215,13 @@ class Set:
         # 110 cells 7 cells to ablate
         self.TotalCells = 40
         self.CellHeight = 15
+        self.Nincr = 610 * 50
 
         self.InPlaneElasticity = False
         self.mu_bulk = 0
         self.lambda_bulk = 0
 
-        self.nu = 5000
-        self.Nincr = 61
+        self.nu = 10
         self.lambdaB = 5
         self.Beta = 1
 
