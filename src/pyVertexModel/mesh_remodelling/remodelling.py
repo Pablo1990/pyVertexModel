@@ -134,18 +134,19 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
     for num_cell, c_cell in enumerate(Geo.Cells):
         for vertex_to_change in c_cell.vertices_and_faces_to_remodel:
             if np.isin(vertex_to_change, c_cell.globalIds):
-                new_point = c_cell.Y[np.isin(c_cell.globalIds, vertex_to_change)][0]
+                vertex_to_change_id = np.isin(c_cell.globalIds, vertex_to_change)
+                new_point = c_cell.Y[vertex_to_change_id][0]
                 # Create a gradient to move the vertices closer to the reference point, so that vertices far from
                 # the reference point are moved more.
                 distance = compute_distance_3d(ref_point_closer[0], new_point)
                 # Vertices on the edge or tricellular junction would move more
-                if np.sum(~np.isin(c_cell.T[vertex_to_change], Geo.XgID)) >= 2:
+                if np.sum(~np.isin(c_cell.T[vertex_to_change_id], Geo.XgID)) >= 2:
                     weight = close_to_new_point * (distance / max_distance) ** strong_gradient
                 else:
                     weight = close_to_new_point * (distance / max_distance) ** (strong_gradient * 0.1)
 
                 avg_point = ref_point_closer * (1 - weight) + new_point * weight
-                Geo.Cells[num_cell].Y[vertex_to_change] = avg_point
+                Geo.Cells[num_cell].Y[vertex_to_change_id] = avg_point
 
         # Move the faces that share the ghost node closer to the reference point
         for face_id, face_r in enumerate(c_cell.Faces):
