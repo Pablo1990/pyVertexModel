@@ -124,6 +124,7 @@ class DegreesOfFreedom:
                 geo.Cells[num_cell].vertices_to_change = None
 
         geo.AssemblegIds = np.array(np.where(self.remodel)[0], dtype=int)
+        geo.AssembleNodes = np.array(id_tnew_cells, dtype=int)
 
         return geo
 
