@@ -24,11 +24,11 @@ class KgViscosity(Kg):
             Cell = Geo.Cells[c]
             Cell_n = Geo_n.Cells[c]
             if Geo.remodelling:
-                filtered_vertices = Cell.globalIds[np.isin(Cell.globalIds, Cell.vertices_and_faces_to_remodel)]
+                filtered_vertices = np.isin(Cell.globalIds, Cell.vertices_and_faces_to_remodel)
+                dY[np.array(Cell.globalIds[filtered_vertices], dtype=int), :] = (
+                        Cell.Y[filtered_vertices] - Cell_n.Y[filtered_vertices])
             else:
-                filtered_vertices = Cell.globalIds
-
-            dY[np.array(filtered_vertices, dtype=int), :] = (Cell.Y[filtered_vertices] - Cell_n.Y[filtered_vertices])
+                dY[np.array(Cell.globalIds, dtype=int), :] = Cell.Y - Cell_n.Y
 
             for f in range(len(Cell.Faces)):
                 Face = Cell.Faces[f]
