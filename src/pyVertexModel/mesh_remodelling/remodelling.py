@@ -123,9 +123,10 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
     # Get the max distance from the reference point to the vertices in the cells to get closer
     max_distance = 0
     for num_cell, c_cell in enumerate(Geo.Cells):
-        if c_cell.vertices_to_change is None:
+        if c_cell.vertices_and_faces_to_remodel is []:
             continue
-        for vertex_to_change in c_cell.vertices_to_change:
+
+        for vertex_to_change in c_cell.vertices_and_faces_to_remodel:
             new_point = c_cell.Y[vertex_to_change]
             distance = compute_distance_3d(ref_point_closer[0], new_point)
             if distance > max_distance:
@@ -133,24 +134,29 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
 
     # Move the vertices closer to the reference point
     for num_cell, c_cell in enumerate(Geo.Cells):
-        if c_cell.vertices_to_change is None:
+        if c_cell.vertices_and_faces_to_remodel is None:
             continue
-        for vertex_to_change in c_cell.vertices_to_change:
+        for vertex_to_change in c_cell.vertices_and_faces_to_remodel:
             new_point = c_cell.Y[vertex_to_change]
             # Create a gradient to move the vertices closer to the reference point, so that vertices far from
             # the reference point are moved more.
             distance = compute_distance_3d(ref_point_closer[0], new_point)
-            weight = close_to_new_point * (distance / max_distance) ** strong_gradient
+            # Vertices on the edge or tricellular junction would move more
+            if np.sum(~np.isin(c_cell.T[vertex_to_change], Geo.XgID)) >= 2:
+                weight = close_to_new_point * (distance / max_distance) ** strong_gradient
+            else:
+                weight = close_to_new_point * (distance / max_distance) ** (strong_gradient * 0.1)
+
             avg_point = ref_point_closer * (1 - weight) + new_point * weight
             Geo.Cells[num_cell].Y[vertex_to_change] = avg_point
 
         # Move the faces that share the ghost node closer to the reference point
         for face_id, face_r in enumerate(c_cell.Faces):
-            if np.all(np.isin(face_r.ij, c_cell.T[c_cell.vertices_to_change])):
-                if face_r.InterfaceType == interface_type and np.all(np.isin(face_r.ij, Tnew)):
+            if np.all(np.isin(face_r.ij, c_cell.T[c_cell.vertices_and_faces_to_remodel])):
+                if face_r.InterfaceType == interface_type:
                     face_centre = face_r.Centre
                     distance = compute_distance_3d(ref_point_closer[0], face_centre)
-                    weight = close_to_new_point * (distance / max_distance) ** strong_gradient
+                    weight = close_to_new_point * (distance / max_distance) ** (strong_gradient * 0.1)
                     Geo.Cells[num_cell].Faces[face_id].Centre = (
                             ref_point_closer[0] * (1 - weight) + face_centre * weight)
 
@@ -229,8 +235,8 @@ class Remodelling:
                 cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
 
                 # Best parameters according to energy, not visually
-                how_close_to_vertex = 1
-                strong_gradient = 0
+                how_close_to_vertex = 0.6
+                strong_gradient = 1
                 # Instead of moving geo vertices closer to the reference point, we move the ones in Geo_n closer to the
                 # reference point. Thus, we'd expect the vertices to be moving not too far from those, but keeping a
                 # good geometry. This function is working.
@@ -241,13 +247,14 @@ class Remodelling:
                                                       cellToSplitFrom,
                                                       ghostNode, allTnew, self.Set, strong_gradient))
 
+                self.Geo_n.create_vtk_cell(self.Geo_0, self.Set, num_step)
+
                 self.Geo = (
-                    move_vertices_closer_to_ref_point(self.Geo, 1,
+                    move_vertices_closer_to_ref_point(self.Geo, how_close_to_vertex,
                                                       np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
                                                       cellToSplitFrom,
                                                       ghostNode, allTnew, self.Set, strong_gradient))
 
-                self.Geo_n.create_vtk_cell(self.Geo_0, self.Set, num_step)
                 self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
                                                                      self.Set)
                 if has_converged is False:
@@ -257,7 +264,7 @@ class Remodelling:
                     newYgIds = np.unique(np.concatenate((newYgIds, self.Geo.AssemblegIds)))
                     self.Geo.update_measures()
                     logger.info(f'=>> Full-Flip accepted')
-                    self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step)
+                    self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step+1)
                     self.Geo_n = self.Geo.copy(update_measurements=False)
                     backup_vars = save_backup_vars(self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs)
             else:
