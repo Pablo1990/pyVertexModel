@@ -13,9 +13,8 @@ class KgSurfaceCellBasedAdhesion(Kg):
 
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
 
-            if Geo.remodelling:
-                if not np.isin(c, Geo.AssembleNodes):
-                    continue
+            if Geo.remodelling and not np.isin(c, Geo.AssembleNodes):
+                continue
 
             Cell = Geo.Cells[c]
             Energy_c = self.work_per_cell(Cell, Geo, Set, calculate_K)
@@ -62,7 +61,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
                 n3 = face.globalIds
                 nY = [Cell.globalIds[edge] for edge in t.Edge] + [n3]
 
-                if Geo.remodelling and not np.any(np.isin(nY, Geo.AssemblegIds)):
+                if Geo.remodelling and not np.any(np.isin(nY, Cell.vertices_and_faces_to_remodel)):
                     continue
 
                 if calculate_K:

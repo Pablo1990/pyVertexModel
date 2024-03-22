@@ -32,7 +32,7 @@ class KgTriEnergyBarrier(Kg):
                     n3 = Cell.Faces[f].globalIds
                     nY = [Cell.globalIds[edge] for edge in Tris[t].Edge] + [n3]
 
-                    if Geo.remodelling and not np.any(np.isin(nY, Geo.AssemblegIds)):
+                    if Geo.remodelling and not np.any(np.isin(nY, Cell.vertices_and_faces_to_remodel)):
                         continue
 
                     gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)

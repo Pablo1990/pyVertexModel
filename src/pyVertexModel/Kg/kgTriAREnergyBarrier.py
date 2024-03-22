@@ -27,7 +27,7 @@ class KgTriAREnergyBarrier(Kg):
                         n3 = Cell.Faces[f].globalIds
                         nY_original = np.array([Cell.globalIds[edge] for edge in Tris[t].Edge] + [n3], dtype=int)
 
-                        if Geo.remodelling and not np.any(np.isin(nY_original, Geo.AssemblegIds)):
+                        if Geo.remodelling and not np.any(np.isin(nY_original, Cell.vertices_and_faces_to_remodel)):
                             continue
 
                         y1 = Ys[Tris[t].Edge[0], :]

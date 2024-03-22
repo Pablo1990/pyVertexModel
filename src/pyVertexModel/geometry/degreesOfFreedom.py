@@ -99,11 +99,12 @@ class DegreesOfFreedom:
         id_tnew_cells_no_debris = [cell_id for cell_id in id_tnew_cells if geo.Cells[cell_id].AliveStatus == 1]
 
         for num_cell, _ in enumerate(geo.Cells):
+            geo.Cells[num_cell].vertices_and_faces_to_remodel = np.array([], dtype=int)
             if num_cell in id_tnew_cells_no_debris:
                 cell = geo.Cells[num_cell]
 
                 news = np.sum(np.isin(cell.T, geo.XgID), axis=1) >= 3
-                news[(np.sum(np.isin(cell.T, id_tnew_cells), axis=1) == 2) &
+                news[(np.sum(np.isin(cell.T, id_tnew_cells_no_debris), axis=1) == 2) &
                      (np.sum(np.isin(cell.T, geo.XgID), axis=1) == 2)] = True
                 news[np.sum(np.isin(cell.T, id_tnew_cells_no_debris), axis=1) >= 3] = True
 
@@ -114,17 +115,16 @@ class DegreesOfFreedom:
 
                 for globalId in cell.globalIds[news]:
                     self.remodel[(dim * globalId): (dim * (globalId + 1))] = 1
+                    geo.Cells[num_cell].vertices_and_faces_to_remodel = np.append(
+                        geo.Cells[num_cell].vertices_and_faces_to_remodel, globalId)
 
                 for face_r in cell.Faces:
                     if np.all(np.isin(face_r.ij, cell.T[news])):
                         self.remodel[(dim * face_r.globalIds): (dim * (face_r.globalIds + 1))] = 1
+                        geo.Cells[num_cell].vertices_and_faces_to_remodel = np.append(
+                            geo.Cells[num_cell].vertices_and_faces_to_remodel, face_r.globalIds)
 
-                geo.Cells[num_cell].vertices_to_change = np.where(news)[0]
-            else:
-                geo.Cells[num_cell].vertices_to_change = None
-
-        geo.AssemblegIds = np.array(np.where(self.remodel)[0], dtype=int)
-        geo.AssembleNodes = np.array(id_tnew_cells, dtype=int)
+        geo.AssembleNodes = np.array(id_tnew_cells_no_debris, dtype=int)
 
         return geo
 

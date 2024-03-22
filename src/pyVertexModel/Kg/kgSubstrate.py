@@ -40,7 +40,7 @@ class KgSubstrate(Kg):
                             currentVertexYs = currentFace.Centre
                             currentGlobalID = np.array([currentVertex], dtype=int)
 
-                        if Geo.remodelling and not np.any(np.isin(Geo.AssemblegIds, currentVertexYs[2])):
+                        if Geo.remodelling and not np.any(np.isin(Geo.Cells[c].vertices_and_faces_to_remodel, currentVertexYs[2])):
                             continue
 
                         # Calculate residual g

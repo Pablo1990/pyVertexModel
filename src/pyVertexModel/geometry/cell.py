@@ -58,7 +58,7 @@ class Cell:
         self.Vol = None
         self.Vol0 = None
         self.AliveStatus = None
-        self.vertices_to_change = None
+        self.vertices_and_faces_to_remodel = np.array([], dtype='int')
         # TODO: Save contractile forces (g) to output
         self.substrate_g = None
         self.lambdaB_perc = 1
