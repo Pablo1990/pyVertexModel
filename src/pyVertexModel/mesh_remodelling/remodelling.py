@@ -227,47 +227,47 @@ class Remodelling:
                 #  to the one before the flip? That will also help the next iteration to converge more easily.
                 self.Geo = self.Dofs.get_remodel_dofs(allTnew, self.Geo)
 
-                gNodeNeighbours = [get_node_neighbours(self.Geo, ghost_node_tried) for ghost_node_tried in
-                                   ghost_nodes_tried]
-                gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
-                cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
-
-                # Best parameters according to energy, not visually
-                best_how_close_to_vertex_gr = 1e10
-                best_how_close_to_vertex = None
-                best_strong_gradient = None
-                for how_close_to_vertex in [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
-                    for strong_gradient in [0, 0.25, 0.5, 0.75, 1]:
-                        # Instead of moving geo vertices closer to the reference point, we move the ones in Geo_n closer to the
-                        # reference point. Thus, we'd expect the vertices to be moving not too far from those, but keeping a
-                        # good geometry. This function is working.
-                        geo_cloned = self.Geo.copy()
-                        geo_cloned = (
-                            move_vertices_closer_to_ref_point(geo_cloned, how_close_to_vertex,
-                                                              np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
-                                                              cellToSplitFrom,
-                                                              ghostNode, allTnew, self.Set, strong_gradient))
-                        g = gGlobal(self.Geo_0, geo_cloned, geo_cloned, self.Set)
-                        gr = np.linalg.norm(g[self.Dofs.remodel])
-                        logger.info(gr)
-                        if gr < best_how_close_to_vertex_gr:
-                            best_how_close_to_vertex_gr = gr
-                            best_how_close_to_vertex = how_close_to_vertex
-                            best_strong_gradient = strong_gradient
-
-                how_close_to_vertex = best_how_close_to_vertex
-                strong_gradient = best_strong_gradient
+                # gNodeNeighbours = [get_node_neighbours(self.Geo, ghost_node_tried) for ghost_node_tried in
+                #                    ghost_nodes_tried]
+                # gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
+                # cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
+                #
+                # # Best parameters according to energy, not visually
+                # best_how_close_to_vertex_gr = 1e10
+                # best_how_close_to_vertex = None
+                # best_strong_gradient = None
+                # for how_close_to_vertex in [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
+                #     for strong_gradient in [0, 0.25, 0.5, 0.75, 1]:
+                #         # Instead of moving geo vertices closer to the reference point, we move the ones in Geo_n closer to the
+                #         # reference point. Thus, we'd expect the vertices to be moving not too far from those, but keeping a
+                #         # good geometry. This function is working.
+                #         geo_cloned = self.Geo.copy()
+                #         geo_cloned = (
+                #             move_vertices_closer_to_ref_point(geo_cloned, how_close_to_vertex,
+                #                                               np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
+                #                                               cellToSplitFrom,
+                #                                               ghostNode, allTnew, self.Set, strong_gradient))
+                #         g = gGlobal(self.Geo_0, geo_cloned, geo_cloned, self.Set)
+                #         gr = np.linalg.norm(g[self.Dofs.remodel])
+                #         logger.info(gr)
+                #         if gr < best_how_close_to_vertex_gr:
+                #             best_how_close_to_vertex_gr = gr
+                #             best_how_close_to_vertex = how_close_to_vertex
+                #             best_strong_gradient = strong_gradient
+                #
+                # how_close_to_vertex = best_how_close_to_vertex
+                # strong_gradient = best_strong_gradient
                 self.Geo_n = self.Geo.copy(update_measurements=False)
-                self.Geo_n = (
-                    move_vertices_closer_to_ref_point(self.Geo_n, how_close_to_vertex,
-                                                      np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
-                                                      cellToSplitFrom,
-                                                      ghostNode, allTnew, self.Set, strong_gradient))
-                self.Geo = (
-                    move_vertices_closer_to_ref_point(self.Geo, how_close_to_vertex,
-                                                      np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
-                                                      cellToSplitFrom,
-                                                      ghostNode, allTnew, self.Set, strong_gradient))
+                # self.Geo_n = (
+                #     move_vertices_closer_to_ref_point(self.Geo_n, how_close_to_vertex,
+                #                                       np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
+                #                                       cellToSplitFrom,
+                #                                       ghostNode, allTnew, self.Set, strong_gradient))
+                # self.Geo = (
+                #     move_vertices_closer_to_ref_point(self.Geo, how_close_to_vertex,
+                #                                       np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
+                #                                       cellToSplitFrom,
+                #                                       ghostNode, allTnew, self.Set, strong_gradient))
 
                 self.Geo_n.create_vtk_cell(self.Geo_0, self.Set, num_step)
 
@@ -317,30 +317,31 @@ class Remodelling:
         has_converged = True
         all_tnew = None
         ghost_nodes_tried = []
-        while has_converged:
-            nodes_pair = np.array([cell_node, ghost_node])
-            ghost_nodes_tried.append(ghost_node)
-            logger.info(f"Remodeling: {cell_node} - {ghost_node}")
+        #while has_converged:
 
-            valence_segment, old_tets, old_ys = edge_valence(self.Geo, nodes_pair)
+        nodes_pair = np.array([cell_node, ghost_node])
+        ghost_nodes_tried.append(ghost_node)
+        logger.info(f"Remodeling: {cell_node} - {ghost_node}")
 
-            if sum(np.isin(self.Geo.non_dead_cells, old_tets.flatten())) > 2:
-                newYgIds, has_converged, Tnew = self.flip_nm(nodes_pair,
-                                                             cell_to_intercalate_with,
-                                                             old_tets, old_ys,
-                                                             newYgIds, cell_to_split_from)
-                if Tnew is not None:
-                    all_tnew = Tnew if all_tnew is None else np.vstack((all_tnew, Tnew))
-            else:
-                has_converged = False
+        valence_segment, old_tets, old_ys = edge_valence(self.Geo, nodes_pair)
 
-            shared_nodes_still = get_node_neighbours_per_domain(self.Geo, cell_node, ghost_node, cell_to_split_from)
+        if sum(np.isin(self.Geo.non_dead_cells, old_tets.flatten())) > 2:
+            newYgIds, has_converged, Tnew = self.flip_nm(nodes_pair,
+                                                         cell_to_intercalate_with,
+                                                         old_tets, old_ys,
+                                                         newYgIds, cell_to_split_from)
+            if Tnew is not None:
+                all_tnew = Tnew if all_tnew is None else np.vstack((all_tnew, Tnew))
+        else:
+            has_converged = False
 
-            if any(np.isin(shared_nodes_still, self.Geo.XgID)) and has_converged:
-                shared_nodes_still_g = shared_nodes_still[np.isin(shared_nodes_still, self.Geo.XgID)]
-                ghost_node = shared_nodes_still_g[0]
-            else:
-                break
+            # shared_nodes_still = get_node_neighbours_per_domain(self.Geo, cell_node, ghost_node, cell_to_split_from)
+            #
+            # if any(np.isin(shared_nodes_still, self.Geo.XgID)) and has_converged:
+            #     shared_nodes_still_g = shared_nodes_still[np.isin(shared_nodes_still, self.Geo.XgID)]
+            #     ghost_node = shared_nodes_still_g[0]
+            # else:
+            #     break
         return all_tnew, cell_to_split_from, ghost_node, ghost_nodes_tried, has_converged, newYgIds
 
     def get_tris_to_remodel_ordered(self):
