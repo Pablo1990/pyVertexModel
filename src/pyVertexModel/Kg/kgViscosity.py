@@ -35,7 +35,8 @@ class KgViscosity(Kg):
                 Face_n = Cell_n.Faces[f]
 
                 if len(Face.Centre) == 3 and len(Face_n.Centre) == 3:
-                    if Geo.remodelling and np.any(np.isin(Face.globalIds, Cell.vertices_and_faces_to_remodel)):
+                    if ((Geo.remodelling and np.any(np.isin(Face.globalIds, Cell.vertices_and_faces_to_remodel))) or
+                            not Geo.remodelling):
                         dY[np.array(Face.globalIds, dtype=int), :] = (Face.Centre - Face_n.Centre)
 
             # dY[np.array(Cell.cglobalIds, dtype=int), :] = (Cell.X - Cell_n.X)
