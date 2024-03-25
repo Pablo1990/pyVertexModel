@@ -520,8 +520,6 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         # Define upper and lower area threshold for remodelling
         self.initialize_average_cell_props()
 
-        load_state(self, filename, ['set'])
-
     def obtain_initial_x_and_tetrahedra(self, img_filename="src/pyVertexModel/resources/LblImg_imageSequence.tif"):
         """
         Obtain the initial X and tetrahedra for the model.
