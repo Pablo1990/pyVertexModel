@@ -215,13 +215,10 @@ class Set:
         # 110 cells 7 cells to ablate
         self.TotalCells = 40
         self.CellHeight = 15
-        self.Nincr = 610 * 50
+        self.tend = 61
+        self.Nincr = self.tend
 
-        self.InPlaneElasticity = False
-        self.mu_bulk = 0
-        self.lambda_bulk = 0
-
-        self.nu = 10
+        self.nu = 500
         self.lambdaB = 5
         self.Beta = 1
 
@@ -249,7 +246,7 @@ class Set:
     def woundDefault(self):
         # ============================== Ablation ============================
         self.cellsToAblate = np.arange(1)
-        self.TInitAblation = 1
+        self.TInitAblation = 30
         self.TEndAblation = self.tend
         self.lambdaSFactor_Debris = np.finfo(float).eps
         # =========================== Contractility ==========================
