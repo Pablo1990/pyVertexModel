@@ -517,6 +517,9 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             self.geo.build_cells(self.set, X, Twg)
             save_state(self.geo, 'voronoi_40cells.pkl')
 
+        if self.set.ablation:
+            self.geo.cellsToAblate = self.set.cellsToAblate
+
         # Define upper and lower area threshold for remodelling
         self.initialize_average_cell_props()
 
