@@ -92,13 +92,6 @@ class VertexModel:
         updating measures, and checking for convergence.
         :return:
         """
-        allYs = np.vstack([cell.Y for cell in self.geo.Cells if cell.AliveStatus == 1])
-        minZs = min(allYs[:, 2])
-        if minZs > 0:
-            self.set.SubstrateZ = minZs * 0.99
-        else:
-            self.set.SubstrateZ = minZs * 1.01
-
         if self.set.Substrate == 1:
             self.Dofs.GetDOFsSubstrate(self.geo, self.set)
         else:

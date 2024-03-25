@@ -227,7 +227,6 @@ class Set:
         self.lambdaV = 10
         self.kSubstrate = 100
         self.cLineTension = 0.05
-        self.purseStringStrength = 12
 
         self.noiseContractility = 0.0
         #self.DelayedAdditionalContractility = 0
@@ -252,7 +251,7 @@ class Set:
         # =========================== Contractility ==========================
         self.Contractility = True
         self.DelayedAdditionalContractility = 0
-        self.purseStringStrength = 10
+        self.purseStringStrength = 7
         self.Contractility_Variability_PurseString = np.multiply(np.array(
             [1, 0.96, 1.087, 1.74, 2.37, 2.61, 2.487, 2.536, 2.46, 2.52, 2.606, 2.456, 2.387, 2.52, 2.31, 2.328,
              2.134, 2.07, 2.055, 1.9, 1.9]), self.purseStringStrength)

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from src.pyVertexModel.algorithm import newtonRaphson
-from src.pyVertexModel.algorithm.newtonRaphson import solve_remodeling_step
+from src.pyVertexModel.algorithm.newtonRaphson import solve_remodeling_step, KgGlobal, gGlobal
 from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
 from src.pyVertexModel.util.utils import ismember_rows, save_backup_vars, load_backup_vars, compute_distance_3d
@@ -233,21 +233,38 @@ class Remodelling:
                 cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
 
                 # Best parameters according to energy, not visually
-                how_close_to_vertex = 0.5
-                strong_gradient = 1
-                # Instead of moving geo vertices closer to the reference point, we move the ones in Geo_n closer to the
-                # reference point. Thus, we'd expect the vertices to be moving not too far from those, but keeping a
-                # good geometry. This function is working.
+                best_how_close_to_vertex_gr = 1e10
+                best_how_close_to_vertex = None
+                best_strong_gradient = None
+                for how_close_to_vertex in [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
+                    for strong_gradient in [0, 0.25, 0.5, 0.75, 1]:
+                        # Instead of moving geo vertices closer to the reference point, we move the ones in Geo_n closer to the
+                        # reference point. Thus, we'd expect the vertices to be moving not too far from those, but keeping a
+                        # good geometry. This function is working.
+                        geo_cloned = self.Geo.copy()
+                        geo_cloned = (
+                            move_vertices_closer_to_ref_point(geo_cloned, how_close_to_vertex,
+                                                              np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
+                                                              cellToSplitFrom,
+                                                              ghostNode, allTnew, self.Set, strong_gradient))
+                        g = gGlobal(self.Geo_0, geo_cloned, geo_cloned, self.Set)
+                        gr = np.linalg.norm(g[self.Dofs.remodel])
+                        logger.info(gr)
+                        if gr < best_how_close_to_vertex_gr:
+                            best_how_close_to_vertex_gr = gr
+                            best_how_close_to_vertex = how_close_to_vertex
+                            best_strong_gradient = strong_gradient
+
+                how_close_to_vertex = best_how_close_to_vertex
+                strong_gradient = best_strong_gradient
                 self.Geo_n = self.Geo.copy(update_measurements=False)
-                self.Geo = (
-                    move_vertices_closer_to_ref_point(self.Geo, how_close_to_vertex,
+                self.Geo_n = (
+                    move_vertices_closer_to_ref_point(self.Geo_n, how_close_to_vertex,
                                                       np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
                                                       cellToSplitFrom,
                                                       ghostNode, allTnew, self.Set, strong_gradient))
-
-                how_close_to_vertex = 0.5
-                self.Geo_n = (
-                    move_vertices_closer_to_ref_point(self.Geo_n, how_close_to_vertex,
+                self.Geo = (
+                    move_vertices_closer_to_ref_point(self.Geo, how_close_to_vertex,
                                                       np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
                                                       cellToSplitFrom,
                                                       ghostNode, allTnew, self.Set, strong_gradient))

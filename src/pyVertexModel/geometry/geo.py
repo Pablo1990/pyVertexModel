@@ -129,6 +129,7 @@ class Geo:
         Initialize the geometry
         :param mat_file:    The mat file of the geometry
         """
+        self.cellsToAblate = None
         self.Cells = []
         self.remodelling = False
         self.non_dead_cells = None
@@ -808,7 +809,7 @@ class Geo:
         # time
         if c_set.ablation and c_set.TInitAblation <= t:
             # Check if the list of cells to ablate is not empty
-            if c_set.cellsToAblate is not None:
+            if self.cellsToAblate is not None:
                 # Log the ablation process
                 logger.info(' ---- Performing ablation')
                 # Iterate over each cell in the list of cells to ablate
@@ -822,5 +823,5 @@ class Geo:
                     # c_set the SubstrateLambda of the cell to the Debris factor
                     self.Cells[debrisCell].SubstrateLambda = c_set.lambdaSFactor_Debris
                 # Empty the list of cells to ablate
-                c_set.cellsToAblate = None
+                self.cellsToAblate = None
         return self
