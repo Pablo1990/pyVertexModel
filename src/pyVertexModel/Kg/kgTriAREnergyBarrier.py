@@ -10,7 +10,7 @@ class KgTriAREnergyBarrier(Kg):
         start = time.time()
 
         self.energy = 0
-        fact = Set.lambdaR / Set.lmin0 ** 4
+        fact = Set.lambdaR / Geo.lmin0 ** 4
 
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
             energy_c = 0
@@ -33,9 +33,6 @@ class KgTriAREnergyBarrier(Kg):
                         y1 = Ys[Tris[t].Edge[0], :]
                         y2 = Ys[Tris[t].Edge[1], :]
                         y3 = Cell.Faces[f].Centre
-
-                        ys = np.zeros([3, 3, 3], dtype=self.precision_type)
-                        nY = np.zeros([3, 3], dtype=int)
 
                         y12 = y1 - y2
                         y23 = y2 - y3

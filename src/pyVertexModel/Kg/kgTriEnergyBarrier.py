@@ -23,9 +23,9 @@ class KgTriEnergyBarrier(Kg):
                 Tris = Cell.Faces[f].Tris
 
                 for t in range(len(Tris)):
-                    fact = -((lambdaB * Set.Beta) / Set.BarrierTri0) * np.exp(
-                        lambdaB * (1 - Set.Beta * Face.Tris[t].Area / Set.BarrierTri0))
-                    fact2 = fact * -((lambdaB * Set.Beta) / Set.BarrierTri0)
+                    fact = -((lambdaB * Set.Beta) / Geo.BarrierTri0) * np.exp(
+                        lambdaB * (1 - Set.Beta * Face.Tris[t].Area / Geo.BarrierTri0))
+                    fact2 = fact * -((lambdaB * Set.Beta) / Geo.BarrierTri0)
                     y1 = Ys[Tris[t].Edge[0], :]
                     y2 = Ys[Tris[t].Edge[1], :]
                     y3 = Cell.Faces[f].Centre
@@ -43,7 +43,7 @@ class KgTriEnergyBarrier(Kg):
                         gs_ = gs.reshape((gs.size, 1))
                         Ks = (np.dot(gs_, gs_transpose) * fact2) + Ks * fact + Kss * fact
                         self.assemble_k(Ks, np.array(nY, dtype='int'))
-                        self.energy += np.exp(lambdaB * (1 - Set.Beta * Face.Tris[t].Area / Set.BarrierTri0))
+                        self.energy += np.exp(lambdaB * (1 - Set.Beta * Face.Tris[t].Area / Geo.BarrierTri0))
 
         end = time.time()
         self.timeInSeconds = f"Time at EnergyBarrier: {end - start} seconds"

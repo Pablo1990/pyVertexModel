@@ -31,7 +31,7 @@ class KgSubstrate(Kg):
                     c_tris = np.append(c_tris, currentFace.globalIds.astype(int))
                     c_tris = np.unique(c_tris)
                     for currentVertex in c_tris:
-                        z0 = Set.SubstrateZ
+                        z0 = Geo.SubstrateZ
 
                         if currentVertex <= len(Geo.Cells[c].globalIds):
                             currentVertexYs = currentCell.Y[currentVertex, :]

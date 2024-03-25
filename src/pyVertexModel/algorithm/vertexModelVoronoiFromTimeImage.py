@@ -15,6 +15,7 @@ from skimage.segmentation import find_boundaries
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.geometry.geo import Geo
+from src.pyVertexModel.parameters.set import Set
 from src.pyVertexModel.util.utils import ismember_rows, save_variables, save_state, load_state
 
 
@@ -505,7 +506,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         """
         if os.path.exists(filename):
             if filename.endswith('.pkl'):
-                load_state(self.geo, filename)
+                load_state(self, filename, ['geo', 'geo_0', 'geo_n'])
             elif filename.endswith('.mat'):
                 mat_info = scipy.io.loadmat(filename)
                 self.geo = Geo(mat_info['Geo'])
@@ -519,13 +520,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         # Define upper and lower area threshold for remodelling
         self.initialize_average_cell_props()
 
-        # Obtain the original cell height
-        min_zs = np.min([np.min(cell.Y[:, 2]) for cell in self.geo.Cells if cell.Y is not None])
-        self.geo.CellHeightOriginal = np.abs(min_zs)
-        if min_zs > 0:
-            self.set.SubstrateZ = min_zs * 0.99
-        else:
-            self.set.SubstrateZ = min_zs * 1.01
+        load_state(self, filename, ['set'])
 
     def obtain_initial_x_and_tetrahedra(self, img_filename="src/pyVertexModel/resources/LblImg_imageSequence.tif"):
         """

@@ -50,9 +50,10 @@ def save_variables(vars, filename):
             pickle.dump({var: vars[var]}, f)
 
 
-def load_state(obj, filename):
+def load_state(obj, filename, objs_to_load=None):
     """
     Load state of the different attributes of obj from filename
+    :param objs_to_load:
     :param obj:
     :param filename:
     :return:
@@ -62,7 +63,8 @@ def load_state(obj, filename):
             try:
                 data = pickle.load(f)
                 for attr, value in data.items():
-                    setattr(obj, attr, value)
+                    if objs_to_load is None or attr in objs_to_load:
+                        setattr(obj, attr, value)
             except EOFError:
                 break
 

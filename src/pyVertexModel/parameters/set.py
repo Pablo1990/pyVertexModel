@@ -219,7 +219,7 @@ class Set:
         self.Nincr = self.tend
 
         self.nu = 500
-        self.lambdaB = 5
+        self.lambdaB = 1
         self.Beta = 1
 
         self.lambdaR = 0.3
@@ -246,7 +246,7 @@ class Set:
     def woundDefault(self):
         # ============================== Ablation ============================
         self.cellsToAblate = np.arange(1)
-        self.TInitAblation = 30
+        self.TInitAblation = 1
         self.TEndAblation = self.tend
         self.lambdaSFactor_Debris = np.finfo(float).eps
         # =========================== Contractility ==========================

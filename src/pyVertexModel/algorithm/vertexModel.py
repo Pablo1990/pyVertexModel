@@ -104,7 +104,7 @@ class VertexModel:
         else:
             self.Dofs.get_dofs(self.geo, self.set)
 
-        self.geo.Remodelling = False
+        self.geo.remodelling = False
         self.geo_0 = self.geo.copy(update_measurements=False)
         self.geo_n = self.geo.copy(update_measurements=False)
         self.backupVars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
@@ -322,7 +322,7 @@ class VertexModel:
         :return: None
         """
         # Concatenate all faces from all cells in the Geo structure
-        all_faces = np.concatenate([cell.Faces for cell in self.geo.Cells])
+        all_faces = np.concatenate([cell.Faces for cell in self.geo.Cells if cell.AliveStatus is not None])
         # Concatenate all tris from all faces
         all_tris = np.concatenate([face.Tris for face in all_faces])
         # Calculate the average area of all tris
@@ -330,13 +330,13 @@ class VertexModel:
         # Calculate the standard deviation of the areas of all tris
         stdArea = np.std([tri.Area for tri in all_tris])
         # Set the upper and lower area thresholds based on the average area and standard deviation
-        self.set.upperAreaThreshold = avgArea + stdArea
-        self.set.lowerAreaThreshold = avgArea - stdArea
+        self.geo.upperAreaThreshold = avgArea + stdArea
+        self.geo.lowerAreaThreshold = avgArea - stdArea
         # Assemble nodes from all cells that are not None
         self.geo.AssembleNodes = [i for i, cell in enumerate(self.geo.Cells) if cell.AliveStatus is not None]
         # Initialize BarrierTri0 and lmin0 with the maximum possible float value
-        self.set.BarrierTri0 = np.finfo(float).max
-        self.set.lmin0 = np.finfo(float).max
+        self.geo.BarrierTri0 = np.finfo(float).max
+        self.geo.lmin0 = np.finfo(float).max
         # Initialize lists for storing edge lengths of tris located at the top, bottom, and lateral sides of the cells
         edgeLengths_Top = []
         edgeLengths_Bottom = []
@@ -364,15 +364,23 @@ class VertexModel:
                     else:
                         edgeLengths_Lateral.append(tri.compute_edge_length(self.geo.Cells[c].Y))
         # Update lmin0 with the minimum value in lmin_values
-        self.set.lmin0 = min(lmin_values)
+        self.geo.lmin0 = min(lmin_values)
         # Calculate the average edge lengths for tris located at the top, bottom, and lateral sides of the cells
         self.geo.AvgEdgeLength_Top = np.mean(edgeLengths_Top)
         self.geo.AvgEdgeLength_Bottom = np.mean(edgeLengths_Bottom)
         self.geo.AvgEdgeLength_Lateral = np.mean(edgeLengths_Lateral)
         # Update BarrierTri0 and lmin0 based on their initial values
-        self.set.BarrierTri0 = self.set.BarrierTri0 / 10
-        self.set.lmin0 = self.set.lmin0 * 10
+        self.geo.BarrierTri0 = self.set.BarrierTri0 / 10
+        self.geo.lmin0 = self.set.lmin0 * 10
         # Initialize an empty list for storing removed debris cells
         self.geo.RemovedDebrisCells = []
 
         self.geo.non_dead_cells = [cell.ID for cell in self.geo.Cells if cell.AliveStatus is not None]
+
+        # Obtain the original cell height
+        min_zs = np.min([np.min(cell.Y[:, 2]) for cell in self.geo.Cells if cell.Y is not None])
+        self.geo.CellHeightOriginal = np.abs(min_zs)
+        if min_zs > 0:
+            self.geo.SubstrateZ = min_zs * 0.99
+        else:
+            self.geo.SubstrateZ = min_zs * 1.01

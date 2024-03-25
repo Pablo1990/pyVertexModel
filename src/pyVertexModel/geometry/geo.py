@@ -297,7 +297,7 @@ class Geo:
 
                     if Face.ij[1] == XgSub:
                         # update the position of the surface centers on the substrate
-                        Face.Centre[2] = c_set.SubstrateZ
+                        Face.Centre[2] = geo.SubstrateZ
 
         self.update_measures()
 
