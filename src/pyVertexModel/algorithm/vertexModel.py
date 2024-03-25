@@ -342,7 +342,7 @@ class VertexModel:
             for f in range(len(self.geo.Cells[c].Faces)):
                 Face = self.geo.Cells[c].Faces[f]
                 # Update BarrierTri0 with the minimum area of all tris in the current face
-                self.set.BarrierTri0 = min([min([tri.Area for tri in Face.Tris]), self.set.BarrierTri0])
+                self.geo.BarrierTri0 = min([min([tri.Area for tri in Face.Tris]), self.geo.BarrierTri0])
                 # Iterate over all tris in the current face
                 for nTris in range(len(self.geo.Cells[c].Faces[f].Tris)):
                     tri = self.geo.Cells[c].Faces[f].Tris[nTris]
@@ -363,8 +363,8 @@ class VertexModel:
         self.geo.AvgEdgeLength_Bottom = np.mean(edgeLengths_Bottom)
         self.geo.AvgEdgeLength_Lateral = np.mean(edgeLengths_Lateral)
         # Update BarrierTri0 and lmin0 based on their initial values
-        self.geo.BarrierTri0 = self.set.BarrierTri0 / 10
-        self.geo.lmin0 = self.set.lmin0 * 10
+        self.geo.BarrierTri0 = self.geo.BarrierTri0 / 10
+        self.geo.lmin0 = self.geo.lmin0 * 10
         # Initialize an empty list for storing removed debris cells
         self.geo.RemovedDebrisCells = []
 
