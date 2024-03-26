@@ -140,7 +140,7 @@ def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g
     """
     dy[dof, 0] = ml_divide(K, dof, g)
 
-    alpha = line_search(Geo_0, Geo_n, Geo, Dofs, Set, g, dy)
+    alpha = line_search(Geo_0, Geo_n, Geo, dof, Set, g, dy)
     dy_reshaped = np.reshape(dy * alpha, (Geo.numF + Geo.numY + Geo.nCells, 3))
     Geo.update_vertices(dy_reshaped)
     Geo.update_measures()
@@ -180,7 +180,7 @@ def ml_divide(K, dof, g):
     return -np.linalg.solve(K[np.ix_(dof, dof)], g[dof])
 
 
-def line_search(Geo_0, Geo_n, geo, Dofs, Set, gc, dy):
+def line_search(Geo_0, Geo_n, geo, dof, Set, gc, dy):
     """
     Line search to find the best alpha to minimize the energy
     :param Geo_0:   Initial geometry
@@ -201,7 +201,6 @@ def line_search(Geo_0, Geo_n, geo, Dofs, Set, gc, dy):
     Geo_copy.update_measures()
 
     g = gGlobal(Geo_0, Geo_n, Geo_copy, Set)
-    dof = Dofs.Free
 
     gr0 = np.linalg.norm(gc[dof])
     gr = np.linalg.norm(g[dof])
