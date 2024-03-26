@@ -257,6 +257,7 @@ class VertexModel:
             self.geo_n = self.geo.copy()
             self.relaxingNu = False
         else:
+            save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
             self.set.nu = np.max([self.set.nu / 2, self.set.nu0])
             self.relaxingNu = True
 
