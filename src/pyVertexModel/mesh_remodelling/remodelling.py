@@ -289,8 +289,8 @@ class Remodelling:
                 logger.info('=>> Full-Flip rejected: did not converge2')
 
             # Remove the segment feature that has been checked
-            for ghost_node_tried in ghost_nodes_tried:
-                checkedYgIds.append([segmentFeatures['num_cell'], ghost_node_tried])
+            for node_tried in allTnew.flatten():
+                checkedYgIds.append(node_tried)
 
             rowsToRemove = []
             if segmentFeatures_all.shape[0] > 0:
