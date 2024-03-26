@@ -573,9 +573,11 @@ class Geo:
         debris_cells = get_cells_by_status(old_geo.Cells, 0)
 
         for cell_id in alive_cells + debris_cells:
-            old_geo_ys = old_geo.Cells[cell_id].Y[~ismember_rows(old_geo.Cells[cell_id].T, old_tets)[0]]
+            old_geo_ys = old_geo.Cells[cell_id].Y[~ismember_rows(old_geo.Cells[cell_id].T, old_tets)[0] &
+                                                  [np.any(np.isin(tet, old_geo.XgID)) for tet in old_geo.Cells[cell_id].T]]
 
-            self.Cells[cell_id].Y[~ismember_rows(self.Cells[cell_id].T, new_tets)[0]] = old_geo_ys
+            self.Cells[cell_id].Y[~ismember_rows(self.Cells[cell_id].T, new_tets)[0] &
+                                  [np.any(np.isin(tet, self.XgID)) for tet in self.Cells[cell_id].T]] = old_geo_ys
 
             if cell_id not in new_tets:
                 for c_face in old_geo.Cells[cell_id].Faces:
