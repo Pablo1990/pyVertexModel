@@ -177,7 +177,7 @@ class TestNewtonRaphson(Tests):
         g_test = mat_info['g'][:, 0]
         dy_test = mat_info['dy'][:, 0]
         set_test = Set(mat_info['Set'])
-        alpha = line_search(geo_0_test, geo_n_test, geo_test, dofs_test, set_test, g_test, dy_test)
+        alpha = line_search(geo_0_test, geo_n_test, geo_test, dofs_test.Free, set_test, g_test, dy_test)
 
         np.testing.assert_almost_equal(alpha, 1)
 
@@ -202,7 +202,7 @@ class TestNewtonRaphson(Tests):
         g_test = mat_info['g'][:, 0]
         dy_test = mat_info['dy']
         set_test = Set(mat_info['Set'])
-        alpha = line_search(geo_0_test, geo_n_test, geo_test, dofs_test, set_test, g_test, dy_test)
+        alpha = line_search(geo_0_test, geo_n_test, geo_test, dofs_test.Free, set_test, g_test, dy_test)
 
         np.testing.assert_almost_equal(alpha, mat_info['alpha'][0][0])
 
