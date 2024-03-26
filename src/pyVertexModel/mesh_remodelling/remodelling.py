@@ -412,7 +412,7 @@ class Remodelling:
 
     def flip_nm(self, segment_to_change, cell_to_intercalate_with, old_tets, old_ys, new_yg_ids, cell_to_split_from):
         hasConverged = False
-        flipName = 'N-M'
+        old_geo = self.Geo.copy()
         t_new, y_new = y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, segment_to_change, self.Geo, self.Set,
                                  cell_to_split_from)
 
@@ -420,6 +420,6 @@ class Remodelling:
             (self.Geo_0, self.Geo_n, self.Geo,
              self.Dofs, new_yg_ids, hasConverged) = post_flip(t_new, y_new, old_tets,
                                                               self.Geo, self.Geo_n, self.Geo_0, self.Dofs,
-                                                              new_yg_ids, self.Set, flipName, segment_to_change)
+                                                              new_yg_ids, self.Set, old_geo)
 
         return new_yg_ids, hasConverged, t_new

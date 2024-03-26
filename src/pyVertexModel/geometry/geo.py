@@ -561,46 +561,34 @@ class Geo:
         count_top = sum(any(tet in n for tet in self.XgTop) for n in new_tets)
         return 2 if count_bottom > count_top else 0
 
-    def check_ys_and_faces_have_not_changed(self, new_tets, old_geo):
+    def check_ys_and_faces_have_not_changed(self, new_tets, old_tets, old_geo):
         """
         Check that the Ys and faces have not changed
+        :param old_geo:
         :param new_tets:
-        :param geo_new:
         :return:
         """
 
-        non_dead_cells = get_cells_by_status(old_geo.Cells, None)
         alive_cells = get_cells_by_status(old_geo.Cells, 1)
         debris_cells = get_cells_by_status(old_geo.Cells, 0)
 
         for cell_id in alive_cells + debris_cells:
-            interface_type = old_geo.calculate_interface_type(new_tets)
-            current_cell = old_geo.Cells[cell_id]
-            cell_new = self.Cells[cell_id]
+            old_geo_ys = old_geo.Cells[cell_id].Y[~ismember_rows(old_geo.Cells[cell_id].T, old_tets)[0]]
 
-            xg_boundary = old_geo.XgBottom if interface_type == 2 else old_geo.XgTop
-            tets_to_check = tets_to_check_in(current_cell, xg_boundary)
-            tets_to_check_new = tets_to_check_in(cell_new, xg_boundary)
-
-            old_geo_ys = old_geo.Cells[cell_id].Y[
-                tets_to_check & [np.any(np.isin(tet, old_geo.XgID)) for tet in old_geo.Cells[cell_id].T]]
-            new_geo_ys = self.Cells[cell_id].Y[
-                tets_to_check_new & [np.any(np.isin(tet, self.XgID)) for tet in self.Cells[cell_id].T]]
-            assert np.all(old_geo_ys == new_geo_ys)
+            self.Cells[cell_id].Y[~ismember_rows(self.Cells[cell_id].T, new_tets)[0]] = old_geo_ys
 
             if cell_id not in new_tets:
                 for c_face in old_geo.Cells[cell_id].Faces:
-                    if c_face.InterfaceType != interface_type:
-                        id_with_new = np.array(
-                            [np.all(np.isin(face_new.ij, c_face.ij)) for face_new in self.Cells[cell_id].Faces])
-                        assert sum(id_with_new) == 1
+                    id_with_new = np.array(
+                        [np.all(np.isin(face_new.ij, c_face.ij)) for face_new in self.Cells[cell_id].Faces])
+                    assert sum(id_with_new) == 1
 
-                        id_with_new_index = np.where(id_with_new)[0][0]
+                    id_with_new_index = np.where(id_with_new)[0][0]
 
-                        if self.Cells[cell_id].Faces[id_with_new_index].Centre is not c_face.Centre:
-                            self.Cells[cell_id].Faces[id_with_new_index].Centre = c_face.Centre
+                    if self.Cells[cell_id].Faces[id_with_new_index].Centre is not c_face.Centre:
+                        self.Cells[cell_id].Faces[id_with_new_index].Centre = c_face.Centre
 
-                        assert np.all(self.Cells[cell_id].Faces[id_with_new_index].Centre == c_face.Centre)
+                    assert np.all(self.Cells[cell_id].Faces[id_with_new_index].Centre == c_face.Centre)
 
     def add_and_rebuild_cells(self, old_geo, old_tets, new_tets, y_new, c_set, update_measurements):
         """
@@ -614,12 +602,12 @@ class Geo:
         :return:
         """
         self.remove_tetrahedra(old_tets)
-        self.add_tetrahedra(old_geo, new_tets, y_new, c_set)
-        self.rebuild(self.copy(), c_set)
+        self.add_tetrahedra(old_geo.copy(), new_tets, y_new, c_set)
+        self.rebuild(old_geo, c_set)
         self.build_global_ids()
 
         # Check if the ys and faces have not changed
-        self.check_ys_and_faces_have_not_changed(new_tets, old_geo)
+        self.check_ys_and_faces_have_not_changed(new_tets, old_tets, old_geo)
 
         # if update_measurements
         if update_measurements:
