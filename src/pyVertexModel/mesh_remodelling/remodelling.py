@@ -276,7 +276,6 @@ class Remodelling:
                     self.Geo_n = self.Geo.copy(update_measurements=False)
 
                 self.Geo_n.create_vtk_cell(self.Geo_0, self.Set, num_step + 1)
-                has_converged = True
                 self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
                                                                      self.Set)
 
