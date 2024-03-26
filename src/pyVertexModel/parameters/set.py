@@ -7,6 +7,7 @@ import numpy as np
 import scipy
 
 from src import PROJECT_DIRECTORY
+from src.pyVertexModel.util.utils import copy_non_mutable_attributes
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -263,3 +264,14 @@ class Set:
     def menu_input(self, inputMode=None, batchMode=None):
         if inputMode == 7:
             self.NoBulk_110()
+
+    def copy(self):
+        """
+        Copy the degrees of freedom.
+        :return:
+        """
+        set_copy = Set()
+
+        copy_non_mutable_attributes(self, '', set_copy)
+
+        return set_copy
