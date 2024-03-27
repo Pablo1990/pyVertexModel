@@ -9,6 +9,7 @@ class DegreesOfFreedom:
         Initialize the degrees of freedom.
         :param mat_file:
         """
+        self.remeshing = None
         self.remodel = None
         if mat_file is None:
             self.Free = []
@@ -127,6 +128,38 @@ class DegreesOfFreedom:
         geo.AssembleNodes = np.array(id_tnew_cells_no_debris, dtype=int)
 
         return geo
+
+    def get_remeshing_dofs(self, geo, id_cells, interface_type):
+        """
+        Get the degrees of freedom for remeshing.
+        :param id_cells:
+        :param geo:
+        :param interface_type:
+        :return:
+        """
+        dim = 3
+        self.remeshing = np.zeros((geo.numY + geo.numF + geo.nCells) * 3, dtype=bool)
+
+        for num_cell, cell in enumerate(geo.Cells):
+            geo.Cells[num_cell].vertices_and_faces_to_remodel = np.array([], dtype=int)
+            if num_cell in id_cells:
+                news = np.sum(np.isin(cell.T, geo.XgID), axis=1) >= 3
+                news[(np.sum(np.isin(cell.T, id_cells), axis=1) == 2) &
+                     (np.sum(np.isin(cell.T, geo.XgID), axis=1) == 2)] = True
+
+                if interface_type == 2:
+                    news[np.any(np.isin(cell.T, geo.XgTop), axis=1)] = False
+                else:
+                    news[np.any(np.isin(cell.T, geo.XgBottom), axis=1)] = False
+
+                for globalId in cell.globalIds[news]:
+                    # We are not allowing to change the z coordinate
+                    self.remodel[(dim * globalId): (dim * (globalId + 1)) - 1] = 1
+
+                for face_r in cell.Faces:
+                    if np.all(np.isin(face_r.ij, cell.T[news])):
+                        # We are not allowing to change the z coordinate
+                        self.remeshing[(dim * face_r.globalIds): (dim * (face_r.globalIds + 1)) - 1] = 1
 
     def update_do_fs_compress(self, Geo, Set):
         """

@@ -132,6 +132,7 @@ class Geo:
         self.cellsToAblate = None
         self.Cells = []
         self.remodelling = False
+        self.remeshing = False
         self.non_dead_cells = None
         self.BorderCells = []
         self.BorderGhostNodes = []

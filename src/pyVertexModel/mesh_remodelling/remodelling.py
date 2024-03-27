@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from src.pyVertexModel.algorithm import newtonRaphson
-from src.pyVertexModel.algorithm.newtonRaphson import solve_remodeling_step, KgGlobal, gGlobal
+from src.pyVertexModel.algorithm.newtonRaphson import solve_remodeling_step, KgGlobal, gGlobal, remeshing_cells
 from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
 from src.pyVertexModel.util.utils import ismember_rows, save_backup_vars, load_backup_vars, compute_distance_3d
@@ -237,8 +237,8 @@ class Remodelling:
                     best_how_close_to_vertex_gr = 1e10
                     best_how_close_to_vertex = None
                     best_strong_gradient = None
-                    for how_close_to_vertex in [0.5, 0.9]:
-                        for strong_gradient in [0, 0.25]:
+                    for how_close_to_vertex in [0.2]:
+                        for strong_gradient in [0]:
                             # Instead of moving geo vertices closer to the reference point, we move the ones in Geo_n closer to the
                             # reference point. Thus, we'd expect the vertices to be moving not too far from those, but keeping a
                             # good geometry. This function is working.
@@ -257,21 +257,21 @@ class Remodelling:
                                 best_how_close_to_vertex = how_close_to_vertex
                                 best_strong_gradient = strong_gradient
 
+
+
                     how_close_to_vertex = best_how_close_to_vertex
                     strong_gradient = best_strong_gradient
                     self.Geo_n = self.Geo.copy(update_measurements=False)
-                    self.Geo_n = (
-                        move_vertices_closer_to_ref_point(self.Geo_n, how_close_to_vertex,
-                                                          np.concatenate(
-                                                              [[segmentFeatures['num_cell']], cellNodesShared]),
-                                                          cellToSplitFrom,
-                                                          ghostNode, allTnew, self.Set, strong_gradient))
                     self.Geo = (
                         move_vertices_closer_to_ref_point(self.Geo, how_close_to_vertex,
                                                           np.concatenate(
                                                               [[segmentFeatures['num_cell']], cellNodesShared]),
                                                           cellToSplitFrom,
                                                           ghostNode, allTnew, self.Set, strong_gradient))
+
+                    dy = remeshing_cells(self.Geo_0, self.Geo_n, self.Geo, self.Dofs, self.Set,
+                                         np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
+                                         segmentFeatures['node_pair_g'])
 
                     self.Geo_n.create_vtk_cell(self.Geo_0, self.Set, num_step + 1)
 
