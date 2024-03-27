@@ -228,7 +228,7 @@ def line_search(Geo_0, Geo_n, geo, dof, Set, gc, dy):
 
 
 def KgGlobal(Geo_0, Geo_n, Geo, Set):
-    if ~Geo.remeshing:
+    if not Geo.remeshing:
         # Surface Energy
         kg_SA = KgSurfaceCellBasedAdhesion(Geo)
         kg_SA.compute_work(Geo, Set)
@@ -382,7 +382,7 @@ def remeshing_cells(Geo_0, Geo_n, Geo, Dofs, Set, cells_to_change, ghost_node):
     :return:
     """
 
-    def objective_function(dy):
+    def objective_function(dy, dof):
         # Reshape dy to match the geometry of the system
         dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
 
@@ -396,12 +396,16 @@ def remeshing_cells(Geo_0, Geo_n, Geo, Dofs, Set, cells_to_change, ghost_node):
         Geo_copy.update_measures()
 
         # Compute the energies
-        _, _, energy_total, _ = KgGlobal(Geo_0, Geo_n, Geo_copy, Set)
+        g, _, energy_total, _ = KgGlobal(Geo_0, Geo_n, Geo_copy, Set)
+
+        logger.info('Energy: ' + str(energy_total))
+        gr = np.linalg.norm(g[dof])
+        logger.info('||gr||= ' + str(gr))
 
         # Return the total energy
-        return energy_total
+        return gr
 
-    def gradient_function(dy):
+    def gradient_function(dy, dof):
         # Reshape dy to match the geometry of the system
         dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
 
@@ -417,6 +421,8 @@ def remeshing_cells(Geo_0, Geo_n, Geo, Dofs, Set, cells_to_change, ghost_node):
         # Compute the energies
         g, _, _, _ = KgGlobal(Geo_0, Geo_n, Geo_copy, Set)
 
+        g[dof == False] = 0
+
         # Return the gradient
         return g.flatten()
 
@@ -427,28 +433,24 @@ def remeshing_cells(Geo_0, Geo_n, Geo, Dofs, Set, cells_to_change, ghost_node):
     elif np.isin(ghost_node, Geo.XgTop).any():
         interface_type = 0
 
-    Dofs = Dofs.get_remeshing_dofs(Geo, cells_to_change, interface_type)
+    Dofs.get_remeshing_dofs(Geo, cells_to_change, interface_type)
 
     # Set the degrees of freedom
-    dof = Dofs.Remeshing
+    dof = Dofs.remeshing
 
     dy_initial = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3, dtype=np.float64)
-    Set.currentT = 0
     g, K, _, _ = KgGlobal(Geo_0, Geo_n, Geo, Set)
     dy_initial[dof] = ml_divide(K, dof, g)
 
     result = minimize(
         fun=objective_function,  # Defined as before
         x0=dy_initial,
-        #args=(Set,),
-        method='L-BFGS-B',
-        #jac=gradient_function,
-        #bounds=bounds,  # Apply bounds
-        #tol=Set.tol,
+        args=(dof,),
+        method='Newton-CG',
+        jac=gradient_function,
+        tol=Set.tol,
         options={'disp': True}
     )
 
-    if result.success:
-        return dy_initial
-    else:
-        raise ValueError("Optimization failed.")
+    dy_reshaped = np.reshape(result.x, (Geo.numF + Geo.numY + Geo.nCells, 3))
+    return dy_reshaped

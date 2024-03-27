@@ -257,11 +257,8 @@ class Remodelling:
                                 best_how_close_to_vertex = how_close_to_vertex
                                 best_strong_gradient = strong_gradient
 
-
-
                     how_close_to_vertex = best_how_close_to_vertex
                     strong_gradient = best_strong_gradient
-                    self.Geo_n = self.Geo.copy(update_measurements=False)
                     self.Geo = (
                         move_vertices_closer_to_ref_point(self.Geo, how_close_to_vertex,
                                                           np.concatenate(
@@ -273,6 +270,11 @@ class Remodelling:
                                          np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
                                          segmentFeatures['node_pair_g'])
 
+                    if dy is not None:
+                        self.Geo.update_vertices(dy)
+                        self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step + 1)
+
+                    self.Geo_n = self.Geo.copy(update_measurements=False)
                     self.Geo_n.create_vtk_cell(self.Geo_0, self.Set, num_step + 1)
 
                     # Solve the remodelling step
