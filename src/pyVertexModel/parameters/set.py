@@ -220,10 +220,10 @@ class Set:
         self.Nincr = self.tend
 
         self.nu = 500
-        self.lambdaB = 1
+        self.lambdaB = 0.4
         self.Beta = 1
 
-        self.lambdaR = 0.01
+        self.lambdaR = 0.05
 
         self.lambdaV = 10
         self.kSubstrate = 100
