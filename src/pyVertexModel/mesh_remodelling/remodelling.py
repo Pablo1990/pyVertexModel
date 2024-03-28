@@ -2,12 +2,14 @@ import logging
 
 import numpy as np
 import pandas as pd
+from matplotlib._qhull import delaunay
 
 from src.pyVertexModel.algorithm import newtonRaphson
 from src.pyVertexModel.algorithm.newtonRaphson import solve_remodeling_step, KgGlobal, gGlobal, remeshing_cells
 from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
-from src.pyVertexModel.util.utils import ismember_rows, save_backup_vars, load_backup_vars, compute_distance_3d
+from src.pyVertexModel.util.utils import ismember_rows, save_backup_vars, load_backup_vars, compute_distance_3d, \
+    RegulariseMesh, laplacian_smoothing
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -176,6 +178,38 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
     return Geo
 
 
+def smoothing_cell_surfaces_mesh(Geo, cellNodesShared, segmentFeatures):
+    cells_intercalted = np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])
+    for cell_intercalated in cells_intercalted:
+        if Geo.Cells[cell_intercalated].AliveStatus == 1:
+            ys = Geo.Cells[cell_intercalated].Y[:, 0:2]
+            # face_centres = [faces.Centre[0:2] for faces in self.Geo.Cells[cell_intercalated].Faces]
+            x_2d = ys
+
+            triangles = []
+            for num_face, face in enumerate(Geo.Cells[cell_intercalated].Faces):
+                for tri in face.Tris:
+                    triangles.append([tri.Edge[0], tri.Edge[1]])
+
+            boundary_ids = np.where(np.sum(np.isin(Geo.Cells[cell_intercalated].T, Geo.XgID),
+                                           axis=1) < 3)[0]
+
+            X2D = laplacian_smoothing(x_2d, np.array(triangles), boundary_ids, iteration_count=100)
+
+            Geo.Cells[cell_intercalated].Y[:, 0:2] = X2D[0:len(ys)]
+
+            # Update as the average of the new vertices
+            for num_face, _ in enumerate(Geo.Cells[cell_intercalated].Faces):
+                all_edges = []
+                for tri in Geo.Cells[cell_intercalated].Faces[num_face].Tris:
+                    all_edges.append(tri.Edge)
+
+                all_edges = np.unique(np.concatenate(all_edges))
+                Geo.Cells[cell_intercalated].Faces[num_face].Centre[0:2] = np.mean(X2D[all_edges], axis=0)
+
+    return Geo
+
+
 class Remodelling:
     """
     Class that contains the information of the remodelling process.
@@ -237,8 +271,8 @@ class Remodelling:
                     best_how_close_to_vertex_gr = 1e10
                     best_how_close_to_vertex = None
                     best_strong_gradient = None
-                    for how_close_to_vertex in [0.2]:
-                        for strong_gradient in [0]:
+                    for how_close_to_vertex in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
+                        for strong_gradient in [0, 0.25, 0.5, 0.75, 1]:
                             # Instead of moving geo vertices closer to the reference point, we move the ones in Geo_n closer to the
                             # reference point. Thus, we'd expect the vertices to be moving not too far from those, but keeping a
                             # good geometry. This function is working.
@@ -249,9 +283,16 @@ class Remodelling:
                                                                       [[segmentFeatures['num_cell']], cellNodesShared]),
                                                                   cellToSplitFrom,
                                                                   ghostNode, allTnew, self.Set, strong_gradient))
+
                             g = gGlobal(self.Geo_0, geo_cloned, geo_cloned, self.Set)
                             gr = np.linalg.norm(g[self.Dofs.Free])
-                            logger.info(gr)
+                            logger.info(f'before: {gr}')
+
+                            geo_cloned = smoothing_cell_surfaces_mesh(geo_cloned, cellNodesShared, segmentFeatures)
+
+                            g = gGlobal(self.Geo_0, geo_cloned, geo_cloned, self.Set)
+                            gr = np.linalg.norm(g[self.Dofs.Free])
+                            logger.info(f'after: {gr}')
                             if gr < best_how_close_to_vertex_gr:
                                 best_how_close_to_vertex_gr = gr
                                 best_how_close_to_vertex = how_close_to_vertex
@@ -266,13 +307,7 @@ class Remodelling:
                                                           cellToSplitFrom,
                                                           ghostNode, allTnew, self.Set, strong_gradient))
 
-                    dy = remeshing_cells(self.Geo_0, self.Geo_n, self.Geo, self.Dofs, self.Set,
-                                         np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
-                                         segmentFeatures['node_pair_g'])
-
-                    if dy is not None:
-                        self.Geo.update_vertices(dy)
-                        self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step + 1)
+                    self.Geo = smoothing_cell_surfaces_mesh(self.Geo, cellNodesShared, segmentFeatures)
 
                     self.Geo_n = self.Geo.copy(update_measurements=False)
                     self.Geo_n.create_vtk_cell(self.Geo_0, self.Set, num_step + 1)
