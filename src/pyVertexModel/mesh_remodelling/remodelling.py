@@ -271,8 +271,8 @@ class Remodelling:
                     best_how_close_to_vertex_gr = 1e10
                     best_how_close_to_vertex = None
                     best_strong_gradient = None
-                    for how_close_to_vertex in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
-                        for strong_gradient in [0, 0.25, 0.5, 0.75, 1]:
+                    for how_close_to_vertex in [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
+                        for strong_gradient in [0]:
                             # Instead of moving geo vertices closer to the reference point, we move the ones in Geo_n closer to the
                             # reference point. Thus, we'd expect the vertices to be moving not too far from those, but keeping a
                             # good geometry. This function is working.
@@ -329,6 +329,8 @@ class Remodelling:
                     self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step + 2)
                     self.Geo_n = self.Geo.copy(update_measurements=False)
                     backup_vars = save_backup_vars(self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs)
+                    if len(np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])) > 3:
+                        break
             else:
                 # Go back to initial state
                 self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs = load_backup_vars(backup_vars)

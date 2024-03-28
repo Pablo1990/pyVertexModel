@@ -223,7 +223,7 @@ class Set:
         self.lambdaB = 1
         self.Beta = 1
 
-        self.lambdaR = 0.3
+        self.lambdaR = 0.01
 
         self.lambdaV = 10
         self.kSubstrate = 100
@@ -246,7 +246,7 @@ class Set:
     def woundDefault(self):
         # ============================== Ablation ============================
         self.cellsToAblate = np.arange(1)
-        self.TInitAblation = 1
+        self.TInitAblation = 10
         self.TEndAblation = self.tend
         self.lambdaSFactor_Debris = np.finfo(float).eps
         # =========================== Contractility ==========================
