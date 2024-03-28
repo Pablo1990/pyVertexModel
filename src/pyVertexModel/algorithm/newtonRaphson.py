@@ -441,13 +441,17 @@ def remeshing_cells(Geo_0, Geo_n, Geo, Dofs, Set, cells_to_change, ghost_node):
     g, K, _, _ = KgGlobal(Geo_0, Geo_n, Geo, Set)
     dy_initial[dof] = ml_divide(K, dof, g)
 
+    lower_bounds = np.zeros_like(dy_initial)
+    upper_bounds = 10e-1 * np.ones_like(dy_initial)
+    bounds = Bounds(lower_bounds, upper_bounds)
+
     result = minimize(
         fun=objective_function,  # Defined as before
         x0=dy_initial,
         args=(dof,),
-        method='Newton-CG',
+        method='L-BFGS-B', #Newton-CG
         jac=gradient_function,
-        tol=Set.tol,
+        bounds=bounds,
         options={'disp': True}
     )
 

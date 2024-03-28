@@ -126,3 +126,45 @@ def copy_non_mutable_attributes(class_to_change, attr_not_to_change, new_cell):
 
 def compute_distance_3d(point1, point2):
     return math.sqrt((point2[0] - point1[0]) ** 2 + (point2[1] - point1[1]) ** 2 + (point2[2] - point1[2]) ** 2)
+
+
+def laplacian_smoothing(vertices, edges, fixed_indices, iteration_count=10, bounding_box=None):
+    """
+    Perform Laplacian smoothing on a mesh.
+
+    Parameters:
+    - vertices: Nx2 array of vertex positions.
+    - edges: Mx2 array of indices into vertices forming edges.
+    - fixed_indices: List of vertex indices that should not be moved.
+    - iteration_count: Number of smoothing iterations to perform.
+    - bounding_box: Optional [(min_x, min_y), (max_x, max_y)] bounding box to constrain vertex movement.
+    """
+    # Convert fixed_indices to a set for faster lookup
+    fixed_indices = set(fixed_indices)
+
+    for _ in range(iteration_count):
+        new_positions = vertices.copy()
+
+        for i in range(len(vertices)):
+            if i in fixed_indices:
+                continue
+
+            # Find neighboring vertices
+            neighbors = np.concatenate((edges[edges[:, 0] == i, 1], edges[edges[:, 1] == i, 0]))
+            if len(neighbors) == 0:
+                continue
+
+            # Calculate the average position of neighboring vertices
+            neighbor_positions = vertices[neighbors]
+            mean_position = np.mean(neighbor_positions, axis=0)
+
+            # Apply bounding box constraint if specified
+            if bounding_box is not None:
+                mean_position = np.maximum(mean_position, bounding_box[0])
+                mean_position = np.minimum(mean_position, bounding_box[1])
+
+            new_positions[i] = mean_position
+
+        vertices = new_positions
+
+    return vertices
