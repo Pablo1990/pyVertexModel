@@ -217,16 +217,16 @@ class Set:
         self.TotalCells = 40
         self.CellHeight = 15
         self.tend = 61
-        self.Nincr = self.tend
+        self.Nincr = self.tend * 2
 
         self.nu = 500
-        self.lambdaB = 0.4
+        self.lambdaB = 1
         self.Beta = 1
 
-        self.lambdaR = 0.05
+        self.lambdaR = 0.3
 
-        self.lambdaV = 10
-        self.kSubstrate = 100
+        self.lambdaV = 0.001
+        self.kSubstrate = 1
         self.cLineTension = 0.05
 
         self.noiseContractility = 0.0
@@ -235,7 +235,7 @@ class Set:
         # Stiff > 0
         self.Remodelling = 1
         self.RemodelStiffness = 0.7
-        self.lambdaS1 = 10
+        self.lambdaS1 = 1
         self.lambdaS2 = self.lambdaS1 / 10
         self.lambdaS3 = self.lambdaS1 / 10
         self.lambdaS4 = self.lambdaS3
@@ -245,8 +245,8 @@ class Set:
 
     def woundDefault(self):
         # ============================== Ablation ============================
-        self.cellsToAblate = np.arange(1)
-        self.TInitAblation = 10
+        self.cellsToAblate = np.array([1])
+        self.TInitAblation = 1
         self.TEndAblation = self.tend
         self.lambdaSFactor_Debris = np.finfo(float).eps
         # =========================== Contractility ==========================
