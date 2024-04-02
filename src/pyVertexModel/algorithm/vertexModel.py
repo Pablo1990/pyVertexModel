@@ -98,8 +98,11 @@ class VertexModel:
             self.Dofs.get_dofs(self.geo, self.set)
 
         self.geo.remodelling = False
-        self.geo_0 = self.geo.copy(update_measurements=False)
-        self.geo_n = self.geo.copy(update_measurements=False)
+        if self.geo_0 is None:
+            self.geo_0 = self.geo.copy(update_measurements=False)
+
+        if self.geo_n is None:
+            self.geo_n = self.geo.copy(update_measurements=False)
         self.backupVars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
 
         # save_state(self, os.path.join(self.set.OutputFolder, 'data_step_0.pkl'))

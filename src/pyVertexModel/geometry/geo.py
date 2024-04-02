@@ -129,6 +129,7 @@ class Geo:
         Initialize the geometry
         :param mat_file:    The mat file of the geometry
         """
+        self.lmin0 = None
         self.cellsToAblate = None
         self.Cells = []
         self.remodelling = False

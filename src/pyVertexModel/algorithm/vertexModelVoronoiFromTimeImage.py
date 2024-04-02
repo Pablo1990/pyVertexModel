@@ -506,7 +506,9 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         """
         if os.path.exists(filename):
             if filename.endswith('.pkl'):
-                load_state(self, filename, ['geo', 'geo_0', 'geo_n'])
+                output_folder = self.set.OutputFolder
+                load_state(self, filename, ['geo', 'geo_0', 'geo_n', 'set'])
+                self.set.OutputFolder = output_folder
             elif filename.endswith('.mat'):
                 mat_info = scipy.io.loadmat(filename)
                 self.geo = Geo(mat_info['Geo'])
@@ -521,7 +523,8 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             self.geo.cellsToAblate = self.set.cellsToAblate
 
         # Define upper and lower area threshold for remodelling
-        self.initialize_average_cell_props()
+        if self.geo.lmin0 is None:
+            self.initialize_average_cell_props()
 
     def obtain_initial_x_and_tetrahedra(self, img_filename="src/pyVertexModel/resources/LblImg_imageSequence.tif"):
         """
