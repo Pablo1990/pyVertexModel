@@ -220,10 +220,10 @@ class Set:
         self.Nincr = self.tend * 2
 
         self.nu = 500
-        self.lambdaB = 1
+        self.lambdaB = 0.5
         self.Beta = 1
 
-        self.lambdaR = 0.3
+        self.lambdaR = 0.23
 
         self.lambdaV = 0.001
         self.kSubstrate = 1
@@ -235,7 +235,7 @@ class Set:
         # Stiff > 0
         self.Remodelling = 1
         self.RemodelStiffness = 0.7
-        self.lambdaS1 = 1
+        self.lambdaS1 = 5
         self.lambdaS2 = self.lambdaS1 / 10
         self.lambdaS3 = self.lambdaS1 / 10
         self.lambdaS4 = self.lambdaS3
@@ -245,7 +245,7 @@ class Set:
 
     def woundDefault(self):
         # ============================== Ablation ============================
-        self.cellsToAblate = np.array([1])
+        self.cellsToAblate = np.array([0])
         self.TInitAblation = 1
         self.TEndAblation = self.tend
         self.lambdaSFactor_Debris = np.finfo(float).eps

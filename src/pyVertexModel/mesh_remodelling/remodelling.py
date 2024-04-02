@@ -194,7 +194,7 @@ def smoothing_cell_surfaces_mesh(Geo, cellNodesShared, segmentFeatures):
             boundary_ids = np.where(np.sum(np.isin(Geo.Cells[cell_intercalated].T, Geo.XgID),
                                            axis=1) < 3)[0]
 
-            X2D = laplacian_smoothing(x_2d, np.array(triangles), boundary_ids, iteration_count=100)
+            X2D = laplacian_smoothing(x_2d, np.array(triangles), boundary_ids, iteration_count=1000)
 
             Geo.Cells[cell_intercalated].Y[:, 0:2] = X2D[0:len(ys)]
 
@@ -205,7 +205,7 @@ def smoothing_cell_surfaces_mesh(Geo, cellNodesShared, segmentFeatures):
                     all_edges.append(tri.Edge)
 
                 all_edges = np.unique(np.concatenate(all_edges))
-                Geo.Cells[cell_intercalated].Faces[num_face].Centre[0:2] = np.mean(X2D[all_edges], axis=0)
+                Geo.Cells[cell_intercalated].Faces[num_face].Centre = np.mean(Geo.Cells[cell_intercalated].Y[all_edges, :], axis=0)
 
     return Geo
 
@@ -271,7 +271,7 @@ class Remodelling:
                     best_how_close_to_vertex_gr = 1e10
                     best_how_close_to_vertex = None
                     best_strong_gradient = None
-                    for how_close_to_vertex in [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
+                    for how_close_to_vertex in [0.5, 0.6, 0.7, 0.8, 0.9]:
                         for strong_gradient in [0]:
                             # Instead of moving geo vertices closer to the reference point, we move the ones in Geo_n closer to the
                             # reference point. Thus, we'd expect the vertices to be moving not too far from those, but keeping a
