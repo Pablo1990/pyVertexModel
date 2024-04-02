@@ -164,7 +164,7 @@ class VertexModel:
         self.relaxingNu = False
         if self.set.iter == self.set.MaxIter0:
             self.set.MaxIter = self.set.MaxIter0 * 3
-            self.set.nu = 100 * self.set.nu0
+            self.set.nu = 10 * self.set.nu0
         else:
             if (self.set.iter >= self.set.MaxIter and self.set.iter > self.set.MaxIter0 and
                     self.set.dt / self.set.dt0 > 1 / 100):

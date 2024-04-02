@@ -507,7 +507,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         if os.path.exists(filename):
             if filename.endswith('.pkl'):
                 output_folder = self.set.OutputFolder
-                load_state(self, filename, ['geo', 'geo_0', 'geo_n', 'set'])
+                load_state(self, filename, ['geo', 'geo_0', 'geo_n'])
                 self.set.OutputFolder = output_folder
             elif filename.endswith('.mat'):
                 mat_info = scipy.io.loadmat(filename)

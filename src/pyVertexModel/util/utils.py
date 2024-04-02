@@ -4,6 +4,7 @@ import math
 import pickle
 
 import numpy as np
+from scipy.optimize import fsolve
 
 
 def load_backup_vars(backup_vars):
@@ -126,6 +127,93 @@ def copy_non_mutable_attributes(class_to_change, attr_not_to_change, new_cell):
 
 def compute_distance_3d(point1, point2):
     return math.sqrt((point2[0] - point1[0]) ** 2 + (point2[1] - point1[1]) ** 2 + (point2[2] - point1[2]) ** 2)
+
+
+def RegulariseMesh(T, X, Xf=None):
+    if Xf is None:
+        Xf = GetBoundary(T, X)
+    x, dofc, doff = Getx(X, Xf)
+    dJ0 = ComputeJ(T, X)
+    fun = lambda x: gBuild(x, dofc, doff, T, X)
+    x, info, flag, _ = fsolve(fun, x, full_output=True)
+    np_, dim = X.shape
+    xf = X.T.flatten()
+    xf[doff] = x
+    X = xf.reshape(dim, np_).T
+    dJ = ComputeJ(T, X)
+    return X, flag, dJ0, dJ
+
+
+def gBuild(x, dofc, doff, T, X):
+    nele, npe = T.shape
+    np_, dim = X.shape
+    xf = X.T.flatten()
+    xf[doff] = x
+    X = xf.reshape(dim, np_).T
+    xi = np.array([1, 1]) * np.sqrt(3) / 3
+    _, dN = ShapeFunctions(xi)
+    g = np.zeros(np_ * dim)
+    for e in range(nele):
+        Xe = X[T[e, :], :]
+        Je = Xe.T @ dN
+        dJ = np.linalg.det(Je)
+        fact = (dJ - 1) * dJ
+        for i in range(npe):
+            idof = np.arange(T[e, i] * dim, T[e, i] * dim + dim)
+            g[idof] += np.linalg.solve(Je.T, dN[i, :])
+    g = np.delete(g, dofc)
+    return g
+
+
+def ComputeJ(T, X):
+    nele = T.shape[0]
+    dJ = np.zeros(nele)
+    xi = np.array([1, 1]) * np.sqrt(3) / 3
+    _, dN = ShapeFunctions(xi)
+    for e in range(nele):
+        Xe = X[T[e]]
+        Je = Xe.T @ dN
+        dJ[e] = np.linalg.det(Je)
+    return dJ
+
+
+def Getx(X, Xf=None):
+    np_, dim = X.shape
+    x = X.T.flatten()
+    doff = np.arange(np_ * dim)
+    if Xf is not None:
+        nf = len(Xf)
+        dofc = np.kron((Xf - 1) * dim, np.array([1, 1])) + np.kron(np.ones(nf), np.array([0, dim - 1])).astype(int)
+        doff = np.delete(doff, dofc)
+        x = np.delete(x, dofc)
+    return x, dofc, doff
+
+
+def ShapeFunctions(xi):
+    n = len(xi)
+    if n == 2:
+        N = np.array([1 - xi[0] - xi[1], xi[0], xi[1]])
+        dN = np.array([[-1, -1], [1, 0], [0, 1]])
+    return N, dN
+
+
+def GetBoundary(T, X):
+    np_ = X.shape[0]
+    nele = T.shape[0]
+    nodesExt = np.zeros(np_, dtype=int)
+    for e in range(nele):
+        Te = np.append(T[e, :], T[e, 0])
+        Sides = np.zeros(3, dtype=int)
+        for s in range(3):
+            n = Te[s:s + 2]
+            for d in range(nele):
+                if np.sum(np.isin(n, T[d, :])) == 2 and d != e:
+                    Sides[s] = 1
+                    break
+            if Sides[s] == 0:
+                nodesExt[Te[s:s + 2]] = Te[s:s + 2]
+    nodesExt = nodesExt[nodesExt != 0]
+    return nodesExt
 
 
 def laplacian_smoothing(vertices, edges, fixed_indices, iteration_count=10, bounding_box=None):
