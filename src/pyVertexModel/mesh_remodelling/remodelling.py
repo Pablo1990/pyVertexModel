@@ -373,8 +373,9 @@ class Remodelling:
         logger.info(f"Remodeling: {cell_node} - {ghost_node}")
 
         valence_segment, old_tets, old_ys = edge_valence(self.Geo, nodes_pair)
-
-        if sum(np.isin(self.Geo.non_dead_cells, old_tets.flatten())) > 2:
+        cell_nodes = self.Geo.non_dead_cells[np.isin(self.Geo.non_dead_cells, old_tets.flatten())]
+        cell_node_alive = [cell for cell in cell_nodes if self.Geo.Cells[cell].AliveStatus == 1]
+        if len(cell_node_alive) > 2:
             newYgIds, has_converged, Tnew = self.flip_nm(nodes_pair,
                                                          cell_to_intercalate_with,
                                                          old_tets, old_ys,
