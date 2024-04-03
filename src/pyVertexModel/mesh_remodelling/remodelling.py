@@ -114,7 +114,7 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
         if 'Bubbles_Cyst' in Set.InputGeo:
             return Geo
         else:
-            raise Exception('moveVerticesCloserToRefPoint_line17')
+            return Geo
 
     vertices_to_change = np.sort(Tnew, axis=1)
 
@@ -268,38 +268,38 @@ class Remodelling:
 
                 if len(np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])) > 3:
                     # Best parameters according to energy, not visually
-                    best_how_close_to_vertex_gr = 1e10
-                    best_how_close_to_vertex = None
-                    best_strong_gradient = None
-                    for how_close_to_vertex in [0.5, 0.6, 0.7, 0.8, 0.9]:
-                        for strong_gradient in [0]:
-                            # Instead of moving geo vertices closer to the reference point, we move the ones in Geo_n closer to the
-                            # reference point. Thus, we'd expect the vertices to be moving not too far from those, but keeping a
-                            # good geometry. This function is working.
-                            geo_cloned = self.Geo.copy()
-                            geo_cloned = (
-                                move_vertices_closer_to_ref_point(geo_cloned, how_close_to_vertex,
-                                                                  np.concatenate(
-                                                                      [[segmentFeatures['num_cell']], cellNodesShared]),
-                                                                  cellToSplitFrom,
-                                                                  ghostNode, allTnew, self.Set, strong_gradient))
+                    # best_how_close_to_vertex_gr = 1e10
+                    # best_how_close_to_vertex = None
+                    # best_strong_gradient = None
+                    # for how_close_to_vertex in [0.9]:
+                    #     for strong_gradient in [0]:
+                    #         # Instead of moving geo vertices closer to the reference point, we move the ones in Geo_n closer to the
+                    #         # reference point. Thus, we'd expect the vertices to be moving not too far from those, but keeping a
+                    #         # good geometry. This function is working.
+                    #         geo_cloned = self.Geo.copy()
+                    #         geo_cloned = (
+                    #             move_vertices_closer_to_ref_point(geo_cloned, how_close_to_vertex,
+                    #                                               np.concatenate(
+                    #                                                   [[segmentFeatures['num_cell']], cellNodesShared]),
+                    #                                               cellToSplitFrom,
+                    #                                               ghostNode, allTnew, self.Set, strong_gradient))
+                    #
+                    #         g = gGlobal(self.Geo_0, geo_cloned, geo_cloned, self.Set)
+                    #         gr = np.linalg.norm(g[self.Dofs.Free])
+                    #         logger.info(f'before: {gr}')
+                    #
+                    #         #geo_cloned = smoothing_cell_surfaces_mesh(geo_cloned, cellNodesShared, segmentFeatures)
+                    #
+                    #         #g = gGlobal(self.Geo_0, geo_cloned, geo_cloned, self.Set)
+                    #         #gr = np.linalg.norm(g[self.Dofs.Free])
+                    #         #logger.info(f'after: {gr}')
+                    #         if gr < best_how_close_to_vertex_gr:
+                    #             best_how_close_to_vertex_gr = gr
+                    #             best_how_close_to_vertex = how_close_to_vertex
+                    #             best_strong_gradient = strong_gradient
 
-                            g = gGlobal(self.Geo_0, geo_cloned, geo_cloned, self.Set)
-                            gr = np.linalg.norm(g[self.Dofs.Free])
-                            logger.info(f'before: {gr}')
-
-                            geo_cloned = smoothing_cell_surfaces_mesh(geo_cloned, cellNodesShared, segmentFeatures)
-
-                            g = gGlobal(self.Geo_0, geo_cloned, geo_cloned, self.Set)
-                            gr = np.linalg.norm(g[self.Dofs.Free])
-                            logger.info(f'after: {gr}')
-                            if gr < best_how_close_to_vertex_gr:
-                                best_how_close_to_vertex_gr = gr
-                                best_how_close_to_vertex = how_close_to_vertex
-                                best_strong_gradient = strong_gradient
-
-                    how_close_to_vertex = best_how_close_to_vertex
-                    strong_gradient = best_strong_gradient
+                    how_close_to_vertex = 0.9
+                    strong_gradient = 0
                     self.Geo = (
                         move_vertices_closer_to_ref_point(self.Geo, how_close_to_vertex,
                                                           np.concatenate(
@@ -307,7 +307,7 @@ class Remodelling:
                                                           cellToSplitFrom,
                                                           ghostNode, allTnew, self.Set, strong_gradient))
 
-                    self.Geo = smoothing_cell_surfaces_mesh(self.Geo, cellNodesShared, segmentFeatures)
+                    #self.Geo = smoothing_cell_surfaces_mesh(self.Geo, cellNodesShared, segmentFeatures)
 
                     self.Geo_n = self.Geo.copy(update_measurements=False)
                     #self.Geo_n.create_vtk_cell(self.Geo_0, self.Set, num_step + 1)
@@ -329,8 +329,6 @@ class Remodelling:
                     self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step)
                     self.Geo_n = self.Geo.copy(update_measurements=False)
                     backup_vars = save_backup_vars(self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs)
-                    if len(np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])) > 3:
-                        break
             else:
                 # Go back to initial state
                 self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs = load_backup_vars(backup_vars)
@@ -375,8 +373,9 @@ class Remodelling:
         logger.info(f"Remodeling: {cell_node} - {ghost_node}")
 
         valence_segment, old_tets, old_ys = edge_valence(self.Geo, nodes_pair)
-
-        if sum(np.isin(self.Geo.non_dead_cells, old_tets.flatten())) > 2:
+        cell_nodes = self.Geo.non_dead_cells[np.isin(self.Geo.non_dead_cells, old_tets.flatten())]
+        cell_node_alive = [cell for cell in cell_nodes if self.Geo.Cells[cell].AliveStatus == 1]
+        if len(cell_node_alive) > 2 or (len(cell_node_alive) == 2 and len(cell_nodes) == 3):
             newYgIds, has_converged, Tnew = self.flip_nm(nodes_pair,
                                                          cell_to_intercalate_with,
                                                          old_tets, old_ys,
