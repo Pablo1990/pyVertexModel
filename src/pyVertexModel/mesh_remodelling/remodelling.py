@@ -244,7 +244,7 @@ class Remodelling:
 
         # Save the current state
         backup_vars = save_backup_vars(self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs)
-        self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step)
+        #self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step)
 
         while segmentFeatures_all.empty is False:
             # Get the first segment feature
@@ -310,7 +310,7 @@ class Remodelling:
                     self.Geo = smoothing_cell_surfaces_mesh(self.Geo, cellNodesShared, segmentFeatures)
 
                     self.Geo_n = self.Geo.copy(update_measurements=False)
-                    self.Geo_n.create_vtk_cell(self.Geo_0, self.Set, num_step + 1)
+                    #self.Geo_n.create_vtk_cell(self.Geo_0, self.Set, num_step + 1)
 
                     # Solve the remodelling step
                     self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
@@ -326,7 +326,7 @@ class Remodelling:
                     newYgIds = np.unique(np.concatenate((newYgIds, self.Geo.AssemblegIds)))
                     self.Geo.update_measures()
                     logger.info(f'=>> Full-Flip accepted')
-                    self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step + 2)
+                    self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step)
                     self.Geo_n = self.Geo.copy(update_measurements=False)
                     backup_vars = save_backup_vars(self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs)
                     if len(np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])) > 3:
