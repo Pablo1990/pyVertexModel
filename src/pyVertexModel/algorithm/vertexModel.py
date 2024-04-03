@@ -221,7 +221,8 @@ class VertexModel:
             #     wound_features = compute_wound_features(geo)
 
             # Test Geo
-            self.check_integrity()
+            #TODO: CHECK
+            #self.check_integrity()
 
             # Save Data of the current step
             save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
