@@ -269,37 +269,6 @@ class Remodelling:
                 cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
 
                 if len(np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])) > 3:
-                    # Best parameters according to energy, not visually
-                    # best_how_close_to_vertex_gr = 1e10
-                    # best_how_close_to_vertex = None
-                    # best_strong_gradient = None
-                    # for how_close_to_vertex in [0.9]:
-                    #     for strong_gradient in [0]:
-                    #         # Instead of moving geo vertices closer to the reference point, we move the ones in Geo_n closer to the
-                    #         # reference point. Thus, we'd expect the vertices to be moving not too far from those, but keeping a
-                    #         # good geometry. This function is working.
-                    #         geo_cloned = self.Geo.copy()
-                    #         geo_cloned = (
-                    #             move_vertices_closer_to_ref_point(geo_cloned, how_close_to_vertex,
-                    #                                               np.concatenate(
-                    #                                                   [[segmentFeatures['num_cell']], cellNodesShared]),
-                    #                                               cellToSplitFrom,
-                    #                                               ghostNode, allTnew, self.Set, strong_gradient))
-                    #
-                    #         g = gGlobal(self.Geo_0, geo_cloned, geo_cloned, self.Set)
-                    #         gr = np.linalg.norm(g[self.Dofs.Free])
-                    #         logger.info(f'before: {gr}')
-                    #
-                    #         #geo_cloned = smoothing_cell_surfaces_mesh(geo_cloned, cellNodesShared, segmentFeatures)
-                    #
-                    #         #g = gGlobal(self.Geo_0, geo_cloned, geo_cloned, self.Set)
-                    #         #gr = np.linalg.norm(g[self.Dofs.Free])
-                    #         #logger.info(f'after: {gr}')
-                    #         if gr < best_how_close_to_vertex_gr:
-                    #             best_how_close_to_vertex_gr = gr
-                    #             best_how_close_to_vertex = how_close_to_vertex
-                    #             best_strong_gradient = strong_gradient
-
                     how_close_to_vertex = 0.3
                     strong_gradient = 0
                     self.Geo = (
@@ -312,8 +281,6 @@ class Remodelling:
                     cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
                                                     and cell.AliveStatus == 1]
                     self.Geo = smoothing_cell_surfaces_mesh(self.Geo, cells_involved_intercalation)
-
-                    # TODO: SMOOTHING CELL SURFACE OF THE WHOLE CELL SURFACE AFTER REMODELLING
 
                     self.Geo_n = self.Geo.copy(update_measurements=False)
                     self.Geo_n.create_vtk_cell(self.Geo_0, self.Set, num_step)
