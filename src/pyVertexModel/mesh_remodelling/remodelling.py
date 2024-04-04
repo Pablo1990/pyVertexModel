@@ -178,9 +178,14 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
     return Geo
 
 
-def smoothing_cell_surfaces_mesh(Geo, cellNodesShared, segmentFeatures):
-    cells_intercalted = np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])
-    for cell_intercalated in cells_intercalted:
+def smoothing_cell_surfaces_mesh(Geo, cells_intercalated):
+    """
+    Smoothing the cell surfaces mesh.
+    :param Geo:
+    :param cells_intercalated:
+    :return:
+    """
+    for cell_intercalated in cells_intercalated:
         if Geo.Cells[cell_intercalated].AliveStatus == 1:
             ys = Geo.Cells[cell_intercalated].Y[:, 0:2]
             # face_centres = [faces.Centre[0:2] for faces in self.Geo.Cells[cell_intercalated].Faces]
@@ -194,7 +199,7 @@ def smoothing_cell_surfaces_mesh(Geo, cellNodesShared, segmentFeatures):
             boundary_ids = np.where(np.sum(np.isin(Geo.Cells[cell_intercalated].T, Geo.XgID),
                                            axis=1) < 3)[0]
 
-            X2D = laplacian_smoothing(x_2d, np.array(triangles), boundary_ids, iteration_count=1000)
+            X2D = laplacian_smoothing(x_2d, np.array(triangles), boundary_ids, iteration_count=50)
 
             Geo.Cells[cell_intercalated].Y[:, 0:2] = X2D[0:len(ys)]
 
@@ -256,9 +261,6 @@ class Remodelling:
             if hasConverged:
                 # Get the degrees of freedom for the remodelling
                 self.Dofs.get_dofs(self.Geo, self.Set)
-                # TODO: Solve remodelling step should obtain a geometry closer to the one before the flip with an almost
-                #  four-fold vertex. This is not happening. How can we move the vertices so that the geometry is closer
-                #  to the one before the flip? That will also help the next iteration to converge more easily.
                 self.Geo = self.Dofs.get_remodel_dofs(allTnew, self.Geo)
 
                 gNodeNeighbours = [get_node_neighbours(self.Geo, ghost_node_tried) for ghost_node_tried in
@@ -298,7 +300,7 @@ class Remodelling:
                     #             best_how_close_to_vertex = how_close_to_vertex
                     #             best_strong_gradient = strong_gradient
 
-                    how_close_to_vertex = 0.9
+                    how_close_to_vertex = 0.3
                     strong_gradient = 0
                     self.Geo = (
                         move_vertices_closer_to_ref_point(self.Geo, how_close_to_vertex,
@@ -307,15 +309,22 @@ class Remodelling:
                                                           cellToSplitFrom,
                                                           ghostNode, allTnew, self.Set, strong_gradient))
 
-                    #self.Geo = smoothing_cell_surfaces_mesh(self.Geo, cellNodesShared, segmentFeatures)
+                    cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
+                                                    and cell.AliveStatus == 1]
+                    self.Geo = smoothing_cell_surfaces_mesh(self.Geo, cells_involved_intercalation)
+
+                    # TODO: SMOOTHING CELL SURFACE OF THE WHOLE CELL SURFACE AFTER REMODELLING
 
                     self.Geo_n = self.Geo.copy(update_measurements=False)
-                    #self.Geo_n.create_vtk_cell(self.Geo_0, self.Set, num_step + 1)
+                    self.Geo_n.create_vtk_cell(self.Geo_0, self.Set, num_step)
 
                     # Solve the remodelling step
-                    self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
-                                                                         self.Set)
+                    #self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
+                    #                                                     self.Set)
                 else:
+                    cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
+                                                    and cell.AliveStatus == 1]
+                    self.Geo = smoothing_cell_surfaces_mesh(self.Geo, cells_involved_intercalation)
                     self.Geo_n = self.Geo.copy(update_measurements=False)
                     has_converged = True
 
