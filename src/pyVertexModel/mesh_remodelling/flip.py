@@ -11,9 +11,9 @@ from src.pyVertexModel.util.utils import ismember_rows
 logger = logging.getLogger("pyVertexModel")
 
 
-def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, new_yg_ids, Set, old_geo):
+def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, Set, old_geo):
     """
-    Post flip function
+    Post flip
     :param Tnew:
     :param Ynew:
     :param oldTets:
@@ -21,18 +21,14 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, new_yg_ids, Set, old
     :param Geo_n:
     :param Geo_0:
     :param Dofs:
-    :param new_yg_ids:
     :param Set:
-    :param flipName:
-    :param segmentToChange:
+    :param old_geo:
     :return:
     """
-
     Geo.add_and_rebuild_cells(old_geo, oldTets, Tnew, Ynew, Set, True)
     has_converged = True
-    new_yg_ids = list(set(np.concatenate((new_yg_ids, Geo.AssemblegIds))))
 
-    return Geo_0, Geo_n, Geo, Dofs, new_yg_ids, has_converged
+    return Geo_0, Geo_n, Geo, Dofs, has_converged
 
 
 def do_flip32(Y, X12):

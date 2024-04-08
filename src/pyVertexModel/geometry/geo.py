@@ -139,7 +139,6 @@ class Geo:
         self.BorderGhostNodes = []
         self.RemovedDebrisCells = []
         self.AssembleNodes = []
-        self.AssemblegIds = []
 
         if mat_file is None:
             self.numF = None
