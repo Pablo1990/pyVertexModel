@@ -187,7 +187,11 @@ class VertexModel:
             save_state(self, os.path.join(self.set.OutputFolder,
                                           'data_step_before_remodelling_' + str(self.numStep) + '.pkl'))
 
-            # REMODELLING
+            # Create VTK files for the current state
+            self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
+            self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
+
+            # Remodelling
             if self.set.Remodelling and abs(self.t - self.tr) >= self.set.RemodelingFrequency:
                 remodel_obj = Remodelling(self.geo, self.geo_n, self.geo_0, self.set, self.Dofs)
                 self.geo, self.geo_n = remodel_obj.remodel_mesh(self.numStep)
@@ -227,10 +231,6 @@ class VertexModel:
 
             # Save Data of the current step
             save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
-
-            # Post Processing and Saving Data
-            self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
-            self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
 
             # Reset Contractility Value and Edge Length
             for num_cell in range(len(self.geo.Cells)):
