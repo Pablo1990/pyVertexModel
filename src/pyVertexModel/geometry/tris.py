@@ -28,6 +28,7 @@ class Tris:
             self.AspectRatio = []
             self.EdgeLength_time = []
             self.ContractilityValue = None
+            self.ContractilityG = None
         else:
             self.Edge = mat_file[0][0] - 1
             self.Area = mat_file[1][0][0]
@@ -39,6 +40,17 @@ class Tris:
             self.ContractilityG = mat_file[7][0][0]
             self.ContractilityValue = None
             self.EdgeLength_time = mat_file[9][0]
+
+    def compute_features(self):
+        """
+        Compute the features of the triangles.
+        """
+        features = {'Area': self.Area,
+                    'AspectRatio': self.AspectRatio,
+                    'EdgeLength': self.EdgeLength,
+                    'ContractilityValue': self.ContractilityValue}
+
+        return features
 
     def compute_edge_length(self, Y):
         """

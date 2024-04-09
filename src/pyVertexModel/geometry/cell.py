@@ -230,6 +230,70 @@ class Cell:
 
         return features
 
+    def create_vtk_edges(self):
+        """
+        Create a vtk with only the information on the edges of the cell
+        :return:
+        """
+        points = vtk.vtkPoints()
+        points.SetNumberOfPoints(len(self.Y))
+        for i in range(len(self.Y)):
+            points.SetPoint(i, self.Y[i, 0], self.Y[i, 1], self.Y[i, 2])
+
+        cell = vtk.vtkCellArray()
+        # Go through all the faces and create the triangles for the VTK cell
+        total_edges = 0
+        for f in range(len(self.Faces)):
+            c_face = self.Faces[f]
+            for t in range(len(c_face.Tris)):
+                cell.InsertNextCell(2)
+                cell.InsertCellPoint(c_face.Tris[t].Edge[0])
+                cell.InsertCellPoint(c_face.Tris[t].Edge[1])
+
+            total_edges += len(c_face.Tris)
+
+        vpoly = vtk.vtkPolyData()
+        vpoly.SetPoints(points)
+
+        vpoly.SetLines(cell)
+
+        # Get all the different properties of a cell
+        properties = self.compute_edge_features()
+
+        # Go through the different properties of the dictionary and add them to the vtkFloatArray
+        for key, value in properties[0].items():
+            # Create a vtkFloatArray to store the properties of the cell
+            property_array = vtk.vtkFloatArray()
+            property_array.SetName(key)
+
+            # Add as many values as tris the cell has
+            for i in range(total_edges):
+                if properties[i][key] is None:
+                    property_array.InsertNextValue(0)
+                else:
+                    property_array.InsertNextValue(properties[i][key])
+
+            # Add the property array to the cell data
+            vpoly.GetCellData().AddArray(property_array)
+
+            if key == 'ContractilityValue':
+                # Default parameter
+                vpoly.GetCellData().SetScalars(property_array)
+
+        return vpoly
+
+    def compute_edge_features(self):
+        """
+        Compute the features of the edges of a cell and create a dictionary with them
+        :return:
+        """
+        cell_features = np.array([])
+        for f, c_face in enumerate(self.Faces):
+            for t, c_tris in enumerate(c_face.Tris):
+                cell_features = np.append(cell_features, c_tris.compute_features())
+
+        return cell_features
+
     def compute_height(self):
         """
         Compute the height of the cell regardless of the orientation

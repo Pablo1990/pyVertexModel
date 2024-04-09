@@ -108,7 +108,8 @@ class VertexModel:
         # save_state(self, os.path.join(self.set.OutputFolder, 'data_step_0.pkl'))
 
         # Create VTK files for initial state
-        self.geo.create_vtk_cell(self.geo_0, self.set, self.numStep)
+        self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
+        self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
 
         while self.t <= self.set.tend and not self.didNotConverge:
             self.set.currentT = self.t
@@ -228,7 +229,8 @@ class VertexModel:
             save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
 
             # Post Processing and Saving Data
-            self.geo.create_vtk_cell(self.geo_0, self.set, self.numStep)
+            self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
+            self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
 
             # Reset Contractility Value and Edge Length
             for num_cell in range(len(self.geo.Cells)):
@@ -261,7 +263,6 @@ class VertexModel:
             self.geo_n = self.geo.copy()
             self.relaxingNu = False
         else:
-            self.geo.create_vtk_cell(self.geo_0, self.set, self.numStep)
             self.set.nu = np.max([self.set.nu / 2, self.set.nu0])
             self.relaxingNu = True
 

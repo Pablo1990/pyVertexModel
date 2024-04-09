@@ -282,7 +282,6 @@ class Remodelling:
                     self.Geo = smoothing_cell_surfaces_mesh(self.Geo, cells_involved_intercalation)
 
                     self.Geo_n = self.Geo.copy(update_measurements=False)
-                    self.Geo_n.create_vtk_cell(self.Geo_0, self.Set, num_step)
 
                     # Solve the remodelling step
                     # self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
@@ -300,7 +299,6 @@ class Remodelling:
                 else:
                     self.Geo.update_measures()
                     logger.info(f'=>> Full-Flip accepted')
-                    self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step)
                     self.Geo_n = self.Geo.copy(update_measurements=False)
                     backup_vars = save_backup_vars(self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs)
             else:
