@@ -186,6 +186,10 @@ class Cell:
             # Add the property array to the cell data
             vpoly.GetCellData().AddArray(property_array)
 
+            if key == 'ID':
+                # Default parameter
+                vpoly.GetCellData().SetScalars(property_array)
+
         return vpoly
 
     def compute_features(self):
@@ -193,7 +197,8 @@ class Cell:
         Compute the features of the cell and create a dictionary with them
         :return: a dictionary with the features of the cell
         """
-        features = {'Area': self.compute_area(),
+        features = {'ID': self.ID,
+                    'Area': self.compute_area(),
                     'Area_top': self.compute_area(location_filter=0),
                     'Area_bottom': self.compute_area(location_filter=2),
                     'Area_cellcell': self.compute_area(location_filter=1),
