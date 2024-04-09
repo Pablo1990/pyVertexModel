@@ -30,35 +30,45 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
     geo.remodelling = True
     original_nu = c_set.nu
     original_nu0 = c_set.nu0
+    original_lambdaB = c_set.lambdaB
+    original_lambdaR = c_set.lambdaR
 
-    nu_factor = 100
-    c_set.nu0 = c_set.nu * nu_factor
-    c_set.nu = c_set.nu_LP_Initial * nu_factor
+    nu_factor = np.linspace(10, 1, 3)
     c_set.MaxIter = c_set.MaxIter0 * 3
+    c_set.lambdaB = original_lambdaB * 10
+    lambdaB = np.linspace(c_set.lambdaB, original_lambdaB * 10, 3)
 
-    g, k, _, _ = KgGlobal(geo_0, geo_n, geo, c_set)
+    for n_id, lambdaR in enumerate(np.linspace(c_set.lambdaR, original_lambdaR * 0.1, 3)):
+        c_set.lambdaR = lambdaR
+        c_set.lambdaB = lambdaB[n_id]
+        c_set.nu0 = original_nu0 * nu_factor[n_id]
+        c_set.nu = original_nu * nu_factor[n_id]
+        g, k, _, _ = KgGlobal(geo_0, geo_n, geo, c_set)
 
-    dy = np.zeros(((geo.numY + geo.numF + geo.nCells) * 3, 1), dtype=np.float64)
-    dyr = np.linalg.norm(dy[dofs.remodel, 0])
-    gr = np.linalg.norm(g[dofs.remodel])
-    logger.info(
-        f'Local Problem ->Iter: 0, ||gr||= {gr:.3e} ||dyr||= {dyr:.3e}  nu/nu0={c_set.nu / c_set.nu0:.3e}  '
-        f'dt/dt0={c_set.dt / c_set.dt0:.3g}')
+        dy = np.zeros(((geo.numY + geo.numF + geo.nCells) * 3, 1), dtype=np.float64)
+        dyr = np.linalg.norm(dy[dofs.remodel, 0])
+        gr = np.linalg.norm(g[dofs.remodel])
+        logger.info(
+            f'Local Problem ->Iter: 0, ||gr||= {gr:.3e} ||dyr||= {dyr:.3e}  nu/nu0={c_set.nu / c_set.nu0:.3e}  '
+            f'dt/dt0={c_set.dt / c_set.dt0:.3g}')
 
-    geo, g, k, energy, c_set, gr, dyr, dy = newton_raphson(geo_0, geo_n, geo, dofs, c_set, k, g, -1, -1)
+        geo, g, k, energy, c_set, gr, dyr, dy = newton_raphson(geo_0, geo_n, geo, dofs, c_set, k, g, -1, -1)
 
-    if gr > c_set.tol or dyr > c_set.tol or np.any(np.isnan(g[dofs.Free])) or np.any(np.isnan(dy[dofs.Free])):
-        logger.info(f'Local Problem did not converge after {c_set.iter} iterations.')
-        has_converged = False
-    else:
-        logger.info(f'=====>> Local Problem converged in {c_set.iter} iterations.')
-        has_converged = True
+        if gr > c_set.tol or dyr > c_set.tol or np.any(np.isnan(g[dofs.Free])) or np.any(np.isnan(dy[dofs.Free])):
+            logger.info(f'Local Problem did not converge after {c_set.iter} iterations.')
+            has_converged = False
+            break
+        else:
+            logger.info(f'=====>> Local Problem converged in {c_set.iter} iterations.')
+            has_converged = True
 
     geo.remodelling = False
 
     c_set.MaxIter = c_set.MaxIter0
     c_set.nu = original_nu
     c_set.nu0 = original_nu0
+    c_set.lambdaB = original_lambdaB
+    c_set.lambdaR = original_lambdaR
 
     return geo, c_set, has_converged
 
@@ -443,7 +453,7 @@ def remeshing_cells(Geo_0, Geo_n, Geo, Dofs, Set, cells_to_change, ghost_node):
         fun=objective_function,  # Defined as before
         x0=dy_initial,
         args=(dof,),
-        method='L-BFGS-B', #Newton-CG
+        method='L-BFGS-B',  #Newton-CG
         jac=gradient_function,
         bounds=bounds,
         options={'disp': True}
