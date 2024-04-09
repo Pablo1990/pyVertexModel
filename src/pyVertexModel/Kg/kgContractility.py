@@ -69,7 +69,7 @@ def getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set):
     contractilityValue = None
     CUTOFF = 3
 
-    if currentTri.ContractilityValue is None:
+    if currentTri.ContractilityValue is None and len(currentTri.SharedByCells) > 1:
         if Set.ablation:
             if Set.DelayedAdditionalContractility == 1:
                 contractilityValue = getDelayedContractility(Set.currentT, Set.purseStringStrength,
