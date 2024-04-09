@@ -268,7 +268,7 @@ class Remodelling:
                 cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
 
                 if len(np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])) > 3:
-                    how_close_to_vertex = 0.1
+                    how_close_to_vertex = 0.3
                     strong_gradient = 0
                     self.Geo = (
                         move_vertices_closer_to_ref_point(self.Geo, how_close_to_vertex,
@@ -284,8 +284,8 @@ class Remodelling:
                     self.Geo_n = self.Geo.copy(update_measurements=False)
 
                     # Solve the remodelling step
-                    # self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
-                    #                                                      self.Set)
+                    self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
+                                                                         self.Set)
                 else:
                     cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
                                                     and cell.AliveStatus == 1]
