@@ -210,7 +210,8 @@ def smoothing_cell_surfaces_mesh(Geo, cells_intercalated):
                     all_edges.append(tri.Edge)
 
                 all_edges = np.unique(np.concatenate(all_edges))
-                Geo.Cells[cell_intercalated].Faces[num_face].Centre = np.mean(Geo.Cells[cell_intercalated].Y[all_edges, :], axis=0)
+                Geo.Cells[cell_intercalated].Faces[num_face].Centre = np.mean(
+                    Geo.Cells[cell_intercalated].Y[all_edges, :], axis=0)
 
     return Geo
 
@@ -247,7 +248,7 @@ class Remodelling:
 
         # Save the current state
         backup_vars = save_backup_vars(self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs)
-        #self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step)
+        # self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step)
 
         while segmentFeatures_all.empty is False:
             # Get the first segment feature
@@ -284,8 +285,8 @@ class Remodelling:
                     self.Geo_n.create_vtk_cell(self.Geo_0, self.Set, num_step)
 
                     # Solve the remodelling step
-                    #self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
-                    #                                                     self.Set)
+                    # self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
+                    #                                                      self.Set)
                 else:
                     cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
                                                     and cell.AliveStatus == 1]
@@ -348,7 +349,8 @@ class Remodelling:
             cell_nodes = [cell for cell in self.Geo.non_dead_cells if cell in old_tets.flatten()]
             cell_node_alive = [cell for cell in cell_nodes if self.Geo.Cells[cell].AliveStatus == 1]
             if len(cell_node_alive) > 2 or (len(cell_node_alive) == 2 and len(cell_nodes) == 3):
-                has_converged, Tnew = self.flip_nm(nodes_pair, cell_to_intercalate_with, old_tets, old_ys, cell_to_split_from)
+                has_converged, Tnew = self.flip_nm(nodes_pair, cell_to_intercalate_with, old_tets, old_ys,
+                                                   cell_to_split_from)
                 if Tnew is not None:
                     all_tnew = Tnew if all_tnew is None else np.vstack((all_tnew, Tnew))
             else:
