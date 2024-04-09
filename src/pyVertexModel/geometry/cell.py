@@ -141,7 +141,7 @@ class Cell:
         self.Vol = v
         return v
 
-    def create_vtk(self, geo_0, set, step):
+    def create_vtk(self):
         """
         Create a vtk cell
         :return:

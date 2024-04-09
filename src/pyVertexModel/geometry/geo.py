@@ -768,7 +768,7 @@ class Geo:
             writer = vtk.vtkPolyDataWriter()
             name_out = os.path.join(new_sub_folder, f'Cell.{c:04d}.{step:04d}{file_extension}')
             writer.SetFileName(name_out)
-            vtk_cells.append(self.Cells[c].create_vtk(geo_0, set, step))
+            vtk_cells.append(self.Cells[c].create_vtk())
 
             # Write to a VTK file
             writer.SetInputData(vtk_cells[-1])
