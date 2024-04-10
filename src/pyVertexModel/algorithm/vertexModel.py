@@ -107,10 +107,6 @@ class VertexModel:
 
         # save_state(self, os.path.join(self.set.OutputFolder, 'data_step_0.pkl'))
 
-        # Create VTK files for initial state
-        self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
-        self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
-
         while self.t <= self.set.tend and not self.didNotConverge:
             self.set.currentT = self.t
             logger.info("Time: " + str(self.t))
@@ -128,6 +124,8 @@ class VertexModel:
                 self.geo.update_measures()
 
             g, K, _, energies = newtonRaphson.KgGlobal(self.geo_0, self.geo_n, self.geo, self.set)
+            self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
+            self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
             for key, energy in energies.items():
                 logger.info(f"{key}: {energy}")
 
@@ -153,7 +151,6 @@ class VertexModel:
         else:
             self.iteration_did_not_converged()
 
-        # TODO: WHY DO WE NEED TO UPDATE THE DOFS GEO IF HASN'T CHANGED?
         self.Dofs.get_dofs(self.geo, self.set)
 
     def iteration_did_not_converged(self):
@@ -169,7 +166,7 @@ class VertexModel:
         else:
             if (self.set.iter >= self.set.MaxIter and
                     (self.set.dt / self.set.dt0) > (1 / 1000)):
-                self.set.MaxIter = self.set.MaxIter0 * 2
+                self.set.MaxIter = self.set.MaxIter0
                 self.set.nu = self.set.nu0
                 self.set.dt = self.set.dt / 2
                 self.t = self.set.last_t_converged + self.set.dt
