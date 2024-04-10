@@ -276,7 +276,7 @@ class Cell:
             # Add the property array to the cell data
             vpoly.GetCellData().AddArray(property_array)
 
-            if key == 'ContractilityValue':
+            if key == 'ContractilityG':
                 # Default parameter
                 vpoly.GetCellData().SetScalars(property_array)
 

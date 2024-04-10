@@ -87,7 +87,6 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
     :param t:
     :return:
     """
-    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.newton.html
     if Geo.remodelling:
         dof = Dofs.remodel
     else:

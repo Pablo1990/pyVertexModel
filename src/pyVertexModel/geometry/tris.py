@@ -48,7 +48,9 @@ class Tris:
         features = {'Area': self.Area,
                     'AspectRatio': self.AspectRatio,
                     'EdgeLength': self.EdgeLength,
-                    'ContractilityValue': self.ContractilityValue}
+                    'ContractilityValue': self.ContractilityValue,
+                    'ContractilityG': self.ContractilityG
+                    }
 
         return features
 

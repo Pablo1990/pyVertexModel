@@ -194,9 +194,6 @@ class Face:
         for tri in self.Tris:
             tri.Location = face_interface_type
 
-        for tri in self.Tris:
-            tri.ContractileG = 0.0
-
     def compute_face_area(self, Y):
         area = 0.0
         trisArea = np.zeros(len(self.Tris))
