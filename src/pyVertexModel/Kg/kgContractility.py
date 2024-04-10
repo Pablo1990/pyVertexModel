@@ -3,6 +3,7 @@ import time
 import numpy as np
 
 from src.pyVertexModel.Kg.kg import Kg, add_noise_to_parameter
+from src.pyVertexModel.util.utils import ismember_rows
 
 
 def getIntensityBasedContractility(Set, current_face):
@@ -69,7 +70,7 @@ def getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set):
     contractilityValue = None
     CUTOFF = 3
 
-    if currentTri.ContractilityValue is None and len(currentTri.SharedByCells) > 1:
+    if currentTri.ContractilityValue is None:
         if Set.ablation:
             if Set.DelayedAdditionalContractility == 1:
                 contractilityValue = getDelayedContractility(Set.currentT, Set.purseStringStrength,
@@ -105,7 +106,7 @@ def getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set):
                 trisToCheck = Geo.Cells[cellToCheck].Faces[faceToCheckID].Tris
                 for n_triToCheck in range(len(trisToCheck)):
                     triToCheck = trisToCheck[n_triToCheck]
-                    if all(item in currentTri.SharedByCells for item in triToCheck.SharedByCells):
+                    if np.array_equal(sorted(currentTri.SharedByCells), sorted(triToCheck.SharedByCells)):
                         Geo.Cells[cellToCheck].Faces[faceToCheckID].Tris[n_triToCheck].ContractilityValue = contractilityValue
     else:
         contractilityValue = currentTri.ContractilityValue
@@ -122,15 +123,15 @@ class KgContractility(Kg):
         # self.K = self.K[range(Geo.numY * 3), range(Geo.numY * 3)]
 
         Energy = {}
-        for cell in [cell for cell in Geo.Cells if cell.AliveStatus == 1]:
+        for cell_id, cell in enumerate([cell for cell in Geo.Cells if cell.AliveStatus == 1]):
             c = cell.ID
             ge = np.zeros(self.g.shape, dtype=self.precision_type)
             Energy_c = 0
-            for currentFace in cell.Faces:
+            for face_id, currentFace in enumerate(cell.Faces):
                 l_i0 = Geo.EdgeLengthAvg_0[next(key for key, value in currentFace.InterfaceType_allValues.items()
                                                 if
                                                 value == currentFace.InterfaceType or key == currentFace.InterfaceType)]
-                for currentTri in currentFace.Tris:
+                for tri_id, currentTri in enumerate(currentFace.Tris):
                     if len(currentTri.SharedByCells) > 1:
                         C, Geo = getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set)
 
@@ -144,8 +145,7 @@ class KgContractility(Kg):
                         g_current = self.computeGContractility(l_i0, y_1, y_2, C)
                         ge = self.assemble_g(ge[:], g_current[:], cell.globalIds[currentTri.Edge])
 
-                        # TODO
-                        # current_face.Tris.ContractileG = np.linalg.norm(g_current[:3])
+                        #Geo.Cells[cell_id].Faces[face_id].Tris[tri_id].ContractilityG = np.linalg.norm(g_current[:])
                         if calculate_K:
                             K_current = self.computeKContractility(l_i0, y_1, y_2, C)
                             self.assemble_k(K_current[:, :], cell.globalIds[currentTri.Edge])
