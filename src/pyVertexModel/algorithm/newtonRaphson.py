@@ -39,8 +39,8 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
     lambdaB = np.linspace(c_set.lambdaB, original_lambdaB * 10, 3)
 
     for n_id, lambdaR in enumerate(np.linspace(c_set.lambdaR, original_lambdaR * 0.1, 3)):
-        c_set.lambdaR = lambdaR
-        c_set.lambdaB = lambdaB[n_id]
+        #c_set.lambdaR = lambdaR
+        #c_set.lambdaB = lambdaB[n_id]
         c_set.nu0 = original_nu0 * nu_factor[n_id]
         c_set.nu = original_nu * nu_factor[n_id]
         g, k, _, _ = KgGlobal(geo_0, geo_n, geo, c_set)
