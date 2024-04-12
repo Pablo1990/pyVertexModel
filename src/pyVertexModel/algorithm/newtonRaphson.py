@@ -187,7 +187,7 @@ def ml_divide(K, dof, g):
 def line_search(Geo_0, Geo_n, geo, dof, Set, gc, dy):
     """
     Line search to find the best alpha to minimize the energy
-    :param Geo_0:   Initial geometry
+    :param Geo_0:   Initial geometry.
     :param Geo_n:   Geometry at the previous time step
     :param geo:     Current geometry
     :param Dofs:    Dofs object

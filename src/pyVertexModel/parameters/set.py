@@ -175,12 +175,10 @@ class Set:
         self.define_if_not_defined("contributionOldFaceCentre", self.contributionOldYs)
 
         current_datetime = datetime.now()
-        new_outputFolder = ''.join([PROJECT_DIRECTORY, '/Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")), self.InputGeo,
-                                    '_Cells_', str(self.TotalCells), '_visc_', str(self.nu), '_lVol_',
-                                    str(self.lambdaV), '_muBulk_', str(self.mu_bulk), '_lBulk_',
-                                    str(self.lambda_bulk), '_kSubs_',
-                                    str(self.kSubstrate), '_lt_', str(self.cLineTension), '_noise_',
-                                    str(self.noiseContractility),
+        new_outputFolder = ''.join([PROJECT_DIRECTORY, '/Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")),
+                                    self.InputGeo, '_Cells_', str(self.TotalCells), '_visc_', str(self.nu), '_lVol_',
+                                    str(self.lambdaV), '_kSubs_', str(self.kSubstrate), '_lt_', str(self.cLineTension),
+                                    '_noise_', str(self.noiseContractility),
                                     '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
                                     '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
                                     '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3)])

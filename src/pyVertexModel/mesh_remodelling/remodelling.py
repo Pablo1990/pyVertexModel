@@ -6,6 +6,7 @@ from matplotlib._qhull import delaunay
 
 from src.pyVertexModel.algorithm import newtonRaphson
 from src.pyVertexModel.algorithm.newtonRaphson import solve_remodeling_step, KgGlobal, gGlobal, remeshing_cells
+from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours_vertices
 from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
 from src.pyVertexModel.util.utils import ismember_rows, save_backup_vars, load_backup_vars, compute_distance_3d, \
@@ -204,14 +205,7 @@ def smoothing_cell_surfaces_mesh(Geo, cells_intercalated):
             Geo.Cells[cell_intercalated].Y[:, 0:2] = X2D[0:len(ys)]
 
             # Update as the average of the new vertices
-            for num_face, _ in enumerate(Geo.Cells[cell_intercalated].Faces):
-                all_edges = []
-                for tri in Geo.Cells[cell_intercalated].Faces[num_face].Tris:
-                    all_edges.append(tri.Edge)
-
-                all_edges = np.unique(np.concatenate(all_edges))
-                Geo.Cells[cell_intercalated].Faces[num_face].Centre = np.mean(
-                    Geo.Cells[cell_intercalated].Y[all_edges, :], axis=0)
+            face_centres_to_middle_of_neighbours_vertices(Geo, cell_intercalated)
 
     return Geo
 
@@ -268,7 +262,7 @@ class Remodelling:
                 cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
 
                 if len(np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])) > 3:
-                    how_close_to_vertex = 0.1
+                    how_close_to_vertex = 0.2
                     strong_gradient = 0
                     self.Geo = (
                         move_vertices_closer_to_ref_point(self.Geo, how_close_to_vertex,
@@ -284,8 +278,8 @@ class Remodelling:
                     self.Geo_n = self.Geo.copy(update_measurements=False)
 
                     # Solve the remodelling step
-                    self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
-                                                                         self.Set)
+                    # self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
+                    #                                                      self.Set)
                 else:
                     cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
                                                     and cell.AliveStatus == 1]
@@ -301,6 +295,7 @@ class Remodelling:
                     logger.info(f'=>> Full-Flip accepted')
                     self.Geo_n = self.Geo.copy(update_measurements=False)
                     backup_vars = save_backup_vars(self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs)
+                    break
             else:
                 # Go back to initial state
                 self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs = load_backup_vars(backup_vars)

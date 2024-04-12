@@ -1,5 +1,3 @@
-import copy
-
 import numpy as np
 import vtk
 from sklearn.decomposition import PCA
@@ -8,7 +6,24 @@ from src.pyVertexModel.geometry import face
 from src.pyVertexModel.util.utils import copy_non_mutable_attributes
 
 
-def compute_2D_circularity(area, perimeter):
+def face_centres_to_middle_of_neighbours_vertices(Geo, c_cell):
+    """
+    Move the face centres to the middle of the neighbours vertices.
+    :param Geo:
+    :param c_cell:
+    :return:
+    """
+    for num_face, _ in enumerate(Geo.Cells[c_cell].Faces):
+        all_edges = []
+        for tri in Geo.Cells[c_cell].Faces[num_face].Tris:
+            all_edges.append(tri.Edge)
+
+        all_edges = np.unique(np.concatenate(all_edges))
+        Geo.Cells[c_cell].Faces[num_face].Centre = np.mean(
+            Geo.Cells[c_cell].Y[all_edges, :], axis=0)
+
+
+def compute_2d_circularity(area, perimeter):
     """
     Compute the 2D circularity of the cell
     :return:
@@ -207,9 +222,9 @@ class Cell:
                     'Width': self.compute_width(),
                     'Length': self.compute_length(),
                     'Perimeter': self.compute_perimeter(),
-                    '2D_circularity_top': compute_2D_circularity(self.compute_area(location_filter=0),
+                    '2D_circularity_top': compute_2d_circularity(self.compute_area(location_filter=0),
                                                                  self.compute_perimeter(filter_location=0)),
-                    '2d_circularity_bottom': compute_2D_circularity(self.compute_area(location_filter=2),
+                    '2d_circularity_bottom': compute_2d_circularity(self.compute_area(location_filter=2),
                                                                     self.compute_perimeter(filter_location=2)),
                     '2D_aspect_ratio_top': self.compute_2d_aspect_ratio(filter_location=0),
                     '2D_aspect_ratio_bottom': self.compute_2d_aspect_ratio(filter_location=2),
