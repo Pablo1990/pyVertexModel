@@ -80,7 +80,7 @@ class Set:
             # Contractility
             self.Contractility = True
             self.cLineTension = 0.0001
-            self.noiseContractility = 0
+            self.noise_lt = 0
             # In plane elasticity
             self.InPlaneElasticity = False
             self.mu_bulk = 3000
@@ -178,7 +178,7 @@ class Set:
         new_outputFolder = ''.join([PROJECT_DIRECTORY, '/Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")),
                                     self.InputGeo, '_Cells_', str(self.TotalCells), '_visc_', str(self.nu), '_lVol_',
                                     str(self.lambdaV), '_kSubs_', str(self.kSubstrate), '_lt_', str(self.cLineTension),
-                                    '_noise_', str(self.noiseContractility),
+                                    '_noise_', str(self.noise_lt), '_brownian_', str(self.brownian_motion_scale),
                                     '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
                                     '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
                                     '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3)])
@@ -226,6 +226,9 @@ class Set:
         self.lambdaV = 0.001
         self.kSubstrate = 1
         self.cLineTension = 0.05
+
+        self.brownian_motion = True
+        self.brownian_motion_scale = 0.05
 
         self.noiseContractility = 0.0
         #self.DelayedAdditionalContractility = 0
