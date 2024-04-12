@@ -6,6 +6,7 @@ import numpy as np
 
 from src.pyVertexModel.algorithm import newtonRaphson
 from src.pyVertexModel.geometry import degreesOfFreedom
+from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours_vertices
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
 from src.pyVertexModel.parameters.set import Set
@@ -181,6 +182,9 @@ class VertexModel:
         if self.set.nu / self.set.nu0 == 1:
             # STEP has converged
             logger.info(f"STEP {str(self.set.i_incr)} has converged ...")
+
+            for c in range(self.geo.nCells):
+                face_centres_to_middle_of_neighbours_vertices(self.geo, c)
             save_state(self, os.path.join(self.set.OutputFolder,
                                           'data_step_before_remodelling_' + str(self.numStep) + '.pkl'))
 
