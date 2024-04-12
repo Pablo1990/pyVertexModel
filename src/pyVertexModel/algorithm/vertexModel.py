@@ -80,10 +80,10 @@ class VertexModel:
         all_tets_unique = np.unique(all_tets, axis=0)
 
         # Generate random displacements with a normal distribution for each dimension
-        displacements = scale * np.random.randn(all_tets_unique.shape[0], 3)
+        displacements = scale * (self.geo.Cells[0].X - self.geo.Cells[1].X) * np.random.randn(all_tets_unique.shape[0], 3)
 
         # Update vertex positions based on 3D Brownian motion displacements
-        for cell in [c for c in self.geo.Cells if c.AliveStatus is not None]:
+        for cell in [c for c in self.geo.Cells if c.AliveStatus is not None and c.ID not in self.geo.BorderCells]:
             _, corresponding_ids = np.where(np.all(np.sort(cell.T, axis=1)[:, None] == all_tets_unique, axis=2))
             cell.Y += displacements[corresponding_ids, :]
 
