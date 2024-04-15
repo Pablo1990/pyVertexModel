@@ -278,8 +278,8 @@ class Remodelling:
                     self.Geo_n = self.Geo.copy(update_measurements=False)
 
                     # Solve the remodelling step
-                    # self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
-                    #                                                      self.Set)
+                    self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
+                                                                         self.Set)
                 else:
                     cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
                                                     and cell.AliveStatus == 1]
