@@ -372,15 +372,17 @@ class Remodelling:
                 edge_lengths_top = np.zeros(len(self.Geo.Cells))
                 edge_lengths_bottom = np.zeros(len(self.Geo.Cells))
 
+                top_area = c_cell.compute_area(0)
+                bottom_area = c_cell.compute_area(2)
                 for c_face in current_faces:
                     for current_tri in c_face.Tris:
                         if len(current_tri.SharedByCells) > 1:
                             shared_cells = [c for c in current_tri.SharedByCells if c != num_cell]
                             for num_shared_cell in shared_cells:
                                 if c_face.InterfaceType == 0 or c_face.InterfaceType == 'Top':
-                                    edge_lengths_top[num_shared_cell] += current_tri.EdgeLength / c_face.Area
+                                    edge_lengths_top[num_shared_cell] += current_tri.EdgeLength / top_area
                                 elif c_face.InterfaceType == 2 or c_face.InterfaceType == 'Bottom':
-                                    edge_lengths_bottom[num_shared_cell] += current_tri.EdgeLength / c_face.Area
+                                    edge_lengths_bottom[num_shared_cell] += current_tri.EdgeLength / bottom_area
 
                 segment_features = self.check_edges_to_intercalate(edge_lengths_top, num_cell, segment_features,
                                                                    self.Geo.XgTop[0])
