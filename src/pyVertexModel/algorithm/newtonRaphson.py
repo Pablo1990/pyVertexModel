@@ -33,16 +33,13 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
     original_lambdaB = c_set.lambdaB
     original_lambdaR = c_set.lambdaR
 
-    nu_factor = np.linspace(10, 1, 3)
     c_set.MaxIter = c_set.MaxIter0 * 3
-    c_set.lambdaB = original_lambdaB * 10
-    lambdaB = np.linspace(c_set.lambdaB, original_lambdaB * 10, 3)
+    c_set.lambdaB = original_lambdaB * 2
+    c_set.lambdaR = original_lambdaR * 0.0001
 
-    for n_id, lambdaR in enumerate(np.linspace(c_set.lambdaR, original_lambdaR * 0.1, 3)):
-        #c_set.lambdaR = lambdaR
-        #c_set.lambdaB = lambdaB[n_id]
-        c_set.nu0 = original_nu0 * nu_factor[n_id]
-        c_set.nu = original_nu * nu_factor[n_id]
+    for n_id, nu_factor in enumerate(np.linspace(10, 1, 3)):
+        c_set.nu0 = original_nu0 * nu_factor
+        c_set.nu = original_nu * nu_factor
         g, k, _, _ = KgGlobal(geo_0, geo_n, geo, c_set)
 
         dy = np.zeros(((geo.numY + geo.numF + geo.nCells) * 3, 1), dtype=np.float64)
