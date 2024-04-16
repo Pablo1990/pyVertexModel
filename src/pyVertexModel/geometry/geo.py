@@ -819,3 +819,64 @@ class Geo:
                 # Empty the list of cells to ablate
                 self.cellsToAblate = None
         return self
+
+    def compute_cells_wound_edge(self, location_filter=None):
+        """
+        Compute the cells at the wound edge
+        :param location_filter:
+        :return:
+        """
+        debris_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
+        cells = [c_cell for c_cell in self.Cells if c_cell.AliveStatus == 1]
+
+        if location_filter is not None:
+            if location_filter == 'Top':
+                cells = [c_cell for c_cell in cells if any(np.isin(c_cell.T, self.XgTop).all(axis=1))]
+            elif location_filter == 'Bottom':
+                cells = [c_cell for c_cell in cells if any(np.isin(c_cell.T, self.XgBottom).all(axis=1))]
+
+        cells = [c_cell for c_cell in cells if np.any(np.isin(c_cell.T, debris_cells))]
+
+        return cells
+
+    def compute_wound_area(self, location_filter=None):
+        """
+        Compute the wound area at the top by calculating the edge length of the alive cells with debris cells on top
+        :return:
+        """
+        # Get the cells that are alive and have debris cells on top
+        wound_edge_cells = self.compute_cells_wound_edge(location_filter)
+
+        debris_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
+
+        # Collect points forming the area
+        wound_area_points = []
+
+        # Compute the area formed by the points of the wound edge cells
+        for c_cell in wound_edge_cells:
+            wound_area_points.append(c_cell.Y[np.any(np.isin(c_cell.T, debris_cells), axis=1), :])
+
+        # Compute the wound area from the wound_area_points
+        
+
+
+        return wound_area
+
+    def compute_wound_volume(self):
+        pass
+
+    def compute_wound_aspect_ratio(self):
+        pass
+
+    def compute_wound_perimeter(self):
+        pass
+
+    def compute_wound_centre(self):
+        """
+        Compute the centroid of the debris cells
+        :return:
+        """
+        debris_cells = [c_cell for c_cell in self.Cells if c_cell.AliveStatus == 0]
+        debris_centre = np.mean([np.mean(c_cell.Y, axis=0) for c_cell in debris_cells], axis=0)
+        return debris_centre
+

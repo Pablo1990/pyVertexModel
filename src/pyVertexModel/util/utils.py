@@ -256,3 +256,21 @@ def laplacian_smoothing(vertices, edges, fixed_indices, iteration_count=10, boun
         vertices = new_positions
 
     return vertices
+
+
+def calculate_area(points):
+    """
+    Calculate the area of a polygon using the Shoelace formula.
+
+    :param points: A list of (x, y) pairs representing the vertices of a polygon.
+    :return: The area of the polygon.
+    """
+    area = 0.0
+    n = len(points)
+    for i in range(n):
+        j = (i + 1) % n
+        area += points[i][0] * points[j][1]
+        area -= points[j][0] * points[i][1]
+    area = abs(area) / 2.0
+    return area
+

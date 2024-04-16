@@ -241,6 +241,10 @@ class Cell:
                     'Tilting': self.compute_tilting(),
                     'Perimeter_top': self.compute_perimeter(filter_location=0),
                     'Perimeter_bottom': self.compute_perimeter(filter_location=2),
+                    'Perimeter_cellcell': self.compute_perimeter(filter_location=1),
+                    'PrincipalAxisLength': self.compute_principal_axis_length(),
+                    'Distance_to_wound': self.compute_distance_to_wound(),
+                    'Cell_distance_to_wound': self.compute_cell_distance_to_wound(),
                     }
 
         return features
@@ -444,3 +448,17 @@ class Cell:
         for i in range(len(Tets)):
             Y[i] = compute_y(geo, Tets[i], self.X, c_set)
         return Y
+
+    def compute_distance_to_wound(self, centre_wound):
+        """
+        Compute the distance from the centre of the cell to the centre of the wound
+        :return:
+        """
+        return np.linalg.norm(self.Y - centre_wound)
+
+    def compute_cell_distance_to_wound(self):
+        """
+        Compute the number of cells between the cell and a wound cell
+        :return:
+        """
+        pass

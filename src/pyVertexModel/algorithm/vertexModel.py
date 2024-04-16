@@ -22,7 +22,7 @@ class VertexModel:
     iterating over time, applying Brownian motion, and checking the integrity of the model.
     """
 
-    def __init__(self, c_set=None):
+    def __init__(self, c_set=None, create_output_folder=True):
         """
         Vertex Model class.
         :param c_set:
@@ -52,7 +52,7 @@ class VertexModel:
             self.set.update_derived_parameters()
 
         # Redirect output
-        if self.set.OutputFolder is not None:
+        if self.set.OutputFolder is not None and create_output_folder:
             self.set.redirect_output()
 
         # Degrees of freedom definition
@@ -398,15 +398,41 @@ class VertexModel:
         """
         # Initialize average cell properties
         cell_features = []
+        debris_features = []
 
         # Analyse the alive cells
         for cell_id, cell in enumerate(self.geo.Cells):
             if cell.AliveStatus:
                 cell_features.append(cell.compute_features())
+            elif cell.AliveStatus is not None:
+                debris_features.append(cell.compute_features())
 
         # Calculate average of cell features
-        cell_features = np.array(cell_features)
-        avg_cell_features = np.mean(cell_features, axis=0)
+        avg_cell_features = pd.DataFrame(cell_features).mean()
         avg_cell_features["time"] = self.t
+
+        # Compute wound features
+        if debris_features:
+            wound_features = self.compute_wound_features()
+            avg_cell_features = avg_cell_features.append(wound_features)
+
+        return avg_cell_features
+
+    def compute_wound_features(self):
+        """
+        Compute wound features.
+        :return:
+        """
+        wound_features = pd.DataFrame()
+
+        # Compute number of cells in the wound edge
+        wound_features["num_cells_wound_edge"] = self.geo.compute_num_cells_wound_edge()
+        wound_features["wound_area_top"] = self.geo.compute_wound_area_top()
+        wound_features["wound_area_bottom"] = self.geo.compute_wound_area_bottom()
+        wound_features["wound_volume"] = self.geo.compute_wound_volume()
+        wound_features["wound_aspect_ratio"] = self.geo.compute_wound_aspect_ratio()
+        wound_features["wound_centre"] = self.geo.compute_wound_centre()
+
+        return wound_features
 
 
