@@ -207,7 +207,7 @@ class Cell:
 
         return vpoly
 
-    def compute_features(self):
+    def compute_features(self, centre_wound=None):
         """
         Compute the features of the cell and create a dictionary with them
         :return: a dictionary with the features of the cell
@@ -242,10 +242,11 @@ class Cell:
                     'Perimeter_top': self.compute_perimeter(filter_location=0),
                     'Perimeter_bottom': self.compute_perimeter(filter_location=2),
                     'Perimeter_cellcell': self.compute_perimeter(filter_location=1),
-                    'PrincipalAxisLength': self.compute_principal_axis_length(),
-                    'Distance_to_wound': self.compute_distance_to_wound(),
-                    'Cell_distance_to_wound': self.compute_cell_distance_to_wound(),
                     }
+
+        if centre_wound is not None:
+            features['Distance_to_wound'] = self.compute_distance_to_wound(centre_wound)
+            features['Cell_distance_to_wound'] = self.compute_cell_distance_to_wound()
 
         return features
 
@@ -439,7 +440,7 @@ class Cell:
         if perimeter == 0:
             return 0
         else:
-            return self.compute_area(filter_location) / self.compute_perimeter(filter_location) ** 2
+            return self.compute_area(filter_location) / perimeter ** 2
 
     def build_y_from_x(self, geo, c_set):
         Tets = self.T
@@ -461,4 +462,4 @@ class Cell:
         Compute the number of cells between the cell and a wound cell
         :return:
         """
-        pass
+        return -1

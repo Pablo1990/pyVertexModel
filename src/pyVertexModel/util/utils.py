@@ -258,7 +258,7 @@ def laplacian_smoothing(vertices, edges, fixed_indices, iteration_count=10, boun
     return vertices
 
 
-def calculate_area(points):
+def calculate_polygon_area(points):
     """
     Calculate the area of a polygon using the Shoelace formula.
 

@@ -4,9 +4,10 @@ import os
 
 import numpy as np
 import vtk
+from scipy.spatial import ConvexHull
 
 from src.pyVertexModel.geometry import face, cell
-from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes
+from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes, calculate_polygon_area
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -117,6 +118,17 @@ def get_node_neighbours_per_domain(geo, node, node_of_domain, main_node=None):
     node_neighbours = node_neighbours[node_neighbours != node]
 
     return node_neighbours
+
+
+def calculate_volume_from_points(points):
+    """
+    Calculate the volume of a convex hull formed by a set of points.
+
+    :param points: A list of (x, y, z) tuples representing the points in 3D space.
+    :return: The volume of the convex hull.
+    """
+    hull = ConvexHull(points)
+    return hull.volume
 
 
 class Geo:
@@ -575,7 +587,8 @@ class Geo:
 
         for cell_id in alive_cells + debris_cells:
             old_geo_ys = old_geo.Cells[cell_id].Y[~ismember_rows(old_geo.Cells[cell_id].T, old_tets)[0] &
-                                                  [np.any(np.isin(tet, old_geo.XgID)) for tet in old_geo.Cells[cell_id].T]]
+                                                  [np.any(np.isin(tet, old_geo.XgID)) for tet in
+                                                   old_geo.Cells[cell_id].T]]
 
             self.Cells[cell_id].Y[~ismember_rows(self.Cells[cell_id].T, new_tets)[0] &
                                   [np.any(np.isin(tet, self.XgID)) for tet in self.Cells[cell_id].T]] = old_geo_ys
@@ -831,9 +844,9 @@ class Geo:
 
         if location_filter is not None:
             if location_filter == 'Top':
-                cells = [c_cell for c_cell in cells if any(np.isin(c_cell.T, self.XgTop).all(axis=1))]
+                cells = [c_cell for c_cell in cells if np.any(np.isin(c_cell.T, self.XgTop))]
             elif location_filter == 'Bottom':
-                cells = [c_cell for c_cell in cells if any(np.isin(c_cell.T, self.XgBottom).all(axis=1))]
+                cells = [c_cell for c_cell in cells if np.any(np.isin(c_cell.T, self.XgBottom))]
 
         cells = [c_cell for c_cell in cells if np.any(np.isin(c_cell.T, debris_cells))]
 
@@ -844,32 +857,72 @@ class Geo:
         Compute the wound area at the top by calculating the edge length of the alive cells with debris cells on top
         :return:
         """
-        # Get the cells that are alive and have debris cells on top
-        wound_edge_cells = self.compute_cells_wound_edge(location_filter)
+        wound_area_points = self.collect_points_wound_edge(location_filter)
 
-        debris_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
-
-        # Collect points forming the area
-        wound_area_points = []
-
-        # Compute the area formed by the points of the wound edge cells
-        for c_cell in wound_edge_cells:
-            wound_area_points.append(c_cell.Y[np.any(np.isin(c_cell.T, debris_cells), axis=1), :])
-
+        wound_area_points = np.concatenate(wound_area_points)
         # Compute the wound area from the wound_area_points
-        
-
+        wound_area = calculate_polygon_area(wound_area_points[:, :2])
 
         return wound_area
 
+    def collect_points_wound_edge(self, location_filter):
+        # Get the cells that are alive and have debris cells on top
+        wound_edge_cells = self.compute_cells_wound_edge(location_filter)
+        debris_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
+        # Collect points forming the area
+        wound_area_points = []
+        # Compute the area formed by the points of the wound edge cells
+        for c_cell in wound_edge_cells:
+            wound_area_points.append(c_cell.Y[np.any(np.isin(c_cell.T, debris_cells), axis=1), :])
+        return wound_area_points
+
     def compute_wound_volume(self):
-        pass
+        """
+        Compute the wound volume from the wound edge on top to the bottom
+        :return:
+        """
+        wound_area_points_top = self.collect_points_wound_edge(location_filter="Top")
+        wound_area_points_bottom = self.collect_points_wound_edge(location_filter="Bottom")
 
-    def compute_wound_aspect_ratio(self):
-        pass
+        wound_area_points = np.concatenate(wound_area_points_top + wound_area_points_bottom)
 
-    def compute_wound_perimeter(self):
-        pass
+        # Compute the wound volume from the wound_area_points
+        wound_volume = calculate_volume_from_points(wound_area_points)
+
+        #TODO: THIS WOUND FORMULA DOESN'T CONTEMPLATE THE MIDDLE VERTEX
+
+        return wound_volume
+
+    def compute_wound_aspect_ratio(self, location_filter=None):
+        """
+        Compute the wound aspect ratio
+        :param location_filter:
+        :return:
+        """
+        if location_filter is not None:
+            perimeter = self.compute_wound_perimeter(location_filter)
+            if perimeter == 0:
+                return 0
+            else:
+                return self.compute_wound_area(location_filter) / perimeter ** 2
+
+    def compute_wound_perimeter(self, location_filter=None):
+        """
+        Compute the wound perimeter
+        :param location_filter:
+        :return:
+        """
+        wound_edge_cells = self.compute_cells_wound_edge(location_filter)
+        debris_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
+
+        perimeter = 0
+        for c_cell in wound_edge_cells:
+            for c_face in c_cell.Faces:
+                for tri in c_face.Tris:
+                    if np.any(np.isin(tri.SharedByCells, debris_cells)):
+                        perimeter += np.sum(tri.EdgeLength)
+
+        return perimeter
 
     def compute_wound_centre(self):
         """
@@ -877,6 +930,8 @@ class Geo:
         :return:
         """
         debris_cells = [c_cell for c_cell in self.Cells if c_cell.AliveStatus == 0]
+        if len(debris_cells) == 0:
+            return None
+
         debris_centre = np.mean([np.mean(c_cell.Y, axis=0) for c_cell in debris_cells], axis=0)
         return debris_centre
-

@@ -400,10 +400,13 @@ class VertexModel:
         cell_features = []
         debris_features = []
 
+
+        wound_centre = self.geo.compute_wound_centre()
+
         # Analyse the alive cells
         for cell_id, cell in enumerate(self.geo.Cells):
             if cell.AliveStatus:
-                cell_features.append(cell.compute_features())
+                cell_features.append(cell.compute_features(wound_centre))
             elif cell.AliveStatus is not None:
                 debris_features.append(cell.compute_features())
 
@@ -414,7 +417,7 @@ class VertexModel:
         # Compute wound features
         if debris_features:
             wound_features = self.compute_wound_features()
-            avg_cell_features = avg_cell_features.append(wound_features)
+            avg_cell_features = pd.concat([avg_cell_features, pd.Series(wound_features)])
 
         return avg_cell_features
 
@@ -423,15 +426,16 @@ class VertexModel:
         Compute wound features.
         :return:
         """
-        wound_features = pd.DataFrame()
-
-        # Compute number of cells in the wound edge
-        wound_features["num_cells_wound_edge"] = self.geo.compute_num_cells_wound_edge()
-        wound_features["wound_area_top"] = self.geo.compute_wound_area_top()
-        wound_features["wound_area_bottom"] = self.geo.compute_wound_area_bottom()
-        wound_features["wound_volume"] = self.geo.compute_wound_volume()
-        wound_features["wound_aspect_ratio"] = self.geo.compute_wound_aspect_ratio()
-        wound_features["wound_centre"] = self.geo.compute_wound_centre()
+        wound_features = {
+            'num_cells_wound_edge': len(self.geo.compute_cells_wound_edge()),
+            'wound_area_top': self.geo.compute_wound_area(location_filter="Top"),
+            'wound_area_bottom': self.geo.compute_wound_area(location_filter="Bottom"),
+            'wound_volume': self.geo.compute_wound_volume(),
+            'wound_aspect_ratio_top': self.geo.compute_wound_aspect_ratio(location_filter="Top"),
+            'wound_aspect_ratio_bottom': self.geo.compute_wound_aspect_ratio(location_filter="Bottom"),
+            'wound_perimeter_top': self.geo.compute_wound_perimeter(location_filter="Top"),
+            'wound_perimeter_bottom': self.geo.compute_wound_perimeter(location_filter="Bottom")
+        }
 
         return wound_features
 
