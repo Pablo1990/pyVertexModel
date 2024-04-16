@@ -3,6 +3,7 @@ import os
 from abc import abstractmethod
 
 import numpy as np
+import pandas as pd
 
 from src.pyVertexModel.algorithm import newtonRaphson
 from src.pyVertexModel.geometry import degreesOfFreedom
@@ -389,3 +390,23 @@ class VertexModel:
             self.geo.SubstrateZ = min_zs * 0.99
         else:
             self.geo.SubstrateZ = min_zs * 1.01
+
+    def analyse_vertex_model(self):
+        """
+        Analyse the vertex model.
+        :return:
+        """
+        # Initialize average cell properties
+        cell_features = []
+
+        # Analyse the alive cells
+        for cell_id, cell in enumerate(self.geo.Cells):
+            if cell.AliveStatus:
+                cell_features.append(cell.compute_features())
+
+        # Calculate average of cell features
+        cell_features = np.array(cell_features)
+        avg_cell_features = np.mean(cell_features, axis=0)
+        avg_cell_features["time"] = self.t
+
+
