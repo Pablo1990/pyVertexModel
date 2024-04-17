@@ -277,9 +277,9 @@ class Remodelling:
 
                     self.Geo_n = self.Geo.copy(update_measurements=False)
 
-                    # Solve the remodelling step
-                    self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
-                                                                         self.Set)
+                    # # Solve the remodelling step
+                    # self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
+                    #                                                      self.Set)
                 else:
                     cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
                                                     and cell.AliveStatus == 1]
@@ -376,7 +376,8 @@ class Remodelling:
                 bottom_area = c_cell.compute_area(2)
                 for c_face in current_faces:
                     for current_tri in c_face.Tris:
-                        if len(current_tri.SharedByCells) > 1:
+                        if (len(current_tri.SharedByCells) > 1 and
+                                not np.any(np.isin(current_tri.SharedByCells, self.Geo.BorderCells))):
                             shared_cells = [c for c in current_tri.SharedByCells if c != num_cell]
                             for num_shared_cell in shared_cells:
                                 if c_face.InterfaceType == 0 or c_face.InterfaceType == 'Top':
