@@ -169,6 +169,35 @@ def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g
     return energy_total, K, dyr, g, gr, ig, aux_gr, dy
 
 
+def explicit_update(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g, gr0, ig, numStep, t):
+    """
+    Explicit update method
+    :param Geo_0:
+    :param Geo_n:
+    :param Geo:
+    :param Dofs:
+    :param Set:
+    :return:
+    """
+
+    # Compute the gradient
+    g = gGlobal(Geo_0, Geo_n, Geo, Set)
+
+    # Compute the new position
+    dy[dof] = Set.dt * g[dof] / Set.nu
+
+    # Reshape dy to match the geometry of the system
+    dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
+
+    # Update the vertices
+    Geo.update_vertices(dy_reshaped)
+
+    # Update the measures
+    Geo.update_measures()
+
+    return Geo
+
+
 def ml_divide(K, dof, g):
     """
     Solve the linear system K * dy = g
@@ -449,7 +478,7 @@ def remeshing_cells(Geo_0, Geo_n, Geo, Dofs, Set, cells_to_change, ghost_node):
         fun=objective_function,  # Defined as before
         x0=dy_initial,
         args=(dof,),
-        method='L-BFGS-B',  #Newton-CG
+        method='L-BFGS-B',  # Newton-CG
         jac=gradient_function,
         bounds=bounds,
         options={'disp': True}
