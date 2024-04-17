@@ -184,7 +184,7 @@ def explicit_update(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g, gr0, ig
     g = gGlobal(Geo_0, Geo_n, Geo, Set)
 
     # Compute the new position
-    dy[dof] = Set.dt * g[dof] / Set.nu
+    dy[dof, 0] = ml_divide(K, dof, g)
 
     # Reshape dy to match the geometry of the system
     dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
