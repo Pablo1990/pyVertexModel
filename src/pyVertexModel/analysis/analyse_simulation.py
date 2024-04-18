@@ -32,3 +32,29 @@ def analyse_simulation(folder):
     features_per_time_df = pd.DataFrame(features_per_time)
     features_per_time_df.sort_values(by='time', inplace=True)
     features_per_time_df.to_csv(os.path.join(folder, 'cell_features.csv'))
+
+    # Calculate the percentage change for each column
+    percentage_change = features_per_time_df.pct_change()
+
+    # Fill the prior elements with the first row
+    percentage_change = percentage_change.fillna(0) + 1
+
+    # Calculate the cumulative product for each column
+    percentage_change = percentage_change.cumprod()
+
+    # Convert to percentage and subtract 100 to get the percentage change with respect to the first row
+    percentage_change = (percentage_change - 1) * 100
+
+    percentage_change.to_csv(os.path.join(folder, 'cell_features_percentage.csv'))
+
+    return features_per_time_df, percentage_change
+
+
+folder = '/Users/pablovm/PostDoc/pyVertexModel/Result/'
+all_files_features = []
+for file_id, file in enumerate(os.listdir(folder)):
+    print(file)
+    # if file is a directory
+    if os.path.isdir(os.path.join(folder, file)):
+        # Analyse the simulation
+        features_per_time_df, percentage_change = analyse_simulation(os.path.join(folder, file))
