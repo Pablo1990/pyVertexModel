@@ -430,6 +430,7 @@ class VertexModel:
             'wound_area_top': self.geo.compute_wound_area(location_filter="Top"),
             'wound_area_bottom': self.geo.compute_wound_area(location_filter="Bottom"),
             'wound_volume': self.geo.compute_wound_volume(),
+            'wound_height': self.geo.compute_wound_height(),
             'wound_aspect_ratio_top': self.geo.compute_wound_aspect_ratio(location_filter="Top"),
             'wound_aspect_ratio_bottom': self.geo.compute_wound_aspect_ratio(location_filter="Bottom"),
             'wound_perimeter_top': self.geo.compute_wound_perimeter(location_filter="Top"),

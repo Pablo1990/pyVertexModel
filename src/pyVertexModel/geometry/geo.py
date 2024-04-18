@@ -938,8 +938,21 @@ class Geo:
         :return:
         """
         debris_cells = [c_cell for c_cell in self.Cells if c_cell.AliveStatus == 0]
-        if len(debris_cells) == 0:
-            return None
+        if not debris_cells:
+            debris_cells = self.cellsToAblate
 
         debris_centre = np.mean([np.mean(c_cell.Y, axis=0) for c_cell in debris_cells], axis=0)
         return debris_centre
+
+    def compute_wound_height(self):
+        """
+        Compute the height of the wound
+        :return:
+        """
+        debris_cells = [c_cell for c_cell in self.Cells if c_cell.AliveStatus == 0]
+        if not debris_cells:
+            debris_cells = self.cellsToAblate
+
+        debris_centre = np.mean([np.mean(c_cell.Y, axis=0) for c_cell in debris_cells], axis=0)
+        debris_height = np.mean([np.mean(c_cell.Y[:, 2]) for c_cell in debris_cells])
+        return debris_height - debris_centre[2]

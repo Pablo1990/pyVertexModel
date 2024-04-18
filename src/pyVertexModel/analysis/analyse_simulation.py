@@ -47,19 +47,24 @@ def analyse_simulation(folder):
 
     # Compare post-wound features with pre-wound features in percentage
     for feature in post_wound_features.columns:
+        print(feature)
+        if np.any(np.isnan(pre_wound_features[feature])) or np.any(np.isnan(post_wound_features[feature])):
+            continue
         post_wound_features[feature] = (post_wound_features[feature] / np.array(pre_wound_features[feature])) * 100
 
     # Obtain important features for post-wound
     important_features = {
         'max_recoiling_top': np.max(post_wound_features['wound_area_top']),
         'max_recoiling_time_top': post_wound_features['time'][np.argmax(post_wound_features['wound_area_top'])],
-        'max_recoiling_speed_top': np.max(post_wound_features['wound_area_top'] / post_wound_features['time']),
-        'max_recoiling_speed_time_top': post_wound_features['time'][np.argmax(post_wound_features['wound_area_top'] /
-                                                                              post_wound_features['time'])],
     }
 
     # Extrapolate features to a given time
-    times_to_extrapolate = {16, 30}
+    times_to_extrapolate = {16, 30, 60}
+    columns_to_extrapolate = {'wound_area_top', 'wound_height'}  # post_wound_features.columns
+    for time in times_to_extrapolate:
+        for feature in columns_to_extrapolate:
+            important_features[feature + '_extrapolated_' + str(time)] = np.interp(time, post_wound_features['time'],
+                                                                                   post_wound_features[feature])
 
     return features_per_time_df, post_wound_features
 
