@@ -92,7 +92,8 @@ for file_id, file in enumerate(os.listdir(folder)):
             analyse_simulation(os.path.join(folder, file)))
 
         if important_features is not None:
-            all_files_features.append((file, important_features))
+            important_features['folder'] = file
+            all_files_features.append(important_features)
 
 # Export to xls file
 df = pd.DataFrame(all_files_features)
