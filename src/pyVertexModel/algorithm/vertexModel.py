@@ -125,7 +125,8 @@ class VertexModel:
                 # up-to-date
                 self.geo.update_measures()
 
-            g, K, _, energies = newtonRaphson.KgGlobal(self.geo_0, self.geo_n, self.geo, self.set)
+            implicit_method = False
+            g, K, _, energies = newtonRaphson.KgGlobal(self.geo_0, self.geo_n, self.geo, self.set, implicit_method)
             self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
             self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
             for key, energy in energies.items():
@@ -133,7 +134,7 @@ class VertexModel:
 
             self.geo, g, __, __, self.set, gr, dyr, dy = newtonRaphson.newton_raphson(self.geo_0, self.geo_n, self.geo,
                                                                                       self.Dofs, self.set, K, g,
-                                                                                      self.numStep, self.t)
+                                                                                      self.numStep, self.t, implicit_method)
             self.post_newton_raphson(dy, dyr, g, gr)
 
         return self.didNotConverge

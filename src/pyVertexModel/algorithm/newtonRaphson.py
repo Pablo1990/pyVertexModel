@@ -70,7 +70,7 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
     return geo, c_set, has_converged
 
 
-def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
+def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t, implicit_method=True):
     """
     Newton-Raphson method
     :param Geo_0:
@@ -102,9 +102,15 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t):
     ig = 0
     Energy = 0
 
-    while (gr > Set.tol or dyr > Set.tol) and Set.iter < Set.MaxIter:
-        Energy, K, dyr, g, gr, ig, auxgr, dy = newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof, dy,
-                                                                        g, gr0, ig, numStep, t)
+    if implicit_method:
+        while (gr > Set.tol or dyr > Set.tol) and Set.iter < Set.MaxIter:
+            Energy, K, dyr, g, gr, ig, auxgr, dy = newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof,
+                                                                            dy, g, gr0, ig, numStep, t)
+    else:
+        Energy, K, dyr, g, gr, ig, auxgr, dy = newton_raphson_iteration_explicit(Dofs, Geo, Geo_0, Geo_n, K, Set,
+                                                                                 auxgr, dof, dy, g, gr0, ig,
+                                                                                 numStep, t)
+
 
     return Geo, g, K, Energy, Set, gr, dyr, dy
 
@@ -169,7 +175,7 @@ def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g
     return energy_total, K, dyr, g, gr, ig, aux_gr, dy
 
 
-def explicit_update(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g, gr0, ig, numStep, t):
+def newton_raphson_iteration_explicit(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g, gr0, ig, numStep, t):
     """
     Explicit update method
     :param Geo_0:
@@ -180,22 +186,20 @@ def explicit_update(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g, gr0, ig
     :return:
     """
 
-    # Compute the gradient
-    g = gGlobal(Geo_0, Geo_n, Geo, Set)
-
-    # Compute the new position
     dy[dof, 0] = ml_divide(K, dof, g)
 
-    # Reshape dy to match the geometry of the system
     dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
-
-    # Update the vertices
     Geo.update_vertices(dy_reshaped)
-
-    # Update the measures
     Geo.update_measures()
+    g, K, energy_total, _ = KgGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=False)
 
-    return Geo
+    dyr = np.linalg.norm(dy[dof, 0])
+    gr = np.linalg.norm(g[dof])
+    logger.info(f"Step: {numStep}, Iter: {Set.iter}, Time: {t} ||gr||= {gr:.3e} ||dyr||= {dyr:.3e}"
+                f" nu/nu0={Set.nu / Set.nu0:.3g}")
+    Set.iter += 1
+
+    return energy_total, K, dyr, g, gr, ig, aux_gr, dy
 
 
 def ml_divide(K, dof, g):
@@ -255,24 +259,41 @@ def line_search(Geo_0, Geo_n, geo, dof, Set, gc, dy):
     return alpha
 
 
-def KgGlobal(Geo_0, Geo_n, Geo, Set):
-    if not Geo.remeshing:
+def KgGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
+    """
+    Compute the global Jacobian matrix and the global gradient
+    :param Geo_0:
+    :param Geo_n:
+    :param Geo:
+    :param Set:
+    :param implicit_method:
+    :return:
+    """
+
+    # Viscous Energy
+    kg_Viscosity = KgViscosity(Geo)
+    kg_Viscosity.compute_work(Geo, Set, Geo_n)
+    g = kg_Viscosity.g
+    K = kg_Viscosity.K
+    energy_total = kg_Viscosity.energy
+    energies = {"Viscosity": kg_Viscosity.energy}
+
+    if implicit_method:
         # Surface Energy
         kg_SA = KgSurfaceCellBasedAdhesion(Geo)
         kg_SA.compute_work(Geo, Set)
+        g += kg_SA.g
+        K += kg_SA.K
+        energy_total += kg_SA.energy
+        energies["Surface"] = kg_SA.energy
 
         # Volume Energy
         kg_Vol = KgVolume(Geo)
         kg_Vol.compute_work(Geo, Set)
-
-        # Viscous Energy
-        kg_Viscosity = KgViscosity(Geo)
-        kg_Viscosity.compute_work(Geo, Set, Geo_n)
-
-        g = kg_Vol.g + kg_Viscosity.g + kg_SA.g
-        K = kg_Vol.K + kg_Viscosity.K + kg_SA.K
-        energy_total = kg_Vol.energy + kg_Viscosity.energy + kg_SA.energy
-        energies = {"Volume": kg_Vol.energy, "Viscosity": kg_Viscosity.energy, "Surface": kg_SA.energy}
+        K += kg_Vol.K
+        g += kg_Vol.g
+        energy_total += kg_Vol.energy
+        energies["Volume"] = kg_Vol.energy
 
         # # TODO: Plane Elasticity
         # if Set.InPlaneElasticity:
@@ -323,7 +344,7 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set):
             K += kg_TriAR.K
             energy_total += kg_TriAR.energy
             energies["TriEnergyBarrierAR"] = kg_TriAR.energy
-    else:
+
         # Triangle Energy Barrier
         kg_Tri = KgTriEnergyBarrier(Geo)
         kg_Tri.compute_work(Geo, Set)
