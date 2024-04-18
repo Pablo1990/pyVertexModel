@@ -27,7 +27,7 @@ def analyse_simulation(folder):
             features_per_time.append(vModel.analyse_vertex_model())
 
     if not features_per_time:
-        return
+        return None, None, None
 
     # Export to xlsx
     features_per_time_df = pd.DataFrame(features_per_time)
@@ -91,7 +91,8 @@ for file_id, file in enumerate(os.listdir(folder)):
         features_per_time_df, post_wound_features, important_features = (
             analyse_simulation(os.path.join(folder, file)))
 
-        all_files_features.append((file, important_features))
+        if important_features is not None:
+            all_files_features.append((file, important_features))
 
 # Export to xls file
 df = pd.DataFrame(all_files_features)
