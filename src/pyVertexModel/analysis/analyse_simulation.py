@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pandas as pd
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
@@ -33,21 +34,34 @@ def analyse_simulation(folder):
     features_per_time_df.sort_values(by='time', inplace=True)
     features_per_time_df.to_csv(os.path.join(folder, 'cell_features.csv'))
 
-    # Calculate the percentage change for each column
-    percentage_change = features_per_time_df.pct_change()
+    # Obtain pre-wound features
+    pre_wound_features = features_per_time_df['time'][features_per_time_df['time'] < vModel.set.TInitAblation]
+    pre_wound_features = features_per_time_df[features_per_time_df['time'] ==
+                                              pre_wound_features[len(pre_wound_features)]]
 
-    # Fill the prior elements with the first row
-    percentage_change = percentage_change.fillna(0) + 1
+    # Obtain post-wound features
+    post_wound_features = features_per_time_df[features_per_time_df['time'] >= vModel.set.TInitAblation]
 
-    # Calculate the cumulative product for each column
-    percentage_change = percentage_change.cumprod()
+    # Reset time to ablation time.
+    post_wound_features['time'] = post_wound_features['time'] - vModel.set.TInitAblation
 
-    # Convert to percentage and subtract 100 to get the percentage change with respect to the first row
-    percentage_change = (percentage_change - 1) * 100
+    # Compare post-wound features with pre-wound features in percentage
+    for feature in post_wound_features.columns:
+        post_wound_features[feature] = (post_wound_features[feature] / np.array(pre_wound_features[feature])) * 100
 
-    percentage_change.to_csv(os.path.join(folder, 'cell_features_percentage.csv'))
+    # Obtain important features for post-wound
+    important_features = {
+        'max_recoiling_top': np.max(post_wound_features['wound_area_top']),
+        'max_recoiling_time_top': post_wound_features['time'][np.argmax(post_wound_features['wound_area_top'])],
+        'max_recoiling_speed_top': np.max(post_wound_features['wound_area_top'] / post_wound_features['time']),
+        'max_recoiling_speed_time_top': post_wound_features['time'][np.argmax(post_wound_features['wound_area_top'] /
+                                                                              post_wound_features['time'])],
+    }
 
-    return features_per_time_df, percentage_change
+    # Extrapolate features to a given time
+    times_to_extrapolate = {16, 30}
+
+    return features_per_time_df, post_wound_features
 
 
 folder = '/Users/pablovm/PostDoc/pyVertexModel/Result/'
@@ -57,4 +71,4 @@ for file_id, file in enumerate(os.listdir(folder)):
     # if file is a directory
     if os.path.isdir(os.path.join(folder, file)):
         # Analyse the simulation
-        features_per_time_df, percentage_change = analyse_simulation(os.path.join(folder, file))
+        features_per_time_df = analyse_simulation(os.path.join(folder, file))

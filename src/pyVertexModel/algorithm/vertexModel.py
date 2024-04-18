@@ -401,7 +401,6 @@ class VertexModel:
         cell_features = []
         debris_features = []
 
-
         wound_centre = self.geo.compute_wound_centre()
 
         # Analyse the alive cells
@@ -416,9 +415,8 @@ class VertexModel:
         avg_cell_features["time"] = self.t
 
         # Compute wound features
-        if debris_features:
-            wound_features = self.compute_wound_features()
-            avg_cell_features = pd.concat([avg_cell_features, pd.Series(wound_features)])
+        wound_features = self.compute_wound_features()
+        avg_cell_features = pd.concat([avg_cell_features, pd.Series(wound_features)])
 
         return avg_cell_features
 

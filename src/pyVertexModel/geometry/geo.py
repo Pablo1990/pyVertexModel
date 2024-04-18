@@ -839,7 +839,11 @@ class Geo:
         :param location_filter:
         :return:
         """
+
         debris_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
+        if not debris_cells:
+            debris_cells = self.cellsToAblate
+
         cells = [c_cell for c_cell in self.Cells if c_cell.AliveStatus == 1]
 
         if location_filter is not None:
@@ -869,6 +873,8 @@ class Geo:
         # Get the cells that are alive and have debris cells on top
         wound_edge_cells = self.compute_cells_wound_edge(location_filter)
         debris_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
+        if not debris_cells:
+            debris_cells = self.cellsToAblate
         # Collect points forming the area
         wound_area_points = []
         # Compute the area formed by the points of the wound edge cells
@@ -914,6 +920,8 @@ class Geo:
         """
         wound_edge_cells = self.compute_cells_wound_edge(location_filter)
         debris_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
+        if not debris_cells:
+            debris_cells = self.cellsToAblate
 
         perimeter = 0
         for c_cell in wound_edge_cells:
