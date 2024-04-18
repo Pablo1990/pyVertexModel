@@ -851,6 +851,9 @@ class Geo:
                 cells = [c_cell for c_cell in cells if np.any(np.isin(c_cell.T, self.XgTop))]
             elif location_filter == 'Bottom':
                 cells = [c_cell for c_cell in cells if np.any(np.isin(c_cell.T, self.XgBottom))]
+            elif location_filter == 'Lateral':
+                cells = [c_cell for c_cell in cells if np.any(np.isin(c_cell.T, self.XgTop)) and
+                         np.any(np.isin(c_cell.T, self.XgBottom))]
 
         cells = [c_cell for c_cell in cells if np.any(np.isin(c_cell.T, debris_cells))]
 
@@ -939,7 +942,7 @@ class Geo:
         """
         debris_cells = [c_cell for c_cell in self.Cells if c_cell.AliveStatus == 0]
         if not debris_cells:
-            debris_cells = self.cellsToAblate
+            debris_cells = [c_cell for c_cell in self.Cells if c_cell.ID in self.cellsToAblate]
 
         debris_centre = np.mean([np.mean(c_cell.Y, axis=0) for c_cell in debris_cells], axis=0)
         return debris_centre
@@ -949,10 +952,27 @@ class Geo:
         Compute the height of the wound
         :return:
         """
-        debris_cells = [c_cell for c_cell in self.Cells if c_cell.AliveStatus == 0]
+        # Get the cells at the wound edge
+        wound_edge_cells = self.compute_cells_wound_edge(location_filter=None)
+
+        # Get the debris cells
+        debris_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
         if not debris_cells:
             debris_cells = self.cellsToAblate
 
-        debris_centre = np.mean([np.mean(c_cell.Y, axis=0) for c_cell in debris_cells], axis=0)
-        debris_height = np.mean([np.mean(c_cell.Y[:, 2]) for c_cell in debris_cells])
-        return debris_height - debris_centre[2]
+        # Compute the distance between the points on top and bottom from vertices sharing the same cells
+        wound_height = []
+        for c_cell in wound_edge_cells:
+            for c_face in c_cell.Faces:
+                if c_face.InterfaceType == 1 or c_face.InterfaceType == 'CellCell':
+                    for tri in c_face.Tris:
+                        if np.any(np.isin(tri.SharedByCells, debris_cells)) and len(tri.SharedByCells) > 2:
+                            # Get the different nodes
+                            different_nodes = np.setxor1d(c_cell.T[tri.Edge[0], :], c_cell.T[tri.Edge[1], :])
+                            if np.any(np.isin(different_nodes, self.XgTop)) and np.any(np.isin(different_nodes, self.XgBottom)):
+                                # Get the vertices of the triangles
+                                vertices = c_cell.Y[tri.Edge, :]
+                                # Compute the distance between the vertices
+                                wound_height.append(np.linalg.norm(vertices[0] - vertices[1]))
+
+        return np.mean(wound_height)

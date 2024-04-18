@@ -29,44 +29,56 @@ def analyse_simulation(folder):
     if not features_per_time:
         return
 
-    # Export to csv
+    # Export to xlsx
     features_per_time_df = pd.DataFrame(features_per_time)
     features_per_time_df.sort_values(by='time', inplace=True)
-    features_per_time_df.to_csv(os.path.join(folder, 'cell_features.csv'))
+    features_per_time_df.to_excel(os.path.join(folder, 'features_per_time.xlsx'))
 
     # Obtain pre-wound features
     pre_wound_features = features_per_time_df['time'][features_per_time_df['time'] < vModel.set.TInitAblation]
     pre_wound_features = features_per_time_df[features_per_time_df['time'] ==
-                                              pre_wound_features[len(pre_wound_features)]]
+                                              pre_wound_features.iloc[-1]]
 
     # Obtain post-wound features
     post_wound_features = features_per_time_df[features_per_time_df['time'] >= vModel.set.TInitAblation]
 
-    # Reset time to ablation time.
-    post_wound_features['time'] = post_wound_features['time'] - vModel.set.TInitAblation
+    if not post_wound_features.empty:
+        # Reset time to ablation time.
+        post_wound_features.loc[:, 'time'] = post_wound_features['time'] - vModel.set.TInitAblation
 
-    # Compare post-wound features with pre-wound features in percentage
-    for feature in post_wound_features.columns:
-        print(feature)
-        if np.any(np.isnan(pre_wound_features[feature])) or np.any(np.isnan(post_wound_features[feature])):
-            continue
-        post_wound_features[feature] = (post_wound_features[feature] / np.array(pre_wound_features[feature])) * 100
+        # Compare post-wound features with pre-wound features in percentage
+        for feature in post_wound_features.columns:
+            if np.any(np.isnan(pre_wound_features[feature])) or np.any(np.isnan(post_wound_features[feature])):
+                continue
+            post_wound_features.loc[:, feature] = (post_wound_features[feature] / np.array(pre_wound_features[feature])) * 100
 
-    # Obtain important features for post-wound
-    important_features = {
-        'max_recoiling_top': np.max(post_wound_features['wound_area_top']),
-        'max_recoiling_time_top': post_wound_features['time'][np.argmax(post_wound_features['wound_area_top'])],
-    }
+        # Export to xlsx
+        post_wound_features.to_excel(os.path.join(folder, 'post_wound_features.xlsx'))
 
-    # Extrapolate features to a given time
-    times_to_extrapolate = {16, 30, 60}
-    columns_to_extrapolate = {'wound_area_top', 'wound_height'}  # post_wound_features.columns
-    for time in times_to_extrapolate:
-        for feature in columns_to_extrapolate:
-            important_features[feature + '_extrapolated_' + str(time)] = np.interp(time, post_wound_features['time'],
-                                                                                   post_wound_features[feature])
+        # Obtain important features for post-wound
+        important_features = {
+            'max_recoiling_top': np.max(post_wound_features['wound_area_top']),
+            'max_recoiling_time_top': post_wound_features['time'][np.argmax(post_wound_features['wound_area_top'])],
+            'min_height_change': np.min(post_wound_features['wound_height']),
+            'min_height_change_time': post_wound_features['time'][np.argmin(post_wound_features['wound_height'])],
+        }
 
-    return features_per_time_df, post_wound_features
+        # Extrapolate features to a given time
+        times_to_extrapolate = {16, 30, 60}
+        columns_to_extrapolate = {'wound_area_top', 'wound_height'}  # post_wound_features.columns
+        for time in times_to_extrapolate:
+            for feature in columns_to_extrapolate:
+                important_features[feature + '_extrapolated_' + str(time)] = np.interp(time, post_wound_features['time'],
+                                                                                       post_wound_features[feature])
+    else:
+        important_features = {
+            'max_recoiling_top': np.nan,
+            'max_recoiling_time_top': np.nan,
+            'min_height_change': np.nan,
+            'min_height_change_time': np.nan,
+        }
+
+    return features_per_time_df, post_wound_features, important_features
 
 
 folder = '/Users/pablovm/PostDoc/pyVertexModel/Result/'
@@ -76,4 +88,11 @@ for file_id, file in enumerate(os.listdir(folder)):
     # if file is a directory
     if os.path.isdir(os.path.join(folder, file)):
         # Analyse the simulation
-        features_per_time_df = analyse_simulation(os.path.join(folder, file))
+        features_per_time_df, post_wound_features, important_features = (
+            analyse_simulation(os.path.join(folder, file)))
+
+        all_files_features.append((file, important_features))
+
+# Export to xls file
+df = pd.DataFrame(all_files_features)
+df.to_excel(os.path.join(folder, 'all_files_features.xlsx'))
