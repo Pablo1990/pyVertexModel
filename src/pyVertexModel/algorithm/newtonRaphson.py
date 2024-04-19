@@ -102,7 +102,7 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t, implicit_meth
     ig = 0
     Energy = 0
 
-    if implicit_method:
+    if implicit_method is True:
         while (gr > Set.tol or dyr > Set.tol) and Set.iter < Set.MaxIter:
             Energy, K, dyr, g, gr, ig, auxgr, dy = newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof,
                                                                             dy, g, gr0, ig, numStep, t)
@@ -278,7 +278,7 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
     energy_total = kg_Viscosity.energy
     energies = {"Viscosity": kg_Viscosity.energy}
 
-    if implicit_method:
+    if implicit_method is True:
         # Surface Energy
         kg_SA = KgSurfaceCellBasedAdhesion(Geo)
         kg_SA.compute_work(Geo, Set)
@@ -344,22 +344,6 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
             K += kg_TriAR.K
             energy_total += kg_TriAR.energy
             energies["TriEnergyBarrierAR"] = kg_TriAR.energy
-
-        # Triangle Energy Barrier
-        kg_Tri = KgTriEnergyBarrier(Geo)
-        kg_Tri.compute_work(Geo, Set)
-        g = kg_Tri.g
-        K = kg_Tri.K
-        energy_total = kg_Tri.energy
-        energies = {"TriEnergyBarrier": kg_Tri.energy}
-
-        # Triangle Energy Barrier Aspect Ratio
-        if Set.EnergyBarrierAR:
-            kg_TriAR = KgTriAREnergyBarrier(Geo)
-            kg_TriAR.compute_work(Geo, Set)
-            g += kg_TriAR.g
-            K += kg_TriAR.K
-            energy_total += kg_TriAR.energy
 
     return g, K, energy_total, energies
 

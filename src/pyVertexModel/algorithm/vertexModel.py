@@ -125,7 +125,7 @@ class VertexModel:
                 # up-to-date
                 self.geo.update_measures()
 
-            implicit_method = False
+            implicit_method = True
             g, K, _, energies = newtonRaphson.KgGlobal(self.geo_0, self.geo_n, self.geo, self.set, implicit_method)
             self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
             self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
