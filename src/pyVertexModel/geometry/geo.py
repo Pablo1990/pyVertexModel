@@ -857,6 +857,9 @@ class Geo:
 
         cells = [c_cell for c_cell in cells if np.any(np.isin(c_cell.T, debris_cells))]
 
+        # Remove debris cells from the list of cells
+        cells = [c_cell for c_cell in cells if c_cell.ID not in debris_cells]
+
         return cells
 
     def compute_wound_area(self, location_filter=None):
@@ -891,6 +894,7 @@ class Geo:
         debris_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
         if not debris_cells:
             debris_cells = self.cellsToAblate
+
         # Collect points forming the area
         wound_area_points = []
         wound_area_points_tets = []
