@@ -89,10 +89,14 @@ def analyse_simulation(folder):
             'min_height_change_time': np.nan,
         }
 
+    # Export to xlsx
+    df = pd.DataFrame([important_features])
+    df.to_excel(os.path.join(folder, 'important_features.xlsx'))
+
     return features_per_time_df, post_wound_features, important_features
 
 
-folder = '/Users/pablovm/PostDoc/pyVertexModel/Result/'
+folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/Relevant/'
 all_files_features = []
 for file_id, file in enumerate(os.listdir(folder)):
     print(file)

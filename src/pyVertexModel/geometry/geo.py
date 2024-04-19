@@ -864,9 +864,22 @@ class Geo:
         Compute the wound area at the top by calculating the edge length of the alive cells with debris cells on top
         :return:
         """
-        wound_area_points = self.collect_points_wound_edge(location_filter)
+        wound_area_points, wound_area_points_tets = self.collect_points_wound_edge(location_filter)
 
-        wound_area_points = np.concatenate(wound_area_points)
+        # Obtain order of points based on tetrahedra
+        first_point = wound_area_points_tets[0]
+        remaining_points = np.delete(wound_area_points_tets, 0, axis=0)
+        order_of_points = [first_point]
+        while remaining_points is not None:
+            next_point = np.where(np.sum(np.isin(remaining_points, order_of_points[-1]), axis=1) > 2)[0]
+            if next_point.size == 0:
+                break
+            order_of_points.append(remaining_points[next_point[0]])
+            remaining_points = np.delete(remaining_points, next_point[0], axis=0)
+
+        # Obtain the wound area points in the correct order
+        wound_area_points = np.concatenate([wound_area_points[np.where(np.all(np.isin(wound_area_points_tets, point), axis=1))[0]] for point in order_of_points])
+
         # Compute the wound area from the wound_area_points
         wound_area = calculate_polygon_area(wound_area_points[:, :2])
 
@@ -880,20 +893,36 @@ class Geo:
             debris_cells = self.cellsToAblate
         # Collect points forming the area
         wound_area_points = []
+        wound_area_points_tets = []
         # Compute the area formed by the points of the wound edge cells
         for c_cell in wound_edge_cells:
-            wound_area_points.append(c_cell.Y[np.any(np.isin(c_cell.T, debris_cells), axis=1), :])
-        return wound_area_points
+            vertices_to_collect = np.any(np.isin(c_cell.T, debris_cells), axis=1)
+            if location_filter == "Top":
+                vertices_to_collect = vertices_to_collect & np.any(np.isin(c_cell.T, self.XgTop), axis=1)
+            elif location_filter == "Bottom":
+                vertices_to_collect = vertices_to_collect & np.any(np.isin(c_cell.T, self.XgBottom), axis=1)
+
+            wound_area_points.append(c_cell.Y[vertices_to_collect, :])
+            wound_area_points_tets.append(c_cell.T[vertices_to_collect, :])
+
+        wound_area_points = np.concatenate(wound_area_points)
+        wound_area_points_tets = np.concatenate(wound_area_points_tets)
+
+        # Remove duplicate points from points and tets keeping the same order
+        wound_area_points, unique_indices = np.unique(wound_area_points, axis=0, return_index=True)
+        wound_area_points_tets = wound_area_points_tets[unique_indices]
+
+        return wound_area_points, wound_area_points_tets
 
     def compute_wound_volume(self):
         """
         Compute the wound volume from the wound edge on top to the bottom
         :return:
         """
-        wound_area_points_top = self.collect_points_wound_edge(location_filter="Top")
-        wound_area_points_bottom = self.collect_points_wound_edge(location_filter="Bottom")
+        wound_area_points_top, _ = self.collect_points_wound_edge(location_filter="Top")
+        wound_area_points_bottom, _ = self.collect_points_wound_edge(location_filter="Bottom")
 
-        wound_area_points = np.concatenate(wound_area_points_top + wound_area_points_bottom)
+        wound_area_points = np.concatenate([wound_area_points_top, wound_area_points_bottom])
 
         # Compute the wound volume from the wound_area_points
         wound_volume = calculate_volume_from_points(wound_area_points)
@@ -929,9 +958,10 @@ class Geo:
         perimeter = 0
         for c_cell in wound_edge_cells:
             for c_face in c_cell.Faces:
-                for tri in c_face.Tris:
-                    if np.any(np.isin(tri.SharedByCells, debris_cells)):
-                        perimeter += np.sum(tri.EdgeLength)
+                if c_face.InterfaceType == location_filter or location_filter is None:
+                    for tri in c_face.Tris:
+                        if np.any(np.isin(tri.SharedByCells, debris_cells)):
+                            perimeter += np.sum(tri.EdgeLength)
 
         return perimeter
 
