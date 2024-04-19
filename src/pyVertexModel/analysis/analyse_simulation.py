@@ -50,6 +50,9 @@ def analyse_simulation(folder):
         for feature in post_wound_features.columns:
             if np.any(np.isnan(pre_wound_features[feature])) or np.any(np.isnan(post_wound_features[feature])):
                 continue
+
+            if feature == 'time':
+                continue
             post_wound_features.loc[:, feature] = (post_wound_features[feature] / np.array(pre_wound_features[feature])) * 100
 
         # Export to xlsx
