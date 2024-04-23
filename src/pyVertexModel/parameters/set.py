@@ -181,7 +181,8 @@ class Set:
                                     '_noise_', str(self.noise_lt), '_brownian_', str(self.brownian_motion_scale),
                                     '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
                                     '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
-                                    '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3)])
+                                    '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3),
+                                    '_pString_', str(self.purseStringStrength)])
         self.define_if_not_defined("OutputFolder", new_outputFolder)
 
     def stretch(self):
@@ -212,31 +213,32 @@ class Set:
         self.InputGeo = 'VertexModelTime'
         # 40 cells 3 cells to ablate
         # 110 cells 7 cells to ablate
-        self.TotalCells = 40
+        self.TotalCells = 150
         self.CellHeight = 15
         self.tend = 61
         self.Nincr = self.tend * 2
 
         self.nu = 500
-        self.lambdaB = 0.5
+        self.lambdaB = 5
         self.Beta = 1
 
-        self.lambdaR = 0.23
+        self.EnergyBarrierAR = True
+        self.lambdaR = 0.000001
 
         self.lambdaV = 0.001
         self.kSubstrate = 1
         self.cLineTension = 0.05
 
         self.brownian_motion = True
-        self.brownian_motion_scale = 0.05
+        self.brownian_motion_scale = 0.001
 
-        self.noiseContractility = 0.0
+        self.noise_lt = 0.2
         #self.DelayedAdditionalContractility = 0
         # Soft < 0
         # Stiff > 0
         self.Remodelling = 1
-        self.RemodelStiffness = 0.7
-        self.lambdaS1 = 5
+        self.RemodelStiffness = 0.85
+        self.lambdaS1 = 1
         self.lambdaS2 = self.lambdaS1 / 10
         self.lambdaS3 = self.lambdaS1 / 10
         self.lambdaS4 = self.lambdaS3
@@ -246,14 +248,14 @@ class Set:
 
     def woundDefault(self):
         # ============================== Ablation ============================
-        self.cellsToAblate = np.array([0, 1, 4])
+        self.cellsToAblate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
         self.TInitAblation = 1
         self.TEndAblation = self.tend
         self.lambdaSFactor_Debris = np.finfo(float).eps
         # =========================== Contractility ==========================
         self.Contractility = True
         self.DelayedAdditionalContractility = 0
-        self.purseStringStrength = 7
+        self.purseStringStrength = 3
         self.Contractility_Variability_PurseString = np.multiply(np.array(
             [1, 0.96, 1.087, 1.74, 2.37, 2.61, 2.487, 2.536, 2.46, 2.52, 2.606, 2.456, 2.387, 2.52, 2.31, 2.328,
              2.134, 2.07, 2.055, 1.9, 1.9]), self.purseStringStrength)

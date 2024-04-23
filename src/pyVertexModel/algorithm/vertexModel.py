@@ -107,6 +107,8 @@ class VertexModel:
             self.geo_n = self.geo.copy(update_measurements=False)
         self.backupVars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
 
+        print("File: ", self.set.OutputFolder)
+
         # save_state(self, os.path.join(self.set.OutputFolder, 'data_step_0.pkl'))
 
         while self.t <= self.set.tend and not self.didNotConverge:

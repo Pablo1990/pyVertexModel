@@ -1,4 +1,5 @@
 import os
+import pickle
 
 import numpy as np
 import pandas as pd
@@ -62,12 +63,12 @@ def analyse_simulation(folder):
             post_wound_features.to_excel(os.path.join(folder, 'post_wound_features.xlsx'))
 
             # Obtain important features for post-wound
-            if not post_wound_features['time'].empty and not post_wound_features['wound_area_top'].empty:
+            if not post_wound_features['wound_area_top'].empty:
                 important_features = {
                     'max_recoiling_top': np.max(post_wound_features['wound_area_top']),
-                    'max_recoiling_time_top': post_wound_features['time'][np.argmax(post_wound_features['wound_area_top'])],
+                    'max_recoiling_time_top': np.array(post_wound_features['time'])[np.argmax(post_wound_features['wound_area_top'])],
                     'min_height_change': np.min(post_wound_features['wound_height']),
-                    'min_height_change_time': post_wound_features['time'][np.argmin(post_wound_features['wound_height'])],
+                    'min_height_change_time': np.array(post_wound_features['time'])[np.argmin(post_wound_features['wound_height'])],
                 }
             else:
                 important_features = {
@@ -106,8 +107,8 @@ def analyse_simulation(folder):
         # Load dataframes from pkl
         with open(os.path.join(folder, 'features_per_time.pkl'), 'rb') as f:
             features_per_time_df = pickle.load(f)
-            post_wound_features = pickle.load(f)
             important_features = pickle.load(f)
+            post_wound_features = pickle.load(f)
 
 
     return features_per_time_df, post_wound_features, important_features
@@ -118,14 +119,19 @@ all_files_features = []
 for file_id, file in enumerate(os.listdir(folder)):
     print(file)
     # if file is a directory
-    if os.path.isdir(os.path.join(folder, file)) and os.path.exists(os.path.join(folder, file, 'post_wound_features.xlsx')):
+    if os.path.isdir(os.path.join(folder, file)):
         # Analyse the simulation
         features_per_time_df, post_wound_features, important_features = (
             analyse_simulation(os.path.join(folder, file)))
 
-        if important_features is not None:
+        if important_features is not None and len(important_features) > 5:
             important_features['folder'] = file
+            # Transform the dictionary into a dataframe
+            important_features = pd.DataFrame([important_features])
             all_files_features.append(important_features)
+
+# Concatenate the elements of the list all_files_features
+all_files_features = pd.concat(all_files_features, axis=0)
 
 # Export to xls file
 df = pd.DataFrame(all_files_features)
