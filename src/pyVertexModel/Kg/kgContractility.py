@@ -81,22 +81,25 @@ def getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set):
         else:
             contractilityValue = 1
 
-        if currentFace.InterfaceType == 'Top' or currentFace.InterfaceType == 0:
-            if any([Geo.Cells[cell].AliveStatus == 0 for cell in currentTri.SharedByCells]):
-                contractilityValue = contractilityValue * Set.cLineTension
+        if len(currentTri.SharedByCells) == 1:
+            contractilityValue = 0
+        else:
+            if currentFace.InterfaceType == 'Top' or currentFace.InterfaceType == 0:
+                if any([Geo.Cells[cell].AliveStatus == 0 for cell in currentTri.SharedByCells]):
+                    contractilityValue = contractilityValue * Set.cLineTension
+                else:
+                    contractilityValue = Set.cLineTension
+            elif currentFace.InterfaceType == 'CellCell' or currentFace.InterfaceType == 1:
+                if any([Geo.Cells[cell].AliveStatus == 0 for cell in currentTri.SharedByCells]):
+                    contractilityValue = contractilityValue * Set.cLineTension
+                else:
+                    contractilityValue = Set.cLineTension / 100
+            elif currentFace.InterfaceType == 'Bottom' or currentFace.InterfaceType == 2:
+                contractilityValue = Set.cLineTension / 100
             else:
                 contractilityValue = Set.cLineTension
-        elif currentFace.InterfaceType == 'CellCell' or currentFace.InterfaceType == 1:
-            if any([Geo.Cells[cell].AliveStatus == 0 for cell in currentTri.SharedByCells]):
-                contractilityValue = contractilityValue * Set.cLineTension
-            else:
-                contractilityValue = Set.cLineTension / 100
-        elif currentFace.InterfaceType == 'Bottom' or currentFace.InterfaceType == 2:
-            contractilityValue = Set.cLineTension / 100
-        else:
-            contractilityValue = Set.cLineTension
 
-        contractilityValue = add_noise_to_parameter(contractilityValue, Set.noise_lt, currentTri)
+            contractilityValue = add_noise_to_parameter(contractilityValue, Set.noise_lt, currentTri)
 
         for cellToCheck in currentTri.SharedByCells:
             facesToCheck = Geo.Cells[cellToCheck].Faces
