@@ -260,7 +260,7 @@ class VertexModel:
 
             # New Step
             self.t = self.t + self.set.dt
-            self.set.dt = np.min([self.set.dt + self.set.dt * 0.5, self.set.dt0])
+            #self.set.dt = np.min([self.set.dt + self.set.dt * 0.5, self.set.dt0])
             self.set.MaxIter = self.set.MaxIter0
             self.numStep = self.numStep + 1
             self.backupVars = {
