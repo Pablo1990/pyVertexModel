@@ -14,6 +14,7 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.implicit_method = False
         self.cellsToAblate = None
         self.DelayedAdditionalContractility = None
         self.Contractility_TimeVariability = None
@@ -216,7 +217,7 @@ class Set:
         self.TotalCells = 150
         self.CellHeight = 15
         self.tend = 61
-        self.Nincr = self.tend * 2
+        self.Nincr = self.tend * 100
 
         self.nu = 500
         self.lambdaB = 5
@@ -227,7 +228,7 @@ class Set:
 
         self.lambdaV = 0.001
         self.kSubstrate = 1
-        self.cLineTension = 0.05
+        self.cLineTension = 0.01
 
         self.brownian_motion = True
         self.brownian_motion_scale = 0.001
@@ -243,6 +244,8 @@ class Set:
         self.lambdaS3 = self.lambdaS1 / 10
         self.lambdaS4 = self.lambdaS3
         self.VTK = True
+
+        self.implicit_method = False
 
         self.ablation = True
 
