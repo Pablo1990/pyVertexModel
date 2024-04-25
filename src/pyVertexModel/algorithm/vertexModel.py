@@ -127,8 +127,12 @@ class VertexModel:
                 # up-to-date
                 self.geo.update_measures()
 
-            implicit_method = True
-            g, K, _, energies = newtonRaphson.KgGlobal(self.geo_0, self.geo_n, self.geo, self.set, implicit_method)
+            if self.set.implicit_method is True:
+                g, K, _, energies = newtonRaphson.KgGlobal(self.geo_0, self.geo_n, self.geo, self.set, self.set.implicit_method)
+            else:
+                K = 0
+                g, energies = newtonRaphson.gGlobal(self.geo_0, self.geo_n, self.geo, self.set, self.set.implicit_method)
+
             self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
             self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
             for key, energy in energies.items():
@@ -136,7 +140,8 @@ class VertexModel:
 
             self.geo, g, __, __, self.set, gr, dyr, dy = newtonRaphson.newton_raphson(self.geo_0, self.geo_n, self.geo,
                                                                                       self.Dofs, self.set, K, g,
-                                                                                      self.numStep, self.t, implicit_method)
+                                                                                      self.numStep, self.t,
+                                                                                      self.set.implicit_method)
             self.post_newton_raphson(dy, dyr, g, gr)
 
         return self.didNotConverge
@@ -255,7 +260,7 @@ class VertexModel:
 
             # New Step
             self.t = self.t + self.set.dt
-            self.set.dt = np.min([self.set.dt + self.set.dt * 0.5, self.set.dt0])
+            #self.set.dt = np.min([self.set.dt + self.set.dt * 0.5, self.set.dt0])
             self.set.MaxIter = self.set.MaxIter0
             self.numStep = self.numStep + 1
             self.backupVars = {

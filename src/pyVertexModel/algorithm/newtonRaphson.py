@@ -107,10 +107,9 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t, implicit_meth
             Energy, K, dyr, g, gr, ig, auxgr, dy = newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof,
                                                                             dy, g, gr0, ig, numStep, t)
     else:
-        Energy, K, dyr, g, gr, ig, auxgr, dy = newton_raphson_iteration_explicit(Dofs, Geo, Geo_0, Geo_n, K, Set,
-                                                                                 auxgr, dof, dy, g, gr0, ig,
-                                                                                 numStep, t)
-
+        Geo, dy = newton_raphson_iteration_explicit(Geo, Set, dof, dy, g)
+        gr = 0
+        dyr = 0
 
     return Geo, g, K, Energy, Set, gr, dyr, dy
 
@@ -175,7 +174,7 @@ def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g
     return energy_total, K, dyr, g, gr, ig, aux_gr, dy
 
 
-def newton_raphson_iteration_explicit(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g, gr0, ig, numStep, t):
+def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
     """
     Explicit update method
     :param Geo_0:
@@ -185,21 +184,13 @@ def newton_raphson_iteration_explicit(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, d
     :param Set:
     :return:
     """
-
-    dy[dof, 0] = ml_divide(K, dof, g)
+    dy[dof, 0] = -Set.dt / Set.nu * g[dof]
 
     dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
     Geo.update_vertices(dy_reshaped)
     Geo.update_measures()
-    g, K, energy_total, _ = KgGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=False)
 
-    dyr = np.linalg.norm(dy[dof, 0])
-    gr = np.linalg.norm(g[dof])
-    logger.info(f"Step: {numStep}, Iter: {Set.iter}, Time: {t} ||gr||= {gr:.3e} ||dyr||= {dyr:.3e}"
-                f" nu/nu0={Set.nu / Set.nu0:.3g}")
-    Set.iter += 1
-
-    return energy_total, K, dyr, g, gr, ig, aux_gr, dy
+    return Geo, dy
 
 
 def ml_divide(K, dof, g):
@@ -234,7 +225,7 @@ def line_search(Geo_0, Geo_n, geo, dof, Set, gc, dy):
     Geo_copy.update_vertices(dy_reshaped)
     Geo_copy.update_measures()
 
-    g = gGlobal(Geo_0, Geo_n, Geo_copy, Set)
+    g, _ = gGlobal(Geo_0, Geo_n, Geo_copy, Set)
 
     gr0 = np.linalg.norm(gc[dof])
     gr = np.linalg.norm(g[dof])
@@ -270,85 +261,94 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
     :return:
     """
 
-    # Viscous Energy
-    kg_Viscosity = KgViscosity(Geo)
-    kg_Viscosity.compute_work(Geo, Set, Geo_n)
-    g = kg_Viscosity.g
-    K = kg_Viscosity.K
-    energy_total = kg_Viscosity.energy
-    energies = {"Viscosity": kg_Viscosity.energy}
+    # Surface Energy
+    kg_SA = KgSurfaceCellBasedAdhesion(Geo)
+    kg_SA.compute_work(Geo, Set)
+    g = kg_SA.g
+    K = kg_SA.K
+    energy_total = kg_SA.energy
+    energies = {"Surface": kg_SA.energy}
+
+    # Volume Energy
+    kg_Vol = KgVolume(Geo)
+    kg_Vol.compute_work(Geo, Set)
+    K += kg_Vol.K
+    g += kg_Vol.g
+    energy_total += kg_Vol.energy
+    energies["Volume"] = kg_Vol.energy
+
+    # # TODO: Plane Elasticity
+    # if Set.InPlaneElasticity:
+    #     gt, Kt, EBulk = KgBulk(geo_0, Geo, Set)
+    #     K += Kt
+    #     g += gt
+    #     E += EBulk
+    #     Energies["Bulk"] = EBulk
+
+    # Bending Energy
+    # TODO
+
+    # Propulsion Forces
+    # TODO
+
+    # Contractility
+    if Set.Contractility:
+        kg_lt = KgContractility(Geo)
+        kg_lt.compute_work(Geo, Set)
+        g += kg_lt.g
+        K += kg_lt.K
+        energy_total += kg_lt.energy
+        energies["Contractility"] = kg_lt.energy
+
+    # Substrate
+    if Set.Substrate == 2:
+        kg_subs = KgSubstrate(Geo)
+        kg_subs.compute_work(Geo, Set)
+        g += kg_subs.g
+        K += kg_subs.K
+        energy_total += kg_subs.energy
+        energies["Substrate"] = kg_subs.energy
+
+    # Triangle Energy Barrier
+    if Set.EnergyBarrierA:
+        kg_Tri = KgTriEnergyBarrier(Geo)
+        kg_Tri.compute_work(Geo, Set)
+        g += kg_Tri.g
+        K += kg_Tri.K
+        energy_total += kg_Tri.energy
+        energies["TriEnergyBarrier"] = kg_Tri.energy
+
+    # Triangle Energy Barrier Aspect Ratio
+    if Set.EnergyBarrierAR:
+        kg_TriAR = KgTriAREnergyBarrier(Geo)
+        kg_TriAR.compute_work(Geo, Set)
+        g += kg_TriAR.g
+        K += kg_TriAR.K
+        energy_total += kg_TriAR.energy
+        energies["TriEnergyBarrierAR"] = kg_TriAR.energy
 
     if implicit_method is True:
-        # Surface Energy
-        kg_SA = KgSurfaceCellBasedAdhesion(Geo)
-        kg_SA.compute_work(Geo, Set)
-        g += kg_SA.g
-        K += kg_SA.K
-        energy_total += kg_SA.energy
-        energies["Surface"] = kg_SA.energy
-
-        # Volume Energy
-        kg_Vol = KgVolume(Geo)
-        kg_Vol.compute_work(Geo, Set)
-        K += kg_Vol.K
-        g += kg_Vol.g
-        energy_total += kg_Vol.energy
-        energies["Volume"] = kg_Vol.energy
-
-        # # TODO: Plane Elasticity
-        # if Set.InPlaneElasticity:
-        #     gt, Kt, EBulk = KgBulk(geo_0, Geo, Set)
-        #     K += Kt
-        #     g += gt
-        #     E += EBulk
-        #     Energies["Bulk"] = EBulk
-
-        # Bending Energy
-        # TODO
-
-        # Propulsion Forces
-        # TODO
-
-        # Contractility
-        if Set.Contractility:
-            kg_lt = KgContractility(Geo)
-            kg_lt.compute_work(Geo, Set)
-            g += kg_lt.g
-            K += kg_lt.K
-            energy_total += kg_lt.energy
-            energies["Contractility"] = kg_lt.energy
-
-        # Substrate
-        if Set.Substrate == 2:
-            kg_subs = KgSubstrate(Geo)
-            kg_subs.compute_work(Geo, Set)
-            g += kg_subs.g
-            K += kg_subs.K
-            energy_total += kg_subs.energy
-            energies["Substrate"] = kg_subs.energy
-
-        # Triangle Energy Barrier
-        if Set.EnergyBarrierA:
-            kg_Tri = KgTriEnergyBarrier(Geo)
-            kg_Tri.compute_work(Geo, Set)
-            g += kg_Tri.g
-            K += kg_Tri.K
-            energy_total += kg_Tri.energy
-            energies["TriEnergyBarrier"] = kg_Tri.energy
-
-        # Triangle Energy Barrier Aspect Ratio
-        if Set.EnergyBarrierAR:
-            kg_TriAR = KgTriAREnergyBarrier(Geo)
-            kg_TriAR.compute_work(Geo, Set)
-            g += kg_TriAR.g
-            K += kg_TriAR.K
-            energy_total += kg_TriAR.energy
-            energies["TriEnergyBarrierAR"] = kg_TriAR.energy
+        # Viscous Energy
+        kg_Viscosity = KgViscosity(Geo)
+        kg_Viscosity.compute_work(Geo, Set, Geo_n)
+        g = kg_Viscosity.g
+        K = kg_Viscosity.K
+        energy_total = kg_Viscosity.energy
+        energies = {"Viscosity": kg_Viscosity.energy}
 
     return g, K, energy_total, energies
 
 
-def gGlobal(Geo_0, Geo_n, Geo, Set):
+def gGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
+    """
+    Compute the global gradient
+    :param Geo_0:
+    :param Geo_n:
+    :param Geo:
+    :param Set:
+    :param implicit_method:
+    :return:
+    """
     # Surface Energy
     kg_SA = KgSurfaceCellBasedAdhesion(Geo)
     kg_SA.compute_work(Geo, Set, None, False)
@@ -356,12 +356,15 @@ def gGlobal(Geo_0, Geo_n, Geo, Set):
     # Volume Energy
     kg_Vol = KgVolume(Geo)
     kg_Vol.compute_work(Geo, Set, None, False)
+    g = kg_Vol.g[:] + kg_SA.g[:]
+    energies = {"Surface": kg_SA.energy, "Volume": kg_Vol.energy}
 
-    # Viscous Energy
-    kg_Viscosity = KgViscosity(Geo)
-    kg_Viscosity.compute_work(Geo, Set, Geo_n, False)
-
-    g = kg_Vol.g[:] + kg_Viscosity.g + kg_SA.g[:]
+    if implicit_method is True:
+        # Viscous Energy
+        kg_Viscosity = KgViscosity(Geo)
+        kg_Viscosity.compute_work(Geo, Set, Geo_n, False)
+        g += kg_Viscosity.g
+        energies["Viscosity"] = kg_Viscosity.energy
 
     # # TODO: Plane Elasticity
     # if Set.InPlaneElasticity:
@@ -379,12 +382,14 @@ def gGlobal(Geo_0, Geo_n, Geo, Set):
         kg_Tri = KgTriEnergyBarrier(Geo)
         kg_Tri.compute_work(Geo, Set, None, False)
         g += kg_Tri.g
+        energies["TriEnergyBarrier"] = kg_Tri.energy
 
     # Triangle Energy Barrier Aspect Ratio
     if Set.EnergyBarrierAR:
         kg_TriAR = KgTriAREnergyBarrier(Geo)
         kg_TriAR.compute_work(Geo, Set, None, False)
         g += kg_TriAR.g
+        energies["TriEnergyBarrierAR"] = kg_TriAR.energy
 
     # Propulsion Forces
     # TODO
@@ -394,14 +399,16 @@ def gGlobal(Geo_0, Geo_n, Geo, Set):
         kg_lt = KgContractility(Geo)
         kg_lt.compute_work(Geo, Set, None, False)
         g += kg_lt.g
+        energies["Contractility"] = kg_lt.energy
 
     # Substrate
     if Set.Substrate == 2:
         kg_subs = KgSubstrate(Geo)
         kg_subs.compute_work(Geo, Set, None, False)
         g += kg_subs.g
+        energies["Substrate"] = kg_subs.energy
 
-    return g
+    return g, energies
 
 
 def remeshing_cells(Geo_0, Geo_n, Geo, Dofs, Set, cells_to_change, ghost_node):
