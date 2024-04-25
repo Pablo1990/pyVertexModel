@@ -14,6 +14,7 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.dt = None
         self.implicit_method = False
         self.cellsToAblate = None
         self.DelayedAdditionalContractility = None
