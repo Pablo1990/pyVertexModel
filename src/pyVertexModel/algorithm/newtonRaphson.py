@@ -107,8 +107,7 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t, implicit_meth
             Energy, K, dyr, g, gr, ig, auxgr, dy = newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof,
                                                                             dy, g, gr0, ig, numStep, t)
     else:
-        Geo, dy = newton_raphson_iteration_explicit(Dofs, Geo, Geo_0, Geo_n, K, Set,
-                                                    auxgr, dof, dy, g, gr0, ig, numStep, t)
+        Geo, dy = newton_raphson_iteration_explicit(Geo, Set, dof, dy, g)
         gr = 0
         dyr = 0
 
@@ -175,7 +174,7 @@ def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g
     return energy_total, K, dyr, g, gr, ig, aux_gr, dy
 
 
-def newton_raphson_iteration_explicit(Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g, gr0, ig, numStep, t):
+def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
     """
     Explicit update method
     :param Geo_0:
