@@ -107,8 +107,7 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t, implicit_meth
             Energy, K, dyr, g, gr, ig, auxgr, dy = newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof,
                                                                             dy, g, gr0, ig, numStep, t)
     else:
-        Geo, dy = newton_raphson_iteration_explicit(Geo, Set, dof, dy, g)
-        gr = 0
+        Geo, dy, gr = newton_raphson_iteration_explicit(Geo, Set, dof, dy, g)
         dyr = 0
 
     return Geo, g, K, Energy, Set, gr, dyr, dy
@@ -190,7 +189,10 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
     Geo.update_vertices(dy_reshaped)
     Geo.update_measures()
 
-    return Geo, dy
+    g, energies = gGlobal(Geo, Geo, Geo, Set, Set.implicit_method)
+    gr = np.linalg.norm(g[dof])
+
+    return Geo, dy, gr
 
 
 def ml_divide(K, dof, g):

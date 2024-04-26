@@ -158,6 +158,7 @@ class VertexModel:
         if (gr < self.set.tol and dyr < self.set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
                 np.all(~np.isnan(dy[self.Dofs.Free]))):
             self.iteration_converged()
+            self.set.tol = gr*2
         else:
             self.iteration_did_not_converged()
 
@@ -170,12 +171,12 @@ class VertexModel:
         """
         self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs = load_backup_vars(self.backupVars)
         self.relaxingNu = False
-        if self.set.iter == self.set.MaxIter0:
+        if self.set.iter == self.set.MaxIter0 and self.set.implicit_method:
             self.set.MaxIter = self.set.MaxIter0 * 3
             self.set.nu = 10 * self.set.nu0
         else:
             if (self.set.iter >= self.set.MaxIter and
-                    (self.set.dt / self.set.dt0) > (1 / 1000)):
+                    (self.set.dt / self.set.dt0) > (1 / 10000000)):
                 self.set.MaxIter = self.set.MaxIter0
                 self.set.nu = self.set.nu0
                 self.set.dt = self.set.dt / 2
@@ -194,8 +195,6 @@ class VertexModel:
 
             for c in range(self.geo.nCells):
                 face_centres_to_middle_of_neighbours_vertices(self.geo, c)
-            save_state(self, os.path.join(self.set.OutputFolder,
-                                          'data_step_before_remodelling_' + str(self.numStep) + '.pkl'))
 
             # Create VTK files for the current state
             self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
@@ -203,6 +202,9 @@ class VertexModel:
 
             # Remodelling
             if self.set.Remodelling and abs(self.t - self.tr) >= self.set.RemodelingFrequency:
+                save_state(self,
+                           os.path.join(self.set.OutputFolder,
+                                        'data_step_before_remodelling_' + str(self.numStep) + '.pkl'))
                 remodel_obj = Remodelling(self.geo, self.geo_n, self.geo_0, self.set, self.Dofs)
                 self.geo, self.geo_n = remodel_obj.remodel_mesh(self.numStep)
                 self.tr = self.t
@@ -260,7 +262,7 @@ class VertexModel:
 
             # New Step
             self.t = self.t + self.set.dt
-            #self.set.dt = np.min([self.set.dt + self.set.dt * 0.5, self.set.dt0])
+            self.set.dt = np.min([self.set.dt + self.set.dt * 0.5, self.set.dt0])
             self.set.MaxIter = self.set.MaxIter0
             self.numStep = self.numStep + 1
             self.backupVars = {

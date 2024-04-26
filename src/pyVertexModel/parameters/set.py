@@ -25,7 +25,7 @@ class Set:
         self.TEndAblation = None
         self.lambdaSFactor_Debris = None
         self.TInitAblation = None
-        self.RemodelingFrequency = 0.2
+        self.RemodelingFrequency = None
         self.i_incr = None
         self.iter = None
         self.ablation = False

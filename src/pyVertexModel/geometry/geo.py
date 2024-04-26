@@ -765,43 +765,44 @@ class Geo:
         :return:
         """
 
-        # Initial setup: defining file paths and extensions
-        str0 = c_set.OutputFolder  # Base name for the output file
-        file_extension = '.vtk'  # File extension
-
-        # Creating a new subdirect
-        #             self.geo.create_vtk_cell(self.geo_0, self.c_set, self.numStep)ory for cells data
-        cell_sub_folder = os.path.join(str0, folder_name)
-        if not os.path.exists(cell_sub_folder):
-            os.makedirs(cell_sub_folder)
-
         # Initialize an array to store the VTK of each cell
         vtk_cells = []
 
-        for c in [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]:
-            writer = vtk.vtkPolyDataWriter()
-            name_out = os.path.join(cell_sub_folder, f'{folder_name}.{c:04d}.{step:04d}{file_extension}')
-            writer.SetFileName(name_out)
-            if folder_name == 'Cells':
-                vtk_cells.append(self.Cells[c].create_vtk())
-            elif folder_name == 'Edges':
-                vtk_cells.append(self.Cells[c].create_vtk_edges())
+        if c_set.VTK:
+            # Initial setup: defining file paths and extensions
+            str0 = c_set.OutputFolder  # Base name for the output file
+            file_extension = '.vtk'  # File extension
 
-            # Write to a VTK file
-            writer.SetInputData(vtk_cells[-1])
-            writer.Write()
+            # Creating a new subdirect
+            #             self.geo.create_vtk_cell(self.geo_0, self.c_set, self.numStep)ory for cells data
+            cell_sub_folder = os.path.join(str0, folder_name)
+            if not os.path.exists(cell_sub_folder):
+                os.makedirs(cell_sub_folder)
 
-            # TODO: Write to a ply file with additional information like cell features
-            # ply_writer = vtk.vtkPLYWriter()
-            # ply_writer.SetFileName(name_out.replace(file_extension, '.ply'))
-            # ply_writer.SetInputData(vtk_cells[-1])
-            # ply_writer.Write()
+            for c in [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]:
+                writer = vtk.vtkPolyDataWriter()
+                name_out = os.path.join(cell_sub_folder, f'{folder_name}.{c:04d}.{step:04d}{file_extension}')
+                writer.SetFileName(name_out)
+                if folder_name == 'Cells':
+                    vtk_cells.append(self.Cells[c].create_vtk())
+                elif folder_name == 'Edges':
+                    vtk_cells.append(self.Cells[c].create_vtk_edges())
 
-            # mesh = o3d.io.read_triangle_mesh(name_out.replace(file_extension, '.ply'))
-            # mesh.compute_vertex_normals()
+                # Write to a VTK file
+                writer.SetInputData(vtk_cells[-1])
+                writer.Write()
 
-            # Visualize the mesh
-            # o3d.visualization.draw_geometries([mesh])
+                # TODO: Write to a ply file with additional information like cell features
+                # ply_writer = vtk.vtkPLYWriter()
+                # ply_writer.SetFileName(name_out.replace(file_extension, '.ply'))
+                # ply_writer.SetInputData(vtk_cells[-1])
+                # ply_writer.Write()
+
+                # mesh = o3d.io.read_triangle_mesh(name_out.replace(file_extension, '.ply'))
+                # mesh.compute_vertex_normals()
+
+                # Visualize the mesh
+                # o3d.visualization.draw_geometries([mesh])
 
         return vtk_cells
 
