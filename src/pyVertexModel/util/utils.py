@@ -2,6 +2,7 @@ import copy
 import lzma
 import math
 import pickle
+import gzip
 
 import numpy as np
 from scipy.optimize import fsolve
@@ -30,7 +31,7 @@ def save_state(obj, filename):
     :param filename:
     :return:
     """
-    with open(filename, 'wb') as f:
+    with gzip.open(filename, 'wb') as f:
         # Go through all the attributes of obj
         for attr in dir(obj):
             # If the attribute is not a method, save it
@@ -59,7 +60,7 @@ def load_state(obj, filename, objs_to_load=None):
     :param filename:
     :return:
     """
-    with open(filename, 'rb') as f:
+    with gzip.open(filename, 'rb') as f:
         while True:
             try:
                 data = pickle.load(f)
