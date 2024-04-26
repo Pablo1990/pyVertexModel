@@ -60,15 +60,26 @@ def load_state(obj, filename, objs_to_load=None):
     :param filename:
     :return:
     """
-    with gzip.open(filename, 'rb') as f:
-        while True:
-            try:
-                data = pickle.load(f)
-                for attr, value in data.items():
-                    if objs_to_load is None or attr in objs_to_load:
-                        setattr(obj, attr, value)
-            except EOFError:
-                break
+    try:
+        with gzip.open(filename, 'rb') as f:
+            while True:
+                try:
+                    data = pickle.load(f)
+                    for attr, value in data.items():
+                        if objs_to_load is None or attr in objs_to_load:
+                            setattr(obj, attr, value)
+                except EOFError:
+                    break
+    except gzip.BadGzipFile:
+        with open(filename, 'rb') as f:
+            while True:
+                try:
+                    data = pickle.load(f)
+                    for attr, value in data.items():
+                        if objs_to_load is None or attr in objs_to_load:
+                            setattr(obj, attr, value)
+                except EOFError:
+                    break
 
 
 def ismember_rows(a, b):
