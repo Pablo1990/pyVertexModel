@@ -191,6 +191,7 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
 
     g, energies = gGlobal(Geo, Geo, Geo, Set, Set.implicit_method)
     gr = np.linalg.norm(g[dof])
+    Set.iter = Set.MaxIter
 
     return Geo, dy, gr
 

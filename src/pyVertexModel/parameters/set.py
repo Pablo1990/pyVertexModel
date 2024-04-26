@@ -219,6 +219,7 @@ class Set:
         self.CellHeight = 15
         self.tend = 61
         self.Nincr = self.tend * 100
+        self.tol = np.Inf
 
         self.nu = 500
         self.lambdaB = 5
