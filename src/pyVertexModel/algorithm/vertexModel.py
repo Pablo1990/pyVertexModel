@@ -161,7 +161,7 @@ class VertexModel:
         if (gr < self.set.tol and dyr < self.set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
                 np.all(~np.isnan(dy[self.Dofs.Free]))):
             self.iteration_converged()
-            self.set.tol = gr*2
+            self.set.tol = gr
         else:
             self.iteration_did_not_converged()
 
