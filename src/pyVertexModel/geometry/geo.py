@@ -930,7 +930,11 @@ class Geo:
         wound_area_points = np.concatenate([wound_area_points_top, wound_area_points_bottom])
 
         # Compute the wound volume from the wound_area_points
-        wound_volume = calculate_volume_from_points(wound_area_points)
+        try:
+            wound_volume = calculate_volume_from_points(wound_area_points)
+        except:
+            wound_volume = 0
+            logger.info('Possible error computing wound volume')
 
         #TODO: THIS WOUND FORMULA DOESN'T CONTEMPLATE THE MIDDLE VERTEX
 

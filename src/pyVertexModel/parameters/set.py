@@ -163,7 +163,7 @@ class Set:
         """
         self.define_if_not_defined("Nincr", self.tend)
         self.define_if_not_defined("dt", self.tend / self.Nincr)
-        self.define_if_not_defined("RemodelingFrequency", self.tend / self.Nincr)
+        self.define_if_not_defined("RemodelingFrequency", 0.1)
         self.define_if_not_defined("lambdaS2", self.lambdaS1 * 0.1)
         self.define_if_not_defined("lambdaS3", self.lambdaS1 / 10)
         self.define_if_not_defined("lambdaS4", self.lambdaS1 / 10)
@@ -226,20 +226,20 @@ class Set:
         self.Beta = 1
 
         self.EnergyBarrierAR = True
-        self.lambdaR = 0.000001
+        self.lambdaR = 0.001
 
-        self.lambdaV = 0.001
+        self.lambdaV = 1
         self.kSubstrate = 1
-        self.cLineTension = 0.01
+        self.cLineTension = 0.02
 
         self.brownian_motion = True
         self.brownian_motion_scale = 0.001
 
-        self.noise_lt = 0.2
+        self.noise_lt = 0.5
         #self.DelayedAdditionalContractility = 0
         # Soft < 0
         # Stiff > 0
-        self.Remodelling = 1
+        self.Remodelling = 0
         self.RemodelStiffness = 0.85
         self.lambdaS1 = 1
         self.lambdaS2 = self.lambdaS1 / 10
@@ -260,7 +260,7 @@ class Set:
         # =========================== Contractility ==========================
         self.Contractility = True
         self.DelayedAdditionalContractility = 0
-        self.purseStringStrength = 3
+        self.purseStringStrength = 0
         self.Contractility_Variability_PurseString = np.multiply(np.array(
             [1, 0.96, 1.087, 1.74, 2.37, 2.61, 2.487, 2.536, 2.46, 2.52, 2.606, 2.456, 2.387, 2.52, 2.31, 2.328,
              2.134, 2.07, 2.055, 1.9, 1.9]), self.purseStringStrength)

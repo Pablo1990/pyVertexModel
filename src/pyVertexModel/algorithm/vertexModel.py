@@ -161,7 +161,7 @@ class VertexModel:
         if (gr < self.set.tol and dyr < self.set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
                 np.all(~np.isnan(dy[self.Dofs.Free]))):
             self.iteration_converged()
-            self.set.tol = gr
+            self.set.tol = gr * 1.5
         else:
             self.iteration_did_not_converged()
 
@@ -179,7 +179,7 @@ class VertexModel:
             self.set.nu = 10 * self.set.nu0
         else:
             if (self.set.iter >= self.set.MaxIter and
-                    (self.set.dt / self.set.dt0) > (1 / 10000000)):
+                    (self.set.dt / self.set.dt0) > (1 / 1000000000)):
                 self.set.MaxIter = self.set.MaxIter0
                 self.set.nu = self.set.nu0
                 self.set.dt = self.set.dt / 2
@@ -199,18 +199,19 @@ class VertexModel:
             for c in range(self.geo.nCells):
                 face_centres_to_middle_of_neighbours_vertices(self.geo, c)
 
-            # Create VTK files for the current state
-            self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
-            self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
+
 
             # Remodelling
-            if self.set.Remodelling and abs(self.t - self.tr) >= self.set.RemodelingFrequency:
-                save_state(self,
-                           os.path.join(self.set.OutputFolder,
-                                        'data_step_before_remodelling_' + str(self.numStep) + '.pkl'))
-                remodel_obj = Remodelling(self.geo, self.geo_n, self.geo_0, self.set, self.Dofs)
-                self.geo, self.geo_n = remodel_obj.remodel_mesh(self.numStep)
-                self.tr = self.t
+            if abs(self.t - self.tr) >= self.set.RemodelingFrequency:
+                # Create VTK files for the current state
+                self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
+                self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
+                if self.set.Remodelling:
+                    save_state(self,
+                               os.path.join(self.set.OutputFolder,
+                                            'data_step_before_remodelling_' + str(self.numStep) + '.pkl'))
+                    remodel_obj = Remodelling(self.geo, self.geo_n, self.geo_0, self.set, self.Dofs)
+                    self.geo, self.geo_n = remodel_obj.remodel_mesh(self.numStep)
 
             # Append Energies
             # energies_per_time_step.append(energies)
@@ -244,8 +245,10 @@ class VertexModel:
             #TODO: CHECK
             #self.check_integrity()
 
-            # Save Data of the current step
-            save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
+            if abs(self.t - self.tr) >= self.set.RemodelingFrequency:
+                # Save Data of the current step
+                save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
+                self.tr = self.t
 
             # Reset Contractility Value and Edge Length
             for num_cell in range(len(self.geo.Cells)):
