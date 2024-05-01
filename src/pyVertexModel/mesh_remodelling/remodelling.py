@@ -254,7 +254,7 @@ class Remodelling:
             if has_converged is True:
                 # Get the degrees of freedom for the remodelling
                 self.Dofs.get_dofs(self.Geo, self.Set)
-                self.Geo = self.Dofs.get_remodel_dofs(allTnew, self.Geo)
+                self.Geo = self.Dofs.get_remodel_dofs(allTnew, self.Geo, cellToSplitFrom)
 
                 gNodeNeighbours = [get_node_neighbours(self.Geo, ghost_node_tried) for ghost_node_tried in
                                    ghost_nodes_tried]

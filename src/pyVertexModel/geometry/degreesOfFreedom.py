@@ -84,7 +84,7 @@ class DegreesOfFreedom:
         self.FixP = np.array(np.where(g_prescribed)[0], dtype=int)
         self.FixC = np.array(np.where(g_constrained)[0], dtype=int)
 
-    def get_remodel_dofs(self, t_new, geo):
+    def get_remodel_dofs(self, t_new, geo, cell_to_split_from):
         """
         Get the degrees of freedom for the remodelling.
         :param t_new:
@@ -97,7 +97,10 @@ class DegreesOfFreedom:
         id_tnew = np.unique(t_new)
         id_tnew_cells = np.setdiff1d(id_tnew, geo.XgID)
         id_tnew_cells = [cell_id for cell_id in id_tnew_cells if geo.Cells[cell_id].AliveStatus is not None]
-        id_tnew_cells_no_debris = [cell_id for cell_id in id_tnew_cells if geo.Cells[cell_id].AliveStatus == 1]
+        if cell_to_split_from in geo.XgID:
+            id_tnew_cells_no_debris = [cell_id for cell_id in id_tnew_cells if geo.Cells[cell_id].AliveStatus == 1]
+        else:
+            id_tnew_cells_no_debris = id_tnew_cells
 
         for num_cell, _ in enumerate(geo.Cells):
             geo.Cells[num_cell].vertices_and_faces_to_remodel = np.array([], dtype=int)
