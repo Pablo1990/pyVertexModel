@@ -198,8 +198,8 @@ class VertexModel:
             # STEP has converged
             logger.info(f"STEP {str(self.set.i_incr)} has converged ...")
 
-            for c in range(self.geo.nCells):
-               face_centres_to_middle_of_neighbours_vertices(self.geo, c)
+            # for c in range(self.geo.nCells):
+            #    face_centres_to_middle_of_neighbours_vertices(self.geo, c)
 
             # Remodelling
             if abs(self.t - self.tr) >= self.set.RemodelingFrequency:
@@ -218,7 +218,6 @@ class VertexModel:
                                                             self.set.implicit_method)
                         self.Dofs.get_dofs(self.geo, self.set)
                         gr = np.linalg.norm(g[self.Dofs.Free])
-                        # TODO: AVERAGE OUT WITH CURRENT TOLERANCE?
                         self.set.tol = gr
 
 
@@ -231,25 +230,6 @@ class VertexModel:
             # Update last time converged
             self.set.last_t_converged = self.t
 
-            # Analyse cells
-            # non_debris_features = []
-            # for c in non_debris_cells:
-            #     if c not in geo.xg_bottom:
-            #         non_debris_features.append(analyse_cell(geo, c))
-
-            # Convert to DataFrame (if needed)
-            # non_debris_features_df = pd.DataFrame(non_debris_features)
-
-            # Analyse debris cells
-            # debris_features = []
-            # for c in debris_cells:
-            #     if c not in geo.xg_bottom:
-            #         debris_features.append(analyse_cell(geo, c))
-
-            # Compute wound features
-            # if debris_features:
-            #     wound_features = compute_wound_features(geo)
-
             # Test Geo
             #TODO: CHECK
             #self.check_integrity()
@@ -258,6 +238,10 @@ class VertexModel:
                 # Save Data of the current step
                 save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
                 self.tr = self.t
+            else:
+                # Brownian Motion
+                if self.set.brownian_motion:
+                    self.brownian_motion(self.set.brownian_motion_scale)
 
             # Reset Contractility Value and Edge Length
             for num_cell in range(len(self.geo.Cells)):
@@ -270,10 +254,6 @@ class VertexModel:
                         tri.ContractilityValue = None
                         # tri.edge_length_time.append([self.t, tri.edge_length])
                         self.geo.Cells[num_cell].Faces[n_face].Tris[n_tri] = tri
-
-            # Brownian Motion
-            if self.set.brownian_motion:
-                self.brownian_motion(self.set.brownian_motion_scale)
 
             # New Step
             self.t = self.t + self.set.dt
