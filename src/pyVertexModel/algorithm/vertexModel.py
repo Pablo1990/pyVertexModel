@@ -212,6 +212,14 @@ class VertexModel:
                                             'data_step_before_remodelling_' + str(self.numStep) + '.pkl'))
                     remodel_obj = Remodelling(self.geo, self.geo_n, self.geo_0, self.set, self.Dofs)
                     self.geo, self.geo_n = remodel_obj.remodel_mesh(self.numStep)
+                    # Update tolerance if remodelling was performed to the current one
+                    if self.set.implicit_method is False:
+                        g, energies = newtonRaphson.gGlobal(self.geo_0, self.geo_n, self.geo, self.set,
+                                                            self.set.implicit_method)
+                        gr = np.linalg.norm(g[self.Dofs.Free])
+                        # TODO: AVERAGE OUT WITH CURRENT TOLERANCE?
+                        self.set.tol = gr
+
 
             # Append Energies
             # energies_per_time_step.append(energies)
