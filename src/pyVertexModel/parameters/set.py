@@ -218,19 +218,20 @@ class Set:
         self.TotalCells = 150
         self.CellHeight = 15
         self.tend = 61
-        self.Nincr = self.tend * 100
+        self.Nincr = self.tend * 10
         self.tol = np.Inf
 
         self.nu = 500
-        self.lambdaB = 5
-        self.Beta = 1
+        self.EnergyBarrierA = False
+        self.lambdaB = 0
+        self.Beta = 0
 
         self.EnergyBarrierAR = True
-        self.lambdaR = 0.001
+        self.lambdaR = 0.1
 
         self.lambdaV = 1
         self.kSubstrate = 1
-        self.cLineTension = 0.02
+        self.cLineTension = 0.006
 
         self.brownian_motion = True
         self.brownian_motion_scale = 0.001
@@ -239,9 +240,9 @@ class Set:
         #self.DelayedAdditionalContractility = 0
         # Soft < 0
         # Stiff > 0
-        self.Remodelling = 0
+        self.Remodelling = 1
         self.RemodelStiffness = 0.85
-        self.lambdaS1 = 1
+        self.lambdaS1 = 5
         self.lambdaS2 = self.lambdaS1 / 10
         self.lambdaS3 = self.lambdaS1 / 10
         self.lambdaS4 = self.lambdaS3
