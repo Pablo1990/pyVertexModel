@@ -198,8 +198,8 @@ class VertexModel:
             # STEP has converged
             logger.info(f"STEP {str(self.set.i_incr)} has converged ...")
 
-            #for c in range(self.geo.nCells):
-            #    face_centres_to_middle_of_neighbours_vertices(self.geo, c)
+            for c in range(self.geo.nCells):
+               face_centres_to_middle_of_neighbours_vertices(self.geo, c)
 
             # Remodelling
             if abs(self.t - self.tr) >= self.set.RemodelingFrequency:
