@@ -97,7 +97,7 @@ class DegreesOfFreedom:
         id_tnew = np.unique(t_new)
         id_tnew_cells = np.setdiff1d(id_tnew, geo.XgID)
         id_tnew_cells = [cell_id for cell_id in id_tnew_cells if geo.Cells[cell_id].AliveStatus is not None]
-        if cell_to_split_from in geo.XgID:
+        if geo.Cells[cell_to_split_from].AliveStatus == 0:
             id_tnew_cells_no_debris = [cell_id for cell_id in id_tnew_cells if geo.Cells[cell_id].AliveStatus == 1]
         else:
             id_tnew_cells_no_debris = id_tnew_cells
