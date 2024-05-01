@@ -134,7 +134,7 @@ class VertexModel:
                 g, energies = newtonRaphson.gGlobal(self.geo_0, self.geo_n, self.geo, self.set, self.set.implicit_method)
                 if self.set.tol is np.Inf:
                     gr = np.linalg.norm(g[self.Dofs.Free])
-                    self.set.tol = gr * 2
+                    self.set.tol = gr
 
             self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
             self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
@@ -216,6 +216,7 @@ class VertexModel:
                     if self.set.implicit_method is False:
                         g, energies = newtonRaphson.gGlobal(self.geo_0, self.geo_n, self.geo, self.set,
                                                             self.set.implicit_method)
+                        self.Dofs.get_dofs(self.geo, self.set)
                         gr = np.linalg.norm(g[self.Dofs.Free])
                         # TODO: AVERAGE OUT WITH CURRENT TOLERANCE?
                         self.set.tol = gr
