@@ -148,7 +148,7 @@ class Face:
             raise Exception('BuildEdges:TetrahedraMinSize', 'Length of the face is lower than 3')
         surf_ids = surf_ids[tet_order]
 
-        Order = np.zeros(len(surf_ids), dtype=int)
+        Order = np.zeros(len(surf_ids))
         for iii in range(len(surf_ids)):
             if iii == len(surf_ids) - 1:
                 v1 = Ys[surf_ids[iii], :] - face_centre
