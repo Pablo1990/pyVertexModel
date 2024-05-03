@@ -218,7 +218,9 @@ class VertexModel:
                                                             self.set.implicit_method)
                         self.Dofs.get_dofs(self.geo, self.set)
                         gr = np.linalg.norm(g[self.Dofs.Free])
-                        self.set.tol = gr
+                        self.set.tol = gr * 1.5
+                        if self.set.tol < 100:
+                            self.set.tol = 100
 
 
             # Append Energies
