@@ -99,9 +99,14 @@ def calculate_important_features(post_wound_features):
             'max_recoiling_top': np.max(post_wound_features['wound_area_top']),
             'max_recoiling_time_top': np.array(post_wound_features['time'])[
                 np.argmax(post_wound_features['wound_area_top'])],
+            'min_recoiling_top': np.min(post_wound_features['wound_area_top']),
+            'min_recoiling_time_top': np.array(post_wound_features['time'])[
+                np.argmin(post_wound_features['wound_area_top'])],
             'min_height_change': np.min(post_wound_features['wound_height']),
             'min_height_change_time': np.array(post_wound_features['time'])[
                 np.argmin(post_wound_features['wound_height'])],
+            'last_recoiling_top': post_wound_features['wound_area_top'].iloc[-1],
+            'last_recoiling_time_top': post_wound_features['time'].iloc[-1],
         }
     else:
         important_features = {
@@ -110,8 +115,9 @@ def calculate_important_features(post_wound_features):
             'min_height_change': np.nan,
             'min_height_change_time': np.nan,
         }
+
     # Extrapolate features to a given time
-    times_to_extrapolate = {16, 30, 60}
+    times_to_extrapolate = {6, 16, 30, 60}
     columns_to_extrapolate = {'wound_area_top', 'wound_height'}  # post_wound_features.columns
     for time in times_to_extrapolate:
         for feature in columns_to_extrapolate:
