@@ -62,29 +62,7 @@ def analyse_simulation(folder):
             # Export to xlsx
             post_wound_features.to_excel(os.path.join(folder, 'post_wound_features.xlsx'))
 
-            # Obtain important features for post-wound
-            if not post_wound_features['wound_area_top'].empty:
-                important_features = {
-                    'max_recoiling_top': np.max(post_wound_features['wound_area_top']),
-                    'max_recoiling_time_top': np.array(post_wound_features['time'])[np.argmax(post_wound_features['wound_area_top'])],
-                    'min_height_change': np.min(post_wound_features['wound_height']),
-                    'min_height_change_time': np.array(post_wound_features['time'])[np.argmin(post_wound_features['wound_height'])],
-                }
-            else:
-                important_features = {
-                    'max_recoiling_top': np.nan,
-                    'max_recoiling_time_top': np.nan,
-                    'min_height_change': np.nan,
-                    'min_height_change_time': np.nan,
-                }
-
-            # Extrapolate features to a given time
-            times_to_extrapolate = {16, 30, 60}
-            columns_to_extrapolate = {'wound_area_top', 'wound_height'}  # post_wound_features.columns
-            for time in times_to_extrapolate:
-                for feature in columns_to_extrapolate:
-                    important_features[feature + '_extrapolated_' + str(time)] = np.interp(time, post_wound_features['time'],
-                                                                                           post_wound_features[feature])
+            important_features = calculate_important_features(post_wound_features)
         else:
             important_features = {
                 'max_recoiling_top': np.nan,
@@ -107,11 +85,39 @@ def analyse_simulation(folder):
         # Load dataframes from pkl
         with open(os.path.join(folder, 'features_per_time.pkl'), 'rb') as f:
             features_per_time_df = pickle.load(f)
-            important_features = pickle.load(f)
             post_wound_features = pickle.load(f)
 
+        important_features = calculate_important_features(post_wound_features)
 
     return features_per_time_df, post_wound_features, important_features
+
+
+def calculate_important_features(post_wound_features):
+    # Obtain important features for post-wound
+    if not post_wound_features['wound_area_top'].empty:
+        important_features = {
+            'max_recoiling_top': np.max(post_wound_features['wound_area_top']),
+            'max_recoiling_time_top': np.array(post_wound_features['time'])[
+                np.argmax(post_wound_features['wound_area_top'])],
+            'min_height_change': np.min(post_wound_features['wound_height']),
+            'min_height_change_time': np.array(post_wound_features['time'])[
+                np.argmin(post_wound_features['wound_height'])],
+        }
+    else:
+        important_features = {
+            'max_recoiling_top': np.nan,
+            'max_recoiling_time_top': np.nan,
+            'min_height_change': np.nan,
+            'min_height_change_time': np.nan,
+        }
+    # Extrapolate features to a given time
+    times_to_extrapolate = {16, 30, 60}
+    columns_to_extrapolate = {'wound_area_top', 'wound_height'}  # post_wound_features.columns
+    for time in times_to_extrapolate:
+        for feature in columns_to_extrapolate:
+            important_features[feature + '_extrapolated_' + str(time)] = np.interp(time, post_wound_features['time'],
+                                                                                   post_wound_features[feature])
+    return important_features
 
 
 folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/Relevant/'
