@@ -117,10 +117,11 @@ def calculate_important_features(post_wound_features):
         }
 
     # Extrapolate features to a given time
-    times_to_extrapolate = {6, 16, 30, 60}
+    times_to_extrapolate = {6.0, 16.0, 30.0, 60.0}
     columns_to_extrapolate = {'wound_area_top', 'wound_height'}  # post_wound_features.columns
     for time in times_to_extrapolate:
         for feature in columns_to_extrapolate:
+            # Extrapolate results to a given time
             important_features[feature + '_extrapolated_' + str(time)] = np.interp(time, post_wound_features['time'],
                                                                                    post_wound_features[feature])
     return important_features
