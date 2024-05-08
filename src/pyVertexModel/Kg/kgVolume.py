@@ -45,9 +45,10 @@ class KgVolume(Kg):
             Cell = Geo.Cells[c]
             Ys = Cell.Y
             if Cell.AliveStatus == 0:
-                lambdaV = Set.lambdaV_Debris
+                lambdaV = Set.lambdaV * Set.lambdaV_Debris
             else:
                 lambdaV = Set.lambdaV
+
             fact = lambdaV * (Cell.Vol - Cell.Vol0) ** (n - 1) / Cell.Vol0 ** n
 
             ge = np.zeros(self.g.shape, dtype=self.precision_type)

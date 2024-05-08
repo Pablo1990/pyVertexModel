@@ -11,7 +11,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
         Energy = {}
         start = time.time()
 
-        for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
+        for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus is not None]:
 
             if Geo.remodelling and not np.isin(c, Geo.AssembleNodes):
                 continue
