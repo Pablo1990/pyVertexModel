@@ -81,9 +81,6 @@ def getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set):
         else:
             contractilityValue = 1
 
-        if len(currentTri.SharedByCells) == 1:
-            contractilityValue = 0
-        else:
             if currentFace.InterfaceType == 'Top' or currentFace.InterfaceType == 0:
                 if any([Geo.Cells[cell].AliveStatus == 0 for cell in currentTri.SharedByCells]):
                     contractilityValue = contractilityValue * Set.cLineTension
@@ -126,7 +123,7 @@ class KgContractility(Kg):
         # self.K = self.K[range(Geo.numY * 3), range(Geo.numY * 3)]
 
         Energy = {}
-        for cell_id, cell in enumerate([cell for cell in Geo.Cells if cell.AliveStatus == 1]):
+        for cell in [cell for cell in Geo.Cells if cell.AliveStatus == 1]:
             c = cell.ID
             ge = np.zeros(self.g.shape, dtype=self.precision_type)
             Energy_c = 0
@@ -134,6 +131,7 @@ class KgContractility(Kg):
                 l_i0 = Geo.EdgeLengthAvg_0[next(key for key, value in currentFace.InterfaceType_allValues.items()
                                                 if
                                                 value == currentFace.InterfaceType or key == currentFace.InterfaceType)]
+                l_i0 = Geo.EdgeLengthAvg_0[1]
                 for tri_id, currentTri in enumerate(currentFace.Tris):
                     if len(currentTri.SharedByCells) > 1:
                         C, Geo = getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set)
@@ -148,7 +146,7 @@ class KgContractility(Kg):
                         g_current = self.computeGContractility(l_i0, y_1, y_2, C)
                         ge = self.assemble_g(ge[:], g_current[:], cell.globalIds[currentTri.Edge])
 
-                        #Geo.Cells[cell_id].Faces[face_id].Tris[tri_id].ContractilityG = np.linalg.norm(g_current[:])
+                        Geo.Cells[c].Faces[face_id].Tris[tri_id].ContractilityG = np.linalg.norm(g_current[:])
                         if calculate_K:
                             K_current = self.computeKContractility(l_i0, y_1, y_2, C)
                             self.assemble_k(K_current[:, :], cell.globalIds[currentTri.Edge])
