@@ -20,10 +20,6 @@ def add_noise_to_parameter(avgParameter, noise, currentTri=None):
 
     finalValue = minValue + (maxValue - minValue) * random.random()
 
-    if currentTri is not None:
-        if currentTri.pastContractilityValue is not None:
-            finalValue = (finalValue + currentTri.pastContractilityValue) / 2
-
     return finalValue
 
 

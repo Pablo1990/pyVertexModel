@@ -96,6 +96,7 @@ def getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set):
             else:
                 contractilityValue = Set.cLineTension
 
+        if Set.noise_lt > 0:
             contractilityValue = add_noise_to_parameter(contractilityValue, Set.noise_lt, currentTri)
 
         for cellToCheck in currentTri.SharedByCells:
@@ -131,7 +132,6 @@ class KgContractility(Kg):
                 l_i0 = Geo.EdgeLengthAvg_0[next(key for key, value in currentFace.InterfaceType_allValues.items()
                                                 if
                                                 value == currentFace.InterfaceType or key == currentFace.InterfaceType)]
-                l_i0 = Geo.EdgeLengthAvg_0[1]
                 for tri_id, currentTri in enumerate(currentFace.Tris):
                     if len(currentTri.SharedByCells) > 1:
                         C, Geo = getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set)
