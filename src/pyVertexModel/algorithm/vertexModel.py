@@ -242,7 +242,7 @@ class VertexModel:
                 self.tr = self.t
             else:
                 # Brownian Motion
-                if self.set.brownian_motion:
+                if self.set.brownian_motion is False:
                     self.brownian_motion(self.set.brownian_motion_scale)
 
             # Reset Contractility Value and Edge Length
