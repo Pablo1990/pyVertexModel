@@ -81,7 +81,7 @@ def getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set):
         else:
             contractilityValue = 1
 
-            if currentFace.InterfaceType == 'Top' or currentFace.InterfaceType == 0:
+        if currentFace.InterfaceType == 'Top' or currentFace.InterfaceType == 0: # Top
                 if any([Geo.Cells[cell].AliveStatus == 0 for cell in currentTri.SharedByCells]):
                     contractilityValue = contractilityValue * Set.cLineTension
                 else:
