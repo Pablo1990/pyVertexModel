@@ -38,13 +38,16 @@ class KgVolume(Kg):
 
         # Loop over Cells
         # Analytical residual g and Jacobian K
-        for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
+        for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus is not None]:
             if Geo.remodelling and c not in Geo.AssembleNodes:
                 continue
 
             Cell = Geo.Cells[c]
             Ys = Cell.Y
-            lambdaV = Set.lambdaV
+            if Cell.AliveStatus == 0:
+                lambdaV = Set.lambdaV_Debris
+            else:
+                lambdaV = Set.lambdaV
             fact = lambdaV * (Cell.Vol - Cell.Vol0) ** (n - 1) / Cell.Vol0 ** n
 
             ge = np.zeros(self.g.shape, dtype=self.precision_type)
