@@ -352,15 +352,22 @@ def gGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
     :param implicit_method:
     :return:
     """
+    g = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3, dtype=np.float64)
+    energies = {}
+
     # Surface Energy
-    kg_SA = KgSurfaceCellBasedAdhesion(Geo)
-    kg_SA.compute_work(Geo, Set, None, False)
+    if Set.lambdaS1 > 0:
+        kg_SA = KgSurfaceCellBasedAdhesion(Geo)
+        kg_SA.compute_work(Geo, Set, None, False)
+        g += kg_SA.g
+        energies["Surface"] = kg_SA.energy
 
     # Volume Energy
-    kg_Vol = KgVolume(Geo)
-    kg_Vol.compute_work(Geo, Set, None, False)
-    g = kg_Vol.g[:] + kg_SA.g[:]
-    energies = {"Surface": kg_SA.energy, "Volume": kg_Vol.energy}
+    if Set.lambdaV > 0:
+        kg_Vol = KgVolume(Geo)
+        kg_Vol.compute_work(Geo, Set, None, False)
+        g+= kg_Vol.g[:]
+        energies["Volume"] = kg_Vol.energy
 
     if implicit_method is True:
         # Viscous Energy
