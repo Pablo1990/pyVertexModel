@@ -219,7 +219,7 @@ class Set:
         self.CellHeight = 15
         self.tend = 61
         self.Nincr = self.tend * 10
-        self.tol = np.Inf
+        self.tol = 25
 
         self.nu = 500
         self.EnergyBarrierA = False

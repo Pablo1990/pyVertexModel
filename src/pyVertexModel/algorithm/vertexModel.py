@@ -132,9 +132,6 @@ class VertexModel:
             else:
                 K = 0
                 g, energies = newtonRaphson.gGlobal(self.geo_0, self.geo_n, self.geo, self.set, self.set.implicit_method)
-                if self.set.tol is np.Inf:
-                    gr = np.linalg.norm(g[self.Dofs.Free])
-                    self.set.tol = gr
 
             self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
             self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
@@ -161,9 +158,6 @@ class VertexModel:
         if (gr < self.set.tol and dyr < self.set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
                 np.all(~np.isnan(dy[self.Dofs.Free]))):
             self.iteration_converged()
-            self.set.tol = gr * 1.5
-            if self.set.tol < 100:
-                self.set.tol = 100
         else:
             self.iteration_did_not_converged()
 
@@ -181,7 +175,7 @@ class VertexModel:
             self.set.nu = 10 * self.set.nu0
         else:
             if (self.set.iter >= self.set.MaxIter and
-                    (self.set.dt / self.set.dt0) > (1 / 1000000000)):
+                    (self.set.dt / self.set.dt0) > 1e-40):
                 self.set.MaxIter = self.set.MaxIter0
                 self.set.nu = self.set.nu0
                 self.set.dt = self.set.dt / 2
@@ -203,9 +197,6 @@ class VertexModel:
 
             # Remodelling
             if abs(self.t - self.tr) >= self.set.RemodelingFrequency:
-                # Create VTK files for the current state
-                self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
-                self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
                 if self.set.Remodelling:
                     save_state(self,
                                os.path.join(self.set.OutputFolder,
@@ -218,9 +209,6 @@ class VertexModel:
                                                             self.set.implicit_method)
                         self.Dofs.get_dofs(self.geo, self.set)
                         gr = np.linalg.norm(g[self.Dofs.Free])
-                        self.set.tol = gr * 1.5
-                        if self.set.tol < 100:
-                            self.set.tol = 100
 
 
             # Append Energies
@@ -237,6 +225,10 @@ class VertexModel:
             #self.check_integrity()
 
             if abs(self.t - self.tr) >= self.set.RemodelingFrequency:
+                # Create VTK files for the current state
+                self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
+                self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
+
                 # Save Data of the current step
                 save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
                 self.tr = self.t
