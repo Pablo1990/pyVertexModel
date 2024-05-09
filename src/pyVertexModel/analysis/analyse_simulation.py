@@ -85,6 +85,7 @@ def analyse_simulation(folder):
         # Load dataframes from pkl
         with open(os.path.join(folder, 'features_per_time.pkl'), 'rb') as f:
             features_per_time_df = pickle.load(f)
+            important_features = pickle.load(f)
             post_wound_features = pickle.load(f)
 
         important_features = calculate_important_features(post_wound_features)
@@ -108,6 +109,18 @@ def calculate_important_features(post_wound_features):
             'last_recoiling_top': post_wound_features['wound_area_top'].iloc[-1],
             'last_recoiling_time_top': post_wound_features['time'].iloc[-1],
         }
+
+        # Extrapolate features to a given time
+        times_to_extrapolate = {6.0, 16.0, 30.0, 60.0}
+        columns_to_extrapolate = {'wound_area_top', 'wound_height'}  # post_wound_features.columns
+        for time in times_to_extrapolate:
+            for feature in columns_to_extrapolate:
+                # Extrapolate results to a given time
+                important_features[feature + '_extrapolated_' + str(time)] = np.interp(time,
+                                                                                       post_wound_features['time'],
+                                                                                       post_wound_features[feature])
+
+
     else:
         important_features = {
             'max_recoiling_top': np.nan,
@@ -116,18 +129,10 @@ def calculate_important_features(post_wound_features):
             'min_height_change_time': np.nan,
         }
 
-    # Extrapolate features to a given time
-    times_to_extrapolate = {6.0, 16.0, 30.0, 60.0}
-    columns_to_extrapolate = {'wound_area_top', 'wound_height'}  # post_wound_features.columns
-    for time in times_to_extrapolate:
-        for feature in columns_to_extrapolate:
-            # Extrapolate results to a given time
-            important_features[feature + '_extrapolated_' + str(time)] = np.interp(time, post_wound_features['time'],
-                                                                                   post_wound_features[feature])
     return important_features
 
 
-folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/Relevant/'
+folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/Results/Relevant/'
 all_files_features = []
 for file_id, file in enumerate(os.listdir(folder)):
     print(file)
@@ -139,6 +144,15 @@ for file_id, file in enumerate(os.listdir(folder)):
 
         if important_features is not None and len(important_features) > 5:
             important_features['folder'] = file
+
+            # Extract the variables from folder name
+            file_splitted = file.split('_')
+            variables_to_show = {'Cells', 'visc', 'lVol', 'kSubs', 'lt', 'noise', 'brownian', 'eTriAreaBarrier',
+                                 'eARBarrier', 'RemStiff', 'lS1', 'lS2', 'lS3', 'pString'}
+            for i in range(3, len(file_splitted), 2):
+                if file_splitted[i] in variables_to_show:
+                    important_features[file_splitted[i]] = file_splitted[i + 1]
+
             # Transform the dictionary into a dataframe
             important_features = pd.DataFrame([important_features])
             all_files_features.append(important_features)
