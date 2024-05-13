@@ -2,7 +2,9 @@ import numpy as np
 
 from Tests.tests import Tests, load_data, assert_matrix, assert_array1D
 from src.pyVertexModel.algorithm.vertexModelBubbles import extrapolate_ys_faces_ellipsoid
+from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain
+from src.pyVertexModel.util.utils import load_state, ismember_rows
 
 
 def check_if_cells_are_the_same(geo_expected, geo_test):
@@ -33,8 +35,14 @@ def check_if_cells_are_the_same(geo_expected, geo_test):
     assert_array1D(vol_test, vol_expected)
     assert_array1D(area_test, area_expected)
 
+    # Check if the cells have the same global ids
+    test_cells = [geo_test.Cells[i].globalIds for i in range(geo_test.nCells)]
+    expected_cells = [geo_expected.Cells[i].globalIds for i in range(geo_expected.nCells)]
+    np.testing.assert_equal(test_cells, expected_cells)
+
     # Check if the faces have the same global ids and the same centres
     for i in range(geo_test.nCells):
+        #print("cell: " + str(i))
         # Put together all the faces' centres
         centres_test = np.concatenate([geo_test.Cells[i].Faces[j].Centre for j in range(len(geo_test.Cells[i].Faces))])
         centres_expected = np.concatenate([geo_expected.Cells[i].Faces[j].Centre for j in range(len(geo_expected.Cells[i].Faces))])
@@ -42,10 +50,29 @@ def check_if_cells_are_the_same(geo_expected, geo_test):
         # Check if the centres are the same
         assert_array1D(centres_test, centres_expected)
 
-        # Check if the faces have the same global ids
-        test_faces = [geo_test.Cells[i].Faces[j].globalIds for j in range(len(geo_test.Cells[i].Faces))]
-        expected_faces = [geo_expected.Cells[i].Faces[j].globalIds for j in range(len(geo_expected.Cells[i].Faces))]
-        np.testing.assert_equal(test_faces, expected_faces)
+        # Check if the attributes of the faces are the same
+        for c_face in range(len(geo_test.Cells[i].Faces)):
+            #print("face: " + str(c_face))
+            for attr in ['InterfaceType', 'globalIds', 'ij']:
+                np.testing.assert_equal(getattr(geo_test.Cells[i].Faces[c_face], attr),
+                                        getattr(geo_expected.Cells[i].Faces[c_face], attr))
+
+            all_ids = geo_test.Cells[i].globalIds[[geo_test.Cells[i].Faces[c_face].Tris[j].Edge for j in range(len(geo_test.Cells[i].Faces[c_face].Tris))]]
+            all_ids_expected = geo_expected.Cells[i].globalIds[[geo_expected.Cells[i].Faces[c_face].Tris[j].Edge for j in range(len(geo_expected.Cells[i].Faces[c_face].Tris))]]
+
+            ids_in_each = ismember_rows(all_ids, all_ids_expected)
+            np.testing.assert_equal(all(ids_in_each[0]), True)
+
+            all_shared_by_cells = [geo_test.Cells[i].Faces[c_face].Tris[j].SharedByCells for j in range(len(geo_test.Cells[i].Faces[c_face].Tris))]
+            all_shared_by_cells_expected = [geo_expected.Cells[i].Faces[c_face].Tris[j].SharedByCells for j in range(len(geo_expected.Cells[i].Faces[c_face].Tris))]
+            np.testing.assert_equal([all_shared_by_cells[i] for i in ids_in_each[1]], all_shared_by_cells_expected)
+
+            for c_tris in range(len(geo_test.Cells[i].Faces[c_face].Tris)):
+                #print("tris: " + str(c_tris))
+                # Check if the attributes of the tris are the same
+                for attr in ['SharedByCells', 'Edge']:
+                    np.testing.assert_equal(getattr(geo_test.Cells[i].Faces[c_face].Tris[c_tris], attr),
+                                            getattr(geo_expected.Cells[i].Faces[c_face].Tris[c_tris], attr))
 
     # Check Xs of each cell
     for i in range(len(geo_test.Cells)):
@@ -281,6 +308,31 @@ class TestGeo(Tests):
 
         # Check if cells are the same
         check_if_cells_are_the_same(geo_test, geo_expected)
+
+    def test_rebuild_and_build_global_ids(self):
+        """
+        Test the functions rebuild and build_global_ids
+        :return:
+        """
+        vModel = VertexModelVoronoiFromTimeImage()
+
+        # Load data
+        load_state(vModel,
+                   '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/Relevant/05-01_161553_VertexModelTime_Cells_150_visc_500_lVol_1_kSubs_1_lt_0.006_noise_0.5_brownian_0.001_eTriAreaBarrier_0_eARBarrier_0_RemStiff_0.85_lS1_5_lS2_0.5_lS3_0.5_pString_15/data_step_before_remodelling_74.pkl')
+
+        geo_test = vModel.geo.copy()
+        set_test = vModel.set
+
+        # Create a copy of geo to test against
+        geo_expected = geo_test.copy()
+
+        # Test if rebuild function does not change anything
+        geo_test.rebuild(geo_test.copy(), set_test)
+        geo_test.build_global_ids()
+
+        # Check if none of the measurements has changed
+        check_if_cells_are_the_same(geo_expected, geo_test)
+
 
     def test_build_x_from_y(self):
         """
