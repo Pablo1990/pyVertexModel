@@ -3,6 +3,7 @@ import pickle
 
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.util.utils import load_state
@@ -90,6 +91,18 @@ def analyse_simulation(folder):
 
         important_features = calculate_important_features(post_wound_features)
 
+    # Plot wound area top evolution over time and save it to a file
+    plt.figure()
+    plt.plot(post_wound_features['time'], post_wound_features['wound_area_top'])
+    plt.xlabel('Time (h)')
+    plt.ylabel('Wound area top')
+
+    # Change axis limits
+    plt.xlim([0, 60])
+    plt.ylim([0, 200])
+
+    plt.savefig(os.path.join(folder, 'wound_area_top.png'))
+
     return features_per_time_df, post_wound_features, important_features
 
 
@@ -126,7 +139,6 @@ def calculate_important_features(post_wound_features):
                 important_features['ratio_area_top_' + str(time)] = (
                         important_features['wound_area_top_extrapolated_' + str(time)] /
                         important_features['wound_area_top_extrapolated_6.0'])
-
 
     else:
         important_features = {
