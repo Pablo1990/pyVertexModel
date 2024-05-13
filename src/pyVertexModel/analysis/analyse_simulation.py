@@ -102,6 +102,7 @@ def analyse_simulation(folder):
     plt.ylim([0, 200])
 
     plt.savefig(os.path.join(folder, 'wound_area_top.png'))
+    plt.close()
 
     return features_per_time_df, post_wound_features, important_features
 
