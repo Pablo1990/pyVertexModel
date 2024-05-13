@@ -14,6 +14,7 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.tol0 = None
         self.dt = None
         self.implicit_method = False
         self.cellsToAblate = None
@@ -55,7 +56,7 @@ class Set:
             # ============================ Mechanics =============================
             # Volumes
             self.lambdaV = 5.0
-            self.lambdaV_Debris = 0.001
+            self.lambdaV_Debris = 0
             # Surface area
             self.SurfaceType = 1
             self.A0eq0 = True
@@ -219,7 +220,8 @@ class Set:
         self.CellHeight = 15
         self.tend = 61
         self.Nincr = self.tend * 10
-        self.tol = 25
+        self.tol = 100
+        self.tol0 = 20
 
         self.nu = 500
         self.EnergyBarrierA = False
@@ -229,9 +231,9 @@ class Set:
         self.EnergyBarrierAR = False
         self.lambdaR = 0
 
-        self.lambdaV = 1
-        self.kSubstrate = 0.1
-        self.cLineTension = 0.001
+        self.lambdaV = 10
+        self.kSubstrate = 1
+        self.cLineTension = 0.006
 
         self.brownian_motion = False
         self.brownian_motion_scale = 0
@@ -241,11 +243,11 @@ class Set:
         # Soft < 0
         # Stiff > 0
         self.Remodelling = 1
-        self.RemodelStiffness = 0.9
+        self.RemodelStiffness = 0.95
         self.lambdaS1 = 5
         self.lambdaS2 = self.lambdaS1 / 10
-        self.lambdaS3 = self.lambdaS1 / 5 # Same as top for better geometry
-        self.lambdaS4 = self.lambdaS3
+        self.lambdaS3 = self.lambdaS1
+        self.lambdaS4 = self.lambdaS2
         self.VTK = False
 
         self.implicit_method = False
