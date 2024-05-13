@@ -132,13 +132,12 @@ class KgContractility(Kg):
                 l_i0 = Geo.EdgeLengthAvg_0[next(key for key, value in currentFace.InterfaceType_allValues.items()
                                                 if
                                                 value == currentFace.InterfaceType or key == currentFace.InterfaceType)]
-                l_i0 = round(l_i0, 2)
                 for tri_id, currentTri in enumerate(currentFace.Tris):
                     if len(currentTri.SharedByCells) > 1:
                         C, Geo = getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set)
 
-                        y_1 = np.round(cell.Y[currentTri.Edge[0]], 5)
-                        y_2 = np.round(cell.Y[currentTri.Edge[1]], 5)
+                        y_1 = cell.Y[currentTri.Edge[0]]
+                        y_2 = cell.Y[currentTri.Edge[1]]
 
                         if Geo.remodelling and not np.any(np.isin(cell.globalIds[currentTri.Edge],
                                                                   Geo.Cells[c].vertices_and_faces_to_remodel)):
