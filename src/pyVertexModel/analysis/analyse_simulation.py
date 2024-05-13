@@ -95,7 +95,7 @@ def analyse_simulation(folder):
 
 def calculate_important_features(post_wound_features):
     # Obtain important features for post-wound
-    if not post_wound_features['wound_area_top'].empty:
+    if not post_wound_features['wound_area_top'].empty and post_wound_features['time'].iloc[-1] > 6:
         important_features = {
             'max_recoiling_top': np.max(post_wound_features['wound_area_top']),
             'max_recoiling_time_top': np.array(post_wound_features['time'])[
@@ -106,8 +106,8 @@ def calculate_important_features(post_wound_features):
             'min_height_change': np.min(post_wound_features['wound_height']),
             'min_height_change_time': np.array(post_wound_features['time'])[
                 np.argmin(post_wound_features['wound_height'])],
-            'last_recoiling_top': post_wound_features['wound_area_top'].iloc[-1],
-            'last_recoiling_time_top': post_wound_features['time'].iloc[-1],
+            'last_area_top': post_wound_features['wound_area_top'].iloc[-1],
+            'last_area_time_top': post_wound_features['time'].iloc[-1],
         }
 
         # Extrapolate features to a given time
@@ -119,6 +119,13 @@ def calculate_important_features(post_wound_features):
                 important_features[feature + '_extrapolated_' + str(time)] = np.interp(time,
                                                                                        post_wound_features['time'],
                                                                                        post_wound_features[feature])
+
+        # Get ratio from area the first time to the other times
+        for time in times_to_extrapolate:
+            if time != 6.0:
+                important_features['ratio_area_top_' + str(time)] = (
+                        important_features['wound_area_top_extrapolated_' + str(time)] /
+                        important_features['wound_area_top_extrapolated_6.0'])
 
 
     else:
