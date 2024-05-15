@@ -203,7 +203,8 @@ def y_flip_nm_recursive(TOld, TRemoved, Tnew, Ynew, oldYs, Geo, possibleEdges, X
                                                                                             Ynew, oldYs, Geo,
                                                                                             possibleEdges,
                                                                                             XsToDisconnect,
-                                                                                            treeOfPossibilities, arrayPos,
+                                                                                            treeOfPossibilities,
+                                                                                            arrayPos,
                                                                                             arrayPos + 1)
 
     return Ynew, Tnew, TRemoved, treeOfPossibilities, arrayPos
@@ -304,16 +305,17 @@ def y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo,
 
     # Step 5: For each combination of edges to remove, check if it is valid
     logger.info(f"Number of possible combinations: {len(Tnew)}")
-    new_tets_tree = get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercalate_with, endNode,
-                                                  ghost_nodes_without_debris, intercalation_flip, old_tets, parentNode,
-                                                  tets4_cells, treeOfPossibilities, xs_to_disconnect,
-                                                  cell_to_split_from)
+    new_tets_tree, Geo_new = get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercalate_with,
+                                                           endNode,
+                                                           ghost_nodes_without_debris, intercalation_flip, old_tets,
+                                                           parentNode,
+                                                           tets4_cells, treeOfPossibilities, xs_to_disconnect,
+                                                           cell_to_split_from)
 
     # Get the last combination from new_tets_tree
     Tnew = new_tets_tree
-    Geo.add_tetrahedra(Geo, tets4_cells, None, Set)
     Ynew = []
-    return Tnew, Ynew
+    return Tnew, Ynew, Geo_new
 
 
 def dfs(graph, start, end):
@@ -354,6 +356,7 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
     :param treeOfPossibilities:
     :return:
     """
+    Geo_final = None
     new_tets_tree = None
     valence_segment = np.inf
 
@@ -386,11 +389,12 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
                     Geo_new.build_global_ids()
 
                     new_tets_tree = new_tets
+                    Geo_final = Geo_new
                     valence_segment = current_valence_segment
                     logger.info(f"New combination found with valence segment: {valence_segment}")
                 except Exception as ex:
                     logger.warning(f"Exception on flip remodelling: {ex}")
-    return new_tets_tree
+    return new_tets_tree, Geo_final
 
 
 def add_new_info(Tnew_23, Ynew_23, final_tets, final_ys, new_tets, new_ys, removed_tets, removed_ys, tetIds):

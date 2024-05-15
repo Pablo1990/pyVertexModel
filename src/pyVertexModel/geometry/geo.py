@@ -617,11 +617,6 @@ class Geo:
         :param update_measurements:
         :return:
         """
-        self.remove_tetrahedra(old_tets)
-        self.add_tetrahedra(old_geo.copy(), new_tets, y_new, c_set)
-        self.rebuild(old_geo, c_set)
-        self.build_global_ids()
-
         # Check if the ys and faces have not changed
         self.check_ys_and_faces_have_not_changed(new_tets, old_tets, old_geo)
 
