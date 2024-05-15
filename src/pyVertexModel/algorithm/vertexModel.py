@@ -142,7 +142,10 @@ class VertexModel:
                                                                                       self.Dofs, self.set, K, g,
                                                                                       self.numStep, self.t,
                                                                                       self.set.implicit_method)
-            self.post_newton_raphson(dy, dyr, g, gr)
+            if not np.isnan(gr):
+                self.post_newton_raphson(dy, dyr, g, gr)
+            else:
+                break
 
         return self.didNotConverge
 
