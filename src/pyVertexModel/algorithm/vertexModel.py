@@ -179,7 +179,7 @@ class VertexModel:
             self.set.nu = 10 * self.set.nu0
         else:
             if (self.set.iter >= self.set.MaxIter and
-                    (self.set.dt / self.set.dt0) > 1e-40):
+                    (self.set.dt / self.set.dt0) > 1e-6):
                 self.set.MaxIter = self.set.MaxIter0
                 self.set.nu = self.set.nu0
                 self.set.dt = self.set.dt / 2
