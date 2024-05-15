@@ -109,7 +109,7 @@ def analyse_simulation(folder):
 
 def calculate_important_features(post_wound_features):
     # Obtain important features for post-wound
-    if not post_wound_features['wound_area_top'].empty and post_wound_features['time'].iloc[-1] > 6:
+    if not post_wound_features['wound_area_top'].empty and post_wound_features['time'].iloc[-1] > 4:
         important_features = {
             'max_recoiling_top': np.max(post_wound_features['wound_area_top']),
             'max_recoiling_time_top': np.array(post_wound_features['time'])[
