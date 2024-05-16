@@ -356,7 +356,7 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
     :param treeOfPossibilities:
     :return:
     """
-    Geo_final = None
+    Geo_final = Geo
     new_tets_tree = None
     valence_segment = np.inf
 
