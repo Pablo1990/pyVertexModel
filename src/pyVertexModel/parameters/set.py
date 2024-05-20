@@ -83,7 +83,7 @@ class Set:
             # Contractility
             self.Contractility = True
             self.cLineTension = 0.0001
-            self.noise_lt = 0
+            self.noise_random = 0
             # In plane elasticity
             self.InPlaneElasticity = False
             self.mu_bulk = 3000
@@ -181,7 +181,7 @@ class Set:
         new_outputFolder = ''.join([PROJECT_DIRECTORY, '/Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")),
                                     self.InputGeo, '_Cells_', str(self.TotalCells), '_visc_', str(self.nu), '_lVol_',
                                     str(self.lambdaV), '_kSubs_', str(self.kSubstrate), '_lt_', str(self.cLineTension),
-                                    '_noise_', str(self.noise_lt), '_brownian_', str(self.brownian_motion_scale),
+                                    '_noise_', str(self.noise_random), '_brownian_', str(self.brownian_motion_scale),
                                     '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
                                     '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
                                     '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3),
@@ -221,9 +221,9 @@ class Set:
         self.tend = 61
         self.Nincr = self.tend * 10
         self.tol = 100
-        self.tol0 = 20
+        self.tol0 = 70
 
-        self.nu = 500
+        self.nu = 100
         self.EnergyBarrierA = False
         self.lambdaB = 0
         self.Beta = 0
@@ -231,22 +231,22 @@ class Set:
         self.EnergyBarrierAR = False
         self.lambdaR = 0
 
-        self.lambdaV = 10
+        self.lambdaV = 0.01
         self.kSubstrate = 1
-        self.cLineTension = 0.006
+        self.cLineTension = 0.0025
 
         self.brownian_motion = False
         self.brownian_motion_scale = 0
 
-        self.noise_lt = 0.5
+        self.noise_random = 0.1
         #self.DelayedAdditionalContractility = 0
         # Soft < 0
         # Stiff > 0
         self.Remodelling = 1
         self.RemodelStiffness = 0.95
-        self.lambdaS1 = 5
-        self.lambdaS2 = self.lambdaS1 / 10
-        self.lambdaS3 = self.lambdaS1
+        self.lambdaS1 = 2
+        self.lambdaS2 = self.lambdaS1 / 20
+        self.lambdaS3 = self.lambdaS1 / 20
         self.lambdaS4 = self.lambdaS2
         self.VTK = False
 
@@ -263,9 +263,9 @@ class Set:
         # =========================== Contractility ==========================
         self.Contractility = True
         self.DelayedAdditionalContractility = 0
-        self.purseStringStrength = 4
+        self.purseStringStrength = 2.95
         self.Contractility_Variability_PurseString = np.power(np.array(
-            [1.0, 1.0, 1.0, 1.74, 2.37, 2.61, 2.487, 2.536, 2.46, 2.52, 2.606, 2.456, 2.387, 2.52, 2.31, 2.328,
+            [1.0, 0.96, 1.007, 1.74, 2.37, 2.61, 2.487, 2.536, 2.46, 2.52, 2.606, 2.456, 2.387, 2.52, 2.31, 2.328,
              2.134, 2.07, 2.055, 1.9, 1.9]), self.purseStringStrength)
         self.Contractility_Variability_LateralCables = np.array(
             [0.45, 0.53, 0.76, 1.15, 1.28, 1.22, 1.38, 1.33, 1.28, 1.4, 1.25, 1.298, 1.45, 1.31, 1.29, 1.42, 1.31,
