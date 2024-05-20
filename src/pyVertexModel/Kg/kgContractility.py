@@ -99,8 +99,7 @@ def getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set):
             else:
                 contractilityValue = Set.cLineTension
 
-        if Set.noise_lt > 0:
-            contractilityValue = add_noise_to_parameter(contractilityValue, Set.noise_lt, currentTri)
+        contractilityValue = add_noise_to_parameter(contractilityValue, Set.noise_random)
 
         for cellToCheck in currentTri.SharedByCells:
             facesToCheck = Geo.Cells[cellToCheck].Faces

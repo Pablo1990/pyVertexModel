@@ -4,23 +4,25 @@ from abc import abstractmethod
 import numpy as np
 
 
-def add_noise_to_parameter(avgParameter, noise, currentTri=None):
+def add_noise_to_parameter(avg_parameter, noise):
     """
     Add noise to a parameter.
-    :param avgParameter:
+    :param avg_parameter:
     :param noise:
-    :param currentTri:
     :return:
     """
-    minValue = avgParameter - avgParameter * noise
-    maxValue = avgParameter + avgParameter * noise
+    if noise == 0:
+        return avg_parameter
+    
+    min_value = avg_parameter - avg_parameter * noise
+    max_value = avg_parameter + avg_parameter * noise
 
-    if minValue < 0:
-        minValue = 2.2204e-16  # equivalent to MATLAB eps
+    if min_value < 0:
+        min_value = 2.2204e-16  # equivalent to MATLAB eps
 
-    finalValue = minValue + (maxValue - minValue) * random.random()
+    final_value = min_value + (max_value - min_value) * random.random()
 
-    return finalValue
+    return final_value
 
 
 class Kg:

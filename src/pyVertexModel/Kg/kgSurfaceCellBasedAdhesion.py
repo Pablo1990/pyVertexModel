@@ -3,7 +3,7 @@ import time
 import numpy as np
 
 from src.pyVertexModel.Kg import kg_functions
-from src.pyVertexModel.Kg.kg import Kg
+from src.pyVertexModel.Kg.kg import Kg, add_noise_to_parameter
 
 
 class KgSurfaceCellBasedAdhesion(Kg):
@@ -30,13 +30,18 @@ class KgSurfaceCellBasedAdhesion(Kg):
         Ys = Cell.Y
         ge = np.zeros(self.g.shape, dtype=self.precision_type)
         fact0 = 0
+
+        lambda_s1_noise = add_noise_to_parameter(Set.lambdaS1, Set.noise_random)
+        lambda_s2_noise = add_noise_to_parameter(Set.lambdaS2, Set.noise_random)
+        lambda_s3_noise = add_noise_to_parameter(Set.lambdaS3, Set.noise_random)
+
         for face in Cell.Faces:
             if face.InterfaceType == 'Top' or face.InterfaceType == 0:
-                Lambda = Set.lambdaS1
+                Lambda = lambda_s1_noise
             elif face.InterfaceType == 'CellCell' or face.InterfaceType == 1:
-                Lambda = Set.lambdaS2
+                Lambda = lambda_s2_noise
             elif face.InterfaceType == 'Bottom' or face.InterfaceType == 2:
-                Lambda = Set.lambdaS3
+                Lambda = lambda_s3_noise
             else:
                 raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
 
@@ -46,11 +51,11 @@ class KgSurfaceCellBasedAdhesion(Kg):
 
         for face in Cell.Faces:
             if face.InterfaceType == 'Top' or face.InterfaceType == 0:
-                Lambda = Set.lambdaS1
+                Lambda = lambda_s1_noise
             elif face.InterfaceType == 'CellCell' or face.InterfaceType == 1:
-                Lambda = Set.lambdaS2
+                Lambda = lambda_s2_noise
             elif face.InterfaceType == 'Bottom' or face.InterfaceType == 2:
-                Lambda = Set.lambdaS3
+                Lambda = lambda_s3_noise
             else:
                 raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
 
