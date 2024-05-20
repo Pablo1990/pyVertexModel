@@ -92,19 +92,23 @@ def analyse_simulation(folder):
         important_features = calculate_important_features(post_wound_features)
 
     # Plot wound area top evolution over time and save it to a file
-    plt.figure()
-    plt.plot(post_wound_features['time'], post_wound_features['wound_area_top'])
-    plt.xlabel('Time (h)')
-    plt.ylabel('Wound area top')
+    plot_feature(folder, post_wound_features, name='wound_area_top')
+    plot_feature(folder, post_wound_features, name='wound_height')
+    plot_feature(folder, post_wound_features, name='num_cells_wound_edge_top')
 
+    return features_per_time_df, post_wound_features, important_features
+
+
+def plot_feature(folder, post_wound_features, name='wound_area_top'):
+    plt.figure()
+    plt.plot(post_wound_features['time'], post_wound_features[name])
+    plt.xlabel('Time (h)')
+    plt.ylabel(name)
     # Change axis limits
     plt.xlim([0, 60])
     plt.ylim([0, 200])
-
-    plt.savefig(os.path.join(folder, 'wound_area_top.png'))
+    plt.savefig(os.path.join(folder,  name + '.png'))
     plt.close()
-
-    return features_per_time_df, post_wound_features, important_features
 
 
 def calculate_important_features(post_wound_features):
@@ -154,7 +158,9 @@ def calculate_important_features(post_wound_features):
 
 folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/Results/Relevant/'
 all_files_features = []
-for file_id, file in enumerate(os.listdir(folder)):
+lst = os.listdir(folder)
+lst.sort()
+for file_id, file in enumerate(lst):
     print(file)
     # if file is a directory
     if os.path.isdir(os.path.join(folder, file)):

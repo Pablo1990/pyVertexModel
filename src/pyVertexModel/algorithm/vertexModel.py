@@ -432,6 +432,8 @@ class VertexModel:
         """
         wound_features = {
             'num_cells_wound_edge': len(self.geo.compute_cells_wound_edge()),
+            'num_cells_wound_edge_top': len(self.geo.compute_cells_wound_edge(location_filter="Top")),
+            'num_cells_wound_edge_bottom': len(self.geo.compute_cells_wound_edge(location_filter="Bottom")),
             'wound_area_top': self.geo.compute_wound_area(location_filter="Top"),
             'wound_area_bottom': self.geo.compute_wound_area(location_filter="Bottom"),
             'wound_volume': self.geo.compute_wound_volume(),
