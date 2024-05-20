@@ -835,26 +835,22 @@ class Geo:
         :param location_filter:
         :return:
         """
-
+        # Compute cells neighbouring debris cells
         debris_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
         if not debris_cells:
             debris_cells = self.cellsToAblate
 
-        cells = [c_cell for c_cell in self.Cells if c_cell.AliveStatus == 1]
+        cells = []
+        for c_cell in self.Cells:
+            if c_cell.AliveStatus == 1 and c_cell.ID not in debris_cells:
+                vertices_to_collect = np.any(np.isin(c_cell.T, debris_cells), axis=1)
+                if location_filter == "Top":
+                    vertices_to_collect = vertices_to_collect & np.any(np.isin(c_cell.T, self.XgTop), axis=1)
+                elif location_filter == "Bottom":
+                    vertices_to_collect = vertices_to_collect & np.any(np.isin(c_cell.T, self.XgBottom), axis=1)
 
-        if location_filter is not None:
-            if location_filter == 'Top':
-                cells = [c_cell for c_cell in cells if np.any(np.isin(c_cell.T, self.XgTop))]
-            elif location_filter == 'Bottom':
-                cells = [c_cell for c_cell in cells if np.any(np.isin(c_cell.T, self.XgBottom))]
-            elif location_filter == 'Lateral':
-                cells = [c_cell for c_cell in cells if np.any(np.isin(c_cell.T, self.XgTop)) and
-                         np.any(np.isin(c_cell.T, self.XgBottom))]
-
-        cells = [c_cell for c_cell in cells if np.any(np.isin(c_cell.T, debris_cells))]
-
-        # Remove debris cells from the list of cells
-        cells = [c_cell for c_cell in cells if c_cell.ID not in debris_cells]
+                if np.any(vertices_to_collect):
+                    cells.append(c_cell)
 
         return cells
 
