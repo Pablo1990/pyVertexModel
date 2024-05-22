@@ -162,7 +162,7 @@ class Set:
         Update derived parameters
         :return:
         """
-        self.define_if_not_defined("Nincr", self.tend)
+        self.define_if_not_defined("Nincr", self.tend * 10)
         self.define_if_not_defined("dt", self.tend / self.Nincr)
         self.define_if_not_defined("RemodelingFrequency", 0.1)
         self.define_if_not_defined("lambdaS2", self.lambdaS1 * 0.1)
@@ -211,6 +211,9 @@ class Set:
         self.lambdaR = 0
         self.Remodelling = True
         self.RemodelStiffness = 0.1
+        self.tol = 100
+        self.tol0 = 10
+        self.VTK = True
 
     def NoBulk_110(self):
         self.InputGeo = 'VertexModelTime'
