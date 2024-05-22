@@ -334,10 +334,10 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
         # Viscous Energy
         kg_Viscosity = KgViscosity(Geo)
         kg_Viscosity.compute_work(Geo, Set, Geo_n)
-        g = kg_Viscosity.g
-        K = kg_Viscosity.K
+        g += kg_Viscosity.g
+        K += kg_Viscosity.K
         energy_total = kg_Viscosity.energy
-        energies = {"Viscosity": kg_Viscosity.energy}
+        energies["Viscosity"] = kg_Viscosity.energy
 
     return g, K, energy_total, energies
 
