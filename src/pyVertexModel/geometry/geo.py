@@ -287,18 +287,18 @@ class Geo:
 
             self.EdgeLengthAvg_0.append(np.mean(edge_lengths))
 
-        # Differential adhesion values
-        for l1, val in c_set.lambdaS1CellFactor:
-            ci = l1
-            self.Cells[ci].ExternalLambda = val
-
-        for l2, val in c_set.lambdaS2CellFactor:
-            ci = l2
-            self.Cells[ci].InternalLambda = val
-
-        for l3, val in c_set.lambdaS3CellFactor:
-            ci = l3
-            self.Cells[ci].SubstrateLambda = val
+        # # Differential adhesion values
+        # for l1, val in c_set.lambdaS1CellFactor:
+        #     ci = l1
+        #     self.Cells[ci].ExternalLambda = val
+        #
+        # for l2, val in c_set.lambdaS2CellFactor:
+        #     ci = l2
+        #     self.Cells[ci].InternalLambda = val
+        #
+        # for l3, val in c_set.lambdaS3CellFactor:
+        #     ci = l3
+        #     self.Cells[ci].SubstrateLambda = val
 
         # Unique Ids for each point (vertex, node or face center) used in K
         self.build_global_ids()

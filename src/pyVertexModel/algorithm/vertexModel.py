@@ -45,8 +45,8 @@ class VertexModel:
         else:
             # TODO Create a menu to select the set
             self.set = Set()
-            # self.set.cyst()
-            self.set.NoBulk_110()
+            self.set.cyst()
+            #self.set.NoBulk_110()
             if self.set.ablation:
                 self.set.woundDefault()
             self.set.update_derived_parameters()
