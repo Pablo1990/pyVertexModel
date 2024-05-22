@@ -159,7 +159,7 @@ def calculate_important_features(post_wound_features):
 folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/Results/Relevant/'
 all_files_features = []
 lst = os.listdir(folder)
-lst.sort()
+lst.sort(reverse=True)
 for file_id, file in enumerate(lst):
     print(file)
     # if file is a directory
