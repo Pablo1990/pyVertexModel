@@ -215,6 +215,30 @@ class Set:
         self.tol0 = 10
         self.VTK = True
 
+        self.nu = 100
+        self.EnergyBarrierA = False
+        self.lambdaB = 0
+        self.Beta = 0
+
+        self.EnergyBarrierAR = False
+        self.lambdaR = 0
+
+        self.lambdaV = 0.01
+        self.cLineTension = 0.0025
+
+        self.brownian_motion = False
+        self.brownian_motion_scale = 0
+
+        self.noise_random = 0
+        # self.DelayedAdditionalContractility = 0
+        # Soft < 0
+        # Stiff > 0
+        self.Remodelling = 1
+        self.RemodelStiffness = 0.95
+        self.lambdaS1 = 2 # Top surface minimization
+        self.lambdaS2 = self.lambdaS1 / 20 # lateral surface minimization
+        self.lambdaS3 = self.lambdaS1 / 20 # bottom surface minimization
+
     def NoBulk_110(self):
         self.InputGeo = 'VertexModelTime'
         # 40 cells 3 cells to ablate
