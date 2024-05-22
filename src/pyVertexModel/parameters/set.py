@@ -203,6 +203,7 @@ class Set:
         self.VTK = False
 
     def cyst(self):
+        # PARAMETERS TO CHANGE FOR AHMAD
         mat_info = scipy.io.loadmat(os.path.join(PROJECT_DIRECTORY, 'Tests/data/Geo_var_cyst.mat'))
         self.read_mat_file(mat_info['Set'])
         self.InputGeo = 'Bubbles_Cyst'
