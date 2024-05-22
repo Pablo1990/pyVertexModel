@@ -247,6 +247,9 @@ class VertexModel:
             # Reset Contractility Value and Edge Length
             for num_cell in range(len(self.geo.Cells)):
                 c_cell = self.geo.Cells[num_cell]
+                c_cell.lambda_s1_noise = None
+                c_cell.lambda_s2_noise = None
+                c_cell.lambda_s3_noise = None
                 for n_face in range(len(c_cell.Faces)):
                     face = c_cell.Faces[n_face]
                     for n_tri in range(len(face.Tris)):
