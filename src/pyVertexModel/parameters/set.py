@@ -185,7 +185,7 @@ class Set:
                                     '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
                                     '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
                                     '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3),
-                                    '_pString_', str(self.purseStringStrength)])
+                                    '_pString_', str(self.purseStringStrength), '_tol_', str(self.tol0)])
         self.define_if_not_defined("OutputFolder", new_outputFolder)
 
     def stretch(self):
@@ -238,7 +238,7 @@ class Set:
         self.brownian_motion = False
         self.brownian_motion_scale = 0
 
-        self.noise_random = 0.1
+        self.noise_random = 0
         #self.DelayedAdditionalContractility = 0
         # Soft < 0
         # Stiff > 0
