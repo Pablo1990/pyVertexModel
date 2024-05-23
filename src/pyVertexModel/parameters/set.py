@@ -226,7 +226,6 @@ class Set:
         self.nu = 100
         self.EnergyBarrierA = False
         self.lambdaB = 0
-        self.Beta = 0
 
         self.EnergyBarrierAR = False
         self.lambdaR = 0
@@ -243,7 +242,7 @@ class Set:
         # Soft < 0
         # Stiff > 0
         self.Remodelling = 1
-        self.RemodelStiffness = 0.95
+        self.RemodelStiffness = 0.99
         self.lambdaS1 = 2
         self.lambdaS2 = self.lambdaS1 / 20
         self.lambdaS3 = self.lambdaS1 / 20
