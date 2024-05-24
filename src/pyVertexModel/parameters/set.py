@@ -107,7 +107,7 @@ class Set:
             self.Reset_PercentageGeo0 = 0.15
             # ============================ Solution ==============================
             self.tol = 1e-08
-            self.MaxIter = 30
+            self.MaxIter = 10
             self.Parallel = False
             self.Sparse = False
             self.last_t_converged = 0
@@ -242,7 +242,7 @@ class Set:
         # Soft < 0
         # Stiff > 0
         self.Remodelling = 1
-        self.RemodelStiffness = 0.99
+        self.RemodelStiffness = 0.98
         self.lambdaS1 = 2
         self.lambdaS2 = self.lambdaS1 / 20
         self.lambdaS3 = self.lambdaS1 / 20
@@ -262,7 +262,7 @@ class Set:
         # =========================== Contractility ==========================
         self.Contractility = True
         self.DelayedAdditionalContractility = 0
-        self.purseStringStrength = 2.95
+        self.purseStringStrength = 2.5
         self.Contractility_Variability_PurseString = np.power(np.array(
             [1.0, 0.96, 1.007, 1.74, 2.37, 2.61, 2.487, 2.536, 2.46, 2.52, 2.606, 2.456, 2.387, 2.52, 2.31, 2.328,
              2.134, 2.07, 2.055, 1.9, 1.9]), self.purseStringStrength)
