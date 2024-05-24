@@ -221,7 +221,7 @@ class Set:
         self.tend = 61
         self.Nincr = self.tend * 10
         self.tol = 100
-        self.tol0 = 70
+        self.tol0 = 20
 
         self.nu = 100
         self.EnergyBarrierA = False
