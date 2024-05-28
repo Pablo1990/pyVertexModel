@@ -107,7 +107,7 @@ class Set:
             self.Reset_PercentageGeo0 = 0.15
             # ============================ Solution ==============================
             self.tol = 1e-08
-            self.MaxIter = 10
+            self.MaxIter = 30
             self.Parallel = False
             self.Sparse = False
             self.last_t_converged = 0
