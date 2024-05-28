@@ -14,6 +14,7 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.typeOfEllipsoid = None
         self.tol0 = None
         self.dt = None
         self.implicit_method = False
@@ -252,9 +253,9 @@ class Set:
 
         # Surface minimization per cell domain
         self.lambdaS1 = 8
-        self.lambdaS2 = 0.01 * Set.lambdaS1
-        self.lambdaS3 = Set.lambdaS2
-        self.lambdaS4 = Set.lambdaS2
+        self.lambdaS2 = 0.01 * self.lambdaS1
+        self.lambdaS3 = self.lambdaS2
+        self.lambdaS4 = self.lambdaS2
 
         # Brownian noise
         self.brownian_motion = True
