@@ -220,8 +220,6 @@ class Set:
         self.CellHeight = 15
         self.tend = 61
         self.Nincr = self.tend * 10
-        self.tol = 100
-        self.tol0 = 20
 
         self.nu = 100
         self.EnergyBarrierA = False
@@ -250,6 +248,9 @@ class Set:
         self.VTK = False
 
         self.implicit_method = False
+        if self.implicit_method is False:
+            self.tol = 100
+            self.tol0 = 1
 
         self.ablation = True
 
