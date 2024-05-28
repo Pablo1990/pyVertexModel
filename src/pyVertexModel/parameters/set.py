@@ -251,6 +251,9 @@ class Set:
         # Line Tension
         self.cLineTension = 0.1
 
+        # Noise
+        self.noise_random = 0.01
+
         # Surface minimization per cell domain
         self.lambdaS1 = 8
         self.lambdaS2 = 0.01 * self.lambdaS1
@@ -258,8 +261,8 @@ class Set:
         self.lambdaS4 = self.lambdaS2
 
         # Brownian noise
-        self.brownian_motion = True
-        self.brownian_motion_scale = 0.05
+        self.brownian_motion = False
+        self.brownian_motion_scale = 0
 
         # Remodelling
         self.Remodelling = True
