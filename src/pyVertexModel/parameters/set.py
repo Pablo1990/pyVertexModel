@@ -204,41 +204,65 @@ class Set:
 
     def cyst(self):
         # PARAMETERS TO CHANGE FOR AHMAD
-        mat_info = scipy.io.loadmat(os.path.join(PROJECT_DIRECTORY, 'Tests/data/Geo_var_cyst.mat'))
-        self.read_mat_file(mat_info['Set'])
         self.InputGeo = 'Bubbles_Cyst'
-        self.CellHeight = 15
-        self.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/Cyst')
-        self.lambdaR = 0
-        self.Remodelling = True
-        self.RemodelStiffness = 0.1
+
+        # Tolerance
         self.tol = 100
         self.tol0 = 10
+
+        # VTK output
         self.VTK = True
 
-        self.nu = 100
-        self.EnergyBarrierA = False
-        self.lambdaB = 0
-        self.Beta = 0
+        # Initial geometry of the tissue
+        self.typeOfEllipsoid = 'ellipsoid'
+        self.ellipsoid_axis1 = 33 / 2
+        self.ellipsoid_axis2 = 31 / 2
+        self.ellipsoid_axis3 = 23 / 2
+        self.lumen_axis1 = 23 / 2
+        self.lumen_axis2 = 20 / 2
+        self.lumen_axis3 = 12 / 2
+        self.cell_V0 = 440
+        self.cell_A0 = 328
+        self.lumen_V0 = 4308
 
-        self.EnergyBarrierAR = False
-        self.lambdaR = 0
+        # Number of cells
+        self.TotalCells = 30
 
-        self.lambdaV = 0.01
-        self.cLineTension = 0.0025
+        # Cell initial shape
+        self.s = 1.5 * 10
+        self.f = 0.5 * 10
 
-        self.brownian_motion = False
-        self.brownian_motion_scale = 0
+        # Simulation parameters
+        self.nu = 1
+        self.Nincr = 61 * 2
 
-        self.noise_random = 0
-        # self.DelayedAdditionalContractility = 0
-        # Soft < 0
-        # Stiff > 0
-        self.Remodelling = 1
-        self.RemodelStiffness = 0.95
-        self.lambdaS1 = 2 # Top surface minimization
-        self.lambdaS2 = self.lambdaS1 / 20 # lateral surface minimization
-        self.lambdaS3 = self.lambdaS1 / 20 # bottom surface minimization
+        # Energy Barrier Tri Area
+        self.lambdaB = 1
+        self.lambdaR = 0.3
+
+        # Volume
+        self.lambdaV = 400
+
+        # Substrate
+        self.Substrate = False
+        self.kSubstrate = 0
+
+        # Line Tension
+        self.cLineTension = 0.1
+
+        # Surface minimization per cell domain
+        self.lambdaS1 = 8
+        self.lambdaS2 = 0.01 * Set.lambdaS1
+        self.lambdaS3 = Set.lambdaS2
+        self.lambdaS4 = Set.lambdaS2
+
+        # Brownian noise
+        self.brownian_motion = True
+        self.brownian_motion_scale = 0.05
+
+        # Remodelling
+        self.Remodelling = True
+        self.RemodelStiffness = 0.98
 
     def NoBulk_110(self):
         self.InputGeo = 'VertexModelTime'
