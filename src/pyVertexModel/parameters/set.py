@@ -185,7 +185,7 @@ class Set:
                                     '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
                                     '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
                                     '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3),
-                                    '_pString_', str(self.purseStringStrength)])
+                                    '_pString_', str(self.purseStringStrength), '_tol_', str(self.tol0)])
         self.define_if_not_defined("OutputFolder", new_outputFolder)
 
     def stretch(self):
@@ -249,12 +249,11 @@ class Set:
         self.tend = 61
         self.Nincr = self.tend * 10
         self.tol = 100
-        self.tol0 = 70
+        self.tol0 = 20
 
         self.nu = 100
         self.EnergyBarrierA = False
         self.lambdaB = 0
-        self.Beta = 0
 
         self.EnergyBarrierAR = False
         self.lambdaR = 0
@@ -266,12 +265,12 @@ class Set:
         self.brownian_motion = False
         self.brownian_motion_scale = 0
 
-        self.noise_random = 0.1
+        self.noise_random = 0
         #self.DelayedAdditionalContractility = 0
         # Soft < 0
         # Stiff > 0
         self.Remodelling = 1
-        self.RemodelStiffness = 0.95
+        self.RemodelStiffness = 0.98
         self.lambdaS1 = 2
         self.lambdaS2 = self.lambdaS1 / 20
         self.lambdaS3 = self.lambdaS1 / 20
@@ -291,7 +290,7 @@ class Set:
         # =========================== Contractility ==========================
         self.Contractility = True
         self.DelayedAdditionalContractility = 0
-        self.purseStringStrength = 2.95
+        self.purseStringStrength = 2.5
         self.Contractility_Variability_PurseString = np.power(np.array(
             [1.0, 0.96, 1.007, 1.74, 2.37, 2.61, 2.487, 2.536, 2.46, 2.52, 2.606, 2.456, 2.387, 2.52, 2.31, 2.328,
              2.134, 2.07, 2.055, 1.9, 1.9]), self.purseStringStrength)

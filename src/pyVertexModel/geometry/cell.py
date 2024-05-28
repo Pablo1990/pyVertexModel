@@ -61,6 +61,9 @@ class Cell:
         Constructor of the class
         :param mat_file:
         """
+        self.lambda_s1_noise = None
+        self.lambda_s2_noise = None
+        self.lambda_s3_noise = None
         self.SubstrateLambda = None
         self.InternalLambda = None
         self.ExternalLambda = None

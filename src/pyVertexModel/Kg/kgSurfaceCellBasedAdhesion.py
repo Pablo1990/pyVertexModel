@@ -31,17 +31,18 @@ class KgSurfaceCellBasedAdhesion(Kg):
         ge = np.zeros(self.g.shape, dtype=self.precision_type)
         fact0 = 0
 
-        lambda_s1_noise = add_noise_to_parameter(Set.lambdaS1, Set.noise_random)
-        lambda_s2_noise = add_noise_to_parameter(Set.lambdaS2, Set.noise_random)
-        lambda_s3_noise = add_noise_to_parameter(Set.lambdaS3, Set.noise_random)
+        if Cell.lambda_s1_noise is None:
+            Cell.lambda_s1_noise = add_noise_to_parameter(Set.lambdaS1, 0)
+            Cell.lambda_s2_noise = add_noise_to_parameter(Set.lambdaS2, 0)
+            Cell.lambda_s3_noise = add_noise_to_parameter(Set.lambdaS3, 0)
 
         for face in Cell.Faces:
             if face.InterfaceType == 'Top' or face.InterfaceType == 0:
-                Lambda = lambda_s1_noise
+                Lambda = Cell.lambda_s1_noise
             elif face.InterfaceType == 'CellCell' or face.InterfaceType == 1:
-                Lambda = lambda_s2_noise
+                Lambda = Cell.lambda_s2_noise
             elif face.InterfaceType == 'Bottom' or face.InterfaceType == 2:
-                Lambda = lambda_s3_noise
+                Lambda = Cell.lambda_s3_noise
             else:
                 raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
 
@@ -51,11 +52,11 @@ class KgSurfaceCellBasedAdhesion(Kg):
 
         for face in Cell.Faces:
             if face.InterfaceType == 'Top' or face.InterfaceType == 0:
-                Lambda = lambda_s1_noise
+                Lambda = Cell.lambda_s1_noise
             elif face.InterfaceType == 'CellCell' or face.InterfaceType == 1:
-                Lambda = lambda_s2_noise
+                Lambda = Cell.lambda_s2_noise
             elif face.InterfaceType == 'Bottom' or face.InterfaceType == 2:
-                Lambda = lambda_s3_noise
+                Lambda = Cell.lambda_s3_noise
             else:
                 raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
 
