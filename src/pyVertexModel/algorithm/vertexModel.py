@@ -46,7 +46,7 @@ class VertexModel:
             # TODO Create a menu to select the set
             self.set = Set()
             # self.set.cyst()
-            self.set.NoBulk_110()
+            self.set.wing_disc()
             if self.set.ablation:
                 self.set.woundDefault()
             self.set.update_derived_parameters()
@@ -182,7 +182,7 @@ class VertexModel:
             self.set.nu = 10 * self.set.nu0
         else:
             if (self.set.iter >= self.set.MaxIter and
-                    (self.set.dt / self.set.dt0) > 1e-6):
+                    (self.set.dt / self.set.dt0) > 1e-8):
                 self.set.MaxIter = self.set.MaxIter0
                 self.set.nu = self.set.nu0
                 self.set.dt = self.set.dt / 2

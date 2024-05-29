@@ -212,7 +212,7 @@ class Set:
         self.Remodelling = True
         self.RemodelStiffness = 0.1
 
-    def NoBulk_110(self):
+    def wing_disc(self):
         self.InputGeo = 'VertexModelTime'
         # 40 cells 3 cells to ablate
         # 110 cells 7 cells to ablate
@@ -274,7 +274,7 @@ class Set:
 
     def menu_input(self, inputMode=None, batchMode=None):
         if inputMode == 7:
-            self.NoBulk_110()
+            self.wing_disc()
 
     def copy(self):
         """
