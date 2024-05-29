@@ -225,8 +225,8 @@ class Set:
         self.EnergyBarrierA = False
         self.lambdaB = 0
 
-        self.EnergyBarrierAR = False
-        self.lambdaR = 0
+        self.EnergyBarrierAR = True
+        self.lambdaR = 0.0005
 
         self.lambdaV = 0.01
         self.kSubstrate = 1
@@ -250,7 +250,7 @@ class Set:
         self.implicit_method = False
         if self.implicit_method is False:
             self.tol = 100
-            self.tol0 = 1
+            self.tol0 = 5
 
         self.ablation = True
 
