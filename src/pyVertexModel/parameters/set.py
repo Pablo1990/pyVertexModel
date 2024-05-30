@@ -241,16 +241,16 @@ class Set:
         # Stiff > 0
         self.Remodelling = 1
         self.RemodelStiffness = 0.98
-        self.lambdaS1 = 2
-        self.lambdaS2 = self.lambdaS1 / 20
-        self.lambdaS3 = self.lambdaS1 / 20
+        self.lambdaS1 = 0.01
+        self.lambdaS2 = self.lambdaS1
+        self.lambdaS3 = self.lambdaS1
         self.lambdaS4 = self.lambdaS2
         self.VTK = False
 
         self.implicit_method = False
         if self.implicit_method is False:
             self.tol = 100
-            self.tol0 = 5
+            self.tol0 = self.nu/20
 
         self.ablation = True
 
