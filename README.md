@@ -1,4 +1,4 @@
-# pyVertexModel
+![logo.png](logo.png)
 
 [![Coverage Status](https://coveralls.io/repos/github/Pablo1990/pyVertexModel/badge.svg?branch=main)](https://coveralls.io/github/Pablo1990/pyVertexModel?branch=main)
 [![codecov](https://codecov.io/gh/Pablo1990/pyVertexModel/graph/badge.svg?token=AKGWS79Z61)](https://codecov.io/gh/Pablo1990/pyVertexModel)
