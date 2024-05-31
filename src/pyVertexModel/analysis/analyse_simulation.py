@@ -17,8 +17,6 @@ def export_movie(vtk_dir):
     :return:
     """
 
-    images = []
-
     vtk_dir_output = None
     temp_dir = None
 
@@ -27,7 +25,7 @@ def export_movie(vtk_dir):
 
     # Go through all the files in the folder
     for file_id, file in enumerate(files_to_check):
-        if file.endswith('.pkl') and not file.__contains__('data_step_before_remodelling'):
+        if file.endswith('.pkl') and file.startswith('data') and not file.__contains__('data_step_before_remodelling'):
             vModel = VertexModel(create_output_folder=False)
 
             # Load the state of the model
@@ -37,7 +35,7 @@ def export_movie(vtk_dir):
                 vtk_dir_output = vModel.set.OutputFolder
 
                 # Create a temporary directory to store the images
-                temp_dir = os.path.join(vtk_dir_output, 'temp')
+                temp_dir = os.path.join(vtk_dir, 'images')
                 if not os.path.exists(temp_dir):
                     os.mkdir(temp_dir)
 
@@ -46,7 +44,7 @@ def export_movie(vtk_dir):
             vModel.geo.create_vtk_cell(vModel.set, vModel.numStep, 'Cells')
 
             # Get a list of VTK files
-            vtk_files = [f for f in os.listdir(os.path.join(vtk_dir, 'Cells')) if
+            vtk_files = [f for f in os.listdir(os.path.join(vtk_dir_output, 'Cells')) if
                          f.endswith(f'{vModel.numStep:04d}.vtk') and not f.startswith('Cells.0001')
                          and not f.startswith('Cells.0000') and not f.startswith('Cells.0002')
                          and not f.startswith('Cells.0003') and not f.startswith('Cells.0004')
@@ -59,37 +57,24 @@ def export_movie(vtk_dir):
 
             for _, file_vtk in enumerate(vtk_files):
                 # Load the VTK file as a pyvista mesh
-                mesh = pv.read(os.path.join(vtk_dir, 'Cells', file_vtk))
+                mesh = pv.read(os.path.join(vtk_dir_output, 'Cells', file_vtk))
 
                 # Add the mesh to the plotter
-                plotter.add_mesh(mesh, scalars='ID', show_edges=True, edge_color='black',
-                                 lighting=True, cmap='gist_ncar')
+                plotter.add_mesh(mesh, scalars='ID', lighting=True, cmap='prism', show_edges=True, edge_opacity=0.5,
+                                 edge_color='grey')
 
             # Render the scene and capture a screenshot
             img = plotter.screenshot()
 
             # Save the image to a temporary file
-            temp_file = os.path.join(temp_dir, f'temp_{vModel.numStep}.png')
+            temp_file = os.path.join(temp_dir, f'vModel_{vModel.numStep}.png')
             imageio.imwrite(temp_file, img)
 
-            # Add the temporary file to the list of images
-            images.append(imageio.v2.imread(temp_file))
-
             # Remove 'Cells' directory
-            for file_vtk in os.listdir(os.path.join(vtk_dir, 'Cells')):
-                os.remove(os.path.join(vtk_dir, 'Cells', file_vtk))
+            for file_vtk in os.listdir(os.path.join(vtk_dir_output, 'Cells')):
+                os.remove(os.path.join(vtk_dir_output, 'Cells', file_vtk))
 
-    # Create a movie from the images
-    if len(images) > 0:
-        imageio.mimwrite(os.path.join(vtk_dir, 'movie.avi'), images, fps=30)
-
-    # Clean up the temporary files
-    if temp_dir is not None:
-        for file in os.listdir(temp_dir):
-            os.remove(os.path.join(temp_dir, file))
-        os.rmdir(temp_dir)
-
-        os.rmdir(os.path.join(vtk_dir, 'Cells'))
+            plotter.close()
 
 
 def analyse_simulation(folder):
@@ -141,7 +126,8 @@ def analyse_simulation(folder):
 
                 if feature == 'time':
                     continue
-                post_wound_features.loc[:, feature] = (post_wound_features[feature] / np.array(pre_wound_features[feature])) * 100
+                post_wound_features.loc[:, feature] = (post_wound_features[feature] / np.array(
+                    pre_wound_features[feature])) * 100
 
             # Export to xlsx
             post_wound_features.to_excel(os.path.join(folder, 'post_wound_features.xlsx'))
@@ -190,7 +176,7 @@ def plot_feature(folder, post_wound_features, name='wound_area_top'):
     # Change axis limits
     plt.xlim([0, 60])
     plt.ylim([0, 200])
-    plt.savefig(os.path.join(folder,  name + '.png'))
+    plt.savefig(os.path.join(folder, name + '.png'))
     plt.close()
 
 
@@ -239,7 +225,7 @@ def calculate_important_features(post_wound_features):
     return important_features
 
 
-folder = '/Users/pablovm/PostDoc/pyVertexModel/Result/'
+folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/Results/Relevant/'
 all_files_features = []
 lst = os.listdir(folder)
 lst.sort(reverse=True)
@@ -247,8 +233,9 @@ for file_id, file in enumerate(lst):
     print(file)
     # if file is a directory
     if os.path.isdir(os.path.join(folder, file)):
-        # Export the movie
-        export_movie(os.path.join(folder, file))
+        if not os.path.exists(os.path.join(folder, file, 'images')):
+            # Export the movie
+            export_movie(os.path.join(folder, file))
 
         # Analyse the simulation
         features_per_time_df, post_wound_features, important_features = (
