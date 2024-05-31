@@ -1,12 +1,95 @@
 import os
 import pickle
 
+import imageio
 import numpy as np
 import pandas as pd
+import pyvista as pv
 from matplotlib import pyplot as plt
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.util.utils import load_state
+
+
+def export_movie(vtk_dir):
+    """
+    Export a movie of the simulation.
+    :return:
+    """
+
+    images = []
+
+    vtk_dir_output = None
+    temp_dir = None
+
+    files_to_check = os.listdir(vtk_dir)
+    files_to_check.sort(key=lambda x: os.path.getctime(os.path.join(vtk_dir, x)))
+
+    # Go through all the files in the folder
+    for file_id, file in enumerate(files_to_check):
+        if file.endswith('.pkl') and not file.__contains__('data_step_before_remodelling'):
+            vModel = VertexModel(create_output_folder=False)
+
+            # Load the state of the model
+            load_state(vModel, os.path.join(vtk_dir, file))
+
+            if vtk_dir_output is None:
+                vtk_dir_output = vModel.set.OutputFolder
+
+                # Create a temporary directory to store the images
+                temp_dir = os.path.join(vtk_dir_output, 'temp')
+                if not os.path.exists(temp_dir):
+                    os.mkdir(temp_dir)
+
+            # if directory called 'cells' does not exist, create it
+            vModel.set.VTK = True
+            vModel.geo.create_vtk_cell(vModel.set, vModel.numStep, 'Cells')
+
+            # Get a list of VTK files
+            vtk_files = [f for f in os.listdir(os.path.join(vtk_dir, 'Cells')) if
+                         f.endswith(f'{vModel.numStep:04d}.vtk') and not f.startswith('Cells.0001')
+                         and not f.startswith('Cells.0000') and not f.startswith('Cells.0002')
+                         and not f.startswith('Cells.0003') and not f.startswith('Cells.0004')
+                         and not f.startswith('Cells.0005') and not f.startswith('Cells.0006')
+                         and not f.startswith('Cells.0007') and not f.startswith('Cells.0008')
+                         and not f.startswith('Cells.0009')]
+
+            # Create a plotter
+            plotter = pv.Plotter(off_screen=True)
+
+            for _, file_vtk in enumerate(vtk_files):
+                # Load the VTK file as a pyvista mesh
+                mesh = pv.read(os.path.join(vtk_dir, 'Cells', file_vtk))
+
+                # Add the mesh to the plotter
+                plotter.add_mesh(mesh, scalars='ID', show_edges=True, edge_color='black',
+                                 lighting=True, cmap='gist_ncar')
+
+            # Render the scene and capture a screenshot
+            img = plotter.screenshot()
+
+            # Save the image to a temporary file
+            temp_file = os.path.join(temp_dir, f'temp_{vModel.numStep}.png')
+            imageio.imwrite(temp_file, img)
+
+            # Add the temporary file to the list of images
+            images.append(imageio.v2.imread(temp_file))
+
+            # Remove 'Cells' directory
+            for file_vtk in os.listdir(os.path.join(vtk_dir, 'Cells')):
+                os.remove(os.path.join(vtk_dir, 'Cells', file_vtk))
+
+    # Create a movie from the images
+    if len(images) > 0:
+        imageio.mimwrite(os.path.join(vtk_dir, 'movie.avi'), images, fps=30)
+
+    # Clean up the temporary files
+    if temp_dir is not None:
+        for file in os.listdir(temp_dir):
+            os.remove(os.path.join(temp_dir, file))
+        os.rmdir(temp_dir)
+
+        os.rmdir(os.path.join(vtk_dir, 'Cells'))
 
 
 def analyse_simulation(folder):
@@ -156,7 +239,7 @@ def calculate_important_features(post_wound_features):
     return important_features
 
 
-folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/Results/Relevant/'
+folder = '/Users/pablovm/PostDoc/pyVertexModel/Result/'
 all_files_features = []
 lst = os.listdir(folder)
 lst.sort(reverse=True)
@@ -164,6 +247,9 @@ for file_id, file in enumerate(lst):
     print(file)
     # if file is a directory
     if os.path.isdir(os.path.join(folder, file)):
+        # Export the movie
+        export_movie(os.path.join(folder, file))
+
         # Analyse the simulation
         features_per_time_df, post_wound_features, important_features = (
             analyse_simulation(os.path.join(folder, file)))

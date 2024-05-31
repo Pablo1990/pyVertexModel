@@ -8,3 +8,6 @@ cython
 networkx
 scikit-image
 pyqt5
+imageio
+pyvista
+setuptools

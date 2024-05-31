@@ -11,7 +11,7 @@ from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
 from src.pyVertexModel.parameters.set import Set
-from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars
+from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars, load_state
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -448,5 +448,7 @@ class VertexModel:
         }
 
         return wound_features
+
+
 
 

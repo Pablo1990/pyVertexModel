@@ -1,8 +1,8 @@
 import copy
+import gzip
 import lzma
 import math
 import pickle
-import gzip
 
 import numpy as np
 from scipy.optimize import fsolve
@@ -285,4 +285,3 @@ def calculate_polygon_area(points):
         area -= points[j][0] * points[i][1]
     area = abs(area) / 2.0
     return area
-
