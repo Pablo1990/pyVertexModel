@@ -2,16 +2,17 @@ import logging
 import os
 from abc import abstractmethod
 
+import imageio
 import numpy as np
 import pandas as pd
+import pyvista as pv
 
 from src.pyVertexModel.algorithm import newtonRaphson
 from src.pyVertexModel.geometry import degreesOfFreedom
-from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours_vertices
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
 from src.pyVertexModel.parameters.set import Set
-from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars, load_state
+from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -233,8 +234,48 @@ class VertexModel:
 
             if abs(self.t - self.tr) >= self.set.RemodelingFrequency:
                 # Create VTK files for the current state
-                self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
                 self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
+
+                past_VTK_value = self.set.VTK
+
+                self.set.VTK = True
+                temp_dir = os.path.join(self.set.OutputFolder, 'images')
+                self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
+
+                # Get a list of VTK files with only the alive cells
+                vtk_files = [f for f in os.listdir(os.path.join(self.set.OutputFolder, 'Cells'))
+                             if f.endswith(f'{self.numStep:04d}.vtk')]
+                # Filter out the VTK files that are not the alive cells
+                vtk_files_only_alive = []
+                for i in range(len(vtk_files)):
+                    if self.geo.Cells[i].AliveStatus == 1:
+                        vtk_files_only_alive.append(vtk_files[i])
+
+                # Create a plotter
+                plotter = pv.Plotter(off_screen=True)
+
+                for _, file_vtk in enumerate(vtk_files_only_alive):
+                    # Load the VTK file as a pyvista mesh
+                    mesh = pv.read(os.path.join(self.set.OutputFolder, 'Cells', file_vtk))
+
+                    # Add the mesh to the plotter
+                    plotter.add_mesh(mesh, scalars='ID', lighting=True, cmap='prism', show_edges=True, edge_opacity=0.5,
+                                     edge_color='grey')
+
+                # Render the scene and capture a screenshot
+                img = plotter.screenshot()
+
+                # Save the image to a temporary file
+                temp_file = os.path.join(temp_dir, f'vModel_{self.numStep}.png')
+                imageio.imwrite(temp_file, img)
+
+                if past_VTK_value is False:
+                    # Remove 'Cells' directory
+                    for file_vtk in os.listdir(os.path.join(self.set.OutputFolder, 'Cells')):
+                        os.remove(os.path.join(self.set.OutputFolder, 'Cells', file_vtk))
+
+                plotter.close()
+                self.set.VTK = past_VTK_value
 
                 # Save Data of the current step
                 save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
