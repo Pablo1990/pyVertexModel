@@ -1,6 +1,7 @@
 import os
 
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
+from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
 from src.pyVertexModel.util.utils import load_state
 
 vModel = VertexModelVoronoiFromTimeImage()
