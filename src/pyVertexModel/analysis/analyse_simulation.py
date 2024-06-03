@@ -11,72 +11,6 @@ from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.util.utils import load_state
 
 
-def export_movie(vtk_dir):
-    """
-    Export a movie of the simulation.
-    :return:
-    """
-
-    vtk_dir_output = None
-    temp_dir = None
-
-    files_to_check = os.listdir(vtk_dir)
-    files_to_check.sort(key=lambda x: os.path.getctime(os.path.join(vtk_dir, x)))
-
-    # Go through all the files in the folder
-    for file_id, file in enumerate(files_to_check):
-        if file.endswith('.pkl') and file.startswith('data') and not file.__contains__('data_step_before_remodelling'):
-            vModel = VertexModel(create_output_folder=False)
-
-            # Load the state of the model
-            load_state(vModel, os.path.join(vtk_dir, file))
-
-            if vtk_dir_output is None:
-                vtk_dir_output = vModel.set.OutputFolder
-
-                # Create a temporary directory to store the images
-                temp_dir = os.path.join(vtk_dir, 'images')
-                if not os.path.exists(temp_dir):
-                    os.mkdir(temp_dir)
-
-            # if directory called 'cells' does not exist, create it
-            vModel.set.VTK = True
-            vModel.geo.create_vtk_cell(vModel.set, vModel.numStep, 'Cells')
-
-            # Get a list of VTK files
-            vtk_files = [f for f in os.listdir(os.path.join(vtk_dir_output, 'Cells')) if
-                         f.endswith(f'{vModel.numStep:04d}.vtk') and not f.startswith('Cells.0001')
-                         and not f.startswith('Cells.0000') and not f.startswith('Cells.0002')
-                         and not f.startswith('Cells.0003') and not f.startswith('Cells.0004')
-                         and not f.startswith('Cells.0005') and not f.startswith('Cells.0006')
-                         and not f.startswith('Cells.0007') and not f.startswith('Cells.0008')
-                         and not f.startswith('Cells.0009')]
-
-            # Create a plotter
-            plotter = pv.Plotter(off_screen=True)
-
-            for _, file_vtk in enumerate(vtk_files):
-                # Load the VTK file as a pyvista mesh
-                mesh = pv.read(os.path.join(vtk_dir_output, 'Cells', file_vtk))
-
-                # Add the mesh to the plotter
-                plotter.add_mesh(mesh, scalars='ID', lighting=True, cmap='prism', show_edges=True, edge_opacity=0.5,
-                                 edge_color='grey')
-
-            # Render the scene and capture a screenshot
-            img = plotter.screenshot()
-
-            # Save the image to a temporary file
-            temp_file = os.path.join(temp_dir, f'vModel_{vModel.numStep}.png')
-            imageio.imwrite(temp_file, img)
-
-            # Remove 'Cells' directory
-            for file_vtk in os.listdir(os.path.join(vtk_dir_output, 'Cells')):
-                os.remove(os.path.join(vtk_dir_output, 'Cells', file_vtk))
-
-            plotter.close()
-
-
 def analyse_simulation(folder):
     """
     Analyse the simulation results
@@ -98,6 +32,12 @@ def analyse_simulation(folder):
 
                 # Analyse the simulation
                 features_per_time.append(vModel.analyse_vertex_model())
+
+                # Create a temporary directory to store the images
+                temp_dir = os.path.join(folder, 'images')
+                if not os.path.exists(temp_dir):
+                    os.mkdir(temp_dir)
+                vModel.screenshot(temp_dir)
 
         if not features_per_time:
             return None, None, None
@@ -233,10 +173,6 @@ for file_id, file in enumerate(lst):
     print(file)
     # if file is a directory
     if os.path.isdir(os.path.join(folder, file)):
-        if not os.path.exists(os.path.join(folder, file, 'images')):
-            # Export the movie
-            export_movie(os.path.join(folder, file))
-
         # Analyse the simulation
         features_per_time_df, post_wound_features, important_features = (
             analyse_simulation(os.path.join(folder, file)))

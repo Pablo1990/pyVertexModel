@@ -235,47 +235,13 @@ class VertexModel:
             if abs(self.t - self.tr) >= self.set.RemodelingFrequency:
                 # Create VTK files for the current state
                 self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
-
-                past_VTK_value = self.set.VTK
-
-                self.set.VTK = True
-                temp_dir = os.path.join(self.set.OutputFolder, 'images')
                 self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
 
-                # Get a list of VTK files with only the alive cells
-                vtk_files = [f for f in os.listdir(os.path.join(self.set.OutputFolder, 'Cells'))
-                             if f.endswith(f'{self.numStep:04d}.vtk')]
-                # Filter out the VTK files that are not the alive cells
-                vtk_files_only_alive = []
-                for i in range(len(vtk_files)):
-                    if self.geo.Cells[i].AliveStatus == 1:
-                        vtk_files_only_alive.append(vtk_files[i])
+                temp_dir = os.path.join(self.set.OutputFolder, 'images')
+                if not os.path.exists(temp_dir):
+                    os.makedirs(temp_dir)
 
-                # Create a plotter
-                plotter = pv.Plotter(off_screen=True)
-
-                for _, file_vtk in enumerate(vtk_files_only_alive):
-                    # Load the VTK file as a pyvista mesh
-                    mesh = pv.read(os.path.join(self.set.OutputFolder, 'Cells', file_vtk))
-
-                    # Add the mesh to the plotter
-                    plotter.add_mesh(mesh, scalars='ID', lighting=True, cmap='prism', show_edges=True, edge_opacity=0.5,
-                                     edge_color='grey')
-
-                # Render the scene and capture a screenshot
-                img = plotter.screenshot()
-
-                # Save the image to a temporary file
-                temp_file = os.path.join(temp_dir, f'vModel_{self.numStep}.png')
-                imageio.imwrite(temp_file, img)
-
-                if past_VTK_value is False:
-                    # Remove 'Cells' directory
-                    for file_vtk in os.listdir(os.path.join(self.set.OutputFolder, 'Cells')):
-                        os.remove(os.path.join(self.set.OutputFolder, 'Cells', file_vtk))
-
-                plotter.close()
-                self.set.VTK = past_VTK_value
+                self.screenshot(temp_dir)
 
                 # Save Data of the current step
                 save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
@@ -489,6 +455,32 @@ class VertexModel:
         }
 
         return wound_features
+
+    def screenshot(self, temp_dir):
+        """
+        Create a screenshot of the current state of the model.
+        :param temp_dir:
+        :return:
+        """
+        if os.path.exists(os.path.join(temp_dir, f'vModel_{self.numStep}.png')):
+            return
+
+        # Create a plotter
+        plotter = pv.Plotter(off_screen=True)
+        for _, cell in enumerate(self.geo.Cells):
+            if cell.AliveStatus == 1:
+                # Load the VTK file as a pyvista mesh
+                mesh = cell.create_pyvista_mesh()
+
+                # Add the mesh to the plotter
+                plotter.add_mesh(mesh, scalars='ID', lighting=True, cmap='prism', show_edges=True, edge_opacity=0.5,
+                                 edge_color='grey')
+        # Render the scene and capture a screenshot
+        img = plotter.screenshot()
+        # Save the image to a temporary file
+        temp_file = os.path.join(temp_dir, f'vModel_{self.numStep}.png')
+        imageio.imwrite(temp_file, img)
+        plotter.close()
 
 
 

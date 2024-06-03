@@ -1,6 +1,7 @@
 import numpy as np
 import vtk
 from sklearn.decomposition import PCA
+import pyvista as pv
 
 from src.pyVertexModel.geometry import face
 from src.pyVertexModel.util.utils import copy_non_mutable_attributes
@@ -209,6 +210,15 @@ class Cell:
                 vpoly.GetCellData().SetScalars(property_array)
 
         return vpoly
+
+    def create_pyvista_mesh(self):
+        """
+        Create a PyVista mesh
+        :return:
+        """
+        mesh = pv.PolyData(self.create_vtk())
+
+        return mesh
 
     def compute_features(self, centre_wound=None):
         """
