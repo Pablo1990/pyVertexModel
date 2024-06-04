@@ -222,26 +222,26 @@ class Set:
         self.Nincr = self.tend * 10
 
         self.nu = 100
-        self.EnergyBarrierA = False
-        self.lambdaB = 0
+        self.EnergyBarrierA = True
+        self.lambdaB = 10
 
         self.EnergyBarrierAR = True
-        self.lambdaR = 0.0005
+        self.lambdaR = 0.01
 
-        self.lambdaV = 0.01
+        self.lambdaV = 2
         self.kSubstrate = 1
-        self.cLineTension = 0.0025
+        self.cLineTension = 0.0035
 
         self.brownian_motion = False
         self.brownian_motion_scale = 0
 
-        self.noise_random = 0
+        self.noise_random = 0.4
         #self.DelayedAdditionalContractility = 0
         # Soft < 0
         # Stiff > 0
         self.Remodelling = 1
         self.RemodelStiffness = 0.98
-        self.lambdaS1 = 0.01
+        self.lambdaS1 = 0.1
         self.lambdaS2 = self.lambdaS1
         self.lambdaS3 = self.lambdaS1
         self.lambdaS4 = self.lambdaS2
@@ -250,7 +250,7 @@ class Set:
         self.implicit_method = False
         if self.implicit_method is False:
             self.tol = 100
-            self.tol0 = self.nu/20
+            self.tol0 = 7 #self.nu/20
 
         self.ablation = True
 
