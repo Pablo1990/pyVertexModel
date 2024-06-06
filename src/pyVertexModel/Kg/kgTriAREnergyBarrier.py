@@ -2,7 +2,7 @@ import time
 
 import numpy as np
 
-from src.pyVertexModel.Kg.kg import Kg
+from src.pyVertexModel.Kg.kg import Kg, add_noise_to_parameter
 
 
 class KgTriAREnergyBarrier(Kg):
@@ -10,7 +10,6 @@ class KgTriAREnergyBarrier(Kg):
         start = time.time()
 
         self.energy = 0
-        fact = Set.lambdaR / Geo.lmin0 ** 4
 
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
             energy_c = 0
@@ -24,6 +23,10 @@ class KgTriAREnergyBarrier(Kg):
                     Tris = Cell.Faces[f].Tris
 
                     for t in range(len(Tris)):
+                        if Tris[t].lambda_r_noise is None:
+                            Tris[t].lambda_r_noise = add_noise_to_parameter(Set.lambdaR, Set.noise_random)
+
+                        fact = Tris[t].lambda_r_noise / Geo.lmin0 ** 4
                         n3 = Cell.Faces[f].globalIds
                         nY_original = np.array([Cell.globalIds[edge] for edge in Tris[t].Edge] + [n3], dtype=int)
 

@@ -65,6 +65,7 @@ class Cell:
         self.lambda_s1_noise = None
         self.lambda_s2_noise = None
         self.lambda_s3_noise = None
+        self.lambda_v_noise = None
         self.SubstrateLambda = None
         self.InternalLambda = None
         self.ExternalLambda = None

@@ -3,7 +3,7 @@ import time
 import numpy as np
 
 from src.pyVertexModel.Kg import kg_functions
-from src.pyVertexModel.Kg.kg import Kg
+from src.pyVertexModel.Kg.kg import Kg, add_noise_to_parameter
 
 
 def compute_finalK_Volume(ge, K, Vol, Vol0, n):
@@ -48,6 +48,10 @@ class KgVolume(Kg):
                 lambdaV = Set.lambdaV * Set.lambdaV_Debris
             else:
                 lambdaV = Set.lambdaV
+
+            if Cell.lambda_v_noise is None:
+                Cell.lambda_v_noise = add_noise_to_parameter(lambdaV, Set.noise_random)
+                lambdaV = Cell.lambda_v_noise
 
             fact = lambdaV * (Cell.Vol - Cell.Vol0) ** (n - 1) / Cell.Vol0 ** n
 

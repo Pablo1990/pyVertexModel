@@ -3,7 +3,7 @@ import time
 import numpy as np
 
 from src.pyVertexModel.Kg import kg_functions
-from src.pyVertexModel.Kg.kg import Kg
+from src.pyVertexModel.Kg.kg import Kg, add_noise_to_parameter
 
 
 class KgTriEnergyBarrier(Kg):
@@ -16,16 +16,20 @@ class KgTriEnergyBarrier(Kg):
 
             Cell = Geo.Cells[c]
             Ys = Cell.Y
-            lambdaB = Set.lambdaB * Geo.Cells[c].lambdaB_perc
+            lambdaB = Set.lambdaB
+            barrier_tri0 = Geo.BarrierTri0
 
             for f in range(len(Cell.Faces)):
                 Face = Cell.Faces[f]
                 Tris = Cell.Faces[f].Tris
 
                 for t in range(len(Tris)):
-                    fact = -((lambdaB * Set.Beta) / Geo.BarrierTri0) * np.exp(
-                        lambdaB * (1 - Set.Beta * Face.Tris[t].Area / Geo.BarrierTri0))
-                    fact2 = fact * -((lambdaB * Set.Beta) / Geo.BarrierTri0)
+                    if Tris[t].lambda_b_noise is None:
+                        Tris[t].lambda_b_noise = add_noise_to_parameter(lambdaB, Set.noise_random)
+
+                    fact = -((Tris[t].lambda_b_noise * Set.Beta) / barrier_tri0) * np.exp(
+                        Tris[t].lambda_b_noise * (1 - Set.Beta * Face.Tris[t].Area / barrier_tri0))
+                    fact2 = fact * -((Tris[t].lambda_b_noise * Set.Beta) / barrier_tri0)
                     y1 = Ys[Tris[t].Edge[0], :]
                     y2 = Ys[Tris[t].Edge[1], :]
                     y3 = Cell.Faces[f].Centre
@@ -43,7 +47,8 @@ class KgTriEnergyBarrier(Kg):
                         gs_ = gs.reshape((gs.size, 1))
                         Ks = (np.dot(gs_, gs_transpose) * fact2) + Ks * fact + Kss * fact
                         self.assemble_k(Ks, np.array(nY, dtype='int'))
-                        self.energy += np.exp(lambdaB * (1 - Set.Beta * Face.Tris[t].Area / Geo.BarrierTri0))
+                        self.energy += np.exp(Tris[t].lambda_b_noise * (1 - Set.Beta *
+                                                                        Face.Tris[t].Area / barrier_tri0))
 
         end = time.time()
         self.timeInSeconds = f"Time at EnergyBarrier: {end - start} seconds"

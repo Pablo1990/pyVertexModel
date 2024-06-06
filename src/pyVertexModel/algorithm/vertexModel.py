@@ -252,19 +252,7 @@ class VertexModel:
                     self.brownian_motion(self.set.brownian_motion_scale)
 
             # Reset Contractility Value and Edge Length
-            for num_cell in range(len(self.geo.Cells)):
-                c_cell = self.geo.Cells[num_cell]
-                c_cell.lambda_s1_noise = None
-                c_cell.lambda_s2_noise = None
-                c_cell.lambda_s3_noise = None
-                for n_face in range(len(c_cell.Faces)):
-                    face = c_cell.Faces[n_face]
-                    for n_tri in range(len(face.Tris)):
-                        tri = face.Tris[n_tri]
-                        tri.past_contractility_value = tri.ContractilityValue
-                        tri.ContractilityValue = None
-                        # tri.edge_length_time.append([self.t, tri.edge_length])
-                        self.geo.Cells[num_cell].Faces[n_face].Tris[n_tri] = tri
+            self.reset_noisy_parameters()
 
             # New Step
             self.t = self.t + self.set.dt
@@ -283,6 +271,24 @@ class VertexModel:
         else:
             self.set.nu = np.max([self.set.nu / 2, self.set.nu0])
             self.relaxingNu = True
+
+    def reset_noisy_parameters(self):
+        for num_cell in range(len(self.geo.Cells)):
+            c_cell = self.geo.Cells[num_cell]
+            self.geo.Cells[num_cell].lambda_s1_noise = None
+            self.geo.Cells[num_cell].lambda_s2_noise = None
+            self.geo.Cells[num_cell].lambda_s3_noise = None
+            self.geo.Cells[num_cell].lambda_v_noise = None
+            for n_face in range(len(c_cell.Faces)):
+                face = c_cell.Faces[n_face]
+                for n_tri in range(len(face.Tris)):
+                    tri = face.Tris[n_tri]
+                    tri.ContractilityValue = None
+                    tri.lambda_r_noise = None
+                    tri.lambda_b_noise = None
+                    tri.k_substrate_noise = None
+                    # tri.edge_length_time.append([self.t, tri.edge_length])
+                    self.geo.Cells[num_cell].Faces[n_face].Tris[n_tri] = tri
 
     def check_integrity(self):
         """
