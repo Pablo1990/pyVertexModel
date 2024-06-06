@@ -106,10 +106,10 @@ class VertexModel:
 
         if self.geo_n is None:
             self.geo_n = self.geo.copy(update_measurements=False)
-        self.backupVars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
 
         # Count the number of faces in average has a cell per domain
         self.update_barrier_tri0_based_on_number_of_faces()
+        self.backupVars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
 
         print("File: ", self.set.OutputFolder)
 

@@ -16,10 +16,17 @@ class KgTriEnergyBarrier(Kg):
 
             Cell = Geo.Cells[c]
             Ys = Cell.Y
-            lambdaB = Set.lambdaB
-            barrier_tri0 = Geo.BarrierTri0
+            lambdaB = Set.lambdaB * Cell.lambdaB_perc
 
             for f in range(len(Cell.Faces)):
+                if Cell.Faces[f].InterfaceType != 'CellCell' and Cell.Faces[f].InterfaceType != 1:
+                    if Cell.Faces[f].InterfaceType == 'Top' or Cell.Faces[f].InterfaceType == 0:
+                        barrier_tri0 = Cell.barrier_tri0_top
+                    else:
+                        barrier_tri0 = Cell.barrier_tri0_bottom
+                else:
+                    barrier_tri0 = Geo.BarrierTri0
+
                 Face = Cell.Faces[f]
                 Tris = Cell.Faces[f].Tris
 
