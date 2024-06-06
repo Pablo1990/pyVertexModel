@@ -108,6 +108,9 @@ class VertexModel:
             self.geo_n = self.geo.copy(update_measurements=False)
         self.backupVars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
 
+        # Count the number of faces in average has a cell per domain
+        self.update_barrier_tri0_based_on_number_of_faces()
+
         print("File: ", self.set.OutputFolder)
 
         # save_state(self, os.path.join(self.set.OutputFolder, 'data_step_0.pkl'))
@@ -149,6 +152,32 @@ class VertexModel:
                 break
 
         return self.didNotConverge
+
+    def update_barrier_tri0_based_on_number_of_faces(self):
+        number_of_faces_per_cell_only_top_and_bottom = []
+        for cell in self.geo.Cells:
+            if cell.AliveStatus is not None:
+                number_of_faces_only_top = 0
+                number_of_faces_only_bottom = 0
+                for face in cell.Faces:
+                    if face.InterfaceType == 'Top' or face.InterfaceType == 0:
+                        number_of_faces_only_top += 1
+                    if face.InterfaceType == 2 or face.InterfaceType == 'Bottom':
+                        number_of_faces_only_bottom += 1
+
+                number_of_faces_per_cell_only_top_and_bottom.append(number_of_faces_only_top)
+                number_of_faces_per_cell_only_top_and_bottom.append(number_of_faces_only_bottom)
+        avg_faces = np.mean(number_of_faces_per_cell_only_top_and_bottom)
+        # Average out BarrierTri0 depending on the number faces the cell has
+        num_faces = 0
+        for cell in self.geo.Cells:
+            if cell.AliveStatus is not None:
+                cell.barrier_tri0_top = (self.geo.BarrierTri0 * number_of_faces_per_cell_only_top_and_bottom[num_faces]
+                                         / avg_faces)
+                num_faces += 1
+                cell.barrier_tri0_bottom = (self.geo.BarrierTri0 *
+                                            number_of_faces_per_cell_only_top_and_bottom[num_faces] / avg_faces)
+                num_faces += 1
 
     def post_newton_raphson(self, dy, dyr, g, gr):
         """
