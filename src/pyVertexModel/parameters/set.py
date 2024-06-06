@@ -223,26 +223,26 @@ class Set:
 
         self.nu = 100
         self.EnergyBarrierA = True
-        self.lambdaB = 10
+        self.lambdaB = 1
 
         self.EnergyBarrierAR = True
-        self.lambdaR = 0.01
+        self.lambdaR = 0.001
 
-        self.lambdaV = 2
+        self.lambdaV = 10
         self.kSubstrate = 1
         self.cLineTension = 0.0035
 
         self.brownian_motion = False
         self.brownian_motion_scale = 0
 
-        self.noise_random = 0.4
+        self.noise_random = 0
         #self.DelayedAdditionalContractility = 0
         # Soft < 0
         # Stiff > 0
         self.Remodelling = 1
         self.RemodelStiffness = 0.98
-        self.lambdaS1 = 0.1
-        self.lambdaS2 = self.lambdaS1
+        self.lambdaS1 = 1
+        self.lambdaS2 = self.lambdaS1 / 10
         self.lambdaS3 = self.lambdaS1
         self.lambdaS4 = self.lambdaS2
         self.VTK = False
