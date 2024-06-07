@@ -16,6 +16,10 @@ class KgTriAREnergyBarrier(Kg):
             Cell = Geo.Cells[c]
             Ys = Cell.Y
 
+            if Cell.Faces[0].Tris[0].lambda_r_noise is None:
+                lambda_r_noise = add_noise_to_parameter(Set.lambdaR, Set.noise_random)
+                Cell.Faces[0].Tris[0].lambda_r_noise = lambda_r_noise
+
             for f in range(len(Cell.Faces)):
                 Face = Cell.Faces[f]
 
@@ -24,7 +28,7 @@ class KgTriAREnergyBarrier(Kg):
 
                     for t in range(len(Tris)):
                         if Tris[t].lambda_r_noise is None:
-                            Tris[t].lambda_r_noise = add_noise_to_parameter(Set.lambdaR, Set.noise_random)
+                            Tris[t].lambda_r_noise = lambda_r_noise
 
                         fact = Tris[t].lambda_r_noise / Geo.lmin0 ** 4
                         n3 = Cell.Faces[f].globalIds
