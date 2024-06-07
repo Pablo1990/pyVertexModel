@@ -32,7 +32,7 @@ class KgTriEnergyBarrier(Kg):
 
                 for t in range(len(Tris)):
                     if Tris[t].lambda_b_noise is None:
-                        Tris[t].lambda_b_noise = add_noise_to_parameter(lambdaB, Set.noise_random)
+                        Tris[t].lambda_b_noise = add_noise_to_parameter(lambdaB, 0)
 
                     fact = -((Tris[t].lambda_b_noise * Set.Beta) / barrier_tri0) * np.exp(
                         Tris[t].lambda_b_noise * (1 - Set.Beta * Face.Tris[t].Area / barrier_tri0))
