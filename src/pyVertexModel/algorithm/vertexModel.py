@@ -82,7 +82,8 @@ class VertexModel:
         all_tets_unique = np.unique(all_tets, axis=0)
 
         # Generate random displacements with a normal distribution for each dimension
-        displacements = scale * (self.geo.Cells[0].X - self.geo.Cells[1].X) * np.random.randn(all_tets_unique.shape[0], 3)
+        displacements = scale * (self.geo.Cells[0].X - self.geo.Cells[1].X) * np.random.randn(all_tets_unique.shape[0],
+                                                                                              3)
 
         # Update vertex positions based on 3D Brownian motion displacements
         for cell in [c for c in self.geo.Cells if c.AliveStatus is not None and c.ID not in self.geo.BorderCells]:
@@ -132,10 +133,12 @@ class VertexModel:
                 self.geo.update_measures()
 
             if self.set.implicit_method is True:
-                g, K, _, energies = newtonRaphson.KgGlobal(self.geo_0, self.geo_n, self.geo, self.set, self.set.implicit_method)
+                g, K, _, energies = newtonRaphson.KgGlobal(self.geo_0, self.geo_n, self.geo, self.set,
+                                                           self.set.implicit_method)
             else:
                 K = 0
-                g, energies = newtonRaphson.gGlobal(self.geo_0, self.geo_n, self.geo, self.set, self.set.implicit_method)
+                g, energies = newtonRaphson.gGlobal(self.geo_0, self.geo_n, self.geo, self.set,
+                                                    self.set.implicit_method)
 
             self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
             self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
@@ -172,11 +175,12 @@ class VertexModel:
         num_faces = 0
         for cell in self.geo.Cells:
             if cell.AliveStatus is not None:
-                cell.barrier_tri0_top = (self.geo.BarrierTri0 * number_of_faces_per_cell_only_top_and_bottom[num_faces]
-                                         / avg_faces)
+                cell.barrier_tri0_top = (self.geo.BarrierTri0 * (number_of_faces_per_cell_only_top_and_bottom[num_faces]
+                                                                 / avg_faces) ** 2)
                 num_faces += 1
                 cell.barrier_tri0_bottom = (self.geo.BarrierTri0 *
-                                            number_of_faces_per_cell_only_top_and_bottom[num_faces] / avg_faces)
+                                            (number_of_faces_per_cell_only_top_and_bottom[num_faces]
+                                             / avg_faces) ** 2)
                 num_faces += 1
 
     def post_newton_raphson(self, dy, dyr, g, gr):
@@ -247,7 +251,6 @@ class VertexModel:
                         self.Dofs.get_dofs(self.geo, self.set)
                         gr = np.linalg.norm(g[self.Dofs.Free])
 
-
             # Append Energies
             # energies_per_time_step.append(energies)
 
@@ -280,10 +283,8 @@ class VertexModel:
                 if self.set.brownian_motion is False:
                     self.brownian_motion(self.set.brownian_motion_scale)
 
-            # Reset Contractility Value and Edge Length
-            self.reset_noisy_parameters()
-
             # New Step
+            self.reset_noisy_parameters()
             self.t = self.t + self.set.dt
             self.set.dt = np.min([self.set.dt + self.set.dt * 0.5, self.set.dt0])
             self.set.MaxIter = self.set.MaxIter0
@@ -427,7 +428,7 @@ class VertexModel:
         self.geo.AvgEdgeLength_Bottom = np.mean(edgeLengths_Bottom)
         self.geo.AvgEdgeLength_Lateral = np.mean(edgeLengths_Lateral)
         # Update BarrierTri0 and lmin0 based on their initial values
-        self.geo.BarrierTri0 = self.geo.BarrierTri0 / 10
+        self.geo.BarrierTri0 = self.geo.BarrierTri0 / 4
         self.geo.lmin0 = self.geo.lmin0 * 10
         # Initialize an empty list for storing removed debris cells
         self.geo.RemovedDebrisCells = []
@@ -516,7 +517,3 @@ class VertexModel:
         temp_file = os.path.join(temp_dir, f'vModel_{self.numStep}.png')
         imageio.imwrite(temp_file, img)
         plotter.close()
-
-
-
-
