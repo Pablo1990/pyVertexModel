@@ -172,15 +172,17 @@ class VertexModel:
                 number_of_faces_per_cell_only_top_and_bottom.append(number_of_faces_only_bottom)
         avg_faces = np.mean(number_of_faces_per_cell_only_top_and_bottom)
         # Average out BarrierTri0 depending on the number faces the cell has
+        #TODO: FIX THIS
         num_faces = 0
         for cell in self.geo.Cells:
             if cell.AliveStatus is not None:
-                cell.barrier_tri0_top = (self.geo.BarrierTri0 * (number_of_faces_per_cell_only_top_and_bottom[num_faces]
-                                                                 / avg_faces) ** 2)
-                num_faces += 1
-                cell.barrier_tri0_bottom = (self.geo.BarrierTri0 *
-                                            (number_of_faces_per_cell_only_top_and_bottom[num_faces]
-                                             / avg_faces) ** 2)
+                cell.barrier_tri0_top = self.geo.BarrierTri0
+                # cell.barrier_tri0_top = (self.geo.BarrierTri0 *
+                #                          (avg_faces / number_of_faces_per_cell_only_top_and_bottom[num_faces]) ** 2)
+                # num_faces += 1
+                # cell.barrier_tri0_bottom = (self.geo.BarrierTri0 *
+                #                             (avg_faces / number_of_faces_per_cell_only_top_and_bottom[num_faces]) ** 2)
+                cell.barrier_tri0_bottom = self.geo.BarrierTri0
                 num_faces += 1
 
     def post_newton_raphson(self, dy, dyr, g, gr):
