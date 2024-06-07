@@ -279,14 +279,15 @@ class VertexModel:
 
                 # Save Data of the current step
                 save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
+
+                # Reset noise to be comparable between simulations
+                self.reset_noisy_parameters()
                 self.tr = self.t
             else:
                 # Brownian Motion
                 if self.set.brownian_motion is False:
                     self.brownian_motion(self.set.brownian_motion_scale)
 
-            # New Step
-            self.reset_noisy_parameters()
             self.t = self.t + self.set.dt
             self.set.dt = np.min([self.set.dt + self.set.dt * 0.5, self.set.dt0])
             self.set.MaxIter = self.set.MaxIter0
