@@ -971,7 +971,7 @@ class Geo:
         :return:
         """
         debris_cells = [c_cell for c_cell in self.Cells if c_cell.AliveStatus == 0]
-        if not debris_cells:
+        if not debris_cells and self.cellsToAblate is not None:
             debris_cells = [c_cell for c_cell in self.Cells if c_cell.ID in self.cellsToAblate]
 
         debris_centre = np.mean([np.mean(c_cell.Y, axis=0) for c_cell in debris_cells], axis=0)

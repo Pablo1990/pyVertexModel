@@ -54,7 +54,6 @@ class KgTriEnergyBarrier(Kg):
                         gs_ = gs.reshape((gs.size, 1))
                         Ks = (np.dot(gs_, gs_transpose) * fact2) + Ks * fact + Kss * fact
                         self.assemble_k(Ks, np.array(nY, dtype='int'))
-
                     self.energy += np.exp(Tris[t].lambda_b_noise * (1 - Set.Beta *
                                                                     Face.Tris[t].Area / barrier_tri0))
 

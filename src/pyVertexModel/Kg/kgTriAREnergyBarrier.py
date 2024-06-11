@@ -17,7 +17,7 @@ class KgTriAREnergyBarrier(Kg):
             Ys = Cell.Y
 
             if Cell.Faces[0].Tris[0].lambda_r_noise is None:
-                lambda_r_noise = add_noise_to_parameter(Set.lambdaR, Set.noise_random)
+                lambda_r_noise = add_noise_to_parameter(Set.lambdaR, 0)
                 Cell.Faces[0].Tris[0].lambda_r_noise = lambda_r_noise
 
             for f in range(len(Cell.Faces)):

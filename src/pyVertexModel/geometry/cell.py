@@ -68,6 +68,7 @@ class Cell:
         self.lambda_v_noise = None
         self.barrier_tri0_top = None
         self.barrier_tri0_bottom = None
+        self.contractility_noise = None
         self.SubstrateLambda = None
         self.InternalLambda = None
         self.ExternalLambda = None

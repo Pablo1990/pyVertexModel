@@ -31,10 +31,9 @@ class KgSurfaceCellBasedAdhesion(Kg):
         ge = np.zeros(self.g.shape, dtype=self.precision_type)
         fact0 = 0
 
-        if Cell.lambda_s1_noise is None:
-            Cell.lambda_s1_noise = add_noise_to_parameter(Set.lambdaS1, Set.noise_random)
-            Cell.lambda_s2_noise = add_noise_to_parameter(Set.lambdaS2, Set.noise_random)
-            Cell.lambda_s3_noise = add_noise_to_parameter(Set.lambdaS3, Set.noise_random)
+        Cell.lambda_s1_noise = add_noise_to_parameter(Set.lambdaS1, 0)
+        Cell.lambda_s2_noise = add_noise_to_parameter(Set.lambdaS2, 0)
+        Cell.lambda_s3_noise = add_noise_to_parameter(Set.lambdaS3, 0)
 
         for face in Cell.Faces:
             if face.InterfaceType == 'Top' or face.InterfaceType == 0:
@@ -80,6 +79,11 @@ class KgSurfaceCellBasedAdhesion(Kg):
             self.K = kg_functions.compute_finalK_SurfaceEnergy(ge, self.K, Cell.Area0)
 
         Energy_c += (1 / 2) * fact0 * fact
+
+        Cell.lambda_s1_noise = None
+        Cell.lambda_s2_noise = None
+        Cell.lambda_s3_noise = None
+
         return Energy_c
 
     def calculate_Kg(self, Lambda, fact, ge, nY, y1, y2, y3):
