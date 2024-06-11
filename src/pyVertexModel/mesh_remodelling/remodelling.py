@@ -280,12 +280,14 @@ class Remodelling:
                     # # Solve the remodelling step
                     # self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
                     #                                                      self.Set)
+                    if self.Set.implicit_method is False:
+                        g, energies = newtonRaphson.gGlobal(self.Geo_0, self.Geo_n, self.Geo, self.Set,
+                                                            self.Set.implicit_method)
+                        gr = np.linalg.norm(g[self.Dofs.Free])
+                        if gr >= self.Set.tol0:
+                            has_converged = False
                 else:
-                    cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
-                                                    and cell.AliveStatus == 1]
-                    self.Geo = smoothing_cell_surfaces_mesh(self.Geo, cells_involved_intercalation)
-                    self.Geo_n = self.Geo.copy(update_measurements=False)
-                    has_converged = True
+                    has_converged = False
 
                 if has_converged is False:
                     self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs = load_backup_vars(backup_vars)
@@ -295,7 +297,6 @@ class Remodelling:
                     logger.info(f'=>> Full-Flip accepted')
                     self.Geo_n = self.Geo.copy(update_measurements=False)
                     backup_vars = save_backup_vars(self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs)
-                    break
             else:
                 # Go back to initial state
                 self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs = load_backup_vars(backup_vars)

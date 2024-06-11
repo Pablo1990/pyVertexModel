@@ -527,6 +527,10 @@ class VertexModel:
         temp_file = os.path.join(temp_dir, f'vModel_{self.numStep}.png')
         imageio.imwrite(temp_file, img)
 
+        # True 2D
+        plotter.enable_parallel_projection()
+        plotter.enable_image_style()
+
         # Set the camera to the top view
         plotter.view_xy()
 
