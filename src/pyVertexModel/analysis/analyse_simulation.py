@@ -23,6 +23,7 @@ def analyse_simulation(folder):
         vModel = VertexModel(create_output_folder=False)
 
         features_per_time = []
+        features_per_time_all_cells = []
 
         # Go through all the files in the folder
         for file_id, file in enumerate(os.listdir(folder)):
@@ -31,7 +32,9 @@ def analyse_simulation(folder):
                 load_state(vModel, os.path.join(folder, file))
 
                 # Analyse the simulation
-                features_per_time.append(vModel.analyse_vertex_model())
+                all_cells, avg_cells = vModel.analyse_vertex_model()
+                features_per_time_all_cells.append(all_cells)
+                features_per_time.append(avg_cells)
 
                 # Create a temporary directory to store the images
                 temp_dir = os.path.join(folder, 'images')
@@ -43,6 +46,10 @@ def analyse_simulation(folder):
             return None, None, None
 
         # Export to xlsx
+        features_per_time_all_cells_df = pd.DataFrame(features_per_time_all_cells)
+        features_per_time_all_cells_df.sort_values(by='time', inplace=True)
+        features_per_time_all_cells_df.to_excel(os.path.join(folder, 'features_per_time_all_cells.xlsx'))
+
         features_per_time_df = pd.DataFrame(features_per_time)
         features_per_time_df.sort_values(by='time', inplace=True)
         features_per_time_df.to_excel(os.path.join(folder, 'features_per_time.xlsx'))
@@ -90,6 +97,7 @@ def analyse_simulation(folder):
             pickle.dump(features_per_time_df, f)
             pickle.dump(important_features, f)
             pickle.dump(post_wound_features, f)
+            pickle.dump(features_per_time_all_cells_df, f)
 
     else:
         # Load dataframes from pkl
@@ -97,6 +105,7 @@ def analyse_simulation(folder):
             features_per_time_df = pickle.load(f)
             important_features = pickle.load(f)
             post_wound_features = pickle.load(f)
+            features_per_time_all_cells_df = pickle.load(f)
 
         important_features = calculate_important_features(post_wound_features)
 

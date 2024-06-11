@@ -464,17 +464,18 @@ class VertexModel:
                 debris_features.append(cell.compute_features())
 
         # Calculate average of cell features
-        avg_cell_features = pd.DataFrame(cell_features).mean()
-        avg_cell_features["time"] = self.t
+        all_cell_features = pd.DataFrame(cell_features)
+        all_cell_features["time"] = self.t
+        avg_cell_features = all_cell_features.mean()
 
         # Compute wound features
         try:
             wound_features = self.compute_wound_features()
             avg_cell_features = pd.concat([avg_cell_features, pd.Series(wound_features)])
         except Exception as e:
-            print(f"Error computing wound features: {e}")
+            pass
 
-        return avg_cell_features
+        return all_cell_features, avg_cell_features
 
     def compute_wound_features(self):
         """
