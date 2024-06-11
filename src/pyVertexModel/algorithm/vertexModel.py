@@ -171,18 +171,16 @@ class VertexModel:
                 number_of_faces_per_cell_only_top_and_bottom.append(number_of_faces_only_top)
                 number_of_faces_per_cell_only_top_and_bottom.append(number_of_faces_only_bottom)
         avg_faces = np.mean(number_of_faces_per_cell_only_top_and_bottom)
+        min_faces = np.max(number_of_faces_per_cell_only_top_and_bottom)
         # Average out BarrierTri0 depending on the number faces the cell has
-        #TODO: FIX THIS
         num_faces = 0
         for cell in self.geo.Cells:
             if cell.AliveStatus is not None:
-                cell.barrier_tri0_top = self.geo.BarrierTri0
-                # cell.barrier_tri0_top = (self.geo.BarrierTri0 *
-                #                          (avg_faces / number_of_faces_per_cell_only_top_and_bottom[num_faces]) ** 2)
-                # num_faces += 1
-                # cell.barrier_tri0_bottom = (self.geo.BarrierTri0 *
-                #                             (avg_faces / number_of_faces_per_cell_only_top_and_bottom[num_faces]) ** 2)
-                cell.barrier_tri0_bottom = self.geo.BarrierTri0
+                cell.barrier_tri0_top = (self.geo.BarrierTri0 + self.geo.BarrierTri0 * 2 *
+                                         (min_faces / number_of_faces_per_cell_only_top_and_bottom[num_faces]) ** 2)
+                num_faces += 1
+                cell.barrier_tri0_bottom = (self.geo.BarrierTri0 + self.geo.BarrierTri0 * 2 *
+                                            (min_faces / number_of_faces_per_cell_only_top_and_bottom[num_faces]) ** 2)
                 num_faces += 1
 
     def post_newton_raphson(self, dy, dyr, g, gr):
@@ -283,9 +281,9 @@ class VertexModel:
                 # Reset noise to be comparable between simulations
                 self.reset_noisy_parameters()
                 self.tr = self.t
-            else:
+
                 # Brownian Motion
-                if self.set.brownian_motion is False:
+                if self.set.brownian_motion is True:
                     self.brownian_motion(self.set.brownian_motion_scale)
 
             self.t = self.t + self.set.dt
@@ -308,6 +306,7 @@ class VertexModel:
     def reset_noisy_parameters(self):
         for num_cell in range(len(self.geo.Cells)):
             c_cell = self.geo.Cells[num_cell]
+            self.geo.Cells[num_cell].contractlity_noise = None
             self.geo.Cells[num_cell].lambda_s1_noise = None
             self.geo.Cells[num_cell].lambda_s2_noise = None
             self.geo.Cells[num_cell].lambda_s3_noise = None
@@ -431,7 +430,7 @@ class VertexModel:
         self.geo.AvgEdgeLength_Bottom = np.mean(edgeLengths_Bottom)
         self.geo.AvgEdgeLength_Lateral = np.mean(edgeLengths_Lateral)
         # Update BarrierTri0 and lmin0 based on their initial values
-        self.geo.BarrierTri0 = self.geo.BarrierTri0 / 4
+        self.geo.BarrierTri0 = self.geo.BarrierTri0 / 10
         self.geo.lmin0 = self.geo.lmin0 * 10
         # Initialize an empty list for storing removed debris cells
         self.geo.RemovedDebrisCells = []
@@ -469,8 +468,11 @@ class VertexModel:
         avg_cell_features["time"] = self.t
 
         # Compute wound features
-        wound_features = self.compute_wound_features()
-        avg_cell_features = pd.concat([avg_cell_features, pd.Series(wound_features)])
+        try:
+            wound_features = self.compute_wound_features()
+            avg_cell_features = pd.concat([avg_cell_features, pd.Series(wound_features)])
+        except Exception as e:
+            print(f"Error computing wound features: {e}")
 
         return avg_cell_features
 
@@ -501,8 +503,8 @@ class VertexModel:
         :param temp_dir:
         :return:
         """
-        if os.path.exists(os.path.join(temp_dir, f'vModel_{self.numStep}.png')):
-            return
+        # if os.path.exists(os.path.join(temp_dir, f'vModel_{self.numStep}.png')):
+        #     return
 
         # Create a plotter
         plotter = pv.Plotter(off_screen=True)
@@ -514,9 +516,36 @@ class VertexModel:
                 # Add the mesh to the plotter
                 plotter.add_mesh(mesh, scalars='ID', lighting=True, cmap='prism', show_edges=True, edge_opacity=0.5,
                                  edge_color='grey')
+        # Set a fixed camera zoom level
+        fixed_zoom_level = 1
+        plotter.camera.zoom(fixed_zoom_level)
+
         # Render the scene and capture a screenshot
         img = plotter.screenshot()
         # Save the image to a temporary file
         temp_file = os.path.join(temp_dir, f'vModel_{self.numStep}.png')
         imageio.imwrite(temp_file, img)
+
+        # Set the camera to the top view
+        plotter.view_xy()
+
+        img = plotter.screenshot()
+        temp_file = os.path.join(temp_dir, f'vModel_top_{self.numStep}.png')
+        imageio.imwrite(temp_file, img)
+
+        # Set the camera to the front view
+        plotter.view_xz()
+
+        img = plotter.screenshot()
+        temp_file = os.path.join(temp_dir, f'vModel_front_{self.numStep}.png')
+        imageio.imwrite(temp_file, img)
+
+        # Set the camera to the bottom view
+        plotter.view_xy(negative=True)
+
+        img = plotter.screenshot()
+        temp_file = os.path.join(temp_dir, f'vModel_bottom_{self.numStep}.png')
+        imageio.imwrite(temp_file, img)
+
+        # Close the plotter
         plotter.close()
