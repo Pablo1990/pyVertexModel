@@ -14,6 +14,7 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.lateralCablesStrength = None
         self.tol0 = None
         self.dt = None
         self.implicit_method = False
@@ -68,7 +69,7 @@ class Set:
             # Tri energy Area
             self.EnergyBarrierA = True
             self.lambdaB = 5.0
-            self.Beta = 1.0
+            self.Beta = 1
             # Tri energy Aspect ratio
             self.EnergyBarrierAR = True
             self.lambdaR = 5.0
@@ -185,7 +186,7 @@ class Set:
                                     '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
                                     '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
                                     '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3),
-                                    '_pString_', str(self.purseStringStrength), '_tol_', str(self.tol0)])
+                                    '_pString_', str(self.purseStringStrength)])
         self.define_if_not_defined("OutputFolder", new_outputFolder)
 
     def stretch(self):
@@ -264,12 +265,13 @@ class Set:
         self.Contractility = True
         self.DelayedAdditionalContractility = 0
         self.purseStringStrength = 2.5
+        self.lateralCablesStrength = 1
         self.Contractility_Variability_PurseString = np.power(np.array(
             [1.0, 0.96, 1.007, 1.74, 2.37, 2.61, 2.487, 2.536, 2.46, 2.52, 2.606, 2.456, 2.387, 2.52, 2.31, 2.328,
              2.134, 2.07, 2.055, 1.9, 1.9]), self.purseStringStrength)
-        self.Contractility_Variability_LateralCables = np.array(
+        self.Contractility_Variability_LateralCables = np.power(np.array(
             [0.45, 0.53, 0.76, 1.15, 1.28, 1.22, 1.38, 1.33, 1.28, 1.4, 1.25, 1.298, 1.45, 1.31, 1.29, 1.42, 1.31,
-             1.41, 1.42, 1.37, 1.28])
+             1.41, 1.42, 1.37, 1.28]), self.lateralCablesStrength)
         self.Contractility_TimeVariability = (np.arange(0, 60 + 3, 3)) / 60 * (self.TEndAblation - self.TInitAblation)
 
     def menu_input(self, inputMode=None, batchMode=None):
