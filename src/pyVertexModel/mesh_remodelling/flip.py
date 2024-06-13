@@ -5,7 +5,8 @@ import networkx as nx
 import numpy as np
 from scipy.spatial import Delaunay
 
-from src.pyVertexModel.geometry.geo import edge_valence_t
+from src.pyVertexModel.algorithm import newtonRaphson
+from src.pyVertexModel.geometry.geo import edge_valence_t, get_node_neighbours_per_domain, edge_valence
 from src.pyVertexModel.util.utils import ismember_rows
 
 logger = logging.getLogger("pyVertexModel")
@@ -274,7 +275,7 @@ def y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo,
     Xs = np.unique(old_tets)
     Xs_c = Xs[~np.isin(Xs, ghost_nodes_without_debris)]
     intercalation_flip = 0
-    if len(Xs_c) == 4:
+    if len(Xs_c) > 3:
         intercalation_flip = 1
 
     # Step 1: Keep the boundary of tets not changed.
@@ -359,8 +360,10 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
     Geo_final = Geo
     new_tets_tree = None
     valence_segment = np.inf
+    best_gr = np.inf
 
     xs_to_disconnect_cells = xs_to_disconnect[~np.isin(xs_to_disconnect, Geo.XgID)]
+    xs_to_disconnect_ghost = xs_to_disconnect[np.isin(xs_to_disconnect, Geo.XgID)]
 
     for c_path in dfs(treeOfPossibilities, parentNode, endNode):
         c_path = np.array(c_path)
@@ -378,6 +381,12 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
                 if ~ismember_rows(Xs_c, np.vstack([new_tets, tets4_cells]))[0][0]:
                     new_tets = np.append(new_tets, [Xs_c], axis=0)
 
+            # cell_nodes = [cell for cell in Geo.non_dead_cells if cell in old_tets.flatten()]
+            # cell_node_alive = [cell for cell in cell_nodes if Geo.Cells[cell].AliveStatus == 1]
+            # print(cell_nodes)
+            # if len(cell_node_alive) <= 2:
+            #     continue
+
             current_valence_segment, _, _ = (
                 edge_valence_t(new_tets, [xs_to_disconnect_cells, cell_to_split_from]))
             if current_valence_segment < valence_segment:
@@ -388,10 +397,30 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
                     Geo_new.rebuild(Geo_new.copy(), Set)
                     Geo_new.build_global_ids()
 
-                    new_tets_tree = new_tets
-                    Geo_final = Geo_new
-                    valence_segment = current_valence_segment
-                    logger.info(f"New combination found with valence segment: {valence_segment}")
+                    # # Checking for next flip
+                    # shared_nodes_still = get_node_neighbours_per_domain(Geo_new, xs_to_disconnect_cells[0], xs_to_disconnect_ghost[0],
+                    #                                                     cell_to_split_from)
+                    #
+                    # good_flip = False
+                    # if any(np.isin(shared_nodes_still, Geo_new.XgID)):
+                    #     shared_nodes_still_g = shared_nodes_still[np.isin(shared_nodes_still, Geo_new.XgID)]
+                    #     cell_node_alive = []
+                    #     for ghost_node_provisional in shared_nodes_still_g:
+                    #         nodes_pair_provisional = np.array([xs_to_disconnect_cells[0], ghost_node_provisional])
+                    #         valence_segment, old_tets, old_ys = edge_valence(Geo_new, nodes_pair_provisional)
+                    #         cell_nodes = [cell for cell in Geo_new.non_dead_cells if cell in old_tets.flatten()]
+                    #         cell_node_alive.append([cell for cell in cell_nodes if Geo_new.Cells[cell].AliveStatus == 1])
+                    #         print(cell_node_alive[-1])
+                    #
+                    #     for cell_node_alive_provisional in cell_node_alive:
+                    #         if len(cell_node_alive_provisional) > 2:
+                    #             good_flip = True
+
+                    if True:
+                        new_tets_tree = new_tets
+                        Geo_final = Geo_new
+                        valence_segment = current_valence_segment
+                        logger.info(f"New combination found with valence segment: {valence_segment}")
                 except Exception as ex:
                     logger.warning(f"Exception on flip remodelling: {ex}")
     return new_tets_tree, Geo_final

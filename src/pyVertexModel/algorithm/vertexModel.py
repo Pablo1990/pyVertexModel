@@ -126,6 +126,9 @@ class VertexModel:
                 # Ablate cells if needed
                 if self.set.ablation:
                     self.geo.ablate_cells(self.set, self.t)
+                    self.geo_n = self.geo.copy()
+                    # Update the degrees of freedom
+                    self.Dofs.get_dofs(self.geo, self.set)
 
                 self.Dofs.ApplyBoundaryCondition(self.t, self.geo, self.set)
                 # IMPORTANT: Here it updates: Areas, Volumes, etc... Should be
