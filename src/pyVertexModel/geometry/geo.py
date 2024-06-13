@@ -131,6 +131,16 @@ def calculate_volume_from_points(points):
     return hull.volume
 
 
+def remove_duplicates(c_cell, nodes_to_combine):
+    c_cell.T = np.where(np.isin(c_cell.T, nodes_to_combine[1]), nodes_to_combine[0], c_cell.T)
+    # Remove repeated tets after replacement with new IDs on Y and T
+    c_cell.T, unique_indices = np.unique(np.sort(c_cell.T, axis=1), axis=0, return_index=True)
+    c_cell.Y = c_cell.Y[unique_indices]
+    # Removing Tets with the new cell twice or more within the Tet
+    c_cell.Y = c_cell.Y[np.sum(np.isin(c_cell.T, nodes_to_combine[0]), axis=1) < 2]
+    c_cell.T = c_cell.T[np.sum(np.isin(c_cell.T, nodes_to_combine[0]), axis=1) < 2]
+
+
 class Geo:
     """
     Class that contains the information of the geometry.
@@ -377,7 +387,7 @@ class Geo:
                                c.ID not in self.BorderGhostNodes]
 
         for c in all_cells_to_update:
-            if self.Cells[c].T is not None:
+            if self.Cells[c].T is not None and self.Cells[c].AliveStatus is not None:
                 if c in self.XgID:
                     dY = np.zeros((self.Cells[c].T.shape[0], 3))
                     for tet in range(self.Cells[c].T.shape[0]):
@@ -815,16 +825,34 @@ class Geo:
             if self.cellsToAblate is not None:
                 # Log the ablation process
                 logger.info(' ---- Performing ablation')
-                # Iterate over each cell in the list of cells to ablate
-                for debrisCell in c_set.cellsToAblate:
-                    # c_set the AliveStatus of the cell to 0 (indicating it's not alive)
-                    self.Cells[debrisCell].AliveStatus = 0
-                    # c_set the ExternalLambda of the cell to the Debris factor
-                    self.Cells[debrisCell].ExternalLambda = c_set.lambdaSFactor_Debris
-                    # c_set the InternalLambda of the cell to the Debris factor
-                    self.Cells[debrisCell].InternalLambda = c_set.lambdaSFactor_Debris
-                    # c_set the SubstrateLambda of the cell to the Debris factor
-                    self.Cells[debrisCell].SubstrateLambda = c_set.lambdaSFactor_Debris
+                # Combine the debris cells into 1
+                uniqueDebrisCell = self.cellsToAblate[0]
+                self.Cells[uniqueDebrisCell].AliveStatus = 0
+                self.Cells[uniqueDebrisCell].ExternalLambda = c_set.lambdaSFactor_Debris
+                self.Cells[uniqueDebrisCell].InternalLambda = c_set.lambdaSFactor_Debris
+                self.Cells[uniqueDebrisCell].SubstrateLambda = c_set.lambdaSFactor_Debris
+
+                # Compute properties of the debris cell
+                self.Cells[uniqueDebrisCell].X = np.mean([cell.X for cell in self.Cells if cell.ID
+                                                          in self.cellsToAblate], axis=0)
+
+                # Get the remaining debris cells
+                remainingDebrisCells = np.setdiff1d(self.cellsToAblate, uniqueDebrisCell)
+
+                old_geo = self.copy()
+                total_vol = sum([cell.Vol for cell in self.Cells if cell.ID in self.cellsToAblate])
+
+                # Iterate over the remaining debris cells
+                for debrisCell in remainingDebrisCells:
+                    # Combine the debris cells
+                    self.combine_two_nodes([uniqueDebrisCell, debrisCell], c_set)
+
+                # Rebuild the geometry
+                self.rebuild(old_geo, c_set)
+                self.build_global_ids()
+                self.update_measures()
+                self.Cells[uniqueDebrisCell].Vol0 = total_vol
+
                 # Empty the list of cells to ablate
                 self.cellsToAblate = None
         return self
@@ -873,7 +901,9 @@ class Geo:
             remaining_points = np.delete(remaining_points, next_point[0], axis=0)
 
         # Obtain the wound area points in the correct order
-        wound_area_points = np.concatenate([wound_area_points[np.where(np.all(np.isin(wound_area_points_tets, point), axis=1))[0]] for point in order_of_points])
+        wound_area_points = np.concatenate(
+            [wound_area_points[np.where(np.all(np.isin(wound_area_points_tets, point), axis=1))[0]] for point in
+             order_of_points])
 
         # Compute the wound area from the wound_area_points
         wound_area = calculate_polygon_area(wound_area_points[:, :2])
@@ -975,7 +1005,37 @@ class Geo:
             debris_cells = [c_cell for c_cell in self.Cells if c_cell.ID in self.cellsToAblate]
 
         debris_centre = np.mean([np.mean(c_cell.Y, axis=0) for c_cell in debris_cells], axis=0)
-        return debris_centre
+
+        debris_cells_ids = [c_cell.ID for c_cell in debris_cells]
+        return debris_centre, debris_cells_ids
+
+    def compute_cell_distance_to_wound(self, wound_cells, location_filter=None):
+        """
+        Compute the number of cells between the cell and a wound cell
+        :return:
+        """
+        list_of_cells = np.zeros(len([c_cell for c_cell in self.Cells if c_cell.AliveStatus is not None]))
+        for num_cell, cell in enumerate(self.Cells):
+            if cell.AliveStatus == 1 and cell.ID not in wound_cells:
+                cell_neighbours = cell.compute_neighbours()
+                cell_distance = 1
+
+                while list_of_cells[num_cell] == 0:
+                    for c in cell_neighbours:
+                        if c in wound_cells:
+                            list_of_cells[num_cell] = cell_distance
+                            break
+                    cell_distance += 1
+                    cell_neighbours = np.unique(np.concatenate([self.Cells[c].compute_neighbours(location_filter)
+                                                                for c in cell_neighbours]))
+
+            elif cell.AliveStatus == 0 or cell.ID in wound_cells:
+                list_of_cells[num_cell] = 0
+
+        # Remove the cells that are not alive
+        list_of_cells = list_of_cells[[c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1]]
+
+        return list_of_cells
 
     def compute_wound_height(self):
         """
@@ -999,10 +1059,39 @@ class Geo:
                         if np.any(np.isin(tri.SharedByCells, debris_cells)) and len(tri.SharedByCells) > 2:
                             # Get the different nodes
                             different_nodes = np.setxor1d(c_cell.T[tri.Edge[0], :], c_cell.T[tri.Edge[1], :])
-                            if np.any(np.isin(different_nodes, self.XgTop)) and np.any(np.isin(different_nodes, self.XgBottom)):
+                            if np.any(np.isin(different_nodes, self.XgTop)) and np.any(
+                                    np.isin(different_nodes, self.XgBottom)):
                                 # Get the vertices of the triangles
                                 vertices = c_cell.Y[tri.Edge, :]
                                 # Compute the distance between the vertices
                                 wound_height.append(np.linalg.norm(vertices[0] - vertices[1]))
 
         return np.mean(wound_height)
+
+    def combine_two_nodes(self, nodes_to_combine, c_set):
+        """
+        Combine two nodes into one node
+        :param nodes_to_combine:
+        :param Set:
+        :return:
+        """
+        cells_to_combine = [c_cell for c_cell in self.Cells if c_cell.ID in nodes_to_combine]
+
+        new_cell = cells_to_combine[0]
+        new_cell.X = np.mean([c_cell.X for c_cell in cells_to_combine], axis=0)
+        new_cell.T = np.concatenate([c_cell.T for c_cell in cells_to_combine], axis=0)
+        new_cell.Y = np.concatenate([c_cell.Y for c_cell in cells_to_combine], axis=0)
+
+        # Replace old for new ID
+        remove_duplicates(new_cell, nodes_to_combine)
+
+        # Replace old for new ID in other cells
+        for c_cell in self.Cells:
+            if c_cell.ID not in nodes_to_combine and c_cell.AliveStatus is not None:
+                remove_duplicates(c_cell, nodes_to_combine)
+
+        new_cell.Y = self.recalculate_ys_from_previous(new_cell.T, new_cell.ID, c_set)
+
+        # Remove the second node
+        self.Cells[nodes_to_combine[1]].kill_cell()
+

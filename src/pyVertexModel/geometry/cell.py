@@ -263,7 +263,6 @@ class Cell:
 
         if centre_wound is not None:
             features['Distance_to_wound'] = self.compute_distance_to_wound(centre_wound)
-            features['Cell_distance_to_wound'] = self.compute_cell_distance_to_wound()
 
         return features
 
@@ -474,9 +473,32 @@ class Cell:
         """
         return np.linalg.norm(self.Y - centre_wound)
 
-    def compute_cell_distance_to_wound(self):
+    def kill_cell(self):
         """
-        Compute the number of cells between the cell and a wound cell
+        Kill the cell
         :return:
         """
-        return -1
+        self.AliveStatus = None
+        self.Y = None
+        self.Vol = None
+        self.Vol0 = None
+        self.Area = None
+        self.Area0 = None
+        self.globalIds = np.array([], dtype='int')
+        self.Faces = []
+        self.T = None
+        self.X = None
+        self.lambda_s1_noise = None
+        self.lambda_s2_noise = None
+        self.lambda_s3_noise = None
+        self.lambda_v_noise = None
+        self.barrier_tri0_top = None
+        self.barrier_tri0_bottom = None
+        self.contractility_noise = None
+        self.SubstrateLambda = None
+        self.InternalLambda = None
+        self.ExternalLambda = None
+        self.axes_lengths = None
+
+
+
