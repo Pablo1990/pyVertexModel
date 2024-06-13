@@ -44,6 +44,18 @@ def analyse_simulation(folder):
                     os.mkdir(temp_dir)
                 vModel.screenshot(temp_dir)
 
+                # temp_dir = os.path.join(folder, 'images_wound_edge')
+                # if not os.path.exists(temp_dir):
+                #     os.mkdir(temp_dir)
+                # _, debris_cells = vModel.geo.compute_wound_centre()
+                # list_of_cell_distances_top = vModel.geo.compute_cell_distance_to_wound(debris_cells, location_filter=0)
+                # alive_cells = [cell.ID for cell in vModel.geo.Cells if cell.AliveStatus == 1]
+                # wound_edge_cells = []
+                # for cell_num, cell_id in enumerate(alive_cells):
+                #     if list_of_cell_distances_top[cell_num] == 1:
+                #         wound_edge_cells.append(cell_id)
+                # vModel.screenshot(temp_dir, wound_edge_cells)
+
         if not features_per_time:
             return None, None, None
 

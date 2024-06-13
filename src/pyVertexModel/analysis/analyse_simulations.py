@@ -4,11 +4,11 @@ import pandas as pd
 
 from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
 
-folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/Results/Relevant/ToUse'
+folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/Results/Relevant/'
 all_files_features = []
 lst = os.listdir(folder)
-lst.sort()
-for file_id, file in enumerate(lst):
+lst.sort(reverse=True)
+for _, file in enumerate(lst):
     print(file)
     # if file is a directory
     if os.path.isdir(os.path.join(folder, file)):

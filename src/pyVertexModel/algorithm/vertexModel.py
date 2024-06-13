@@ -457,7 +457,10 @@ class VertexModel:
         cell_features = []
         debris_features = []
 
-        wound_centre = self.geo.compute_wound_centre()
+        wound_centre, debris_cells = self.geo.compute_wound_centre()
+        list_of_cell_distances = self.geo.compute_cell_distance_to_wound(debris_cells, location_filter=None)
+        list_of_cell_distances_top = self.geo.compute_cell_distance_to_wound(debris_cells, location_filter=0)
+        list_of_cell_distances_bottom = self.geo.compute_cell_distance_to_wound(debris_cells, location_filter=2)
 
         # Analyse the alive cells
         for cell_id, cell in enumerate(self.geo.Cells):
@@ -468,6 +471,9 @@ class VertexModel:
 
         # Calculate average of cell features
         all_cell_features = pd.DataFrame(cell_features)
+        all_cell_features["cell_distance_to_wound"] = list_of_cell_distances
+        all_cell_features["cell_distance_to_wound_top"] = list_of_cell_distances_top
+        all_cell_features["cell_distance_to_wound_bottom"] = list_of_cell_distances_bottom
         all_cell_features["time"] = self.t
         avg_cell_features = all_cell_features.mean()
 
@@ -501,19 +507,21 @@ class VertexModel:
 
         return wound_features
 
-    def screenshot(self, temp_dir):
+    def screenshot(self, temp_dir, selected_cells=[]):
         """
         Create a screenshot of the current state of the model.
+        :param selected_cells:
         :param temp_dir:
         :return:
         """
         # if os.path.exists(os.path.join(temp_dir, f'vModel_{self.numStep}.png')):
         #     return
 
+
         # Create a plotter
         plotter = pv.Plotter(off_screen=True)
         for _, cell in enumerate(self.geo.Cells):
-            if cell.AliveStatus == 1:
+            if cell.AliveStatus == 1 and (cell.ID in selected_cells or selected_cells is not []):
                 # Load the VTK file as a pyvista mesh
                 mesh = cell.create_pyvista_mesh()
 
