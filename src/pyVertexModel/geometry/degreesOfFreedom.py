@@ -52,32 +52,32 @@ class DegreesOfFreedom:
         g_constrained = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3, dtype=bool)
         g_prescribed = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3, dtype=bool)
 
-        if Geo.BorderCells is not None and len(Geo.BorderCells) > 0:
-            borderIds = np.concatenate([Geo.Cells[cell].globalIds for cell in Geo.BorderCells])
-        else:
-            borderIds = []
-
-        for cell in [cell for cell in Geo.Cells if cell.AliveStatus == 1]:
-            Y = cell.Y
-            gIDsY = cell.globalIds
-
-            for face in cell.Faces:
-                if face.Centre[1] < Set.VFixd:
-                    g_constrained[(dim * face.globalIds):(dim * (face.globalIds + 1))] = 1
-                elif face.Centre[1] > Set.VPrescribed:
-                    g_prescribed[dim * face.globalIds + 1] = 1
-                    if Set.BC == 1:
-                        g_constrained[dim * face.globalIds] = 1
-                        g_constrained[dim * face.globalIds + 2] = 1
-
-            fixY = (Y[:, 1] < Set.VFixd) | np.isin(gIDsY, borderIds)
-            preY = (Y[:, 1] > Set.VPrescribed) | np.isin(gIDsY, borderIds)
-
-            for idx in np.where(fixY)[0]:
-                g_constrained[(dim * gIDsY[idx]): (dim * (gIDsY[idx] + 1))] = 1
-
-            for idx in np.where(preY)[0]:
-                g_prescribed[(dim * gIDsY[idx]): (dim * (gIDsY[idx] + 1))] = 1
+        # if Geo.BorderCells is not None and len(Geo.BorderCells) > 0:
+        #     borderIds = np.concatenate([Geo.Cells[cell].globalIds for cell in Geo.BorderCells])
+        # else:
+        #     borderIds = []
+        #
+        # for cell in [cell for cell in Geo.Cells if cell.AliveStatus == 1]:
+        #     Y = cell.Y
+        #     gIDsY = cell.globalIds
+        #
+        #     for face in cell.Faces:
+        #         if face.Centre[1] < Set.VFixd:
+        #             g_constrained[(dim * face.globalIds):(dim * (face.globalIds + 1))] = 1
+        #         elif face.Centre[1] > Set.VPrescribed:
+        #             g_prescribed[dim * face.globalIds + 1] = 1
+        #             if Set.BC == 1:
+        #                 g_constrained[dim * face.globalIds] = 1
+        #                 g_constrained[dim * face.globalIds + 2] = 1
+        #
+        #     fixY = (Y[:, 1] < Set.VFixd) | np.isin(gIDsY, borderIds)
+        #     preY = (Y[:, 1] > Set.VPrescribed) | np.isin(gIDsY, borderIds)
+        #
+        #     for idx in np.where(fixY)[0]:
+        #         g_constrained[(dim * gIDsY[idx]): (dim * (gIDsY[idx] + 1))] = 1
+        #
+        #     for idx in np.where(preY)[0]:
+        #         g_prescribed[(dim * gIDsY[idx]): (dim * (gIDsY[idx] + 1))] = 1
 
         self.Free = np.array(np.where((g_constrained == 0) & (g_prescribed == 0))[0], dtype=int)
         self.Fix = np.array(np.concatenate([np.where(g_constrained)[0], np.where(g_prescribed)[0]]), dtype=int)
