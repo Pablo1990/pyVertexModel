@@ -273,9 +273,6 @@ class VertexModel:
                 self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
 
                 temp_dir = os.path.join(self.set.OutputFolder, 'images')
-                if not os.path.exists(temp_dir):
-                    os.makedirs(temp_dir)
-
                 self.screenshot(temp_dir)
 
                 # Save Data of the current step
@@ -535,7 +532,7 @@ class VertexModel:
         # Render the scene and capture a screenshot
         img = plotter.screenshot()
         # Save the image to a temporary file
-        temp_file = os.path.join(temp_dir, f'vModel_{self.numStep}.png')
+        temp_file = os.path.join(temp_dir, f'vModel_perspective_{self.numStep}.png')
         imageio.imwrite(temp_file, img)
 
         # True 2D

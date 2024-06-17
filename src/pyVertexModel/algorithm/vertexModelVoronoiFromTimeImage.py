@@ -13,6 +13,7 @@ from skimage.measure import regionprops_table, regionprops
 from skimage.morphology import dilation, disk, square
 from skimage.segmentation import find_boundaries
 
+from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.parameters.set import Set
@@ -504,20 +505,19 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         Initialize the geometry and the topology of the model.
         :return:
         """
-        if os.path.exists(filename):
-            if filename.endswith('.pkl'):
+        if os.path.exists(filename) and filename.endswith('.pkl'):
                 output_folder = self.set.OutputFolder
                 load_state(self, filename, ['geo', 'geo_0', 'geo_n'])
                 self.set.OutputFolder = output_folder
-            elif filename.endswith('.mat'):
+        elif os.path.exists(filename) and filename.endswith('.mat'):
                 mat_info = scipy.io.loadmat(filename)
                 self.geo = Geo(mat_info['Geo'])
         else:
             # Load the image and obtain the initial X and tetrahedra
-            Twg, X = self.obtain_initial_x_and_tetrahedra(filename)
+            Twg, X = self.obtain_initial_x_and_tetrahedra()
             # Build cells
             self.geo.build_cells(self.set, X, Twg)
-            save_state(self.geo, 'voronoi_40cells.pkl')
+            #save_state(self.geo, 'voronoi_40cells.pkl')
 
         if self.set.ablation:
             self.geo.cellsToAblate = self.set.cellsToAblate
@@ -526,11 +526,14 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         if self.geo.lmin0 is None:
             self.initialize_average_cell_props()
 
-    def obtain_initial_x_and_tetrahedra(self, img_filename="src/pyVertexModel/resources/LblImg_imageSequence.tif"):
+    def obtain_initial_x_and_tetrahedra(self, img_filename=None):
         """
         Obtain the initial X and tetrahedra for the model.
         :return:
         """
+        if img_filename is None:
+            img_filename = PROJECT_DIRECTORY + '/src/pyVertexModel/resources/LblImg_imageSequence.tif'
+
         selectedPlanes = [0, 99]
         xInternal = np.arange(1, self.set.TotalCells + 1)
         img2DLabelled, imgStackLabelled = process_image(img_filename)
@@ -549,8 +552,8 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         for numPlane in selectedPlanes:
             (triangles_connectivity, neighbours_network,
              cell_edges, vertices_location, border_cells,
-             border_of_border_cells_and_main_cells) = build_2d_voronoi_from_image(imgStackLabelled[:, :, numPlane],
-                                                                                  imgStackLabelled[:, :, numPlane],
+             border_of_border_cells_and_main_cells) = build_2d_voronoi_from_image(imgStackLabelled[:, numPlane, :],
+                                                                                  imgStackLabelled[:, numPlane, :],
                                                                                   np.arange(1, self.set.TotalCells + 1))
 
             trianglesConnectivity[numPlane] = triangles_connectivity
@@ -561,10 +564,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             borderOfborderCellsAndMainCells[numPlane] = border_of_border_cells_and_main_cells
         # Select nodes from images
         img3DProperties = regionprops_table(imgStackLabelled, properties=('centroid', 'label',))
-        # TODO: even though this is like in matlab, it should change because it is not correct. You might not
-        #  connected neighbours and thus, issues with neighbours
-        all_main_cells = np.arange(1, np.max(
-            np.concatenate([borderOfborderCellsAndMainCells[numPlane] for numPlane in selectedPlanes])) + 1)
+        all_main_cells = np.unique(np.concatenate([borderOfborderCellsAndMainCells[numPlane] for numPlane in selectedPlanes]))
         X = np.vstack(
             [[img3DProperties['centroid-1'][i], img3DProperties['centroid-0'][i], img3DProperties['centroid-2'][i]] for
              i in
@@ -581,7 +581,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             zCoordinate = [cellHeight, -cellHeight]
         Twg = []
         for idPlane, numPlane in enumerate(selectedPlanes):
-            img2DLabelled = imgStackLabelled[:, :, numPlane]
+            img2DLabelled = imgStackLabelled[:, numPlane, :]
             unique_label = np.max(img2DLabelled)
             props = regionprops_table(img2DLabelled, properties=('centroid', 'label',))
 
