@@ -243,7 +243,7 @@ def get_4_fold_tets(Geo):
     :param Geo:
     :return:
     """
-    allTets = np.vstack([cell.T for cell in Geo.Cells])
+    allTets = np.vstack([cell.T for cell in Geo.Cells if cell.AliveStatus is not None])
 
     ghostNodesWithoutDebris = np.setdiff1d(Geo.XgID, Geo.RemovedDebrisCells)
 
