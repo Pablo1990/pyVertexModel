@@ -370,7 +370,7 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
         new_tets = np.vstack(old_tets)
 
         for posPath in c_path[c_path > 1]:
-            toAdd = Tnew[posPath]
+            toAdd = np.sort(Tnew[posPath])
             toRemove = TRemoved[posPath]
             new_tets = new_tets[~ismember_rows(np.sort(new_tets, 1), np.sort(toRemove, 1))[0]]
             new_tets = np.vstack((new_tets, toAdd))

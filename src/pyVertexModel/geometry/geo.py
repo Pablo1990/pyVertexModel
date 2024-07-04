@@ -135,9 +135,11 @@ def remove_duplicates(c_cell, nodes_to_combine):
     c_cell.T = np.where(np.isin(c_cell.T, nodes_to_combine[1]), nodes_to_combine[0], c_cell.T)
     # Remove repeated tets after replacement with new IDs on Y and T
     c_cell.T, unique_indices = np.unique(np.sort(c_cell.T, axis=1), axis=0, return_index=True)
-    c_cell.Y = c_cell.Y[unique_indices]
+    if c_cell.AliveStatus is not None:
+        c_cell.Y = c_cell.Y[unique_indices]
+        c_cell.Y = c_cell.Y[np.sum(np.isin(c_cell.T, nodes_to_combine[0]), axis=1) < 2]
+
     # Removing Tets with the new cell twice or more within the Tet
-    c_cell.Y = c_cell.Y[np.sum(np.isin(c_cell.T, nodes_to_combine[0]), axis=1) < 2]
     c_cell.T = c_cell.T[np.sum(np.isin(c_cell.T, nodes_to_combine[0]), axis=1) < 2]
 
 
@@ -255,6 +257,7 @@ class Geo:
                 self.Cells[c].Y = self.BuildYSubstrate(self.Cells[c], self.Cells, self.XgID, c_set, XgSub)
 
         for c in range(self.nCells):
+            logger.info(f'Building cell {c}')
             Neigh_nodes = np.unique(self.Cells[c].T)
             Neigh_nodes = Neigh_nodes[Neigh_nodes != c]
             for j in range(len(Neigh_nodes)):
@@ -1087,7 +1090,7 @@ class Geo:
 
         # Replace old for new ID in other cells
         for c_cell in self.Cells:
-            if c_cell.ID not in nodes_to_combine and c_cell.AliveStatus is not None:
+            if c_cell.ID not in nodes_to_combine:
                 remove_duplicates(c_cell, nodes_to_combine)
 
         new_cell.Y = self.recalculate_ys_from_previous(new_cell.T, new_cell.ID, c_set)
