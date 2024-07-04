@@ -298,6 +298,7 @@ class Remodelling:
                     logger.info(f'=>> Full-Flip accepted')
                     self.Geo_n = self.Geo.copy(update_measurements=False)
                     backup_vars = save_backup_vars(self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs)
+                    #break
             else:
                 # Go back to initial state
                 self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs = load_backup_vars(backup_vars)
@@ -342,14 +343,13 @@ class Remodelling:
 
             valence_segment, old_tets, old_ys = edge_valence(self.Geo, nodes_pair)
             cell_nodes = [cell for cell in self.Geo.non_dead_cells if cell in old_tets.flatten()]
-            cell_node_alive = [cell for cell in cell_nodes if self.Geo.Cells[cell].AliveStatus == 1]
-            #if len(cell_node_alive) > 2 or (len(cell_node_alive) == 2 and len(cell_nodes) == 3):
-            has_converged, Tnew = self.flip_nm(nodes_pair, cell_to_intercalate_with, old_tets, old_ys,
-                                               cell_to_split_from)
-            if Tnew is not None:
-                all_tnew = Tnew if all_tnew is None else np.vstack((all_tnew, Tnew))
-            # else:
-            #     has_converged = False
+            if len(cell_nodes) > 2:
+                has_converged, Tnew = self.flip_nm(nodes_pair, cell_to_intercalate_with, old_tets, old_ys,
+                                                   cell_to_split_from)
+                if Tnew is not None:
+                    all_tnew = Tnew if all_tnew is None else np.vstack((all_tnew, Tnew))
+            else:
+                has_converged = False
 
             shared_nodes_still = get_node_neighbours_per_domain(self.Geo, cell_node, ghost_node, cell_to_split_from)
 
@@ -362,7 +362,7 @@ class Remodelling:
                     valence_segment, old_tets, old_ys = edge_valence(self.Geo, nodes_pair_provisional)
                     cell_nodes = [cell for cell in self.Geo.non_dead_cells if cell in old_tets.flatten()]
                     cell_node_alive = [cell for cell in cell_nodes if self.Geo.Cells[cell].AliveStatus == 1]
-                    print(cell_node_alive)
+                    #print(cell_node_alive)
 
                 # TODO: SELECT THE BEST GHOST NODE
             else:
