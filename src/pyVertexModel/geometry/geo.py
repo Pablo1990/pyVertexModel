@@ -132,15 +132,16 @@ def calculate_volume_from_points(points):
 
 
 def remove_duplicates(c_cell, nodes_to_combine):
-    c_cell.T = np.where(np.isin(c_cell.T, nodes_to_combine[1]), nodes_to_combine[0], c_cell.T)
-    # Remove repeated tets after replacement with new IDs on Y and T
-    c_cell.T, unique_indices = np.unique(np.sort(c_cell.T, axis=1), axis=0, return_index=True)
-    if c_cell.AliveStatus is not None:
-        c_cell.Y = c_cell.Y[unique_indices]
-        c_cell.Y = c_cell.Y[np.sum(np.isin(c_cell.T, nodes_to_combine[0]), axis=1) < 2]
+    if np.isin(c_cell.T, nodes_to_combine[1]).any():
+        c_cell.T = np.where(np.isin(c_cell.T, nodes_to_combine[1]), nodes_to_combine[0], c_cell.T)
+        # Remove repeated tets after replacement with new IDs on Y and T
+        c_cell.T, unique_indices = np.unique(np.sort(c_cell.T, axis=1), axis=0, return_index=True)
+        if c_cell.AliveStatus is not None:
+            c_cell.Y = c_cell.Y[unique_indices]
+            c_cell.Y = c_cell.Y[np.sum(np.isin(c_cell.T, nodes_to_combine[0]), axis=1) < 2]
 
-    # Removing Tets with the new cell twice or more within the Tet
-    c_cell.T = c_cell.T[np.sum(np.isin(c_cell.T, nodes_to_combine[0]), axis=1) < 2]
+        # Removing Tets with the new cell twice or more within the Tet
+        c_cell.T = c_cell.T[np.sum(np.isin(c_cell.T, nodes_to_combine[0]), axis=1) < 2]
 
 
 class Geo:
@@ -858,7 +859,6 @@ class Geo:
 
                 # Empty the list of cells to ablate
                 self.cellsToAblate = None
-        return self
 
     def compute_cells_wound_edge(self, location_filter=None):
         """
