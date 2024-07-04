@@ -568,7 +568,8 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         X = np.vstack(
             [[img3DProperties['centroid-1'][i], img3DProperties['centroid-0'][i], img3DProperties['centroid-2'][i]] for
              i in
-             range(len(img3DProperties['label'])) if img3DProperties['label'][i] in all_main_cells])
+             range(len(img3DProperties['label'])) if img3DProperties['label'][i] <= np.max(all_main_cells)])
+        # TODO: HERE I GOT THE IDS UNTIL 373 WITH MANY MISSING IDS IN BETWEEN
         X[:, 2] = 0
 
         # Using the centroids and vertices of the cells of each 2D image as ghost nodes
@@ -627,6 +628,11 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         # that is, not a part of any tetrahedra. Therefore, they should be
         # removed from X
         Twg = Twg[~np.all(np.isin(Twg, self.geo.XgID), axis=1)]
+
+        # Remove tetrahedra with cells that are not in all_main_cells
+        cells_to_remove = np.setdiff1d(range(np.max(all_main_cells) + 1), all_main_cells)
+        Twg = Twg[~np.any(np.isin(Twg, cells_to_remove), axis=1)]
+
         # Re-number the surviving tets
         Twg, X = self.renumber_tets_xs(Twg, X)
         # Normalise Xs
