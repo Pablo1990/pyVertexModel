@@ -280,14 +280,15 @@ def boundary_of_cell(vertices_of_cell, neighbours=None):
     return new_vert_order
 
 
-def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
+def build_2d_voronoi_from_image(labelled_img, watershed_img, total_cells):
     """
     Build a 2D Voronoi diagram from an image
     :param labelled_img:
     :param watershed_img:
-    :param main_cells:
+    :param total_cells:
     :return:
     """
+
     ratio = 2
 
     labelled_img[watershed_img == 0] = 0
@@ -305,6 +306,23 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
 
     img_neighbours = calculate_neighbours(labelled_img, ratio)
 
+    # Calculate the network of neighbours from the cell with ID 1
+    if not isinstance(total_cells, np.ndarray):
+        main_cells = img_neighbours[1]
+        while len(main_cells) < total_cells:
+            for c_cell in main_cells:
+                for c_neighbour in img_neighbours[c_cell]:
+                    if len(main_cells) >= total_cells:
+                        break
+
+                    if c_neighbour not in main_cells:
+                        main_cells = np.append(main_cells, c_neighbour)
+
+        main_cells = np.sort(main_cells)
+    else:
+        main_cells = total_cells
+
+    # Calculate the border cells from main_cells
     border_cells_and_main_cells = np.unique(np.block([img_neighbours[i] for i in main_cells]))
     border_ghost_cells = np.setdiff1d(border_cells_and_main_cells, main_cells)
     border_cells = np.intersect1d(main_cells, np.unique(np.block([img_neighbours[i] for i in border_ghost_cells])))
@@ -338,7 +356,7 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
     cell_edges = [cell_edges[i] for i in range(len(cell_edges)) if cell_edges[i] is not None]
 
     return (triangles_connectivity, neighbours_network, cell_edges, vertices_location, border_cells,
-            border_of_border_cells_and_main_cells)
+            border_of_border_cells_and_main_cells, main_cells)
 
 
 def divide_quartets_neighbours(img_neighbours_all, labelled_img, quartets):
@@ -535,13 +553,8 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             img_filename = PROJECT_DIRECTORY + '/src/pyVertexModel/resources/LblImg_imageSequence.tif'
 
         selectedPlanes = [0, 99]
-        xInternal = np.arange(1, self.set.TotalCells + 1)
         img2DLabelled, imgStackLabelled = process_image(img_filename)
-        # Basic features
-        properties = regionprops(img2DLabelled)
-        # Extract major axis lengths
-        avgDiameter = np.mean([prop.major_axis_length for prop in properties[0:self.set.TotalCells]])
-        cellHeight = avgDiameter * self.set.CellHeight
+
         # Building the topology of each plane
         trianglesConnectivity = {}
         neighboursNetwork = {}
@@ -549,12 +562,14 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         verticesOfCell_pos = {}
         borderCells = {}
         borderOfborderCellsAndMainCells = {}
+        main_cells = self.set.TotalCells
         for numPlane in selectedPlanes:
             (triangles_connectivity, neighbours_network,
              cell_edges, vertices_location, border_cells,
-             border_of_border_cells_and_main_cells) = build_2d_voronoi_from_image(imgStackLabelled[:, numPlane, :],
-                                                                                  imgStackLabelled[:, numPlane, :],
-                                                                                  np.arange(1, self.set.TotalCells + 1))
+             border_of_border_cells_and_main_cells,
+             main_cells) = build_2d_voronoi_from_image(imgStackLabelled[:, numPlane, :],
+                                                       imgStackLabelled[:, numPlane, :],
+                                                       main_cells)
 
             trianglesConnectivity[numPlane] = triangles_connectivity
             neighboursNetwork[numPlane] = neighbours_network
@@ -562,6 +577,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             verticesOfCell_pos[numPlane] = vertices_location
             borderCells[numPlane] = border_cells
             borderOfborderCellsAndMainCells[numPlane] = border_of_border_cells_and_main_cells
+
         # Select nodes from images
         img3DProperties = regionprops_table(imgStackLabelled, properties=('centroid', 'label',))
         all_main_cells = np.unique(np.concatenate([borderOfborderCellsAndMainCells[numPlane] for numPlane in selectedPlanes]))
@@ -571,6 +587,15 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
              range(len(img3DProperties['label'])) if img3DProperties['label'][i] <= np.max(all_main_cells)])
         # TODO: HERE I GOT THE IDS UNTIL 373 WITH MANY MISSING IDS IN BETWEEN
         X[:, 2] = 0
+
+        # Obtain the
+        xInternal = main_cells
+
+        # Basic features
+        properties = regionprops(img2DLabelled)
+        # Extract major axis lengths
+        avgDiameter = np.mean([prop.major_axis_length for prop in properties[xInternal]])
+        cellHeight = avgDiameter * self.set.CellHeight
 
         # Using the centroids and vertices of the cells of each 2D image as ghost nodes
         bottomPlane = 0
@@ -630,7 +655,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         Twg = Twg[~np.all(np.isin(Twg, self.geo.XgID), axis=1)]
 
         # Remove tetrahedra with cells that are not in all_main_cells
-        cells_to_remove = np.setdiff1d(range(np.max(all_main_cells) + 1), all_main_cells)
+        cells_to_remove = np.setdiff1d(range(1, np.max(all_main_cells) + 1), all_main_cells)
         Twg = Twg[~np.any(np.isin(Twg, cells_to_remove), axis=1)]
 
         # Re-number the surviving tets
