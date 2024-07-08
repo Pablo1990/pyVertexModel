@@ -41,9 +41,9 @@ def create_tetrahedra(triangles_connectivity, neighbours_network, edges_of_verti
 
     # Relationships: 1 cell node and 3 ghost nodes
     new_additions = []
-    for num_cell in x_internal:
-        face_id = x_face_ids[num_cell - 1]
-        vertices_to_connect = edges_of_vertices[num_cell - 1]
+    for id_cell, num_cell in enumerate(x_internal):
+        face_id = x_face_ids[id_cell]
+        vertices_to_connect = edges_of_vertices[id_cell]
         new_additions.extend(np.hstack([np.repeat(np.array([[num_cell, face_id]]), len(vertices_to_connect), axis=0),
                                         x_vertices_ids[vertices_to_connect]]))
     twg = np.vstack([twg, new_additions])
