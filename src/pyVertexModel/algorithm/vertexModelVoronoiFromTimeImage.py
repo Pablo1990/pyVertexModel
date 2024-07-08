@@ -585,7 +585,6 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             [[img3DProperties['centroid-1'][i], img3DProperties['centroid-0'][i], img3DProperties['centroid-2'][i]] for
              i in
              range(len(img3DProperties['label'])) if img3DProperties['label'][i] <= np.max(all_main_cells)])
-        # TODO: HERE I GOT THE IDS UNTIL 373 WITH MANY MISSING IDS IN BETWEEN
         X[:, 2] = 0
 
         # Obtain the
