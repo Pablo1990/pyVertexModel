@@ -593,7 +593,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         # Basic features
         properties = regionprops(img2DLabelled)
         # Extract major axis lengths
-        avgDiameter = np.mean([prop.major_axis_length for prop in properties[xInternal]])
+        avgDiameter = np.mean([prop.major_axis_length for prop in properties if prop.label in xInternal])
         cellHeight = avgDiameter * self.set.CellHeight
 
         # Using the centroids and vertices of the cells of each 2D image as ghost nodes
