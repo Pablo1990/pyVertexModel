@@ -449,7 +449,7 @@ def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence
 
                 # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
                 centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
-                centre_of_image = np.array([img2DLabelled.shape[0] / 2, img2DLabelled.shape[0] / 2])
+                centre_of_image = np.array([img2DLabelled.shape[0] / 2, img2DLabelled.shape[1] / 2])
 
                 # Sorting cells based on distance to the middle of the image
                 distanceToMiddle = cdist([centre_of_image], centroids)
