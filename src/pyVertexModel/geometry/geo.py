@@ -665,19 +665,19 @@ class Geo:
                     self.numY -= 1
         return oldYs
 
-    def add_tetrahedra(self, oldGeo, newTets, Ynew=None, Set=None):
+    def add_tetrahedra(self, old_geo, new_tets, old_ys=None, y_new=None, c_set=None):
         """
         Add the tetrahedra to the cells
-        :param oldGeo:
-        :param newTets:
-        :param Ynew:
-        :param Set:
+        :param old_geo:
+        :param new_tets:
+        :param y_new:
+        :param c_set:
         :return:
         """
-        if Ynew is None:
-            Ynew = []
+        if y_new is None:
+            y_new = []
 
-        for newTet in newTets:
+        for newTet in new_tets:
             if np.any(~np.isin(newTet, self.XgID)):
                 for numNode in newTet:
                     if (not np.any(np.isin(newTet, self.XgID)) and
@@ -690,17 +690,17 @@ class Geo:
                         if len(self.Cells[numNode].T) == 0 or not np.any(
                                 np.isin(self.Cells[numNode].T, newTet).all(axis=1)):
                             self.Cells[numNode].T = np.append(self.Cells[numNode].T, [newTet], axis=0)
-                            if self.Cells[numNode].AliveStatus is not None and Set is not None:
-                                if Ynew:
+                            if self.Cells[numNode].AliveStatus is not None and c_set is not None:
+                                if y_new:
                                     self.Cells[numNode].Y = np.append(self.Cells[numNode].Y,
-                                                                      Ynew[np.isin(newTets, newTet)],
+                                                                      y_new[np.isin(new_tets, newTet)],
                                                                       axis=0)
                                 else:
                                     self.Cells[numNode].Y = np.append(self.Cells[numNode].Y,
-                                                                      oldGeo.recalculate_ys_from_previous(
+                                                                      old_geo.recalculate_ys_from_previous(
                                                                           np.array([newTet]),
                                                                           numNode,
-                                                                          Set), axis=0)
+                                                                          c_set), axis=0)
                                 self.numY += 1
 
     def recalculate_ys_from_previous(self, Tnew, mainNodesToConnect, Set):
