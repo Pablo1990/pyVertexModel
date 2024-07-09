@@ -282,7 +282,7 @@ class Geo:
             self.Cells[c].lambdaB_perc = 1
 
         # Initialize reference values
-        self.init_reference_cell_values()
+        self.init_reference_cell_values(c_set)
 
         # Differential adhesion values
         for l1, val in c_set.lambdaS1CellFactor:
@@ -312,7 +312,7 @@ class Geo:
 
         self.update_measures()
 
-    def init_reference_cell_values(self):
+    def init_reference_cell_values(self, c_set):
         """
         Initializes the average cell properties. This method calculates the average area of all triangles (tris) in the
         geometry (Geo) structure, and sets the upper and lower area thresholds based on the standard deviation of the areas.
@@ -330,8 +330,17 @@ class Geo:
         self.lmin0 = np.finfo(float).max
 
         # Average values
-        avg_vol = np.mean([c_cell.Vol for c_cell in self.Cells if c_cell.ID < self.nCells])
-        avg_area = np.mean([c_cell.Area for c_cell in self.Cells if c_cell.ID < self.nCells])
+        avg_vol = np.mean([c_cell.Vol for c_cell in self.Cells if c_cell.AliveStatus is not None])
+
+        # Average area per domain
+        avg_area_top = np.mean([c_cell.compute_area(location_filter=0) for c_cell in self.Cells
+                                if c_cell.AliveStatus is not None])
+        avg_area_bottom = np.mean([c_cell.compute_area(location_filter=2) for c_cell in self.Cells
+                                   if c_cell.AliveStatus is not None])
+        avg_area_lateral = np.mean([c_cell.compute_area(location_filter=1) for c_cell in self.Cells
+                                    if c_cell.AliveStatus is not None])
+        avg_area = np.mean([c_cell.Area for c_cell in self.Cells if c_cell.AliveStatus is not None])
+
 
         # Initialize list for storing minimum lengths to the centre and edge lengths of tris
         lmin_values = []
@@ -341,9 +350,23 @@ class Geo:
             if self.Cells[c].AliveStatus is not None:
                 self.Cells[c].Vol0 = avg_vol
                 self.Cells[c].Area0 = avg_area
+
+                # Compute number of faces per domain
+                num_faces_top = sum([c_face.InterfaceType == 'Top' or c_face.InterfaceType == 0
+                                     for c_face in self.Cells[c].Faces])
+                num_faces_bottom = sum([c_face.InterfaceType == 'Bottom' or c_face.InterfaceType == 2
+                                        for c_face in self.Cells[c].Faces])
+                num_faces_lateral = sum([c_face.InterfaceType == 'Lateral' or c_face.InterfaceType == 1
+                                        for c_face in self.Cells[c].Faces])
+
                 # Iterate over all faces in the current cell
                 for f in range(len(self.Cells[c].Faces)):
-                    self.Cells[c].Faces[f].Area0 = avg_area * 0.8 / len(self.Cells[c].Faces)
+                    if self.Cells[c].Faces[f].InterfaceType == 'Top' or self.Cells[c].Faces[f].InterfaceType == 0:
+                        self.Cells[c].Faces[f].Area0 = avg_area_top * c_set.ref_A0 / num_faces_top
+                    elif self.Cells[c].Faces[f].InterfaceType == 'Bottom' or self.Cells[c].Faces[f].InterfaceType == 2:
+                        self.Cells[c].Faces[f].Area0 = avg_area_bottom * c_set.ref_A0 / num_faces_bottom
+                    else:
+                        self.Cells[c].Faces[f].Area0 = avg_area_lateral * c_set.ref_A0 / num_faces_lateral
 
                     Face = self.Cells[c].Faces[f]
 
