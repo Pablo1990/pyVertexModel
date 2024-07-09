@@ -1148,7 +1148,7 @@ class Geo:
         """
         Combine two nodes into one node
         :param nodes_to_combine:
-        :param Set:
+        :param c_set:
         :return:
         """
         cells_to_combine = [c_cell for c_cell in self.Cells if c_cell.ID in nodes_to_combine]
@@ -1170,4 +1170,3 @@ class Geo:
 
         # Remove the second node
         self.Cells[nodes_to_combine[1]].kill_cell()
-
