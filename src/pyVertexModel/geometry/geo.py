@@ -228,7 +228,7 @@ class Geo:
 
         return new_geo
 
-    def build_cells(self, c_set, X, twg):
+    def build_cells(self, c_set, X, twg, main_cells):
         """
         Build the cells of the geometry
         :param c_set: The settings of the simulation
@@ -241,20 +241,20 @@ class Geo:
         if c_set.InputGeo == 'Bubbles':
             c_set.TotalCells = self.nx * self.ny * self.nz
 
-        for c in range(len(X)):
+        for id, c in enumerate(main_cells):
             newCell = cell.Cell()
             newCell.ID = c
-            newCell.X = X[c, :]
+            newCell.X = X[id, :]
             newCell.T = twg[np.any(twg == c, axis=1),]
 
             # Initialize status of cells: 1 = 'Alive', 0 = 'Ablated', [] = 'Dead'
-            if c < c_set.TotalCells:
+            if c in main_cells:
                 newCell.AliveStatus = 1
 
             self.Cells.append(newCell)
 
-        for c in range(self.nCells):
-            self.Cells[c].Y = self.Cells[c].build_y_from_x(self, c_set)
+        for id, c in enumerate(main_cells):
+            self.Cells[id].Y = self.Cells[id].build_y_from_x(self, c_set)
 
         if c_set.Substrate == 1:
             XgSub = X.shape[0]  # THE SUBSTRATE NODE
@@ -262,7 +262,7 @@ class Geo:
                 self.Cells[c].Y = self.BuildYSubstrate(self.Cells[c], self.Cells, self.XgID, c_set, XgSub)
 
         for c in range(self.nCells):
-            logger.info(f'Building cell {c}')
+            logger.info(f'Building cell {self.Cells[c].ID}')
             Neigh_nodes = np.unique(self.Cells[c].T)
             Neigh_nodes = Neigh_nodes[Neigh_nodes != c]
             for j in range(len(Neigh_nodes)):

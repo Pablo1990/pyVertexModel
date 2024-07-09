@@ -532,9 +532,9 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                 self.geo = Geo(mat_info['Geo'])
         else:
             # Load the image and obtain the initial X and tetrahedra
-            Twg, X = self.obtain_initial_x_and_tetrahedra()
+            Twg, X, main_cells = self.obtain_initial_x_and_tetrahedra()
             # Build cells
-            self.geo.build_cells(self.set, X, Twg)
+            self.geo.build_cells(self.set, X, Twg, main_cells)
             #save_state(self.geo, 'voronoi_40cells.pkl')
 
         if self.set.ablation:
@@ -654,17 +654,17 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         Twg = Twg[~np.all(np.isin(Twg, self.geo.XgID), axis=1)]
 
         # Remove tetrahedra with cells that are not in all_main_cells
-        cells_to_remove = np.setdiff1d(range(1, np.max(all_main_cells) + 1), all_main_cells)
-        Twg = Twg[~np.any(np.isin(Twg, cells_to_remove), axis=1)]
+        #cells_to_remove = np.setdiff1d(range(1, np.max(all_main_cells) + 1), all_main_cells)
+        #Twg = Twg[~np.any(np.isin(Twg, cells_to_remove), axis=1)]
 
         # Re-number the surviving tets
-        Twg, X = self.renumber_tets_xs(Twg, X)
+        Twg, X, main_cells = self.renumber_tets_xs(Twg, X, main_cells)
         # Normalise Xs
         X = X / img2DLabelled.shape[0]
 
-        return Twg, X
+        return Twg, X, main_cells
 
-    def renumber_tets_xs(self, Twg, X):
+    def renumber_tets_xs(self, Twg, X, main_cells):
         """
         Renumber the tetrahedra and the coordinates.
 
