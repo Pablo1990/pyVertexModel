@@ -242,10 +242,11 @@ class Geo:
         if c_set.InputGeo == 'Bubbles':
             c_set.TotalCells = self.nx * self.ny * self.nz
 
-        for id, c in enumerate(self.Main_cells):
+        # We create all the cells (ghost and regular) with basic information
+        for c in range(np.max(twg) + 1):
             newCell = cell.Cell()
             newCell.ID = c
-            newCell.X = X[id, :]
+            newCell.X = X[c, :]
             newCell.T = twg[np.any(twg == c, axis=1),]
 
             # Initialize status of cells: 1 = 'Alive', 0 = 'Ablated', [] = 'Dead'
@@ -262,10 +263,11 @@ class Geo:
             for c in range(self.nCells):
                 self.Cells[c].Y = self.BuildYSubstrate(self.Cells[c], self.Cells, self.XgID, c_set, XgSub)
 
-        for c in range(self.nCells):
-            logger.info(f'Building cell {self.Cells[c].ID}')
-            Neigh_nodes = np.unique(self.Cells[c].T)
-            Neigh_nodes = Neigh_nodes[Neigh_nodes != c]
+        # Build regular cells
+        for id, c in enumerate(self.Main_cells):
+            logger.info(f'Building cell {self.Cells[id].ID}')
+            Neigh_nodes = np.unique(self.Cells[id].T)
+            Neigh_nodes = Neigh_nodes[Neigh_nodes != self.Cells[id].ID]
             for j in range(len(Neigh_nodes)):
                 cj = Neigh_nodes[j]
                 ij = [c, cj]
