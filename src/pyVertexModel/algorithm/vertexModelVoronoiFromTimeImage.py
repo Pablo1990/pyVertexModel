@@ -506,10 +506,10 @@ def add_tetrahedral_intercalations(Twg, xInternal, XgBottom, XgTop, XgLateral):
 
         neighboursMissing[numCell] = np.setxor1d(neighbours_bottom, neighbours_top)
         for missingCell in neighboursMissing[numCell]:
-            tetsToAdd = allCellIds[
-                np.isin(allCellIds, Twg_cCell[np.any(np.isin(Twg_cCell, missingCell), axis=1), :])]
+            tetsToAdd = np.sort(allCellIds[
+                np.isin(allCellIds, Twg_cCell[np.any(np.isin(Twg_cCell, missingCell), axis=1), :])])
             assert len(tetsToAdd) == 4, f'Missing 4-fold at Cell {numCell}'
-            if not np.any(np.all(np.sort(tetsToAdd) == Twg, axis=1)):
+            if not np.any(np.all(tetsToAdd == Twg, axis=1)):
                 Twg = np.vstack((Twg, tetsToAdd))
     return Twg
 
