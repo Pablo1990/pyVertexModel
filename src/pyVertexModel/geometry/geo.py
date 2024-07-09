@@ -155,6 +155,9 @@ class Geo:
         Initialize the geometry
         :param mat_file:    The mat file of the geometry
         """
+        self.SubstrateZ = None
+        self.CellHeightOriginal = None
+        self.BarrierTri0 = None
         self.lmin0 = None
         self.cellsToAblate = None
         self.Cells = []
@@ -272,35 +275,14 @@ class Geo:
                 self.Cells[c].Faces.append(newFace)
 
             self.Cells[c].compute_area()
-            self.Cells[c].Area0 = self.Cells[c].Area
             self.Cells[c].compute_volume()
             self.Cells[c].ExternalLambda = 1
             self.Cells[c].InternalLambda = 1
             self.Cells[c].SubstrateLambda = 1
             self.Cells[c].lambdaB_perc = 1
 
-        # Average volume of the cells
-        avg_vol = np.mean([c_cell.Vol for c_cell in self.Cells if c_cell.ID < self.nCells])
-        for c in range(self.nCells):
-            self.Cells[c].Vol0 = avg_vol
-
-        # Edge lengths 0 as average of all cells by location (Top, bottom, or lateral)
-        self.EdgeLengthAvg_0 = []
-        all_faces = [c_cell.Faces for c_cell in self.Cells]
-        all_face_types = [c_face.InterfaceType for faces in all_faces for c_face in faces]
-
-        for face_type in np.unique(all_face_types):
-            current_tris = []
-            for faces in all_faces:
-                for c_face in faces:
-                    if c_face.InterfaceType == face_type:
-                        current_tris.extend(c_face.Tris)
-
-            edge_lengths = []
-            for tri in current_tris:
-                edge_lengths.append(tri.EdgeLength)
-
-            self.EdgeLengthAvg_0.append(np.mean(edge_lengths))
+        # Initialize reference values
+        self.init_reference_cell_values()
 
         # Differential adhesion values
         for l1, val in c_set.lambdaS1CellFactor:
@@ -329,6 +311,96 @@ class Geo:
                         Face.Centre[2] = geo.SubstrateZ
 
         self.update_measures()
+
+    def init_reference_cell_values(self):
+        """
+        Initializes the average cell properties. This method calculates the average area of all triangles (tris) in the
+        geometry (Geo) structure, and sets the upper and lower area thresholds based on the standard deviation of the areas.
+        It also calculates the minimum edge length and the minimum area of all tris, and sets the initial values for
+        BarrierTri0 and lmin0 based on these calculations. The method also calculates the average edge lengths for tris
+        located at the top, bottom, and lateral sides of the cells. Finally, it initializes an empty list for storing
+        removed debris cells.
+
+        :return: None
+        """
+        # Assemble nodes from all cells that are not None
+        self.AssembleNodes = [i for i, cell in enumerate(self.Cells) if cell.AliveStatus is not None]
+        # Initialize BarrierTri0 and lmin0 with the maximum possible float value
+        self.BarrierTri0 = np.finfo(float).max
+        self.lmin0 = np.finfo(float).max
+
+        # Average values
+        avg_vol = np.mean([c_cell.Vol for c_cell in self.Cells if c_cell.ID < self.nCells])
+        avg_area = np.mean([c_cell.Area for c_cell in self.Cells if c_cell.ID < self.nCells])
+
+        # Initialize list for storing minimum lengths to the centre and edge lengths of tris
+        lmin_values = []
+        # Iterate over all cells in the Geo structure
+
+        for c in range(self.nCells):
+            if self.Cells[c].AliveStatus is not None:
+                self.Cells[c].Vol0 = avg_vol
+                self.Cells[c].Area0 = avg_area
+                # Iterate over all faces in the current cell
+                for f in range(len(self.Cells[c].Faces)):
+                    self.Cells[c].Faces[f].Area0 = avg_area * 0.8 / len(self.Cells[c].Faces)
+
+                    Face = self.Cells[c].Faces[f]
+
+                    # Update BarrierTri0 with the minimum area of all tris in the current face
+                    self.BarrierTri0 = min([min([tri.Area for tri in Face.Tris]), self.BarrierTri0])
+
+                    # Iterate over all tris in the current face
+                    for nTris in range(len(self.Cells[c].Faces[f].Tris)):
+                        tri = self.Cells[c].Faces[f].Tris[nTris]
+                        # Append the minimum length to the centre and the edge length of the current tri to lmin_values
+                        lmin_values.append(min(tri.LengthsToCentre))
+                        lmin_values.append(tri.EdgeLength)
+
+        # Update lmin0 with the minimum value in lmin_values
+        self.lmin0 = min(lmin_values)
+        # Update BarrierTri0 and lmin0 based on their initial values
+        self.BarrierTri0 = self.BarrierTri0 / 10
+        self.lmin0 = self.lmin0 * 10
+        # Initialize an empty list for storing removed debris cells
+        self.RemovedDebrisCells = []
+
+        self.non_dead_cells = [cell.ID for cell in self.Cells if cell.AliveStatus is not None]
+
+        # Obtain the original cell height
+        min_zs = np.min([np.min(cell.Y[:, 2]) for cell in self.Cells if cell.Y is not None])
+        self.CellHeightOriginal = np.abs(min_zs)
+        if min_zs > 0:
+            self.SubstrateZ = min_zs * 0.99
+        else:
+            self.SubstrateZ = min_zs * 1.01
+
+    def update_barrier_tri0_based_on_number_of_faces(self):
+        number_of_faces_per_cell_only_top_and_bottom = []
+        for cell in self.Cells:
+            if cell.AliveStatus is not None:
+                number_of_faces_only_top = 0
+                number_of_faces_only_bottom = 0
+                for face in cell.Faces:
+                    if face.InterfaceType == 'Top' or face.InterfaceType == 0:
+                        number_of_faces_only_top += 1
+                    if face.InterfaceType == 2 or face.InterfaceType == 'Bottom':
+                        number_of_faces_only_bottom += 1
+
+                number_of_faces_per_cell_only_top_and_bottom.append(number_of_faces_only_top)
+                number_of_faces_per_cell_only_top_and_bottom.append(number_of_faces_only_bottom)
+        avg_faces = np.mean(number_of_faces_per_cell_only_top_and_bottom)
+        min_faces = np.max(number_of_faces_per_cell_only_top_and_bottom)
+        # Average out BarrierTri0 depending on the number faces the cell has
+        num_faces = 0
+        for cell in self.Cells:
+            if cell.AliveStatus is not None:
+                cell.barrier_tri0_top = (self.BarrierTri0 + self.BarrierTri0 * 2 *
+                                         (min_faces / number_of_faces_per_cell_only_top_and_bottom[num_faces]) ** 2)
+                num_faces += 1
+                cell.barrier_tri0_bottom = (self.BarrierTri0 + self.BarrierTri0 * 2 *
+                                            (min_faces / number_of_faces_per_cell_only_top_and_bottom[num_faces]) ** 2)
+                num_faces += 1
 
     def update_vertices(self, dy_reshaped):
         """

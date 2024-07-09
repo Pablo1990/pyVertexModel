@@ -542,7 +542,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
         # Define upper and lower area threshold for remodelling
         if self.geo.lmin0 is None:
-            self.initialize_average_cell_props()
+            self.geo.init_reference_cell_values()
 
     def obtain_initial_x_and_tetrahedra(self, img_filename=None):
         """
