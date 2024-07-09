@@ -256,7 +256,8 @@ class Geo:
             self.Cells.append(newCell)
 
         for id, c in enumerate(self.Main_cells):
-            self.Cells[id].Y = self.Cells[id].build_y_from_x(self, c_set)
+            if self.Cells[c].AliveStatus == 1:
+                self.Cells[c].Y = self.Cells[c].build_y_from_x(self, c_set)
 
         if c_set.Substrate == 1:
             XgSub = X.shape[0]  # THE SUBSTRATE NODE
@@ -265,24 +266,25 @@ class Geo:
 
         # Build regular cells
         for id, c in enumerate(self.Main_cells):
-            logger.info(f'Building cell {self.Cells[id].ID}')
-            Neigh_nodes = np.unique(self.Cells[id].T)
-            Neigh_nodes = Neigh_nodes[Neigh_nodes != self.Cells[id].ID]
-            for j in range(len(Neigh_nodes)):
-                cj = Neigh_nodes[j]
-                ij = [c, cj]
-                face_ids = np.sum(np.isin(self.Cells[c].T, ij), axis=1) == 2
-                newFace = face.Face()
-                newFace.build_face(c, cj, face_ids, self.nCells, self.Cells[c], self.XgID,
-                                   c_set, self.XgTop, self.XgBottom)
-                self.Cells[c].Faces.append(newFace)
+            if self.Cells[c].AliveStatus == 1:
+                logger.info(f'Building cell {self.Cells[c].ID}')
+                Neigh_nodes = np.unique(self.Cells[c].T)
+                Neigh_nodes = Neigh_nodes[Neigh_nodes != self.Cells[c].ID]
+                for j in range(len(Neigh_nodes)):
+                    cj = Neigh_nodes[j]
+                    ij = [c, cj]
+                    face_ids = np.sum(np.isin(self.Cells[c].T, ij), axis=1) == 2
+                    newFace = face.Face()
+                    newFace.build_face(c, cj, face_ids, self.nCells, self.Cells[c], self.XgID,
+                                       c_set, self.XgTop, self.XgBottom)
+                    self.Cells[c].Faces.append(newFace)
 
-            self.Cells[c].compute_area()
-            self.Cells[c].compute_volume()
-            self.Cells[c].ExternalLambda = 1
-            self.Cells[c].InternalLambda = 1
-            self.Cells[c].SubstrateLambda = 1
-            self.Cells[c].lambdaB_perc = 1
+                self.Cells[c].compute_area()
+                self.Cells[c].compute_volume()
+                self.Cells[c].ExternalLambda = 1
+                self.Cells[c].InternalLambda = 1
+                self.Cells[c].SubstrateLambda = 1
+                self.Cells[c].lambdaB_perc = 1
 
         # Initialize reference values
         self.init_reference_cell_values(c_set)
@@ -569,6 +571,9 @@ class Geo:
             for cj in range(ci):
                 ij = [ci, cj]
                 CellJ = self.Cells[cj]
+
+                if CellJ.AliveStatus is None:
+                    continue
 
                 face_ids_i = np.sum(np.isin(Cell.T, ij), axis=1) == 2
 
