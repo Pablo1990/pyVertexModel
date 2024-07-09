@@ -14,6 +14,7 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.ref_A0 = None
         self.lateralCablesStrength = None
         self.tol0 = None
         self.dt = None
@@ -182,7 +183,7 @@ class Set:
         new_outputFolder = ''.join([PROJECT_DIRECTORY, '/Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")),
                                     self.InputGeo, '_Cells_', str(self.TotalCells), '_visc_', str(self.nu), '_lVol_',
                                     str(self.lambdaV), '_kSubs_', str(self.kSubstrate), '_lt_', str(self.cLineTension),
-                                    '_noise_', str(self.noise_random), '_brownian_', str(self.brownian_motion_scale),
+                                    '_noise_', str(self.noise_random), '_ref_A0_', str(self.ref_A0),
                                     '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
                                     '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
                                     '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3),
@@ -225,7 +226,7 @@ class Set:
         self.nu = 100
         self.EnergyBarrierA = False
         if self.EnergyBarrierA:
-            self.lambdaB = 10
+            self.lambdaB = 20
         else:
             self.lambdaB = 0
 
@@ -235,8 +236,8 @@ class Set:
         else:
             self.lambdaR = 0
 
-        self.lambdaV = 2
-        self.kSubstrate = 1
+        self.lambdaV = 1
+        self.kSubstrate = 0
         self.cLineTension = 0.0025
 
         self.brownian_motion = False
@@ -247,17 +248,18 @@ class Set:
         # Soft < 0
         # Stiff > 0
         self.Remodelling = 1
-        self.RemodelStiffness = 0.95
+        self.RemodelStiffness = 0.9
+        self.ref_A0 = 0.8
         self.lambdaS1 = 0.1
-        self.lambdaS2 = 0.1
-        self.lambdaS3 = self.lambdaS1 / 10
+        self.lambdaS2 = self.lambdaS1
+        self.lambdaS3 = self.lambdaS1
         self.lambdaS4 = self.lambdaS2
         self.VTK = False
 
         self.implicit_method = False
         if self.implicit_method is False:
             self.tol = 100
-            self.tol0 = 8 #self.nu/20
+            self.tol0 = 5 #self.nu/20
 
         self.ablation = True
 
