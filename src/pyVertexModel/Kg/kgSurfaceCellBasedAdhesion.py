@@ -35,6 +35,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
         Cell.lambda_s2_noise = add_noise_to_parameter(Set.lambdaS2, 0)
         Cell.lambda_s3_noise = add_noise_to_parameter(Set.lambdaS3, 0)
 
+        # Calculate the fact0 for each type of interface
         for face in Cell.Faces:
             if face.InterfaceType == 'Top' or face.InterfaceType == 0:
                 Lambda = Cell.lambda_s1_noise
@@ -45,7 +46,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
             else:
                 raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
 
-            fact0 += (Lambda * face.Area)
+            fact0 += (Lambda * (face.Area - face.Area0))
 
         fact = fact0 / Cell.Area0 ** 2
 
