@@ -532,9 +532,9 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                 self.geo = Geo(mat_info['Geo'])
         else:
             # Load the image and obtain the initial X and tetrahedra
-            Twg, X, main_cells = self.obtain_initial_x_and_tetrahedra()
+            Twg, X = self.obtain_initial_x_and_tetrahedra()
             # Build cells
-            self.geo.build_cells(self.set, X, Twg, main_cells)
+            self.geo.build_cells(self.set, X, Twg)
             #save_state(self.geo, 'voronoi_40cells.pkl')
 
         if self.set.ablation:
@@ -587,13 +587,10 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
              range(len(img3DProperties['label'])) if img3DProperties['label'][i] <= np.max(all_main_cells)])
         X[:, 2] = 0
 
-        # Obtain the
-        xInternal = main_cells
-
         # Basic features
         properties = regionprops(img2DLabelled)
         # Extract major axis lengths
-        avgDiameter = np.mean([prop.major_axis_length for prop in properties if prop.label in xInternal])
+        avgDiameter = np.mean([prop.major_axis_length for prop in properties if prop.label in main_cells])
         cellHeight = avgDiameter * self.set.CellHeight
 
         # Using the centroids and vertices of the cells of each 2D image as ghost nodes
@@ -631,22 +628,23 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
             # Create tetrahedra
             Twg_numPlane = create_tetrahedra(trianglesConnectivity[numPlane], neighboursNetwork[numPlane],
-                                             cellEdges[numPlane], xInternal, Xg_faceIds, Xg_verticesIds, X)
+                                             cellEdges[numPlane], main_cells, Xg_faceIds, Xg_verticesIds, X)
 
             Twg.append(Twg_numPlane)
 
         Twg = np.vstack(Twg)
 
         # Fill Geo info
-        self.geo.nCells = len(xInternal)
-        self.geo.XgLateral = np.setdiff1d(all_main_cells, xInternal)
-        self.geo.XgID = np.setdiff1d(np.arange(1, X.shape[0] + 1), xInternal)
+        self.geo.nCells = len(main_cells)
+        self.geo.Main_cells = main_cells
+        self.geo.XgLateral = np.setdiff1d(all_main_cells, main_cells)
+        self.geo.XgID = np.setdiff1d(np.arange(1, X.shape[0] + 1), main_cells)
         # Define border cells
         self.geo.BorderCells = np.unique(np.concatenate([borderCells[numPlane] for numPlane in selectedPlanes]))
         self.geo.BorderGhostNodes = self.geo.XgLateral
 
         # Create new tetrahedra based on intercalations
-        Twg = add_tetrahedral_intercalations(Twg, xInternal, self.geo.XgBottom, self.geo.XgTop, self.geo.XgLateral)
+        Twg = add_tetrahedral_intercalations(Twg, main_cells, self.geo.XgBottom, self.geo.XgTop, self.geo.XgLateral)
 
         # After removing ghost tetrahedras, some nodes become disconnected,
         # that is, not a part of any tetrahedra. Therefore, they should be
@@ -658,13 +656,13 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         #Twg = Twg[~np.any(np.isin(Twg, cells_to_remove), axis=1)]
 
         # Re-number the surviving tets
-        Twg, X, main_cells = self.renumber_tets_xs(Twg, X, main_cells)
+        Twg, X = self.renumber_tets_xs(Twg, X)
         # Normalise Xs
         X = X / img2DLabelled.shape[0]
 
-        return Twg, X, main_cells
+        return Twg, X
 
-    def renumber_tets_xs(self, Twg, X, main_cells):
+    def renumber_tets_xs(self, Twg, X):
         """
         Renumber the tetrahedra and the coordinates.
 
@@ -693,5 +691,6 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         self.geo.XgLateral = newIds[np.isin(oldIds, self.geo.XgLateral)]
         self.geo.XgID = newIds[np.isin(oldIds, self.geo.XgID)]
         self.geo.BorderGhostNodes = self.geo.XgLateral
+        self.geo.Main_cells = newIds[np.isin(oldIds, self.geo.Main_cells)]
         # Return the renumbered tetrahedra and coordinates arrays
         return Twg, X

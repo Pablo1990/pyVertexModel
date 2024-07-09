@@ -155,6 +155,7 @@ class Geo:
         Initialize the geometry
         :param mat_file:    The mat file of the geometry
         """
+        self.Main_cells = None
         self.SubstrateZ = None
         self.CellHeightOriginal = None
         self.BarrierTri0 = None
@@ -228,7 +229,7 @@ class Geo:
 
         return new_geo
 
-    def build_cells(self, c_set, X, twg, main_cells):
+    def build_cells(self, c_set, X, twg):
         """
         Build the cells of the geometry
         :param c_set: The settings of the simulation
@@ -241,19 +242,19 @@ class Geo:
         if c_set.InputGeo == 'Bubbles':
             c_set.TotalCells = self.nx * self.ny * self.nz
 
-        for id, c in enumerate(main_cells):
+        for id, c in enumerate(self.Main_cells):
             newCell = cell.Cell()
             newCell.ID = c
             newCell.X = X[id, :]
             newCell.T = twg[np.any(twg == c, axis=1),]
 
             # Initialize status of cells: 1 = 'Alive', 0 = 'Ablated', [] = 'Dead'
-            if c in main_cells:
+            if c in self.Main_cells:
                 newCell.AliveStatus = 1
 
             self.Cells.append(newCell)
 
-        for id, c in enumerate(main_cells):
+        for id, c in enumerate(self.Main_cells):
             self.Cells[id].Y = self.Cells[id].build_y_from_x(self, c_set)
 
         if c_set.Substrate == 1:

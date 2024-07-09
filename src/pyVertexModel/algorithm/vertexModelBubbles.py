@@ -413,7 +413,8 @@ class VertexModelBubbles(VertexModel):
             self.geo.XgBottom = self.geo.XgID[Xg[:, 2] < np.mean(self.X[:, 2])]
             self.geo.XgTop = self.geo.XgID[Xg[:, 2] > np.mean(self.X[:, 2])]
 
-        self.geo.build_cells(self.set, self.X, Twg, range(len(self.geo.nCells)))
+        self.geo.Main_cells = range(len(self.geo.nCells))
+        self.geo.build_cells(self.set, self.X, Twg)
 
         if self.set.InputGeo == 'Bubbles_Cyst':
             # Extrapolate Face centres and Ys to the ellipsoid
