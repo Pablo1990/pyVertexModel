@@ -759,18 +759,23 @@ class Geo:
         """
         oldYs = []
         for removingTet in removingTets:
+            removed_y = None
             for numNode in removingTet:
                 idToRemove = np.all(np.isin(np.sort(self.Cells[numNode].T, axis=1), np.sort(removingTet)), axis=1)
                 self.Cells[numNode].T = self.Cells[numNode].T[~idToRemove]
                 if self.Cells[numNode].AliveStatus is not None:
-                    oldYs.extend(self.Cells[numNode].Y[idToRemove])
+                    removed_y = self.Cells[numNode].Y[idToRemove]
+
                     self.Cells[numNode].Y = self.Cells[numNode].Y[~idToRemove]
                     self.numY -= 1
+            if removed_y is not None:
+                oldYs.extend(removed_y)
         return oldYs
 
     def add_tetrahedra(self, old_geo, new_tets, old_ys=None, y_new=None, c_set=None):
         """
         Add the tetrahedra to the cells
+        :param old_ys:
         :param old_geo:
         :param new_tets:
         :param y_new:
@@ -795,9 +800,19 @@ class Geo:
                             self.Cells[numNode].T = np.append(self.Cells[numNode].T, [newTet], axis=0)
                             if self.Cells[numNode].AliveStatus is not None and c_set is not None:
                                 if y_new:
-                                    self.Cells[numNode].Y = np.append(self.Cells[numNode].Y,
-                                                                      y_new[np.isin(new_tets, newTet)],
-                                                                      axis=0)
+                                    # Find indices where all elements in new_tets match newTet
+                                    matching_indices = np.where(np.all(np.isin(new_tets, newTet), axis=1))[0]
+
+                                    # Check if there are any matching indices
+                                    if len(matching_indices) > 0:
+                                        # Assuming y_new is structured with rows corresponding to tetrahedra in new_tets
+                                        # Use the first matching index as an example
+                                        first_matching_index = matching_indices[0]
+                                        selected_y_new = y_new[first_matching_index]
+                                        # Now you can use selected_y_new as needed
+                                        self.Cells[numNode].Y = np.append(self.Cells[numNode].Y,
+                                                                          selected_y_new.reshape(1, -1),
+                                                                          axis=0)
                                 else:
                                     self.Cells[numNode].Y = np.append(self.Cells[numNode].Y,
                                                                       old_geo.recalculate_ys_from_previous(

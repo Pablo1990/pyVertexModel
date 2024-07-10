@@ -268,8 +268,8 @@ def y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo,
 
     # Temporary remove 4-cell tetrahedra
     tets4_cells = get_4_fold_tets(Geo)
-    Geo.remove_tetrahedra(tets4_cells)
-    tets4_cells = np.unique(np.sort(tets4_cells, axis=1), axis=0)
+    ys_4_cells = Geo.remove_tetrahedra(tets4_cells)
+    #tets4_cells = np.unique(np.sort(tets4_cells, axis=1), axis=0)
     ghost_nodes_without_debris = np.setdiff1d(Geo.XgID, Geo.RemovedDebrisCells)
 
     Xs = np.unique(old_tets)
@@ -310,7 +310,7 @@ def y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo,
                                                            endNode,
                                                            ghost_nodes_without_debris, intercalation_flip, old_tets,
                                                            parentNode,
-                                                           tets4_cells, treeOfPossibilities, xs_to_disconnect,
+                                                           tets4_cells, ys_4_cells, treeOfPossibilities, xs_to_disconnect,
                                                            cell_to_split_from)
 
     # Get the last combination from new_tets_tree
@@ -339,7 +339,7 @@ def dfs(graph, start, end):
 
 def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercalate_with, endNode,
                                   ghost_nodes_without_debris, intercalation_flip, old_tets, parentNode, tets4_cells,
-                                  treeOfPossibilities, xs_to_disconnect, cell_to_split_from):
+                                  ys_4_cells, treeOfPossibilities, xs_to_disconnect, cell_to_split_from):
     """
     Get the best combination of new tets
     :param Geo:
@@ -390,39 +390,21 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
             current_valence_segment, _, _ = (
                 edge_valence_t(new_tets, [xs_to_disconnect_cells, cell_to_split_from]))
             if current_valence_segment < valence_segment:
-                try:
-                    Geo_new = Geo.copy()
-                    Geo_new.remove_tetrahedra(old_tets)
-                    Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), None, Set)
-                    Geo_new.rebuild(Geo_new.copy(), Set)
-                    Geo_new.build_global_ids()
+                #try:
+                Geo_new = Geo.copy()
+                Geo_new.add_tetrahedra(Geo, tets4_cells, ys_4_cells, ys_4_cells, Set)
+                old_ys = Geo_new.remove_tetrahedra(old_tets)
+                Geo_new.add_tetrahedra(Geo, new_tets, old_ys, None, Set)
+                Geo_new.rebuild(Geo_new.copy(), Set)
+                Geo_new.build_global_ids()
 
-                    # # Checking for next flip
-                    # shared_nodes_still = get_node_neighbours_per_domain(Geo_new, xs_to_disconnect_cells[0], xs_to_disconnect_ghost[0],
-                    #                                                     cell_to_split_from)
-                    #
-                    # good_flip = False
-                    # if any(np.isin(shared_nodes_still, Geo_new.XgID)):
-                    #     shared_nodes_still_g = shared_nodes_still[np.isin(shared_nodes_still, Geo_new.XgID)]
-                    #     cell_node_alive = []
-                    #     for ghost_node_provisional in shared_nodes_still_g:
-                    #         nodes_pair_provisional = np.array([xs_to_disconnect_cells[0], ghost_node_provisional])
-                    #         valence_segment, old_tets, old_ys = edge_valence(Geo_new, nodes_pair_provisional)
-                    #         cell_nodes = [cell for cell in Geo_new.non_dead_cells if cell in old_tets.flatten()]
-                    #         cell_node_alive.append([cell for cell in cell_nodes if Geo_new.Cells[cell].AliveStatus == 1])
-                    #         print(cell_node_alive[-1])
-                    #
-                    #     for cell_node_alive_provisional in cell_node_alive:
-                    #         if len(cell_node_alive_provisional) > 2:
-                    #             good_flip = True
-
-                    if True:
-                        new_tets_tree = new_tets
-                        Geo_final = Geo_new
-                        valence_segment = current_valence_segment
-                        logger.info(f"New combination found with valence segment: {valence_segment}")
-                except Exception as ex:
-                    logger.warning(f"Exception on flip remodelling: {ex}")
+                if True:
+                    new_tets_tree = new_tets
+                    Geo_final = Geo_new
+                    valence_segment = current_valence_segment
+                    logger.info(f"New combination found with valence segment: {valence_segment}")
+                # except Exception as ex:
+                #     logger.warning(f"Exception on flip remodelling: {ex}")
     return new_tets_tree, Geo_final
 
 
