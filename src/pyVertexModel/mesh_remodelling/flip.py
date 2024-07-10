@@ -363,7 +363,6 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
     best_gr = np.inf
 
     xs_to_disconnect_cells = xs_to_disconnect[~np.isin(xs_to_disconnect, Geo.XgID)]
-    xs_to_disconnect_ghost = xs_to_disconnect[np.isin(xs_to_disconnect, Geo.XgID)]
 
     for c_path in dfs(treeOfPossibilities, parentNode, endNode):
         c_path = np.array(c_path)
@@ -381,30 +380,23 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
                 if ~ismember_rows(Xs_c, np.vstack([new_tets, tets4_cells]))[0][0]:
                     new_tets = np.append(new_tets, [Xs_c], axis=0)
 
-            # cell_nodes = [cell for cell in Geo.non_dead_cells if cell in old_tets.flatten()]
-            # cell_node_alive = [cell for cell in cell_nodes if Geo.Cells[cell].AliveStatus == 1]
-            # print(cell_nodes)
-            # if len(cell_node_alive) <= 2:
-            #     continue
-
             current_valence_segment, _, _ = (
                 edge_valence_t(new_tets, [xs_to_disconnect_cells, cell_to_split_from]))
             if current_valence_segment < valence_segment:
-                #try:
-                Geo_new = Geo.copy()
-                Geo_new.add_tetrahedra(Geo, tets4_cells, ys_4_cells, ys_4_cells, Set)
-                old_ys = Geo_new.remove_tetrahedra(old_tets)
-                Geo_new.add_tetrahedra(Geo, new_tets, old_ys, None, Set)
-                Geo_new.rebuild(Geo_new.copy(), Set)
-                Geo_new.build_global_ids()
+                try:
+                    Geo_new = Geo.copy()
+                    Geo_new.add_tetrahedra(Geo, tets4_cells, ys_4_cells, ys_4_cells, Set)
+                    old_ys = Geo_new.remove_tetrahedra(old_tets)
+                    Geo_new.add_tetrahedra(Geo, new_tets, old_ys, None, Set)
+                    Geo_new.rebuild(Geo_new.copy(), Set)
+                    Geo_new.build_global_ids()
 
-                if True:
                     new_tets_tree = new_tets
                     Geo_final = Geo_new
                     valence_segment = current_valence_segment
                     logger.info(f"New combination found with valence segment: {valence_segment}")
-                # except Exception as ex:
-                #     logger.warning(f"Exception on flip remodelling: {ex}")
+                except Exception as ex:
+                    logger.warning(f"Exception on flip remodelling: {ex}")
     return new_tets_tree, Geo_final
 
 
