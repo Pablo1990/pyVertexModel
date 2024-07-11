@@ -255,18 +255,19 @@ class Geo:
 
             self.Cells.append(newCell)
 
-        for id, c in enumerate(self.Main_cells):
-            if self.Cells[c].AliveStatus == 1:
+        for c, c_cell in enumerate(self.Cells):
+            if c_cell.AliveStatus is not None:
                 self.Cells[c].Y = self.Cells[c].build_y_from_x(self, c_set)
 
         if c_set.Substrate == 1:
             XgSub = X.shape[0]  # THE SUBSTRATE NODE
-            for c in range(self.nCells):
-                self.Cells[c].Y = self.build_y_substrate(self.Cells[c], self.Cells, self.XgID, c_set, XgSub)
+            for c, c_cell in enumerate(self.Cells):
+                if c_cell.AliveStatus is not None:
+                    self.Cells[c].Y = self.build_y_substrate(self.Cells[c], self.Cells, self.XgID, c_set, XgSub)
 
         # Build regular cells
-        for id, c in enumerate(self.Main_cells):
-            if self.Cells[c].AliveStatus == 1:
+        for c, c_cell in enumerate(self.Cells):
+            if c_cell.AliveStatus is not None:
                 logger.info(f'Building cell {self.Cells[c].ID}')
                 Neigh_nodes = np.unique(self.Cells[c].T)
                 Neigh_nodes = Neigh_nodes[Neigh_nodes != self.Cells[c].ID]
@@ -306,14 +307,15 @@ class Geo:
         self.build_global_ids()
 
         if c_set.Substrate == 1:
-            for c in range(self.nCells):
-                for f in range(len(self.Cells[c].Faces)):
-                    Face = self.Cells[c].Faces[f]
-                    Face.InterfaceType = Face.build_interface_type(Face.ij, self.XgID)
+            for c, c_cell in enumerate(self.Cells):
+                if c_cell.AliveStatus is not None:
+                    for f in range(len(self.Cells[c].Faces)):
+                        Face = self.Cells[c].Faces[f]
+                        Face.InterfaceType = Face.build_interface_type(Face.ij, self.XgID)
 
-                    if Face.ij[1] == XgSub:
-                        # update the position of the surface centers on the substrate
-                        Face.Centre[2] = geo.SubstrateZ
+                        if Face.ij[1] == XgSub:
+                            # update the position of the surface centers on the substrate
+                            Face.Centre[2] = c_set.SubstrateZ
 
         self.update_measures()
 
@@ -348,10 +350,10 @@ class Geo:
 
         # Initialize list for storing minimum lengths to the centre and edge lengths of tris
         lmin_values = []
-        # Iterate over all cells in the Geo structure
 
-        for c in range(self.nCells):
-            if self.Cells[c].AliveStatus is not None:
+        # Iterate over all cells in the Geo structure
+        for c, c_cell in enumerate(self.Cells):
+            if c_cell.AliveStatus is not None:
                 self.Cells[c].Vol0 = avg_vol
                 self.Cells[c].Area0 = avg_area
 
@@ -602,9 +604,10 @@ class Geo:
 
         self.numY = g_ids_tot
 
-        for c in range(self.nCells):
-            for f in range(len(self.Cells[c].Faces)):
-                self.Cells[c].Faces[f].globalIds += self.numY
+        for c, c_cell in enumerate(self.Cells):
+            if c_cell.AliveStatus is not None:
+                for f in range(len(self.Cells[c].Faces)):
+                    self.Cells[c].Faces[f].globalIds += self.numY
 
         self.numF = g_ids_tot_f
 
@@ -735,15 +738,6 @@ class Geo:
         # if update_measurements
         if update_measurements:
             self.update_measures()
-
-        # Check here how many neighbours they're losing and winning and change the number of lambdaA_perc accordingly
-        neighbours_init = [len(get_node_neighbours(old_geo, c_cell.ID)) for c_cell in old_geo.Cells[:old_geo.nCells]]
-        neighbours_end = [len(get_node_neighbours(self, c_cell.ID)) for c_cell in self.Cells[:self.nCells]]
-
-        difference = [neighbours_init[i] - neighbours_end[i] for i in range(old_geo.nCells)]
-
-        for num_cell, diff in enumerate(difference):
-            self.Cells[num_cell].lambdaB_perc += 0.05 * diff
 
     def remove_tetrahedra(self, removingTets):
         """
