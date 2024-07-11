@@ -391,6 +391,25 @@ class Geo:
         # Update BarrierTri0 and lmin0 based on their initial values
         self.BarrierTri0 = self.BarrierTri0 / 10
         self.lmin0 = self.lmin0 * 10
+
+        # Edge lengths 0 as average of all cells by location (Top, bottom, or lateral)
+        self.EdgeLengthAvg_0 = []
+        all_faces = [c_cell.Faces for c_cell in self.Cells]
+        all_face_types = [c_face.InterfaceType for faces in all_faces for c_face in faces]
+
+        for face_type in np.unique(all_face_types):
+            current_tris = []
+            for faces in all_faces:
+                for c_face in faces:
+                    if c_face.InterfaceType == face_type:
+                        current_tris.extend(c_face.Tris)
+
+            edge_lengths = []
+            for tri in current_tris:
+                edge_lengths.append(tri.EdgeLength)
+
+            self.EdgeLengthAvg_0.append(np.mean(edge_lengths))
+
         # Initialize an empty list for storing removed debris cells
         self.RemovedDebrisCells = []
 
