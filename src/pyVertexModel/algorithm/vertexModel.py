@@ -402,18 +402,18 @@ class VertexModel:
 
         return wound_features
 
-    def screenshot(self, temp_dir, selected_cells=[]):
+    def screenshot(self, temp_dir, selected_cells=None):
         """
         Create a screenshot of the current state of the model.
         :param selected_cells:
         :param temp_dir:
         :return:
         """
-        # if os.path.exists(os.path.join(temp_dir, f'vModel_{self.numStep}.png')):
-        #     return
-
 
         # Create a plotter
+        if selected_cells is None:
+            selected_cells = []
+
         plotter = pv.Plotter(off_screen=True)
         for _, cell in enumerate(self.geo.Cells):
             if cell.AliveStatus == 1 and (cell.ID in selected_cells or selected_cells is not []):
@@ -426,6 +426,15 @@ class VertexModel:
         # Set a fixed camera zoom level
         fixed_zoom_level = 1
         plotter.camera.zoom(fixed_zoom_level)
+
+        # Add text to the plotter
+        if self.set.ablation:
+            timeAfterAblation = float(self.t) - float(self.set.TInitAblation)
+            text_content = f"Ablation time: {timeAfterAblation:.2f}"
+            plotter.add_text(text_content, position='upper_right', font_size=12, color='black')
+        else:
+            text_content = f"Time: {self.t:.2f}"
+            plotter.add_text(text_content, position='upper_right', font_size=12, color='black')
 
         # Render the scene and capture a screenshot
         img = plotter.screenshot()

@@ -963,7 +963,7 @@ class Geo:
                 remainingDebrisCells = np.setdiff1d(self.cellsToAblate, uniqueDebrisCell)
 
                 old_geo = self.copy()
-                total_vol = sum([cell.Vol for cell in self.Cells if cell.ID in self.cellsToAblate])
+                total_vol = sum([cell.Vol0 for cell in self.Cells if cell.ID in self.cellsToAblate])
 
                 # Iterate over the remaining debris cells
                 for debrisCell in remainingDebrisCells:
@@ -975,6 +975,9 @@ class Geo:
                 self.build_global_ids()
                 self.update_measures()
                 self.Cells[uniqueDebrisCell].Vol0 = total_vol
+
+                # Create baseline results to compare with
+
 
                 # Empty the list of cells to ablate
                 self.cellsToAblate = None
