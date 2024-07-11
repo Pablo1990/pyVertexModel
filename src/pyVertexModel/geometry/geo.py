@@ -262,7 +262,7 @@ class Geo:
         if c_set.Substrate == 1:
             XgSub = X.shape[0]  # THE SUBSTRATE NODE
             for c in range(self.nCells):
-                self.Cells[c].Y = self.BuildYSubstrate(self.Cells[c], self.Cells, self.XgID, c_set, XgSub)
+                self.Cells[c].Y = self.build_y_substrate(self.Cells[c], self.Cells, self.XgID, c_set, XgSub)
 
         # Build regular cells
         for id, c in enumerate(self.Main_cells):
@@ -346,7 +346,6 @@ class Geo:
                                     if c_cell.AliveStatus is not None])
         avg_area = np.mean([c_cell.Area for c_cell in self.Cells if c_cell.AliveStatus is not None])
 
-
         # Initialize list for storing minimum lengths to the centre and edge lengths of tris
         lmin_values = []
         # Iterate over all cells in the Geo structure
@@ -362,7 +361,7 @@ class Geo:
                 num_faces_bottom = sum([c_face.InterfaceType == 'Bottom' or c_face.InterfaceType == 2
                                         for c_face in self.Cells[c].Faces])
                 num_faces_lateral = sum([c_face.InterfaceType == 'Lateral' or c_face.InterfaceType == 1
-                                        for c_face in self.Cells[c].Faces])
+                                         for c_face in self.Cells[c].Faces])
 
                 # Iterate over all faces in the current cell
                 for f in range(len(self.Cells[c].Faces)):
@@ -444,36 +443,31 @@ class Geo:
             for f in range(len(self.Cells[c].Faces)):
                 self.Cells[c].Faces[f].Centre += dy_reshaped[self.Cells[c].Faces[f].globalIds, :]
 
-    def update_measures(self, ids=None):
+    def update_measures(self):
         """
-        Update the measures of the geometry
-        :param ids: The ids of the cells to update. If None, all cells are updated
+        Update the measures of the geometry.
         :return:
         """
-        if self.Cells[self.nCells - 1].Vol is None:
-            logger.error('Wont update measures with this Geo')
+        ids = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]
 
-        if ids is None:
-            ids = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]
-            resetLengths = 1
-        else:
-            resetLengths = 0
+        if self.Cells[ids[-1]].Vol is None:
+            logger.error('Wont update measures with this Geo')
+            return
 
         for c in ids:
-            if resetLengths:
-                for f in range(len(self.Cells[c].Faces)):
-                    self.Cells[c].Faces[f].Area, triAreas = self.Cells[c].Faces[f].compute_face_area(self.Cells[c].Y)
+            for f in range(len(self.Cells[c].Faces)):
+                self.Cells[c].Faces[f].Area, triAreas = self.Cells[c].Faces[f].compute_face_area(self.Cells[c].Y)
 
-                    for tri, triArea in zip(self.Cells[c].Faces[f].Tris, triAreas):
-                        tri.Area = triArea
+                for tri, triArea in zip(self.Cells[c].Faces[f].Tris, triAreas):
+                    tri.Area = triArea
 
-                    # Compute the edge lengths of the triangles
-                    for tri in self.Cells[c].Faces[f].Tris:
-                        tri.EdgeLength, tri.LengthsToCentre, tri.AspectRatio = (
-                            tri.compute_tri_length_measurements(self.Cells[c].Y, self.Cells[c].Faces[f].Centre))
+                # Compute the edge lengths of the triangles
+                for tri in self.Cells[c].Faces[f].Tris:
+                    tri.EdgeLength, tri.LengthsToCentre, tri.AspectRatio = (
+                        tri.compute_tri_length_measurements(self.Cells[c].Y, self.Cells[c].Faces[f].Centre))
 
-                    for tri in self.Cells[c].Faces[f].Tris:
-                        tri.ContractileG = 0
+                for tri in self.Cells[c].Faces[f].Tris:
+                    tri.ContractileG = 0
 
             self.Cells[c].compute_area()
             self.Cells[c].compute_volume()
@@ -508,7 +502,7 @@ class Geo:
 
                 self.Cells[c].X = self.Cells[c].X + np.mean(dY, axis=0)
 
-    def BuildYSubstrate(self, Cell, Cells, XgID, Set, XgSub):
+    def build_y_substrate(self, Cell, Cells, XgID, Set, XgSub):
         """
         Build the Y of the substrate
         :param Cell:
@@ -977,7 +971,6 @@ class Geo:
                 self.Cells[uniqueDebrisCell].Vol0 = total_vol
 
                 # Create baseline results to compare with
-
 
                 # Empty the list of cells to ablate
                 self.cellsToAblate = None
