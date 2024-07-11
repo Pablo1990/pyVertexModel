@@ -1,4 +1,3 @@
-import copy
 import logging
 import os
 
@@ -13,10 +12,24 @@ logger = logging.getLogger("pyVertexModel")
 
 
 def get_cells_by_status(cells, status):
+    """
+    Get the cells by status
+
+    :param cells:
+    :param status:
+    :return:
+    """
     return [c_cell.ID for c_cell in cells if c_cell.AliveStatus == status]
 
 
 def tets_to_check_in(c_cell, xg_boundary):
+    """
+    Get the tets to check in the cell
+
+    :param c_cell:
+    :param xg_boundary:
+    :return:
+    """
     return np.array([not any(n in tet for n in xg_boundary) for tet in c_cell.T], dtype=bool)
 
 
@@ -133,6 +146,13 @@ def calculate_volume_from_points(points):
 
 
 def remove_duplicates(c_cell, nodes_to_combine):
+    """
+    Remove duplicates from the cell after combining nodes.
+
+    :param c_cell:
+    :param nodes_to_combine:
+    :return:
+    """
     if np.isin(c_cell.T, nodes_to_combine[1]).any():
         c_cell.T = np.where(np.isin(c_cell.T, nodes_to_combine[1]), nodes_to_combine[0], c_cell.T)
         # Remove repeated tets after replacement with new IDs on Y and T
@@ -328,6 +348,7 @@ class Geo:
         located at the top, bottom, and lateral sides of the cells. Finally, it initializes an empty list for storing
         removed debris cells.
 
+        :param c_set: The settings of the simulation
         :return: None
         """
         # Assemble nodes from all cells that are not None

@@ -6,7 +6,7 @@ from src.pyVertexModel.Kg import kg_functions
 from src.pyVertexModel.Kg.kg import Kg, add_noise_to_parameter
 
 
-def compute_finalK_Volume(ge, K, Vol, Vol0, n):
+def compute_final_k_volume(ge, K, Vol, Vol0, n):
     """
     Helper function to compute the final K for the Volume energy.
     :param ge: The residual g.
@@ -26,8 +26,15 @@ def compute_finalK_Volume(ge, K, Vol, Vol0, n):
 
 class KgVolume(Kg):
     def compute_work(self, Geo, Set, Geo_n=None, calculate_K=True):
-        # The residual g and Jacobian K of Volume Energy
-        # Energy W_s= sum_cell lambdaV ((V-V0)/V0)^2
+        """
+        The residual g and Jacobian K of Volume Energy
+        Energy W_s= sum_cell lambdaV ((V-V0)/V0)^2
+        :param Geo:
+        :param Set:
+        :param Geo_n:
+        :param calculate_K:
+        :return:
+        """
         n = 4  # 2 or 4 for now.
 
         start = time.time()
