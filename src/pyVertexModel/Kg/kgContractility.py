@@ -7,7 +7,7 @@ from src.pyVertexModel.Kg.kg import Kg, add_noise_to_parameter
 from src.pyVertexModel.util.utils import ismember_rows
 
 
-def getIntensityBasedContractility(Set, current_face):
+def get_intensity_based_contractility(Set, current_face):
     timeAfterAblation = float(Set.currentT) - float(Set.TInitAblation)
     contractilityValue = 0
 
@@ -29,7 +29,7 @@ def getIntensityBasedContractility(Set, current_face):
     return contractilityValue
 
 
-def getDelayedContractility(currentT, purseStringStrength, currentTri, CUTOFF):
+def get_delayed_contractility(currentT, purseStringStrength, currentTri, CUTOFF):
     delayMinutes = 6
     distanceToTimeVariables = (currentT - delayMinutes) - currentTri.EdgeLength_time[:, 0]
     contractilityValue = 0
@@ -62,23 +62,23 @@ def getDelayedContractility(currentT, purseStringStrength, currentTri, CUTOFF):
     return contractilityValue
 
 
-def computeEnergyContractility(l_i0, l_i, C):
+def compute_energy_contractility(l_i0, l_i, C):
     energyContractility = (C / l_i0) * l_i
     return energyContractility
 
 
-def getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set, cell_noise):
+def get_contractility_based_on_location(currentFace, currentTri, Geo, Set, cell_noise):
     contractilityValue = None
     CUTOFF = 3
 
     if currentTri.ContractilityValue is None:
         if Set.ablation:
             if Set.DelayedAdditionalContractility == 1:
-                contractilityValue = getDelayedContractility(Set.currentT, Set.purseStringStrength,
-                                                             currentTri,
-                                                             CUTOFF * Set.purseStringStrength)
+                contractilityValue = get_delayed_contractility(Set.currentT, Set.purseStringStrength,
+                                                               currentTri,
+                                                               CUTOFF * Set.purseStringStrength)
             else:
-                contractilityValue = getIntensityBasedContractility(Set, currentFace)
+                contractilityValue = get_intensity_based_contractility(Set, currentFace)
         else:
             contractilityValue = 1
 
@@ -119,7 +119,7 @@ def getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set, cell_nois
 
 
 class KgContractility(Kg):
-    def compute_work(self, Geo, Set, Geo_n=None, calculate_K=True):
+    def compute_work(self, geo, c_set, Geo_n=None, calculate_K=True):
 
         start = time.time()
         oldSize = self.K.shape[0]
@@ -127,7 +127,7 @@ class KgContractility(Kg):
         # self.K = self.K[range(Geo.numY * 3), range(Geo.numY * 3)]
 
         Energy = {}
-        for cell in [cell for cell in Geo.Cells if cell.AliveStatus == 1]:
+        for cell in [cell for cell in geo.Cells if cell.AliveStatus == 1]:
             c = cell.ID
             ge = np.zeros(self.g.shape, dtype=self.precision_type)
             Energy_c = 0
@@ -135,30 +135,30 @@ class KgContractility(Kg):
                 cell.contractility_noise = random.random()
 
             for face_id, currentFace in enumerate(cell.Faces):
-                l_i0 = Geo.EdgeLengthAvg_0[next(key for key, value in currentFace.InterfaceType_allValues.items()
+                l_i0 = geo.EdgeLengthAvg_0[next(key for key, value in currentFace.InterfaceType_allValues.items()
                                                 if
                                                 value == currentFace.InterfaceType or key == currentFace.InterfaceType)]
                 for tri_id, currentTri in enumerate(currentFace.Tris):
                     if len(currentTri.SharedByCells) > 1:
-                        C, Geo = getContractilityBasedOnLocation(currentFace, currentTri, Geo, Set,
-                                                                 cell_noise=cell.contractility_noise)
+                        C, geo = get_contractility_based_on_location(currentFace, currentTri, geo, c_set,
+                                                                     cell_noise=cell.contractility_noise)
 
                         y_1 = cell.Y[currentTri.Edge[0]]
                         y_2 = cell.Y[currentTri.Edge[1]]
 
-                        if Geo.remodelling and not np.any(np.isin(cell.globalIds[currentTri.Edge],
-                                                                  Geo.Cells[c].vertices_and_faces_to_remodel)):
+                        if geo.remodelling and not np.any(np.isin(cell.globalIds[currentTri.Edge],
+                                                                  geo.Cells[c].vertices_and_faces_to_remodel)):
                             continue
 
-                        g_current = self.computeGContractility(l_i0, y_1, y_2, C)
+                        g_current = self.compute_g_contractility(l_i0, y_1, y_2, C)
                         ge = self.assemble_g(ge[:], g_current[:], cell.globalIds[currentTri.Edge])
 
-                        Geo.Cells[c].Faces[face_id].Tris[tri_id].ContractilityG = np.linalg.norm(g_current[:])
+                        geo.Cells[c].Faces[face_id].Tris[tri_id].ContractilityG = np.linalg.norm(g_current[:])
                         if calculate_K:
-                            K_current = self.computeKContractility(l_i0, y_1, y_2, C)
+                            K_current = self.compute_k_contractility(l_i0, y_1, y_2, C)
                             self.assemble_k(K_current[:, :], cell.globalIds[currentTri.Edge])
 
-                        Energy_c += computeEnergyContractility(l_i0, np.linalg.norm(y_1 - y_2), C)
+                        Energy_c += compute_energy_contractility(l_i0, np.linalg.norm(y_1 - y_2), C)
             self.g += ge
             Energy[c] = Energy_c
             cell.contractility_noise = None
@@ -170,7 +170,7 @@ class KgContractility(Kg):
         end = time.time()
         self.timeInSeconds = f"Time at LineTension: {end - start} seconds"
 
-    def computeKContractility(self, l_i0, y_1, y_2, C):
+    def compute_k_contractility(self, l_i0, y_1, y_2, C):
         dim = 3
 
         l_i = np.linalg.norm(y_1 - y_2)
@@ -184,7 +184,7 @@ class KgContractility(Kg):
 
         return kContractility
 
-    def computeGContractility(self, l_i0, y_1, y_2, C):
+    def compute_g_contractility(self, l_i0, y_1, y_2, C):
         l_i = np.linalg.norm(y_1 - y_2)
 
         gContractility = np.zeros(6, dtype=self.precision_type)

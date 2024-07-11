@@ -71,7 +71,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
                     continue
 
                 if calculate_K:
-                    ge = self.calculate_Kg(Lambda, fact, ge, nY, y1, y2, y3)
+                    ge = self.calculate_kg(Lambda, fact, ge, nY, y1, y2, y3)
                 else:
                     ge = self.calculate_g(Lambda, ge, nY, y1, y2, y3)
 
@@ -87,7 +87,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
 
         return Energy_c
 
-    def calculate_Kg(self, Lambda, fact, ge, nY, y1, y2, y3):
+    def calculate_kg(self, Lambda, fact, ge, nY, y1, y2, y3):
         gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)
         gs = Lambda * gs
         ge = self.assemble_g(ge, gs, np.array(nY, dtype='int'))
@@ -102,7 +102,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
         ge = self.assemble_g(ge, gs, np.array(nY, dtype='int'))
         return ge
 
-    def compute_finalK_SurfaceEnergy(self, ge, K, Area0):
+    def compute_final_k_surface_energy(self, ge, K, Area0):
         """
         Helper function to compute the final K for the Surface energy.
         :param ge: The residual g.
