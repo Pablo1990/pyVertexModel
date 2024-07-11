@@ -38,7 +38,7 @@ def compute_2d_circularity(area, perimeter):
 def compute_y(geo, T, cellCentre, Set):
     """
     Compute the new Y of the cell
-    
+
     :param geo:
     :param T:
     :param cellCentre:

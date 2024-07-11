@@ -113,8 +113,7 @@ class VertexModel:
         self.backupVars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
 
         print("File: ", self.set.OutputFolder)
-
-        # save_state(self, os.path.join(self.set.OutputFolder, 'data_step_0.pkl'))
+        self.save_v_model_state()
 
         while self.t <= self.set.tend and not self.didNotConverge:
             self.set.currentT = self.t
@@ -143,8 +142,6 @@ class VertexModel:
                 g, energies = newtonRaphson.gGlobal(self.geo_0, self.geo_n, self.geo, self.set,
                                                     self.set.implicit_method)
 
-            self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
-            self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
             for key, energy in energies.items():
                 logger.info(f"{key}: {energy}")
 
@@ -238,15 +235,7 @@ class VertexModel:
             #self.check_integrity()
 
             if abs(self.t - self.tr) >= self.set.RemodelingFrequency:
-                # Create VTK files for the current state
-                self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
-                self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
-
-                temp_dir = os.path.join(self.set.OutputFolder, 'images')
-                self.screenshot(temp_dir)
-
-                # Save Data of the current step
-                save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
+                self.save_v_model_state()
 
                 # Reset noise to be comparable between simulations
                 self.reset_noisy_parameters()
@@ -272,6 +261,15 @@ class VertexModel:
         else:
             self.set.nu = np.max([self.set.nu / 2, self.set.nu0])
             self.relaxingNu = True
+
+    def save_v_model_state(self):
+        # Create VTK files for the current state
+        self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
+        self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
+        temp_dir = os.path.join(self.set.OutputFolder, 'images')
+        self.screenshot(temp_dir)
+        # Save Data of the current step
+        save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
 
     def reset_noisy_parameters(self):
         for num_cell in range(len(self.geo.Cells)):
