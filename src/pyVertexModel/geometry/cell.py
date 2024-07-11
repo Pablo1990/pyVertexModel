@@ -1,7 +1,7 @@
 import numpy as np
+import pyvista as pv
 import vtk
 from sklearn.decomposition import PCA
-import pyvista as pv
 
 from src.pyVertexModel.geometry import face
 from src.pyVertexModel.util.utils import copy_non_mutable_attributes

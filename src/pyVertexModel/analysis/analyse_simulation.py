@@ -1,10 +1,8 @@
 import os
 import pickle
 
-import imageio
 import numpy as np
 import pandas as pd
-import pyvista as pv
 from matplotlib import pyplot as plt
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel

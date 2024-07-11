@@ -16,8 +16,7 @@ from skimage.segmentation import find_boundaries
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.geometry.geo import Geo
-from src.pyVertexModel.parameters.set import Set
-from src.pyVertexModel.util.utils import ismember_rows, save_variables, save_state, load_state
+from src.pyVertexModel.util.utils import ismember_rows, save_variables, load_state
 
 
 def create_tetrahedra(triangles_connectivity, neighbours_network, edges_of_vertices, x_internal, x_face_ids,

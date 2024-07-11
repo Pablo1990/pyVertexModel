@@ -2,15 +2,12 @@ import logging
 
 import numpy as np
 import pandas as pd
-from matplotlib._qhull import delaunay
 
-from src.pyVertexModel.algorithm import newtonRaphson
-from src.pyVertexModel.algorithm.newtonRaphson import solve_remodeling_step, KgGlobal, gGlobal, remeshing_cells
 from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours_vertices
 from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
 from src.pyVertexModel.util.utils import ismember_rows, save_backup_vars, load_backup_vars, compute_distance_3d, \
-    RegulariseMesh, laplacian_smoothing
+    laplacian_smoothing
 
 logger = logging.getLogger("pyVertexModel")
 
