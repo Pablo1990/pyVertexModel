@@ -1,4 +1,3 @@
-import copy
 import logging
 import os
 
@@ -13,10 +12,24 @@ logger = logging.getLogger("pyVertexModel")
 
 
 def get_cells_by_status(cells, status):
+    """
+    Get the cells by status
+
+    :param cells:
+    :param status:
+    :return:
+    """
     return [c_cell.ID for c_cell in cells if c_cell.AliveStatus == status]
 
 
 def tets_to_check_in(c_cell, xg_boundary):
+    """
+    Get the tets to check in the cell
+
+    :param c_cell:
+    :param xg_boundary:
+    :return:
+    """
     return np.array([not any(n in tet for n in xg_boundary) for tet in c_cell.T], dtype=bool)
 
 
@@ -133,6 +146,13 @@ def calculate_volume_from_points(points):
 
 
 def remove_duplicates(c_cell, nodes_to_combine):
+    """
+    Remove duplicates from the cell after combining nodes.
+
+    :param c_cell:
+    :param nodes_to_combine:
+    :return:
+    """
     if np.isin(c_cell.T, nodes_to_combine[1]).any():
         c_cell.T = np.where(np.isin(c_cell.T, nodes_to_combine[1]), nodes_to_combine[0], c_cell.T)
         # Remove repeated tets after replacement with new IDs on Y and T
@@ -255,18 +275,19 @@ class Geo:
 
             self.Cells.append(newCell)
 
-        for id, c in enumerate(self.Main_cells):
-            if self.Cells[c].AliveStatus == 1:
+        for c, c_cell in enumerate(self.Cells):
+            if c_cell.AliveStatus is not None:
                 self.Cells[c].Y = self.Cells[c].build_y_from_x(self, c_set)
 
         if c_set.Substrate == 1:
             XgSub = X.shape[0]  # THE SUBSTRATE NODE
-            for c in range(self.nCells):
-                self.Cells[c].Y = self.BuildYSubstrate(self.Cells[c], self.Cells, self.XgID, c_set, XgSub)
+            for c, c_cell in enumerate(self.Cells):
+                if c_cell.AliveStatus is not None:
+                    self.Cells[c].Y = self.build_y_substrate(self.Cells[c], self.Cells, self.XgID, c_set, XgSub)
 
         # Build regular cells
-        for id, c in enumerate(self.Main_cells):
-            if self.Cells[c].AliveStatus == 1:
+        for c, c_cell in enumerate(self.Cells):
+            if c_cell.AliveStatus is not None:
                 logger.info(f'Building cell {self.Cells[c].ID}')
                 Neigh_nodes = np.unique(self.Cells[c].T)
                 Neigh_nodes = Neigh_nodes[Neigh_nodes != self.Cells[c].ID]
@@ -306,14 +327,15 @@ class Geo:
         self.build_global_ids()
 
         if c_set.Substrate == 1:
-            for c in range(self.nCells):
-                for f in range(len(self.Cells[c].Faces)):
-                    Face = self.Cells[c].Faces[f]
-                    Face.InterfaceType = Face.build_interface_type(Face.ij, self.XgID)
+            for c, c_cell in enumerate(self.Cells):
+                if c_cell.AliveStatus is not None:
+                    for f in range(len(self.Cells[c].Faces)):
+                        Face = self.Cells[c].Faces[f]
+                        Face.InterfaceType = Face.build_interface_type(Face.ij, self.XgID)
 
-                    if Face.ij[1] == XgSub:
-                        # update the position of the surface centers on the substrate
-                        Face.Centre[2] = geo.SubstrateZ
+                        if Face.ij[1] == XgSub:
+                            # update the position of the surface centers on the substrate
+                            Face.Centre[2] = c_set.SubstrateZ
 
         self.update_measures()
 
@@ -326,6 +348,7 @@ class Geo:
         located at the top, bottom, and lateral sides of the cells. Finally, it initializes an empty list for storing
         removed debris cells.
 
+        :param c_set: The settings of the simulation
         :return: None
         """
         # Assemble nodes from all cells that are not None
@@ -346,13 +369,12 @@ class Geo:
                                     if c_cell.AliveStatus is not None])
         avg_area = np.mean([c_cell.Area for c_cell in self.Cells if c_cell.AliveStatus is not None])
 
-
         # Initialize list for storing minimum lengths to the centre and edge lengths of tris
         lmin_values = []
-        # Iterate over all cells in the Geo structure
 
-        for c in range(self.nCells):
-            if self.Cells[c].AliveStatus is not None:
+        # Iterate over all cells in the Geo structure
+        for c, c_cell in enumerate(self.Cells):
+            if c_cell.AliveStatus is not None:
                 self.Cells[c].Vol0 = avg_vol
                 self.Cells[c].Area0 = avg_area
 
@@ -362,7 +384,7 @@ class Geo:
                 num_faces_bottom = sum([c_face.InterfaceType == 'Bottom' or c_face.InterfaceType == 2
                                         for c_face in self.Cells[c].Faces])
                 num_faces_lateral = sum([c_face.InterfaceType == 'Lateral' or c_face.InterfaceType == 1
-                                        for c_face in self.Cells[c].Faces])
+                                         for c_face in self.Cells[c].Faces])
 
                 # Iterate over all faces in the current cell
                 for f in range(len(self.Cells[c].Faces)):
@@ -390,6 +412,25 @@ class Geo:
         # Update BarrierTri0 and lmin0 based on their initial values
         self.BarrierTri0 = self.BarrierTri0 / 10
         self.lmin0 = self.lmin0 * 10
+
+        # Edge lengths 0 as average of all cells by location (Top, bottom, or lateral)
+        self.EdgeLengthAvg_0 = []
+        all_faces = [c_cell.Faces for c_cell in self.Cells]
+        all_face_types = [c_face.InterfaceType for faces in all_faces for c_face in faces]
+
+        for face_type in np.unique(all_face_types):
+            current_tris = []
+            for faces in all_faces:
+                for c_face in faces:
+                    if c_face.InterfaceType == face_type:
+                        current_tris.extend(c_face.Tris)
+
+            edge_lengths = []
+            for tri in current_tris:
+                edge_lengths.append(tri.EdgeLength)
+
+            self.EdgeLengthAvg_0.append(np.mean(edge_lengths))
+
         # Initialize an empty list for storing removed debris cells
         self.RemovedDebrisCells = []
 
@@ -444,36 +485,31 @@ class Geo:
             for f in range(len(self.Cells[c].Faces)):
                 self.Cells[c].Faces[f].Centre += dy_reshaped[self.Cells[c].Faces[f].globalIds, :]
 
-    def update_measures(self, ids=None):
+    def update_measures(self):
         """
-        Update the measures of the geometry
-        :param ids: The ids of the cells to update. If None, all cells are updated
+        Update the measures of the geometry.
         :return:
         """
-        if self.Cells[self.nCells - 1].Vol is None:
-            logger.error('Wont update measures with this Geo')
+        ids = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]
 
-        if ids is None:
-            ids = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]
-            resetLengths = 1
-        else:
-            resetLengths = 0
+        if self.Cells[ids[-1]].Vol is None:
+            logger.error('Wont update measures with this Geo')
+            return
 
         for c in ids:
-            if resetLengths:
-                for f in range(len(self.Cells[c].Faces)):
-                    self.Cells[c].Faces[f].Area, triAreas = self.Cells[c].Faces[f].compute_face_area(self.Cells[c].Y)
+            for f in range(len(self.Cells[c].Faces)):
+                self.Cells[c].Faces[f].Area, triAreas = self.Cells[c].Faces[f].compute_face_area(self.Cells[c].Y)
 
-                    for tri, triArea in zip(self.Cells[c].Faces[f].Tris, triAreas):
-                        tri.Area = triArea
+                for tri, triArea in zip(self.Cells[c].Faces[f].Tris, triAreas):
+                    tri.Area = triArea
 
-                    # Compute the edge lengths of the triangles
-                    for tri in self.Cells[c].Faces[f].Tris:
-                        tri.EdgeLength, tri.LengthsToCentre, tri.AspectRatio = (
-                            tri.compute_tri_length_measurements(self.Cells[c].Y, self.Cells[c].Faces[f].Centre))
+                # Compute the edge lengths of the triangles
+                for tri in self.Cells[c].Faces[f].Tris:
+                    tri.EdgeLength, tri.LengthsToCentre, tri.AspectRatio = (
+                        tri.compute_tri_length_measurements(self.Cells[c].Y, self.Cells[c].Faces[f].Centre))
 
-                    for tri in self.Cells[c].Faces[f].Tris:
-                        tri.ContractileG = 0
+                for tri in self.Cells[c].Faces[f].Tris:
+                    tri.ContractileG = 0
 
             self.Cells[c].compute_area()
             self.Cells[c].compute_volume()
@@ -508,7 +544,7 @@ class Geo:
 
                 self.Cells[c].X = self.Cells[c].X + np.mean(dY, axis=0)
 
-    def BuildYSubstrate(self, Cell, Cells, XgID, Set, XgSub):
+    def build_y_substrate(self, Cell, Cells, XgID, Set, XgSub):
         """
         Build the Y of the substrate
         :param Cell:
@@ -608,9 +644,10 @@ class Geo:
 
         self.numY = g_ids_tot
 
-        for c in range(self.nCells):
-            for f in range(len(self.Cells[c].Faces)):
-                self.Cells[c].Faces[f].globalIds += self.numY
+        for c, c_cell in enumerate(self.Cells):
+            if c_cell.AliveStatus is not None:
+                for f in range(len(self.Cells[c].Faces)):
+                    self.Cells[c].Faces[f].globalIds += self.numY
 
         self.numF = g_ids_tot_f
 
@@ -741,15 +778,6 @@ class Geo:
         # if update_measurements
         if update_measurements:
             self.update_measures()
-
-        # Check here how many neighbours they're losing and winning and change the number of lambdaA_perc accordingly
-        neighbours_init = [len(get_node_neighbours(old_geo, c_cell.ID)) for c_cell in old_geo.Cells[:old_geo.nCells]]
-        neighbours_end = [len(get_node_neighbours(self, c_cell.ID)) for c_cell in self.Cells[:self.nCells]]
-
-        difference = [neighbours_init[i] - neighbours_end[i] for i in range(old_geo.nCells)]
-
-        for num_cell, diff in enumerate(difference):
-            self.Cells[num_cell].lambdaB_perc += 0.05 * diff
 
     def remove_tetrahedra(self, removingTets):
         """
@@ -963,7 +991,7 @@ class Geo:
                 remainingDebrisCells = np.setdiff1d(self.cellsToAblate, uniqueDebrisCell)
 
                 old_geo = self.copy()
-                total_vol = sum([cell.Vol for cell in self.Cells if cell.ID in self.cellsToAblate])
+                total_vol = sum([cell.Vol0 for cell in self.Cells if cell.ID in self.cellsToAblate])
 
                 # Iterate over the remaining debris cells
                 for debrisCell in remainingDebrisCells:
@@ -975,6 +1003,8 @@ class Geo:
                 self.build_global_ids()
                 self.update_measures()
                 self.Cells[uniqueDebrisCell].Vol0 = total_vol
+
+                # Create baseline results to compare with
 
                 # Empty the list of cells to ablate
                 self.cellsToAblate = None

@@ -1,7 +1,7 @@
 import numpy as np
+import pyvista as pv
 import vtk
 from sklearn.decomposition import PCA
-import pyvista as pv
 
 from src.pyVertexModel.geometry import face
 from src.pyVertexModel.util.utils import copy_non_mutable_attributes
@@ -36,6 +36,15 @@ def compute_2d_circularity(area, perimeter):
 
 
 def compute_y(geo, T, cellCentre, Set):
+    """
+    Compute the new Y of the cell
+
+    :param geo:
+    :param T:
+    :param cellCentre:
+    :param Set:
+    :return:
+    """
     x = [geo.Cells[i].X for i in T]
     newY = np.mean(x, axis=0)
     if sum([geo.Cells[i].AliveStatus is not None for i in T]) == 1 and "Bubbles" in Set.InputGeo:

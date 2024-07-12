@@ -5,8 +5,7 @@ import networkx as nx
 import numpy as np
 from scipy.spatial import Delaunay
 
-from src.pyVertexModel.algorithm import newtonRaphson
-from src.pyVertexModel.geometry.geo import edge_valence_t, get_node_neighbours_per_domain, edge_valence
+from src.pyVertexModel.geometry.geo import edge_valence_t
 from src.pyVertexModel.util.utils import ismember_rows
 
 logger = logging.getLogger("pyVertexModel")

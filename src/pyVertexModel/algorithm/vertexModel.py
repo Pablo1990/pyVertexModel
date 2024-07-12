@@ -113,8 +113,7 @@ class VertexModel:
         self.backupVars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
 
         print("File: ", self.set.OutputFolder)
-
-        # save_state(self, os.path.join(self.set.OutputFolder, 'data_step_0.pkl'))
+        self.save_v_model_state()
 
         while self.t <= self.set.tend and not self.didNotConverge:
             self.set.currentT = self.t
@@ -143,8 +142,6 @@ class VertexModel:
                 g, energies = newtonRaphson.gGlobal(self.geo_0, self.geo_n, self.geo, self.set,
                                                     self.set.implicit_method)
 
-            self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
-            self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
             for key, energy in energies.items():
                 logger.info(f"{key}: {energy}")
 
@@ -209,9 +206,6 @@ class VertexModel:
             # STEP has converged
             logger.info(f"STEP {str(self.set.i_incr)} has converged ...")
 
-            # for c in range(self.geo.nCells):
-            #    face_centres_to_middle_of_neighbours_vertices(self.geo, c)
-
             # Remodelling
             if abs(self.t - self.tr) >= self.set.RemodelingFrequency:
                 if self.set.Remodelling:
@@ -241,15 +235,7 @@ class VertexModel:
             #self.check_integrity()
 
             if abs(self.t - self.tr) >= self.set.RemodelingFrequency:
-                # Create VTK files for the current state
-                self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
-                self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
-
-                temp_dir = os.path.join(self.set.OutputFolder, 'images')
-                self.screenshot(temp_dir)
-
-                # Save Data of the current step
-                save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
+                self.save_v_model_state()
 
                 # Reset noise to be comparable between simulations
                 self.reset_noisy_parameters()
@@ -275,6 +261,15 @@ class VertexModel:
         else:
             self.set.nu = np.max([self.set.nu / 2, self.set.nu0])
             self.relaxingNu = True
+
+    def save_v_model_state(self):
+        # Create VTK files for the current state
+        self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
+        self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
+        temp_dir = os.path.join(self.set.OutputFolder, 'images')
+        self.screenshot(temp_dir)
+        # Save Data of the current step
+        save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
 
     def reset_noisy_parameters(self):
         for num_cell in range(len(self.geo.Cells)):
@@ -402,18 +397,18 @@ class VertexModel:
 
         return wound_features
 
-    def screenshot(self, temp_dir, selected_cells=[]):
+    def screenshot(self, temp_dir, selected_cells=None):
         """
         Create a screenshot of the current state of the model.
         :param selected_cells:
         :param temp_dir:
         :return:
         """
-        # if os.path.exists(os.path.join(temp_dir, f'vModel_{self.numStep}.png')):
-        #     return
-
 
         # Create a plotter
+        if selected_cells is None:
+            selected_cells = []
+
         plotter = pv.Plotter(off_screen=True)
         for _, cell in enumerate(self.geo.Cells):
             if cell.AliveStatus == 1 and (cell.ID in selected_cells or selected_cells is not []):
@@ -426,6 +421,15 @@ class VertexModel:
         # Set a fixed camera zoom level
         fixed_zoom_level = 1
         plotter.camera.zoom(fixed_zoom_level)
+
+        # Add text to the plotter
+        if self.set.ablation:
+            timeAfterAblation = float(self.t) - float(self.set.TInitAblation)
+            text_content = f"Ablation time: {timeAfterAblation:.2f}"
+            plotter.add_text(text_content, position='upper_right', font_size=12, color='black')
+        else:
+            text_content = f"Time: {self.t:.2f}"
+            plotter.add_text(text_content, position='upper_right', font_size=12, color='black')
 
         # Render the scene and capture a screenshot
         img = plotter.screenshot()

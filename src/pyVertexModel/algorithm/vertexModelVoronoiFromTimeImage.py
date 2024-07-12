@@ -16,8 +16,7 @@ from skimage.segmentation import find_boundaries
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.geometry.geo import Geo
-from src.pyVertexModel.parameters.set import Set
-from src.pyVertexModel.util.utils import ismember_rows, save_variables, save_state, load_state
+from src.pyVertexModel.util.utils import ismember_rows, save_variables, load_state
 
 
 def create_tetrahedra(triangles_connectivity, neighbours_network, edges_of_vertices, x_internal, x_face_ids,
@@ -272,7 +271,7 @@ def boundary_of_cell(vertices_of_cell, neighbours=None):
     # order the vertices based on their angular position relative to the centroid of the cell
     imaginary_centroid_mean_vert = np.mean(vertices_of_cell, axis=0)
     vector_for_ang_mean = vertices_of_cell - imaginary_centroid_mean_vert
-    th_mean = np.arctan2(vector_for_ang_mean[:, 1], vector_for_ang_mean[:, 0])
+    th_mean = np.arctan2(vector_for_ang_mean[:, 0], vector_for_ang_mean[:, 1])
     vert_order = np.argsort(th_mean)
 
     new_vert_order = np.vstack((vert_order, np.hstack((vert_order[1:], vert_order[0])))).T
@@ -535,6 +534,9 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             Twg, X = self.obtain_initial_x_and_tetrahedra()
             # Build cells
             self.geo.build_cells(self.set, X, Twg)
+
+            # Save state with filename using the number of cells
+            filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
             #save_state(self.geo, 'voronoi_40cells.pkl')
 
         if self.set.ablation:
@@ -582,7 +584,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         img3DProperties = regionprops_table(imgStackLabelled, properties=('centroid', 'label',))
         all_main_cells = np.unique(np.concatenate([borderOfborderCellsAndMainCells[numPlane] for numPlane in selectedPlanes]))
         X = np.vstack(
-            [[img3DProperties['centroid-1'][i], img3DProperties['centroid-0'][i], img3DProperties['centroid-2'][i]] for
+            [[img3DProperties['centroid-0'][i], img3DProperties['centroid-2'][i], img3DProperties['centroid-1'][i]] for
              i in
              range(len(img3DProperties['label'])) if img3DProperties['label'][i] <= np.max(all_main_cells)])
         X[:, 2] = 0
@@ -609,7 +611,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
             centroids = np.full((unique_label, 2), np.nan)
             centroids[np.array(props['label'], dtype=int) - 1] = np.column_stack(
-                [props['centroid-1'], props['centroid-0']])
+                [props['centroid-0'], props['centroid-1']])
             Xg_faceCentres2D = np.hstack((centroids, np.tile(zCoordinate[idPlane], (len(centroids), 1))))
             Xg_vertices2D = np.hstack((np.fliplr(verticesOfCell_pos[numPlane]),
                                        np.tile(zCoordinate[idPlane], (len(verticesOfCell_pos[numPlane]), 1))))
