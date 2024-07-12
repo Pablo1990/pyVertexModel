@@ -553,11 +553,11 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         # Basic features
         properties = regionprops(img2DLabelled)
         # Extract major axis lengths
-        avgDiameter = np.mean([prop.major_axis_length for prop in properties if prop.label in main_cells])
-        cellHeight = avgDiameter * self.set.CellHeight
+        avg_diameter = np.mean([prop.major_axis_length for prop in properties if prop.label in main_cells])
+        cell_height = avg_diameter * self.set.CellHeight
 
         # Generate tetrahedra from information of images
-        Twg, X = generate_tetrahedra_from_information(X, cellEdges, cellHeight, cell_centroids, main_cells,
+        Twg, X = generate_tetrahedra_from_information(X, cellEdges, cell_height, cell_centroids, main_cells,
                                                       neighboursNetwork, selectedPlanes, trianglesConnectivity,
                                                       verticesOfCell_pos, self.geo)
 

@@ -35,8 +35,6 @@ def generate_tetrahedra_from_information(X, cell_edges, cell_height, cell_centro
     :param geo:
     :return:
     """
-
-    # Using the centroids and vertices of the cells of each 2D image as ghost nodes
     bottom_plane = 0
     top_plane = 1
     if bottom_plane == 0:
@@ -45,6 +43,7 @@ def generate_tetrahedra_from_information(X, cell_edges, cell_height, cell_centro
         z_coordinate = [cell_height, -cell_height]
     Twg = []
     for idPlane, numPlane in enumerate(selected_planes):
+        # Using the centroids and vertices of the cells of each 2D image as ghost nodes
         centroids = cell_centroids[numPlane][:, 1:3]
 
         Xg_faceCentres2D = np.hstack((centroids, np.tile(z_coordinate[idPlane], (len(centroids), 1))))
