@@ -586,19 +586,18 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
         # Obtain the average centroid between the selected planes
         max_label = int(np.max([np.max(cell_centroids[numPlane][:, 0]) for numPlane in selectedPlanes]))
+        avg_centroids = np.zeros((max_label + 1, 3))
         for label in range(max_label + 1):
+            list_centroids = []
             for numPlane in selectedPlanes:
-                found_centroid = np.where(cell_centroids[numPlane][:, 0] == label)
+                found_centroid = np.where(cell_centroids[numPlane][:, 0] == label)[0]
+                if len(found_centroid) > 0:
+                    list_centroids.append(cell_centroids[numPlane][found_centroid, 1:3])
 
-
-            if np.all([label in cell_centroids[numPlane][:, 0] for numPlane in selectedPlanes]):
-                continue
+            if len(list_centroids) > 0:
+                avg_centroids[label, 0:2] = np.mean(list_centroids, axis=0)
             else:
                 print(f'Cell {label} not found in all planes')
-
-        X = np.mean(np.column_stack([cell_centroids[numPlane] for numPlane in selectedPlanes]), axis=0)
-
-        X[:, 2] = 0
 
         # Basic features
         properties = regionprops(img2DLabelled)
