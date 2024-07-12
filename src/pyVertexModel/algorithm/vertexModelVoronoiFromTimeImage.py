@@ -85,7 +85,7 @@ def calculate_neighbours(labelled_img, ratio_strel):
 
     img_neighbours = [None] * (np.max(cells) + 1)
 
-    for idx, cell in enumerate(cells, start=1):
+    for idx, cell in enumerate(cells):
         BW = find_boundaries(labelled_img == cell, mode='inner')
         BW_dilate = dilation(BW, se)
         neighs = np.unique(labelled_img[BW_dilate == 1])
