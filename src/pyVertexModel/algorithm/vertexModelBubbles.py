@@ -421,7 +421,7 @@ class VertexModelBubbles(VertexModel):
             self.geo = extrapolate_ys_faces_ellipsoid(self.geo, self.set)
 
         # Define upper and lower area threshold for remodelling
-        self.initialize_average_cell_props()
+        self.geo.init_reference_cell_values(self.set)
 
     def generate_Xs(self, nx=None, ny=None, nz=None):
         """
