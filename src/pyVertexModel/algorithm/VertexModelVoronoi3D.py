@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.spatial import Delaunay
+from scipy.spatial import Delaunay, Voronoi
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 
@@ -40,7 +40,27 @@ def generate_initial_points(num_points, lloyd_steps):
     return X
 
 
-class vertexModel_Voronoi3D(VertexModel):
+def generate_points_from_other_points(X, noise):
+    """
+    Generate points with noise from other points using brownian motion.
+    :param X:
+    :param noise:
+    :return:
+    """
+
+    # Generate the points at the face centres
+    X_face_centres = X + np.random.normal(0, noise, X.shape)
+
+    # Get the vertices of the cells from the face_centres
+    vor = Voronoi(X_face_centres)
+
+    # Get the vertices of the cells
+    X_vertices_centres = vor.vertices
+
+    return X_face_centres, X_vertices_centres
+
+
+class VertexModelVoronoi3D(VertexModel):
     """
     Vertex model for 3D voronoi tessellation.
     """
@@ -48,7 +68,7 @@ class vertexModel_Voronoi3D(VertexModel):
     def __init__(self, set_test=None):
         super().__init__(set_test)
 
-    def initialize(self):
+    def initialize(self, num_planes=2):
         """
         Initialize the vertex model.
         """
@@ -57,8 +77,8 @@ class vertexModel_Voronoi3D(VertexModel):
         X = generate_initial_points(num_points=self.set.TotalCells, lloyd_steps=0)
 
         # Generate points at different planes with some noise
-        X = self.generate_points_at_different_planes(X, num_planes=2, noise=0.1)
+        for i in range(num_planes):
+            X_face_centres, X_vertices_centres = generate_points_from_other_points(X, noise=0.1)
 
-    def generate_points_at_different_planes(self, X, num_planes, noise):
-        pass
+
 

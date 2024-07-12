@@ -14,7 +14,8 @@ from skimage.morphology import dilation, disk, square
 from skimage.segmentation import find_boundaries
 
 from src import PROJECT_DIRECTORY
-from src.pyVertexModel.algorithm.vertexModel import VertexModel, create_tetrahedra, generate_tetrahedra_from_information
+from src.pyVertexModel.algorithm.vertexModel import VertexModel, create_tetrahedra, \
+    generate_tetrahedra_from_information, calculate_cell_height_on_model
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.util.utils import ismember_rows, save_variables, load_state
 
@@ -466,7 +467,6 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
     def initialize(self, filename="src/pyVertexModel/resources/LblImg_imageSequence.tif"):
         """
         Initialize the geometry and the topology of the model.
-        :return:
         """
         if os.path.exists(filename) and filename.endswith('.pkl'):
             output_folder = self.set.OutputFolder
@@ -551,10 +551,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                 print(f'Cell {label} not found in all planes')
 
         # Basic features
-        properties = regionprops(img2DLabelled)
-        # Extract major axis lengths
-        avg_diameter = np.mean([prop.major_axis_length for prop in properties if prop.label in main_cells])
-        cell_height = avg_diameter * self.set.CellHeight
+        cell_height = calculate_cell_height_on_model(img2DLabelled, main_cells, self.set)
 
         # Generate tetrahedra from information of images
         Twg, X = generate_tetrahedra_from_information(X, cellEdges, cell_height, cell_centroids, main_cells,

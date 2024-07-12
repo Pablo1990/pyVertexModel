@@ -7,6 +7,7 @@ import imageio
 import numpy as np
 import pandas as pd
 import pyvista as pv
+from skimage.measure import regionprops
 
 from src.pyVertexModel.algorithm import newtonRaphson
 from src.pyVertexModel.geometry import degreesOfFreedom
@@ -117,6 +118,20 @@ def create_tetrahedra(triangles_connectivity, neighbours_network, edges_of_verti
     twg = np.vstack([twg, new_additions])
 
     return twg
+
+
+def calculate_cell_height_on_model(img2DLabelled, main_cells, c_set):
+    """
+    Calculate the cell height on the model regarding the diameter of the cells.
+    :param img2DLabelled:
+    :param main_cells:
+    :return:
+    """
+    properties = regionprops(img2DLabelled)
+    # Extract major axis lengths
+    avg_diameter = np.mean([prop.major_axis_length for prop in properties if prop.label in main_cells])
+    cell_height = avg_diameter * c_set.CellHeight
+    return cell_height
 
 
 class VertexModel:
