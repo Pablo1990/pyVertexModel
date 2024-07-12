@@ -6,6 +6,7 @@ from itertools import combinations
 
 import numpy as np
 import scipy
+from PIL import Image
 from numpy import arange
 from scipy.spatial.distance import squareform, pdist, cdist
 from skimage import io
@@ -84,7 +85,7 @@ def calculate_neighbours(labelled_img, ratio_strel):
 
     img_neighbours = [None] * (np.max(cells) + 1)
 
-    for idx, cell in enumerate(cells):
+    for idx, cell in enumerate(cells, start=1):
         BW = find_boundaries(labelled_img == cell, mode='inner')
         BW_dilate = dilation(BW, se)
         neighs = np.unique(labelled_img[BW_dilate == 1])
@@ -328,20 +329,19 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, total_cells):
 
     border_of_border_cells_and_main_cells = np.unique(
         np.concatenate([img_neighbours[i] for i in border_cells_and_main_cells]))
-    labelled_img[~np.isin(labelled_img, np.arange(1, np.max(border_of_border_cells_and_main_cells) + 1))] = 0
 
-    img_neighbours_all = calculate_neighbours(labelled_img, ratio)
-    quartets, _ = get_four_fold_vertices(img_neighbours_all)
+    quartets, _ = get_four_fold_vertices(img_neighbours)
     if quartets is not None:
-        divide_quartets_neighbours(img_neighbours_all, labelled_img, quartets)
+        img_neighbours = divide_quartets_neighbours(img_neighbours, labelled_img, quartets)
 
-    vertices_info = populate_vertices_info(border_cells_and_main_cells, img_neighbours_all,
+    #labelled_img[~np.isin(labelled_img, border_of_border_cells_and_main_cells)] = 0
+    vertices_info = populate_vertices_info(border_cells_and_main_cells, img_neighbours,
                                            labelled_img, main_cells, ratio)
 
     neighbours_network = []
 
     for num_cell in main_cells:
-        current_neighbours = np.array(img_neighbours_all[num_cell])
+        current_neighbours = np.array(img_neighbours[num_cell])
         current_cell_neighbours = np.vstack(
             [np.ones(len(current_neighbours), dtype=int) * num_cell, current_neighbours]).T
 
@@ -391,6 +391,8 @@ def divide_quartets_neighbours(img_neighbours_all, labelled_img, quartets):
         current_neighs = img_neighbours_all[quartets[num_quartets][row[0]]]
         current_neighs = current_neighs[current_neighs != quartets[num_quartets][col[0]]]
         img_neighbours_all[quartets[num_quartets][row[0]]] = current_neighs
+
+    return img_neighbours_all
 
 
 def populate_vertices_info(border_cells_and_main_cells, img_neighbours_all, labelled_img, main_cells,
@@ -470,12 +472,6 @@ def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence
                     newCont += 1
 
                 img2DLabelled = imgStackLabelled[0, :, :]
-
-                # Show the first plane
-                import matplotlib.pyplot as plt
-                plt.imshow(img2DLabelled)
-                plt.imshow(imgStackLabelled[99, :, :])
-                plt.show()
 
                 save_variables({'imgStackLabelled': imgStackLabelled},
                                img_filename.replace('.tif', '.xz'))
@@ -564,14 +560,14 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         verticesOfCell_pos = {}
         borderCells = {}
         borderOfborderCellsAndMainCells = {}
+        cell_centroids = {}
         main_cells = self.set.TotalCells
         for numPlane in selectedPlanes:
+            current_img = imgStackLabelled[:, numPlane, :]
             (triangles_connectivity, neighbours_network,
              cell_edges, vertices_location, border_cells,
              border_of_border_cells_and_main_cells,
-             main_cells) = build_2d_voronoi_from_image(imgStackLabelled[:, numPlane, :],
-                                                       imgStackLabelled[:, numPlane, :],
-                                                       main_cells)
+             main_cells) = build_2d_voronoi_from_image(current_img, current_img, main_cells)
 
             trianglesConnectivity[numPlane] = triangles_connectivity
             neighboursNetwork[numPlane] = neighbours_network
@@ -580,13 +576,28 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             borderCells[numPlane] = border_cells
             borderOfborderCellsAndMainCells[numPlane] = border_of_border_cells_and_main_cells
 
+            props = regionprops_table(current_img, properties=('centroid', 'label',))
+            zeros_column = np.zeros((props['centroid-1'].shape[0], 1))
+            cell_centroids[numPlane] = np.column_stack([props['label'], props['centroid-0'], props['centroid-1'],
+                                                        zeros_column])
+
         # Select nodes from images
-        img3DProperties = regionprops_table(imgStackLabelled, properties=('centroid', 'label',))
         all_main_cells = np.unique(np.concatenate([borderOfborderCellsAndMainCells[numPlane] for numPlane in selectedPlanes]))
-        X = np.vstack(
-            [[img3DProperties['centroid-0'][i], img3DProperties['centroid-2'][i], img3DProperties['centroid-1'][i]] for
-             i in
-             range(len(img3DProperties['label'])) if img3DProperties['label'][i] <= np.max(all_main_cells)])
+
+        # Obtain the average centroid between the selected planes
+        max_label = int(np.max([np.max(cell_centroids[numPlane][:, 0]) for numPlane in selectedPlanes]))
+        for label in range(max_label + 1):
+            for numPlane in selectedPlanes:
+                found_centroid = np.where(cell_centroids[numPlane][:, 0] == label)
+
+
+            if np.all([label in cell_centroids[numPlane][:, 0] for numPlane in selectedPlanes]):
+                continue
+            else:
+                print(f'Cell {label} not found in all planes')
+
+        X = np.mean(np.column_stack([cell_centroids[numPlane] for numPlane in selectedPlanes]), axis=0)
+
         X[:, 2] = 0
 
         # Basic features
@@ -610,7 +621,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             props = regionprops_table(img2DLabelled, properties=('centroid', 'label',))
 
             centroids = np.full((unique_label, 2), np.nan)
-            centroids[np.array(props['label'], dtype=int) - 1] = np.column_stack(
+            centroids[np.array(props['label'], dtype=int)] = np.column_stack(
                 [props['centroid-0'], props['centroid-1']])
             Xg_faceCentres2D = np.hstack((centroids, np.tile(zCoordinate[idPlane], (len(centroids), 1))))
             Xg_vertices2D = np.hstack((np.fliplr(verticesOfCell_pos[numPlane]),
