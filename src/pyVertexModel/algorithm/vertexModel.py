@@ -1,6 +1,7 @@
 import logging
 import os
 from abc import abstractmethod
+from itertools import combinations
 
 import imageio
 import numpy as np
@@ -15,6 +16,108 @@ from src.pyVertexModel.parameters.set import Set
 from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars
 
 logger = logging.getLogger("pyVertexModel")
+
+
+def generate_tetrahedra_from_information(X, cell_edges, cell_height, cell_centroids, main_cells,
+                                         neighbours_network, selected_planes, triangles_connectivity,
+                                         vertices_of_cell_pos, geo):
+    """
+    Generate tetrahedra from the information of the cells.
+    :param X:
+    :param cell_edges:
+    :param cell_height:
+    :param cell_centroids:
+    :param main_cells:
+    :param neighbours_network:
+    :param selected_planes:
+    :param triangles_connectivity:
+    :param vertices_of_cell_pos:
+    :param geo:
+    :return:
+    """
+
+    # Using the centroids and vertices of the cells of each 2D image as ghost nodes
+    bottom_plane = 0
+    top_plane = 1
+    if bottom_plane == 0:
+        z_coordinate = [-cell_height, cell_height]
+    else:
+        z_coordinate = [cell_height, -cell_height]
+    Twg = []
+    for idPlane, numPlane in enumerate(selected_planes):
+        centroids = cell_centroids[numPlane][:, 1:3]
+
+        Xg_faceCentres2D = np.hstack((centroids, np.tile(z_coordinate[idPlane], (len(centroids), 1))))
+        Xg_vertices2D = np.hstack((np.fliplr(vertices_of_cell_pos[numPlane]),
+                                   np.tile(z_coordinate[idPlane], (len(vertices_of_cell_pos[numPlane]), 1))))
+
+        Xg_nodes = np.vstack((Xg_faceCentres2D, Xg_vertices2D))
+        Xg_ids = np.arange(X.shape[0] + 1, X.shape[0] + Xg_nodes.shape[0] + 1)
+        Xg_faceIds = Xg_ids[0:Xg_faceCentres2D.shape[0]]
+        Xg_verticesIds = Xg_ids[Xg_faceCentres2D.shape[0]:]
+        X = np.vstack((X, Xg_nodes))
+
+        # Fill Geo info
+        if idPlane == bottom_plane:
+            geo.XgBottom = Xg_ids
+        elif idPlane == top_plane:
+            geo.XgTop = Xg_ids
+
+        # Create tetrahedra
+        Twg_numPlane = create_tetrahedra(triangles_connectivity[numPlane], neighbours_network[numPlane],
+                                         cell_edges[numPlane], main_cells, Xg_faceIds, Xg_verticesIds)
+
+        Twg.append(Twg_numPlane)
+    Twg = np.vstack(Twg)
+    return Twg, X
+
+
+def create_tetrahedra(triangles_connectivity, neighbours_network, edges_of_vertices, x_internal, x_face_ids,
+                      x_vertices_ids):
+    """
+    Add connections between real nodes and ghost cells to create tetrahedra.
+
+    :param triangles_connectivity: A 2D array where each row represents a triangle connectivity.
+    :param neighbours_network: A 2D array where each row represents a pair of neighboring nodes.
+    :param edges_of_vertices: A list of lists where each sublist represents the edges of a vertex.
+    :param x_internal: A 1D array representing the internal nodes.
+    :param x_face_ids: A 1D array representing the face ids.
+    :param x_vertices_ids: A 1D array representing the vertices ids.
+    :return: A 2D array representing the tetrahedra.
+    """
+    x_ids = np.concatenate([x_face_ids, x_vertices_ids])
+
+    # Relationships: 1 ghost node, three cell nodes
+    twg = np.hstack([triangles_connectivity, x_vertices_ids[:, None]])
+
+    # Relationships: 1 cell node and 3 ghost nodes
+    new_additions = []
+    for id_cell, num_cell in enumerate(x_internal):
+        face_id = x_face_ids[id_cell]
+        vertices_to_connect = edges_of_vertices[id_cell]
+        new_additions.extend(np.hstack([np.repeat(np.array([[num_cell, face_id]]), len(vertices_to_connect), axis=0),
+                                        x_vertices_ids[vertices_to_connect]]))
+    twg = np.vstack([twg, new_additions])
+
+    # Relationships: 2 ghost nodes, two cell nodes
+    twg_sorted = np.sort(twg[np.any(np.isin(twg, x_ids), axis=1)], axis=1)
+    internal_neighbour_network = [neighbour for neighbour in neighbours_network if
+                                  np.any(np.isin(neighbour, x_internal))]
+    internal_neighbour_network = np.unique(np.sort(internal_neighbour_network, axis=1), axis=0)
+
+    new_additions = []
+    for num_pair in range(internal_neighbour_network.shape[0]):
+        found = np.isin(twg_sorted, internal_neighbour_network[num_pair])
+        new_connections = np.unique(twg_sorted[np.sum(found, axis=1) == 2, 3])
+        if len(new_connections) > 1:
+            new_connections_pairs = np.array(list(combinations(new_connections, 2)))
+            new_additions.extend([np.hstack([internal_neighbour_network[num_pair], new_connections_pair])
+                                  for new_connections_pair in new_connections_pairs])
+        else:
+            raise ValueError('Error while creating the connections and initial topology')
+    twg = np.vstack([twg, new_additions])
+
+    return twg
 
 
 class VertexModel:
