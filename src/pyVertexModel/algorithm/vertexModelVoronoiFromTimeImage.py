@@ -289,14 +289,7 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, total_cells):
     vertices_info = populate_vertices_info(border_cells_and_main_cells, img_neighbours,
                                            labelled_img, main_cells, ratio)
 
-    neighbours_network = []
-
-    for num_cell in main_cells:
-        current_neighbours = np.array(img_neighbours[num_cell])
-        current_cell_neighbours = np.vstack(
-            [np.ones(len(current_neighbours), dtype=int) * num_cell, current_neighbours]).T
-
-        neighbours_network.extend(current_cell_neighbours)
+    neighbours_network = generate_neighbours_network(img_neighbours, main_cells)
 
     triangles_connectivity = np.array(vertices_info['connectedCells'])
     cell_edges = vertices_info['edges']
@@ -307,6 +300,17 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, total_cells):
 
     return (triangles_connectivity, neighbours_network, cell_edges, vertices_location, border_cells,
             border_of_border_cells_and_main_cells, main_cells)
+
+
+def generate_neighbours_network(neighbours, main_cells):
+    neighbours_network = []
+    for num_cell in main_cells:
+        current_neighbours = np.array(neighbours[num_cell])
+        current_cell_neighbours = np.vstack(
+            [np.ones(len(current_neighbours), dtype=int) * num_cell, current_neighbours]).T
+
+        neighbours_network.extend(current_cell_neighbours)
+    return neighbours_network
 
 
 def divide_quartets_neighbours(img_neighbours_all, labelled_img, quartets):
