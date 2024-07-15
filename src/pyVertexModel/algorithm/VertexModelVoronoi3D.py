@@ -1,7 +1,8 @@
 import numpy as np
 from scipy.spatial import Delaunay, Voronoi
 
-from src.pyVertexModel.algorithm.vertexModel import VertexModel
+from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrahedra_from_information, \
+    create_tetrahedra, add_faces_and_vertices_to_X
 
 
 def relax_points(X):
@@ -72,13 +73,32 @@ class VertexModelVoronoi3D(VertexModel):
         """
         Initialize the vertex model.
         """
+        bottom_plane = 0
+        top_plane = 1
 
         # Generate the initial random points and how regular it should be
         X = generate_initial_points(num_points=self.set.TotalCells, lloyd_steps=0)
 
         # Generate points at different planes with some noise
-        for i in range(num_planes):
+        for id_plane in range(num_planes):
+            # Generate the points and vertices with noise from the other points
             X_face_centres, X_vertices_centres = generate_points_from_other_points(X, noise=0.1)
+
+            X, Xg_faceIds, Xg_ids, Xg_verticesIds = add_faces_and_vertices_to_X(X, X_face_centres, X_vertices_centres)
+
+            # Fill Geo info
+            if id_plane == bottom_plane:
+                self.geo.XgBottom = Xg_ids
+            elif id_plane == top_plane:
+                self.geo.XgTop = Xg_ids
+
+            # Triangulate the points
+            triangles_connectivity = Delaunay(X_face_centres).simplices
+
+            # Create tetrahedra
+            Twg_numPlane = create_tetrahedra(triangles_connectivity, neighbours_network[numPlane], cell_edges[numPlane], range(self.set.TotalCells), Xg_faceIds, Xg_verticesIds)
+
+
 
 
 

@@ -45,17 +45,13 @@ def generate_tetrahedra_from_information(X, cell_edges, cell_height, cell_centro
     Twg = []
     for idPlane, numPlane in enumerate(selected_planes):
         # Using the centroids and vertices of the cells of each 2D image as ghost nodes
-        centroids = cell_centroids[numPlane][:, 1:3]
-
-        Xg_faceCentres2D = np.hstack((centroids, np.tile(z_coordinate[idPlane], (len(centroids), 1))))
-        Xg_vertices2D = np.hstack((np.fliplr(vertices_of_cell_pos[numPlane]),
-                                   np.tile(z_coordinate[idPlane], (len(vertices_of_cell_pos[numPlane]), 1))))
-
-        Xg_nodes = np.vstack((Xg_faceCentres2D, Xg_vertices2D))
-        Xg_ids = np.arange(X.shape[0] + 1, X.shape[0] + Xg_nodes.shape[0] + 1)
-        Xg_faceIds = Xg_ids[0:Xg_faceCentres2D.shape[0]]
-        Xg_verticesIds = Xg_ids[Xg_faceCentres2D.shape[0]:]
-        X = np.vstack((X, Xg_nodes))
+        X, Xg_faceIds, Xg_ids, Xg_verticesIds = (
+            add_faces_and_vertices_to_X(X,
+                                        np.hstack((cell_centroids[numPlane][:, 1:3], np.tile(z_coordinate[idPlane],
+                                                                      (len(cell_centroids[numPlane][:, 1:3]), 1)))),
+                                        np.hstack((np.fliplr(vertices_of_cell_pos[numPlane]),
+                                                   np.tile(z_coordinate[idPlane],
+                                                           (len(vertices_of_cell_pos[numPlane]), 1))))))
 
         # Fill Geo info
         if idPlane == bottom_plane:
@@ -70,6 +66,15 @@ def generate_tetrahedra_from_information(X, cell_edges, cell_height, cell_centro
         Twg.append(Twg_numPlane)
     Twg = np.vstack(Twg)
     return Twg, X
+
+
+def add_faces_and_vertices_to_X(X, Xg_faceCentres2D, Xg_vertices2D):
+    Xg_nodes = np.vstack((Xg_faceCentres2D, Xg_vertices2D))
+    Xg_ids = np.arange(X.shape[0] + 1, X.shape[0] + Xg_nodes.shape[0] + 1)
+    Xg_faceIds = Xg_ids[0:Xg_faceCentres2D.shape[0]]
+    Xg_verticesIds = Xg_ids[Xg_faceCentres2D.shape[0]:]
+    X = np.vstack((X, Xg_nodes))
+    return X, Xg_faceIds, Xg_ids, Xg_verticesIds
 
 
 def create_tetrahedra(triangles_connectivity, neighbours_network, edges_of_vertices, x_internal, x_face_ids,
