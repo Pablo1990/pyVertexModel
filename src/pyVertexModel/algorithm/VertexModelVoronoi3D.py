@@ -102,17 +102,15 @@ class VertexModelVoronoi3D(VertexModel):
             # Get the neighbours of each cell
             current_connected_cells = []
             for id_cell in range(self.set.TotalCells):
-                current_connected_cells.append([cell for cell in neighbours_network if np.any(np.isin(cell, id_cell))])
+                unique_neighbourhood = np.unique([cell for cell in neighbours_network if np.any(np.isin(cell, id_cell))])
+                unique_neighbourhood = np.delete(unique_neighbourhood, np.where(unique_neighbourhood == id_cell))
+                current_connected_cells.append(unique_neighbourhood)
 
-            # Get the vertices of each cell
-            vor = Voronoi(X_face_centres)
-            current_vertices = []
+            # Get the cell_edges of each cell
+            vor = Voronoi(X_face_centres, qhull_options='Qc')
+            cell_edges = []
             for id_cell in range(self.set.TotalCells):
-                current_vertices.append([vertex for vertex in vor.regions[vor.point_region[id_cell]] if vertex != -1])
-
-            # Get the edges of the cells
-            boundary_of_cell(current_vertices, current_connected_cells)
-            cell_edges = self.geo.get_cell_edges(triangles_connectivity)
+                cell_edges.append([vertex for vertex in vor.regions[vor.point_region[id_cell]] if vertex != -1])
 
             # Create tetrahedra
             Twg_numPlane = create_tetrahedra(triangles_connectivity, neighbours_network, cell_edges, range(self.set.TotalCells), Xg_faceIds, Xg_verticesIds)
