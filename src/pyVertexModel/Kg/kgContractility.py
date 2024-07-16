@@ -29,11 +29,13 @@ def get_intensity_based_contractility(c_set, current_face, intensity_images=True
 
         contractility_variability_purse_string = (np.ones(len(contractility_time_variability)) *
                                                   c_set.purseStringStrength)
-        contractility_variability_purse_string[contractility_time_variability <= c_set.delay_purse_string] = 1
+        contractility_variability_purse_string[
+            contractility_time_variability <= c_set.delay_purse_string] = c_set.cLineTension
 
         contractility_variability_lateral_cables = (np.ones(len(contractility_time_variability)) *
                                                     c_set.lateralCablesStrength)
-        contractility_variability_lateral_cables[contractility_time_variability <= c_set.delay_lateral_cables] = 1
+        contractility_variability_lateral_cables[
+            contractility_time_variability <= c_set.delay_lateral_cables] = c_set.cLineTension
 
     time_after_ablation = float(c_set.currentT) - float(c_set.TInitAblation)
     contractility_value = 0
@@ -132,7 +134,6 @@ def get_contractility_based_on_location(current_face, current_tri, geo, c_set, c
                                                                CUTOFF * c_set.purseStringStrength)
             elif c_set.TypeOfPurseString == 2:
                 contractilityValue = get_intensity_based_contractility(c_set, current_face, intensity_images=False)
-
         else:
             contractilityValue = 1
 
@@ -141,12 +142,12 @@ def get_contractility_based_on_location(current_face, current_tri, geo, c_set, c
         else:
             if current_face.InterfaceType == 'Top' or current_face.InterfaceType == 0:  # Top
                 if any([geo.Cells[cell].AliveStatus == 0 for cell in current_tri.SharedByCells]):
-                    contractilityValue = contractilityValue * c_set.cLineTension
+                    pass
                 else:
                     contractilityValue = c_set.cLineTension
             elif current_face.InterfaceType == 'CellCell' or current_face.InterfaceType == 1:
                 if any([geo.Cells[cell].AliveStatus == 0 for cell in current_tri.SharedByCells]):
-                    contractilityValue = contractilityValue * c_set.cLineTension
+                    pass
                 else:
                     contractilityValue = c_set.cLineTension / 10
             elif current_face.InterfaceType == 'Bottom' or current_face.InterfaceType == 2:
