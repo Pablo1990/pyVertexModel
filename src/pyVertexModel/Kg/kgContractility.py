@@ -25,17 +25,17 @@ def get_intensity_based_contractility(c_set, current_face, intensity_images=True
             [0.45, 0.53, 0.76, 1.15, 1.28, 1.22, 1.38, 1.33, 1.28, 1.4, 1.25, 1.298, 1.45, 1.31, 1.29, 1.42, 1.31,
              1.41, 1.42, 1.37, 1.28]), c_set.lateralCablesStrength)
     else:
-        contractility_time_variability = np.linspace(0, (c_set.TEndAblation - c_set.TInitAblation) * 10)
+        contractility_time_variability = np.linspace(0, (c_set.TEndAblation - c_set.TInitAblation), int((c_set.TEndAblation - c_set.TInitAblation) * 20))
 
         contractility_variability_purse_string = (np.ones(len(contractility_time_variability)) *
                                                   c_set.purseStringStrength)
         contractility_variability_purse_string[
-            contractility_time_variability <= c_set.delay_purse_string] = c_set.cLineTension
+            contractility_time_variability < c_set.delay_purse_string] = c_set.cLineTension
 
         contractility_variability_lateral_cables = (np.ones(len(contractility_time_variability)) *
                                                     c_set.lateralCablesStrength)
         contractility_variability_lateral_cables[
-            contractility_time_variability <= c_set.delay_lateral_cables] = c_set.cLineTension
+            contractility_time_variability < c_set.delay_lateral_cables] = c_set.cLineTension
 
     time_after_ablation = float(c_set.currentT) - float(c_set.TInitAblation)
     contractility_value = 0
