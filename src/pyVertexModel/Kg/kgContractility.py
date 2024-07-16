@@ -109,10 +109,6 @@ def compute_energy_contractility(l_i0, l_i, c_contractility):
     return energyContractility
 
 
-def get_fixed_contractility(purseStringStrength, current_tri, CUTOFF):
-    pass
-
-
 def get_contractility_based_on_location(current_face, current_tri, geo, c_set, cell_noise):
     """
     Get the contractility based on the location
