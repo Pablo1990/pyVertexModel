@@ -14,13 +14,15 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.delay_lateral_cables = None
+        self.delay_purse_string = None
         self.ref_A0 = None
         self.lateralCablesStrength = None
         self.tol0 = None
         self.dt = None
         self.implicit_method = False
         self.cellsToAblate = None
-        self.DelayedAdditionalContractility = None
+        self.TypeOfPurseString = None
         self.Contractility_TimeVariability = None
         self.Contractility_Variability_LateralCables = None
         self.Contractility_Variability_PurseString = None
@@ -263,7 +265,7 @@ class Set:
 
         self.ablation = True
 
-    def woundDefault(self):
+    def wound_default(self):
         # ============================== Ablation ============================
         self.cellsToAblate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
         self.TInitAblation = 1
@@ -271,16 +273,14 @@ class Set:
         self.lambdaSFactor_Debris = np.finfo(float).eps
         # =========================== Contractility ==========================
         self.Contractility = True
-        self.DelayedAdditionalContractility = 0
-        self.purseStringStrength = 2.5
+        self.TypeOfPurseString = 2
+        # 0: Intensity-based purse string
+        # 1: Strain-based purse string (delayed)
+        # 2: Fixed with linear increase purse string
+        self.purseStringStrength = 5
         self.lateralCablesStrength = 1
-        self.Contractility_Variability_PurseString = np.power(np.array(
-            [1.0, 0.96, 1.007, 1.74, 2.37, 2.61, 2.487, 2.536, 2.46, 2.52, 2.606, 2.456, 2.387, 2.52, 2.31, 2.328,
-             2.134, 2.07, 2.055, 1.9, 1.9]), self.purseStringStrength)
-        self.Contractility_Variability_LateralCables = np.power(np.array(
-            [0.45, 0.53, 0.76, 1.15, 1.28, 1.22, 1.38, 1.33, 1.28, 1.4, 1.25, 1.298, 1.45, 1.31, 1.29, 1.42, 1.31,
-             1.41, 1.42, 1.37, 1.28]), self.lateralCablesStrength)
-        self.Contractility_TimeVariability = (np.arange(0, 60 + 3, 3)) / 60 * (self.TEndAblation - self.TInitAblation)
+        self.delay_purse_string = 5.5
+        self.delay_lateral_cables = 1
 
     def menu_input(self, inputMode=None, batchMode=None):
         if inputMode == 7:

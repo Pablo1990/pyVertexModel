@@ -6,32 +6,54 @@ import numpy as np
 from src.pyVertexModel.Kg.kg import Kg, add_noise_to_parameter
 
 
-def get_intensity_based_contractility(c_set, current_face):
+def get_intensity_based_contractility(c_set, current_face, intensity_images=True):
     """
     Get the intensity based contractility
+    :param intensity_images:
     :param c_set:
     :param current_face:
     :return:
     """
-    timeAfterAblation = float(c_set.currentT) - float(c_set.TInitAblation)
-    contractilityValue = 0
 
-    if timeAfterAblation >= 0:
-        distanceToTimeVariables = np.abs(c_set.Contractility_TimeVariability - timeAfterAblation) / \
-                                  c_set.Contractility_TimeVariability[1]
-        indicesOfClosestTimePoints = np.argsort(distanceToTimeVariables)
-        closestTimePointsDistance = 1 - distanceToTimeVariables[indicesOfClosestTimePoints]
+    if intensity_images:
+        contractility_time_variability = (np.arange(0, 60 + 3, 3)) / 60 * (c_set.TEndAblation - c_set.TInitAblation)
+        contractility_variability_purse_string = np.power(np.array(
+            [1.0, 0.96, 1.007, 1.74, 2.37, 2.61, 2.487, 2.536, 2.46, 2.52, 2.606, 2.456, 2.387, 2.52, 2.31, 2.328,
+             2.134, 2.07, 2.055, 1.9, 1.9]), c_set.purseStringStrength)
+
+        contractility_variability_lateral_cables = np.power(np.array(
+            [0.45, 0.53, 0.76, 1.15, 1.28, 1.22, 1.38, 1.33, 1.28, 1.4, 1.25, 1.298, 1.45, 1.31, 1.29, 1.42, 1.31,
+             1.41, 1.42, 1.37, 1.28]), c_set.lateralCablesStrength)
+    else:
+        contractility_time_variability = np.linspace(0, (c_set.TEndAblation - c_set.TInitAblation) * 10)
+
+        contractility_variability_purse_string = (np.ones(len(contractility_time_variability)) *
+                                                  c_set.purseStringStrength)
+        contractility_variability_purse_string[contractility_time_variability <= c_set.delay_purse_string] = 1
+
+        contractility_variability_lateral_cables = (np.ones(len(contractility_time_variability)) *
+                                                    c_set.lateralCablesStrength)
+        contractility_variability_lateral_cables[contractility_time_variability <= c_set.delay_lateral_cables] = 1
+
+    time_after_ablation = float(c_set.currentT) - float(c_set.TInitAblation)
+    contractility_value = 0
+
+    if time_after_ablation >= 0:
+        distance_to_time_variables = np.abs(contractility_time_variability - time_after_ablation) / \
+                                     contractility_time_variability[1]
+        indices_of_closest_time_points = np.argsort(distance_to_time_variables)
+        closest_time_points_distance = 1 - distance_to_time_variables[indices_of_closest_time_points]
 
         if current_face.InterfaceType == 'Top' or current_face.InterfaceType == 0:
-            contractilityValue = c_set.Contractility_Variability_PurseString[indicesOfClosestTimePoints[0]] * \
-                                 closestTimePointsDistance[0] + c_set.Contractility_Variability_PurseString[
-                                     indicesOfClosestTimePoints[1]] * closestTimePointsDistance[1]
+            contractility_value = contractility_variability_purse_string[indices_of_closest_time_points[0]] * \
+                                  closest_time_points_distance[0] + contractility_variability_purse_string[
+                                      indices_of_closest_time_points[1]] * closest_time_points_distance[1]
         elif current_face.InterfaceType == 'CellCell' or current_face.InterfaceType == 1:
-            contractilityValue = c_set.Contractility_Variability_LateralCables[indicesOfClosestTimePoints[0]] * \
-                                 closestTimePointsDistance[0] + c_set.Contractility_Variability_LateralCables[
-                                     indicesOfClosestTimePoints[1]] * closestTimePointsDistance[1]
+            contractility_value = contractility_variability_lateral_cables[indices_of_closest_time_points[0]] * \
+                                  closest_time_points_distance[0] + contractility_variability_lateral_cables[
+                                      indices_of_closest_time_points[1]] * closest_time_points_distance[1]
 
-    return contractilityValue
+    return contractility_value
 
 
 def get_delayed_contractility(current_t, purse_string_strength, current_tri, cutoff):
@@ -87,6 +109,10 @@ def compute_energy_contractility(l_i0, l_i, c_contractility):
     return energyContractility
 
 
+def get_fixed_contractility(purseStringStrength, current_tri, CUTOFF):
+    pass
+
+
 def get_contractility_based_on_location(current_face, current_tri, geo, c_set, cell_noise):
     """
     Get the contractility based on the location
@@ -102,19 +128,22 @@ def get_contractility_based_on_location(current_face, current_tri, geo, c_set, c
 
     if current_tri.ContractilityValue is None:
         if c_set.ablation:
-            if c_set.DelayedAdditionalContractility == 1:
+            if c_set.TypeOfPurseString == 0:
+                contractilityValue = get_intensity_based_contractility(c_set, current_face, intensity_images=True)
+            elif c_set.TypeOfPurseString == 1:
                 contractilityValue = get_delayed_contractility(c_set.currentT, c_set.purseStringStrength,
                                                                current_tri,
                                                                CUTOFF * c_set.purseStringStrength)
-            else:
-                contractilityValue = get_intensity_based_contractility(c_set, current_face)
+            elif c_set.TypeOfPurseString == 2:
+                contractilityValue = get_intensity_based_contractility(c_set, current_face, intensity_images=False)
+
         else:
             contractilityValue = 1
 
         if len(current_tri.SharedByCells) == 1:
             contractilityValue = 0
         else:
-            if current_face.InterfaceType == 'Top' or current_face.InterfaceType == 0: # Top
+            if current_face.InterfaceType == 'Top' or current_face.InterfaceType == 0:  # Top
                 if any([geo.Cells[cell].AliveStatus == 0 for cell in current_tri.SharedByCells]):
                     contractilityValue = contractilityValue * c_set.cLineTension
                 else:
@@ -140,7 +169,8 @@ def get_contractility_based_on_location(current_face, current_tri, geo, c_set, c
                 for n_triToCheck in range(len(trisToCheck)):
                     triToCheck = trisToCheck[n_triToCheck]
                     if np.array_equal(sorted(current_tri.SharedByCells), sorted(triToCheck.SharedByCells)):
-                        geo.Cells[cellToCheck].Faces[faceToCheckID].Tris[n_triToCheck].ContractilityValue = contractilityValue
+                        geo.Cells[cellToCheck].Faces[faceToCheckID].Tris[
+                            n_triToCheck].ContractilityValue = contractilityValue
     else:
         contractilityValue = current_tri.ContractilityValue
 
@@ -151,6 +181,7 @@ class KgContractility(Kg):
     """
     Class to compute the work and Jacobian for the contractility energy.
     """
+
     def compute_work(self, geo, c_set, geo_n=None, calculate_k=True):
         """
         Compute the work of the contractility

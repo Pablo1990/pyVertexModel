@@ -171,7 +171,7 @@ class VertexModel:
             # self.set.cyst()
             self.set.wing_disc()
             if self.set.ablation:
-                self.set.woundDefault()
+                self.set.wound_default()
             self.set.update_derived_parameters()
 
         # Redirect output
