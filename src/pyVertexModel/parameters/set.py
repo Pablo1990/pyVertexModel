@@ -14,6 +14,7 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.initial_filename_state = 'input/wing_disc_150.mat'
         self.delay_lateral_cables = None
         self.delay_purse_string = None
         self.ref_A0 = None
@@ -218,6 +219,7 @@ class Set:
 
     def wing_disc(self):
         self.InputGeo = 'VertexModelTime'
+        #self.initial_filename_state = 'input/initial_lambdaS_0.3.pkl'
         # 40 cells 3 cells to ablate
         # 110 cells 7 cells to ablate
         self.TotalCells = 150

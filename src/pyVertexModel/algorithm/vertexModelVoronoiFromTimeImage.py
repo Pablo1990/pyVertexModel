@@ -468,10 +468,12 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
     def __init__(self, set_test=None):
         super().__init__(set_test)
 
-    def initialize(self, filename="src/pyVertexModel/resources/LblImg_imageSequence.tif"):
+    def initialize(self):
         """
         Initialize the geometry and the topology of the model.
         """
+        filename = self.set.initial_filename_state
+
         if os.path.exists(filename) and filename.endswith('.pkl'):
             output_folder = self.set.OutputFolder
             load_state(self, filename, ['geo', 'geo_0', 'geo_n'])
