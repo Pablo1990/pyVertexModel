@@ -8,8 +8,6 @@ vModel = VertexModelVoronoiFromTimeImage()
 
 start_new = True
 if start_new == True:
-    #vModel.initialize(
-    #    '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Tests/data/wing_disc_150.mat')
     vModel.initialize()
     temp_dir = os.path.join(vModel.set.OutputFolder, 'images')
     if not os.path.exists(temp_dir):
