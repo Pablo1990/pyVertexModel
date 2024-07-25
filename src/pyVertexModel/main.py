@@ -19,4 +19,4 @@ else:
     vModel.iteration_converged()
     vModel.iterate_over_time()
 
-analyse_simulation(vModel.set.OutputFolder)
+#analyse_simulation(vModel.set.OutputFolder)

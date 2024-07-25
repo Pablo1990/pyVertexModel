@@ -1,4 +1,5 @@
 import copy
+import logging
 import lzma
 import os
 import pickle
@@ -472,13 +473,16 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         """
         Initialize the geometry and the topology of the model.
         """
-        filename = self.set.initial_filename_state
+        filename = os.path.join(PROJECT_DIRECTORY, self.set.initial_filename_state)
 
-        if os.path.exists(filename) and filename.endswith('.pkl'):
+        if not os.path.exists(filename):
+            logging.error(f'File {filename} not found')
+
+        if filename.endswith('.pkl'):
             output_folder = self.set.OutputFolder
             load_state(self, filename, ['geo', 'geo_0', 'geo_n'])
             self.set.OutputFolder = output_folder
-        elif os.path.exists(filename) and filename.endswith('.mat'):
+        elif filename.endswith('.mat'):
             mat_info = scipy.io.loadmat(filename)
             self.geo = Geo(mat_info['Geo'])
         else:
