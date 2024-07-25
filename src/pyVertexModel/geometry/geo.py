@@ -1166,12 +1166,11 @@ class Geo:
         Compute the number of cells between the cell and a wound cell
         :return:
         """
-        list_of_cells = np.zeros(len([c_cell for c_cell in self.Cells if c_cell.AliveStatus is not None]))
+        list_of_cells = np.zeros(len(self.Cells))
         for num_cell, cell in enumerate(self.Cells):
             if cell.AliveStatus == 1 and cell.ID not in wound_cells:
                 cell_neighbours = cell.compute_neighbours()
                 cell_distance = 1
-
                 while list_of_cells[num_cell] == 0:
                     for c in cell_neighbours:
                         if c in wound_cells:
