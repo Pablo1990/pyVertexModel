@@ -247,15 +247,13 @@ class Set:
         self.kSubstrate = 0
         self.cLineTension = 0.0025
         self.Contractility_external = True
-        self.cLineTension_external = 0.0001
+        self.cLineTension_external = self.cLineTension
 
         self.brownian_motion = False
         self.brownian_motion_scale = 0
 
         self.noise_random = 0
-        #self.DelayedAdditionalContractility = 0
-        # Soft < 0
-        # Stiff > 0
+        self.TypeOfPurseString = 2
         self.Remodelling = 1
         self.RemodelStiffness = 0.9
         self.ref_A0 = 0.8
@@ -268,7 +266,7 @@ class Set:
         self.implicit_method = False
         if self.implicit_method is False:
             self.tol = 100
-            self.tol0 = 5 #self.nu/20
+            self.tol0 = 5  #self.nu/20
 
         self.ablation = True
 
