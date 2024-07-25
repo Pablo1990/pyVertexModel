@@ -15,11 +15,18 @@ logger = logging.getLogger("pyVertexModel")
 class Set:
     def __init__(self, mat_file=None):
         self.typeOfEllipsoid = None
+        self.cLineTension_external = None
+        self.Contractility_external = None
+        self.initial_filename_state = 'Input/wing_disc_150.mat'
+        self.delay_lateral_cables = None
+        self.delay_purse_string = None
+        self.ref_A0 = None
+        self.lateralCablesStrength = None
         self.tol0 = None
         self.dt = None
         self.implicit_method = False
         self.cellsToAblate = None
-        self.DelayedAdditionalContractility = None
+        self.TypeOfPurseString = None
         self.Contractility_TimeVariability = None
         self.Contractility_Variability_LateralCables = None
         self.Contractility_Variability_PurseString = None
@@ -69,7 +76,7 @@ class Set:
             # Tri energy Area
             self.EnergyBarrierA = True
             self.lambdaB = 5.0
-            self.Beta = 1.0
+            self.Beta = 1
             # Tri energy Aspect ratio
             self.EnergyBarrierAR = True
             self.lambdaR = 5.0
@@ -180,13 +187,14 @@ class Set:
 
         current_datetime = datetime.now()
         new_outputFolder = ''.join([PROJECT_DIRECTORY, '/Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")),
-                                    self.InputGeo, '_Cells_', str(self.TotalCells), '_visc_', str(self.nu), '_lVol_',
+                                    '_Cells_', str(self.TotalCells), '_visc_', str(self.nu), '_lVol_',
                                     str(self.lambdaV), '_kSubs_', str(self.kSubstrate), '_lt_', str(self.cLineTension),
-                                    '_noise_', str(self.noise_random), '_brownian_', str(self.brownian_motion_scale),
+                                    '_ltExt_', str(self.cLineTension_external),
+                                    '_noise_', str(self.noise_random), '_ref_A0_', str(self.ref_A0),
                                     '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
                                     '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
                                     '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3),
-                                    '_pString_', str(self.purseStringStrength), '_tol_', str(self.tol0)])
+                                    '_pString_', str(self.purseStringStrength)])
         self.define_if_not_defined("OutputFolder", new_outputFolder)
 
     def stretch(self):
@@ -268,48 +276,57 @@ class Set:
         self.Remodelling = True
         self.RemodelStiffness = 0.98
 
-    def NoBulk_110(self):
+    def wing_disc(self):
         self.InputGeo = 'VertexModelTime'
+        #self.initial_filename_state = 'Input/initial_lambdaS_0.3.pkl'
         # 40 cells 3 cells to ablate
         # 110 cells 7 cells to ablate
         self.TotalCells = 150
         self.CellHeight = 15
         self.tend = 61
         self.Nincr = self.tend * 10
-        self.tol = 100
-        self.tol0 = 20
 
         self.nu = 100
         self.EnergyBarrierA = False
-        self.lambdaB = 0
+        if self.EnergyBarrierA:
+            self.lambdaB = 20
+        else:
+            self.lambdaB = 0
 
         self.EnergyBarrierAR = False
-        self.lambdaR = 0
+        if self.EnergyBarrierAR:
+            self.lambdaR = 0.000001
+        else:
+            self.lambdaR = 0
 
-        self.lambdaV = 0.01
-        self.kSubstrate = 1
+        self.lambdaV = 1
+        self.kSubstrate = 0
         self.cLineTension = 0.0025
+        self.Contractility_external = True
+        self.cLineTension_external = self.cLineTension
 
         self.brownian_motion = False
         self.brownian_motion_scale = 0
 
         self.noise_random = 0
-        #self.DelayedAdditionalContractility = 0
-        # Soft < 0
-        # Stiff > 0
+        self.TypeOfPurseString = 2
         self.Remodelling = 1
-        self.RemodelStiffness = 0.98
-        self.lambdaS1 = 2
-        self.lambdaS2 = self.lambdaS1 / 20
-        self.lambdaS3 = self.lambdaS1 / 20
+        self.RemodelStiffness = 0.9
+        self.ref_A0 = 0.8
+        self.lambdaS1 = 0.1
+        self.lambdaS2 = self.lambdaS1
+        self.lambdaS3 = self.lambdaS1
         self.lambdaS4 = self.lambdaS2
         self.VTK = False
 
         self.implicit_method = False
+        if self.implicit_method is False:
+            self.tol = 100
+            self.tol0 = 5  #self.nu/20
 
         self.ablation = True
 
-    def woundDefault(self):
+    def wound_default(self):
         # ============================== Ablation ============================
         self.cellsToAblate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
         self.TInitAblation = 1
@@ -317,19 +334,18 @@ class Set:
         self.lambdaSFactor_Debris = np.finfo(float).eps
         # =========================== Contractility ==========================
         self.Contractility = True
-        self.DelayedAdditionalContractility = 0
-        self.purseStringStrength = 2.5
-        self.Contractility_Variability_PurseString = np.power(np.array(
-            [1.0, 0.96, 1.007, 1.74, 2.37, 2.61, 2.487, 2.536, 2.46, 2.52, 2.606, 2.456, 2.387, 2.52, 2.31, 2.328,
-             2.134, 2.07, 2.055, 1.9, 1.9]), self.purseStringStrength)
-        self.Contractility_Variability_LateralCables = np.array(
-            [0.45, 0.53, 0.76, 1.15, 1.28, 1.22, 1.38, 1.33, 1.28, 1.4, 1.25, 1.298, 1.45, 1.31, 1.29, 1.42, 1.31,
-             1.41, 1.42, 1.37, 1.28])
-        self.Contractility_TimeVariability = (np.arange(0, 60 + 3, 3)) / 60 * (self.TEndAblation - self.TInitAblation)
+        self.TypeOfPurseString = 2
+        # 0: Intensity-based purse string
+        # 1: Strain-based purse string (delayed)
+        # 2: Fixed with linear increase purse string
+        self.purseStringStrength = 5
+        self.lateralCablesStrength = 1
+        self.delay_purse_string = 5.5
+        self.delay_lateral_cables = 1
 
     def menu_input(self, inputMode=None, batchMode=None):
         if inputMode == 7:
-            self.NoBulk_110()
+            self.wing_disc()
 
     def copy(self):
         """

@@ -19,7 +19,9 @@ class Tris:
         Initialize the triangles.
         :param mat_file:
         """
-        self.pastContractilityValue = None
+        self.lambda_r_noise = None
+        self.lambda_b_noise = None
+        self.k_substrate_noise = None
         if mat_file is None or mat_file[0].shape[0] == 0:
             self.Edge = []
             self.SharedByCells = []

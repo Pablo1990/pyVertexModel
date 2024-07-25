@@ -249,7 +249,7 @@ class TestGeo(Tests):
         new_tets_test = mat_info['newTets'] - 1
         geo_test = Geo(mat_info['Geo_new'])
 
-        geo_test.add_tetrahedra(old_geo, new_tets_test, None, set_test)
+        geo_test.add_tetrahedra(old_geo, new_tets_test, None, None, set_test)
 
         _, _, mat_info = load_data('add_tetrahedra_wingdisc_expected.mat')
         geo_expected = Geo(mat_info['Geo_new'])

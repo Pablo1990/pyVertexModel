@@ -2,15 +2,12 @@ import logging
 
 import numpy as np
 import pandas as pd
-from matplotlib._qhull import delaunay
 
-from src.pyVertexModel.algorithm import newtonRaphson
-from src.pyVertexModel.algorithm.newtonRaphson import solve_remodeling_step, KgGlobal, gGlobal, remeshing_cells
 from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours_vertices
 from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
 from src.pyVertexModel.util.utils import ismember_rows, save_backup_vars, load_backup_vars, compute_distance_3d, \
-    RegulariseMesh, laplacian_smoothing
+    laplacian_smoothing
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -280,12 +277,15 @@ class Remodelling:
                     # # Solve the remodelling step
                     # self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
                     #                                                      self.Set)
+                    # if self.Set.implicit_method is False:
+                    #     g, energies = newtonRaphson.gGlobal(self.Geo_0, self.Geo_n, self.Geo, self.Set,
+                    #                                         self.Set.implicit_method)
+                    #     gr = np.linalg.norm(g[self.Dofs.Free])
+                    #     print(gr)
+                    #     if gr >= self.Set.tol0:
+                    #         has_converged = False
                 else:
-                    cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
-                                                    and cell.AliveStatus == 1]
-                    self.Geo = smoothing_cell_surfaces_mesh(self.Geo, cells_involved_intercalation)
-                    self.Geo_n = self.Geo.copy(update_measurements=False)
-                    has_converged = True
+                    has_converged = False
 
                 if has_converged is False:
                     self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs = load_backup_vars(backup_vars)
@@ -295,7 +295,7 @@ class Remodelling:
                     logger.info(f'=>> Full-Flip accepted')
                     self.Geo_n = self.Geo.copy(update_measurements=False)
                     backup_vars = save_backup_vars(self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs)
-                    break
+                    #break
             else:
                 # Go back to initial state
                 self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs = load_backup_vars(backup_vars)
@@ -340,8 +340,7 @@ class Remodelling:
 
             valence_segment, old_tets, old_ys = edge_valence(self.Geo, nodes_pair)
             cell_nodes = [cell for cell in self.Geo.non_dead_cells if cell in old_tets.flatten()]
-            cell_node_alive = [cell for cell in cell_nodes if self.Geo.Cells[cell].AliveStatus == 1]
-            if len(cell_node_alive) > 2 or (len(cell_node_alive) == 2 and len(cell_nodes) == 3):
+            if len(cell_nodes) > 2:
                 has_converged, Tnew = self.flip_nm(nodes_pair, cell_to_intercalate_with, old_tets, old_ys,
                                                    cell_to_split_from)
                 if Tnew is not None:
@@ -354,6 +353,15 @@ class Remodelling:
             if any(np.isin(shared_nodes_still, self.Geo.XgID)) and has_converged:
                 shared_nodes_still_g = shared_nodes_still[np.isin(shared_nodes_still, self.Geo.XgID)]
                 ghost_node = shared_nodes_still_g[0]
+
+                for ghost_node_provisional in shared_nodes_still_g:
+                    nodes_pair_provisional = np.array([cell_node, ghost_node_provisional])
+                    valence_segment, old_tets, old_ys = edge_valence(self.Geo, nodes_pair_provisional)
+                    cell_nodes = [cell for cell in self.Geo.non_dead_cells if cell in old_tets.flatten()]
+                    cell_node_alive = [cell for cell in cell_nodes if self.Geo.Cells[cell].AliveStatus == 1]
+                    #print(cell_node_alive)
+
+                # TODO: SELECT THE BEST GHOST NODE
             else:
                 break
 

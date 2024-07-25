@@ -1,4 +1,5 @@
 import copy
+import logging
 import lzma
 import os
 import pickle
@@ -13,59 +14,11 @@ from skimage.measure import regionprops_table, regionprops
 from skimage.morphology import dilation, disk, square
 from skimage.segmentation import find_boundaries
 
-from src.pyVertexModel.algorithm.vertexModel import VertexModel
+from src import PROJECT_DIRECTORY
+from src.pyVertexModel.algorithm.vertexModel import VertexModel, create_tetrahedra, \
+    generate_tetrahedra_from_information, calculate_cell_height_on_model
 from src.pyVertexModel.geometry.geo import Geo
-from src.pyVertexModel.parameters.set import Set
-from src.pyVertexModel.util.utils import ismember_rows, save_variables, save_state, load_state
-
-
-def create_tetrahedra(triangles_connectivity, neighbours_network, edges_of_vertices, x_internal, x_face_ids,
-                      x_vertices_ids, x):
-    """
-    Add connections between real nodes and ghost cells to create tetrahedra.
-
-    :param triangles_connectivity: A 2D array where each row represents a triangle connectivity.
-    :param neighbours_network: A 2D array where each row represents a pair of neighboring nodes.
-    :param edges_of_vertices: A list of lists where each sublist represents the edges of a vertex.
-    :param x_internal: A 1D array representing the internal nodes.
-    :param x_face_ids: A 1D array representing the face ids.
-    :param x_vertices_ids: A 1D array representing the vertices ids.
-    :param x: A 2D array representing the nodes.
-    :return: A 2D array representing the tetrahedra.
-    """
-    x_ids = np.concatenate([x_face_ids, x_vertices_ids])
-
-    # Relationships: 1 ghost node, three cell nodes
-    twg = np.hstack([triangles_connectivity, x_vertices_ids[:, None]])
-
-    # Relationships: 1 cell node and 3 ghost nodes
-    new_additions = []
-    for num_cell in x_internal:
-        face_id = x_face_ids[num_cell - 1]
-        vertices_to_connect = edges_of_vertices[num_cell - 1]
-        new_additions.extend(np.hstack([np.repeat(np.array([[num_cell, face_id]]), len(vertices_to_connect), axis=0),
-                                        x_vertices_ids[vertices_to_connect]]))
-    twg = np.vstack([twg, new_additions])
-
-    # Relationships: 2 ghost nodes, two cell nodes
-    twg_sorted = np.sort(twg[np.any(np.isin(twg, x_ids), axis=1)], axis=1)
-    internal_neighbour_network = [neighbour for neighbour in neighbours_network if
-                                  np.any(np.isin(neighbour, x_internal))]
-    internal_neighbour_network = np.unique(np.sort(internal_neighbour_network, axis=1), axis=0)
-
-    new_additions = []
-    for num_pair in range(internal_neighbour_network.shape[0]):
-        found = np.isin(twg_sorted, internal_neighbour_network[num_pair])
-        new_connections = np.unique(twg_sorted[np.sum(found, axis=1) == 2, 3])
-        if len(new_connections) > 1:
-            new_connections_pairs = np.array(list(combinations(new_connections, 2)))
-            new_additions.extend([np.hstack([internal_neighbour_network[num_pair], new_connections_pair])
-                                  for new_connections_pair in new_connections_pairs])
-        else:
-            raise ValueError('Error while creating the connections and initial topology')
-    twg = np.vstack([twg, new_additions])
-
-    return twg
+from src.pyVertexModel.util.utils import ismember_rows, save_variables, load_state
 
 
 def calculate_neighbours(labelled_img, ratio_strel):
@@ -279,14 +232,15 @@ def boundary_of_cell(vertices_of_cell, neighbours=None):
     return new_vert_order
 
 
-def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
+def build_2d_voronoi_from_image(labelled_img, watershed_img, total_cells):
     """
     Build a 2D Voronoi diagram from an image
     :param labelled_img:
     :param watershed_img:
-    :param main_cells:
+    :param total_cells:
     :return:
     """
+
     ratio = 2
 
     labelled_img[watershed_img == 0] = 0
@@ -304,30 +258,39 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
 
     img_neighbours = calculate_neighbours(labelled_img, ratio)
 
+    # Calculate the network of neighbours from the cell with ID 1
+    if not isinstance(total_cells, np.ndarray):
+        main_cells = img_neighbours[1]
+        while len(main_cells) < total_cells:
+            for c_cell in main_cells:
+                for c_neighbour in img_neighbours[c_cell]:
+                    if len(main_cells) >= total_cells:
+                        break
+
+                    if c_neighbour not in main_cells:
+                        main_cells = np.append(main_cells, c_neighbour)
+
+        main_cells = np.sort(main_cells)
+    else:
+        main_cells = total_cells
+
+    # Calculate the border cells from main_cells
     border_cells_and_main_cells = np.unique(np.block([img_neighbours[i] for i in main_cells]))
     border_ghost_cells = np.setdiff1d(border_cells_and_main_cells, main_cells)
     border_cells = np.intersect1d(main_cells, np.unique(np.block([img_neighbours[i] for i in border_ghost_cells])))
 
     border_of_border_cells_and_main_cells = np.unique(
         np.concatenate([img_neighbours[i] for i in border_cells_and_main_cells]))
-    labelled_img[~np.isin(labelled_img, np.arange(1, np.max(border_of_border_cells_and_main_cells) + 1))] = 0
 
-    img_neighbours_all = calculate_neighbours(labelled_img, ratio)
-    quartets, _ = get_four_fold_vertices(img_neighbours_all)
+    quartets, _ = get_four_fold_vertices(img_neighbours)
     if quartets is not None:
-        divide_quartets_neighbours(img_neighbours_all, labelled_img, quartets)
+        img_neighbours = divide_quartets_neighbours(img_neighbours, labelled_img, quartets)
 
-    vertices_info = populate_vertices_info(border_cells_and_main_cells, img_neighbours_all,
+    #labelled_img[~np.isin(labelled_img, border_of_border_cells_and_main_cells)] = 0
+    vertices_info = populate_vertices_info(border_cells_and_main_cells, img_neighbours,
                                            labelled_img, main_cells, ratio)
 
-    neighbours_network = []
-
-    for num_cell in main_cells:
-        current_neighbours = np.array(img_neighbours_all[num_cell])
-        current_cell_neighbours = np.vstack(
-            [np.ones(len(current_neighbours), dtype=int) * num_cell, current_neighbours]).T
-
-        neighbours_network.extend(current_cell_neighbours)
+    neighbours_network = generate_neighbours_network(img_neighbours, main_cells)
 
     triangles_connectivity = np.array(vertices_info['connectedCells'])
     cell_edges = vertices_info['edges']
@@ -337,7 +300,18 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells):
     cell_edges = [cell_edges[i] for i in range(len(cell_edges)) if cell_edges[i] is not None]
 
     return (triangles_connectivity, neighbours_network, cell_edges, vertices_location, border_cells,
-            border_of_border_cells_and_main_cells)
+            border_of_border_cells_and_main_cells, main_cells)
+
+
+def generate_neighbours_network(neighbours, main_cells):
+    neighbours_network = []
+    for num_cell in main_cells:
+        current_neighbours = np.array(neighbours[num_cell])
+        current_cell_neighbours = np.vstack(
+            [np.ones(len(current_neighbours), dtype=int) * num_cell, current_neighbours]).T
+
+        neighbours_network.extend(current_cell_neighbours)
+    return neighbours_network
 
 
 def divide_quartets_neighbours(img_neighbours_all, labelled_img, quartets):
@@ -373,6 +347,8 @@ def divide_quartets_neighbours(img_neighbours_all, labelled_img, quartets):
         current_neighs = img_neighbours_all[quartets[num_quartets][row[0]]]
         current_neighs = current_neighs[current_neighs != quartets[num_quartets][col[0]]]
         img_neighbours_all[quartets[num_quartets][row[0]]] = current_neighs
+
+    return img_neighbours_all
 
 
 def populate_vertices_info(border_cells_and_main_cells, img_neighbours_all, labelled_img, main_cells,
@@ -430,7 +406,7 @@ def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence
 
                 # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
                 centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
-                centre_of_image = np.array([img2DLabelled.shape[0] / 2, img2DLabelled.shape[0] / 2])
+                centre_of_image = np.array([img2DLabelled.shape[0] / 2, img2DLabelled.shape[1] / 2])
 
                 # Sorting cells based on distance to the middle of the image
                 distanceToMiddle = cdist([centre_of_image], centroids)
@@ -452,12 +428,6 @@ def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence
                     newCont += 1
 
                 img2DLabelled = imgStackLabelled[0, :, :]
-
-                # Show the first plane
-                import matplotlib.pyplot as plt
-                plt.imshow(img2DLabelled)
-                plt.imshow(imgStackLabelled[99, :, :])
-                plt.show()
 
                 save_variables({'imgStackLabelled': imgStackLabelled},
                                img_filename.replace('.tif', '.xz'))
@@ -487,10 +457,10 @@ def add_tetrahedral_intercalations(Twg, xInternal, XgBottom, XgTop, XgLateral):
 
         neighboursMissing[numCell] = np.setxor1d(neighbours_bottom, neighbours_top)
         for missingCell in neighboursMissing[numCell]:
-            tetsToAdd = allCellIds[
-                np.isin(allCellIds, Twg_cCell[np.any(np.isin(Twg_cCell, missingCell), axis=1), :])]
+            tetsToAdd = np.sort(allCellIds[
+                                    np.isin(allCellIds, Twg_cCell[np.any(np.isin(Twg_cCell, missingCell), axis=1), :])])
             assert len(tetsToAdd) == 4, f'Missing 4-fold at Cell {numCell}'
-            if not np.any(np.all(np.sort(tetsToAdd) == Twg, axis=1)):
+            if not np.any(np.all(tetsToAdd == Twg, axis=1)):
                 Twg = np.vstack((Twg, tetsToAdd))
     return Twg
 
@@ -499,46 +469,50 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
     def __init__(self, set_test=None):
         super().__init__(set_test)
 
-    def initialize(self, filename="src/pyVertexModel/resources/LblImg_imageSequence.tif"):
+    def initialize(self):
         """
         Initialize the geometry and the topology of the model.
-        :return:
         """
-        if os.path.exists(filename):
-            if filename.endswith('.pkl'):
-                output_folder = self.set.OutputFolder
-                load_state(self, filename, ['geo', 'geo_0', 'geo_n'])
-                self.set.OutputFolder = output_folder
-            elif filename.endswith('.mat'):
-                mat_info = scipy.io.loadmat(filename)
-                self.geo = Geo(mat_info['Geo'])
+        filename = os.path.join(PROJECT_DIRECTORY, self.set.initial_filename_state)
+
+        if not os.path.exists(filename):
+            logging.error(f'File {filename} not found')
+
+        if filename.endswith('.pkl'):
+            output_folder = self.set.OutputFolder
+            load_state(self, filename, ['geo', 'geo_0', 'geo_n'])
+            self.set.OutputFolder = output_folder
+        elif filename.endswith('.mat'):
+            mat_info = scipy.io.loadmat(filename)
+            self.geo = Geo(mat_info['Geo'])
         else:
             # Load the image and obtain the initial X and tetrahedra
-            Twg, X = self.obtain_initial_x_and_tetrahedra(filename)
+            Twg, X = self.obtain_initial_x_and_tetrahedra()
             # Build cells
             self.geo.build_cells(self.set, X, Twg)
-            save_state(self.geo, 'voronoi_40cells.pkl')
+
+            # Save state with filename using the number of cells
+            filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
+            #save_state(self.geo, 'voronoi_40cells.pkl')
 
         if self.set.ablation:
             self.geo.cellsToAblate = self.set.cellsToAblate
 
         # Define upper and lower area threshold for remodelling
         if self.geo.lmin0 is None:
-            self.initialize_average_cell_props()
+            self.geo.init_reference_cell_values(self.set)
 
-    def obtain_initial_x_and_tetrahedra(self, img_filename="src/pyVertexModel/resources/LblImg_imageSequence.tif"):
+    def obtain_initial_x_and_tetrahedra(self, img_filename=None):
         """
         Obtain the initial X and tetrahedra for the model.
         :return:
         """
+        if img_filename is None:
+            img_filename = PROJECT_DIRECTORY + '/src/pyVertexModel/resources/LblImg_imageSequence.tif'
+
         selectedPlanes = [0, 99]
-        xInternal = np.arange(1, self.set.TotalCells + 1)
         img2DLabelled, imgStackLabelled = process_image(img_filename)
-        # Basic features
-        properties = regionprops(img2DLabelled)
-        # Extract major axis lengths
-        avgDiameter = np.mean([prop.major_axis_length for prop in properties[0:self.set.TotalCells]])
-        cellHeight = avgDiameter * self.set.CellHeight
+
         # Building the topology of each plane
         trianglesConnectivity = {}
         neighboursNetwork = {}
@@ -546,12 +520,14 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         verticesOfCell_pos = {}
         borderCells = {}
         borderOfborderCellsAndMainCells = {}
+        cell_centroids = {}
+        main_cells = self.set.TotalCells
         for numPlane in selectedPlanes:
+            current_img = imgStackLabelled[:, numPlane, :]
             (triangles_connectivity, neighbours_network,
              cell_edges, vertices_location, border_cells,
-             border_of_border_cells_and_main_cells) = build_2d_voronoi_from_image(imgStackLabelled[:, :, numPlane],
-                                                                                  imgStackLabelled[:, :, numPlane],
-                                                                                  np.arange(1, self.set.TotalCells + 1))
+             border_of_border_cells_and_main_cells,
+             main_cells) = build_2d_voronoi_from_image(current_img, current_img, main_cells)
 
             trianglesConnectivity[numPlane] = triangles_connectivity
             neighboursNetwork[numPlane] = neighbours_network
@@ -559,74 +535,60 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             verticesOfCell_pos[numPlane] = vertices_location
             borderCells[numPlane] = border_cells
             borderOfborderCellsAndMainCells[numPlane] = border_of_border_cells_and_main_cells
+
+            props = regionprops_table(current_img, properties=('centroid', 'label',))
+            zeros_column = np.zeros((props['centroid-1'].shape[0], 1))
+            cell_centroids[numPlane] = np.column_stack([props['label'], props['centroid-0'], props['centroid-1'],
+                                                        zeros_column])
+
         # Select nodes from images
-        img3DProperties = regionprops_table(imgStackLabelled, properties=('centroid', 'label',))
-        # TODO: even though this is like in matlab, it should change because it is not correct. You might not
-        #  connected neighbours and thus, issues with neighbours
-        all_main_cells = np.arange(1, np.max(
-            np.concatenate([borderOfborderCellsAndMainCells[numPlane] for numPlane in selectedPlanes])) + 1)
-        X = np.vstack(
-            [[img3DProperties['centroid-1'][i], img3DProperties['centroid-0'][i], img3DProperties['centroid-2'][i]] for
-             i in
-             range(len(img3DProperties['label'])) if img3DProperties['label'][i] in all_main_cells])
-        X[:, 2] = 0
+        all_main_cells = np.unique(
+            np.concatenate([borderOfborderCellsAndMainCells[numPlane] for numPlane in selectedPlanes]))
 
-        # Using the centroids and vertices of the cells of each 2D image as ghost nodes
-        bottomPlane = 0
-        topPlane = 1
+        # Obtain the average centroid between the selected planes
+        max_label = int(np.max([np.max(cell_centroids[numPlane][:, 0]) for numPlane in selectedPlanes]))
+        X = np.zeros((max_label + 1, 3))
+        for label in arange(1, max_label + 1):
+            list_centroids = []
+            for numPlane in selectedPlanes:
+                found_centroid = np.where(cell_centroids[numPlane][:, 0] == label)[0]
+                if len(found_centroid) > 0:
+                    list_centroids.append(cell_centroids[numPlane][found_centroid, 1:3])
 
-        if bottomPlane == 0:
-            zCoordinate = [-cellHeight, cellHeight]
-        else:
-            zCoordinate = [cellHeight, -cellHeight]
-        Twg = []
-        for idPlane, numPlane in enumerate(selectedPlanes):
-            img2DLabelled = imgStackLabelled[:, :, numPlane]
-            unique_label = np.max(img2DLabelled)
-            props = regionprops_table(img2DLabelled, properties=('centroid', 'label',))
+            if len(list_centroids) > 0:
+                X[label, 0:2] = np.mean(list_centroids, axis=0)
+            else:
+                print(f'Cell {label} not found in all planes')
 
-            centroids = np.full((unique_label, 2), np.nan)
-            centroids[np.array(props['label'], dtype=int) - 1] = np.column_stack(
-                [props['centroid-1'], props['centroid-0']])
-            Xg_faceCentres2D = np.hstack((centroids, np.tile(zCoordinate[idPlane], (len(centroids), 1))))
-            Xg_vertices2D = np.hstack((np.fliplr(verticesOfCell_pos[numPlane]),
-                                       np.tile(zCoordinate[idPlane], (len(verticesOfCell_pos[numPlane]), 1))))
+        # Basic features
+        cell_height = calculate_cell_height_on_model(img2DLabelled, main_cells, self.set)
 
-            Xg_nodes = np.vstack((Xg_faceCentres2D, Xg_vertices2D))
-            Xg_ids = np.arange(X.shape[0] + 1, X.shape[0] + Xg_nodes.shape[0] + 1)
-            Xg_faceIds = Xg_ids[0:Xg_faceCentres2D.shape[0]]
-            Xg_verticesIds = Xg_ids[Xg_faceCentres2D.shape[0]:]
-            X = np.vstack((X, Xg_nodes))
-
-            # Fill Geo info
-            if idPlane == bottomPlane:
-                self.geo.XgBottom = Xg_ids
-            elif idPlane == topPlane:
-                self.geo.XgTop = Xg_ids
-
-            # Create tetrahedra
-            Twg_numPlane = create_tetrahedra(trianglesConnectivity[numPlane], neighboursNetwork[numPlane],
-                                             cellEdges[numPlane], xInternal, Xg_faceIds, Xg_verticesIds, X)
-
-            Twg.append(Twg_numPlane)
-
-        Twg = np.vstack(Twg)
+        # Generate tetrahedra from information of images
+        Twg, X = generate_tetrahedra_from_information(X, cellEdges, cell_height, cell_centroids, main_cells,
+                                                      neighboursNetwork, selectedPlanes, trianglesConnectivity,
+                                                      verticesOfCell_pos, self.geo)
 
         # Fill Geo info
-        self.geo.nCells = len(xInternal)
-        self.geo.XgLateral = np.setdiff1d(all_main_cells, xInternal)
-        self.geo.XgID = np.setdiff1d(np.arange(1, X.shape[0] + 1), xInternal)
+        self.geo.nCells = len(main_cells)
+        self.geo.Main_cells = main_cells
+        self.geo.XgLateral = np.setdiff1d(all_main_cells, main_cells)
+        self.geo.XgID = np.setdiff1d(np.arange(1, X.shape[0] + 1), main_cells)
         # Define border cells
         self.geo.BorderCells = np.unique(np.concatenate([borderCells[numPlane] for numPlane in selectedPlanes]))
         self.geo.BorderGhostNodes = self.geo.XgLateral
 
         # Create new tetrahedra based on intercalations
-        Twg = add_tetrahedral_intercalations(Twg, xInternal, self.geo.XgBottom, self.geo.XgTop, self.geo.XgLateral)
+        Twg = add_tetrahedral_intercalations(Twg, main_cells, self.geo.XgBottom, self.geo.XgTop, self.geo.XgLateral)
 
         # After removing ghost tetrahedras, some nodes become disconnected,
         # that is, not a part of any tetrahedra. Therefore, they should be
         # removed from X
         Twg = Twg[~np.all(np.isin(Twg, self.geo.XgID), axis=1)]
+
+        # Remove tetrahedra with cells that are not in all_main_cells
+        #cells_to_remove = np.setdiff1d(range(1, np.max(all_main_cells) + 1), all_main_cells)
+        #Twg = Twg[~np.any(np.isin(Twg, cells_to_remove), axis=1)]
+
         # Re-number the surviving tets
         Twg, X = self.renumber_tets_xs(Twg, X)
         # Normalise Xs
@@ -663,5 +625,6 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         self.geo.XgLateral = newIds[np.isin(oldIds, self.geo.XgLateral)]
         self.geo.XgID = newIds[np.isin(oldIds, self.geo.XgID)]
         self.geo.BorderGhostNodes = self.geo.XgLateral
+        self.geo.Main_cells = newIds[np.isin(oldIds, self.geo.Main_cells)]
         # Return the renumbered tetrahedra and coordinates arrays
         return Twg, X

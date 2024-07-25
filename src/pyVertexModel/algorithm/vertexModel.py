@@ -1,19 +1,142 @@
 import logging
 import os
 from abc import abstractmethod
+from itertools import combinations
 
+import imageio
 import numpy as np
 import pandas as pd
+import pyvista as pv
+from skimage.measure import regionprops
 
 from src.pyVertexModel.algorithm import newtonRaphson
 from src.pyVertexModel.geometry import degreesOfFreedom
-from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours_vertices
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
 from src.pyVertexModel.parameters.set import Set
 from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars
 
 logger = logging.getLogger("pyVertexModel")
+
+
+def generate_tetrahedra_from_information(X, cell_edges, cell_height, cell_centroids, main_cells,
+                                         neighbours_network, selected_planes, triangles_connectivity,
+                                         vertices_of_cell_pos, geo):
+    """
+    Generate tetrahedra from the information of the cells.
+    :param X:
+    :param cell_edges:
+    :param cell_height:
+    :param cell_centroids:
+    :param main_cells:
+    :param neighbours_network:
+    :param selected_planes:
+    :param triangles_connectivity:
+    :param vertices_of_cell_pos:
+    :param geo:
+    :return:
+    """
+    bottom_plane = 0
+    top_plane = 1
+    if bottom_plane == 0:
+        z_coordinate = [-cell_height, cell_height]
+    else:
+        z_coordinate = [cell_height, -cell_height]
+    Twg = []
+    for idPlane, numPlane in enumerate(selected_planes):
+        # Using the centroids and vertices of the cells of each 2D image as ghost nodes
+        X, Xg_faceIds, Xg_ids, Xg_verticesIds = (
+            add_faces_and_vertices_to_X(X,
+                                        np.hstack((cell_centroids[numPlane][:, 1:3], np.tile(z_coordinate[idPlane],
+                                                                      (len(cell_centroids[numPlane][:, 1:3]), 1)))),
+                                        np.hstack((np.fliplr(vertices_of_cell_pos[numPlane]),
+                                                   np.tile(z_coordinate[idPlane],
+                                                           (len(vertices_of_cell_pos[numPlane]), 1))))))
+
+        # Fill Geo info
+        if idPlane == bottom_plane:
+            geo.XgBottom = Xg_ids
+        elif idPlane == top_plane:
+            geo.XgTop = Xg_ids
+
+        # Create tetrahedra
+        Twg_numPlane = create_tetrahedra(triangles_connectivity[numPlane], neighbours_network[numPlane],
+                                         cell_edges[numPlane], main_cells, Xg_faceIds, Xg_verticesIds)
+
+        Twg.append(Twg_numPlane)
+    Twg = np.vstack(Twg)
+    return Twg, X
+
+
+def add_faces_and_vertices_to_X(X, Xg_faceCentres2D, Xg_vertices2D):
+    Xg_nodes = np.vstack((Xg_faceCentres2D, Xg_vertices2D))
+    Xg_ids = np.arange(X.shape[0] + 1, X.shape[0] + Xg_nodes.shape[0] + 1)
+    Xg_faceIds = Xg_ids[0:Xg_faceCentres2D.shape[0]]
+    Xg_verticesIds = Xg_ids[Xg_faceCentres2D.shape[0]:]
+    X = np.vstack((X, Xg_nodes))
+    return X, Xg_faceIds, Xg_ids, Xg_verticesIds
+
+
+def create_tetrahedra(triangles_connectivity, neighbours_network, edges_of_vertices, x_internal, x_face_ids,
+                      x_vertices_ids):
+    """
+    Add connections between real nodes and ghost cells to create tetrahedra.
+
+    :param triangles_connectivity: A 2D array where each row represents a triangle connectivity.
+    :param neighbours_network: A 2D array where each row represents a pair of neighboring nodes.
+    :param edges_of_vertices: A list of lists where each sublist represents the edges of a vertex.
+    :param x_internal: A 1D array representing the internal nodes.
+    :param x_face_ids: A 1D array representing the face ids.
+    :param x_vertices_ids: A 1D array representing the vertices ids.
+    :return: A 2D array representing the tetrahedra.
+    """
+    x_ids = np.concatenate([x_face_ids, x_vertices_ids])
+
+    # Relationships: 1 ghost node, three cell nodes
+    twg = np.hstack([triangles_connectivity, x_vertices_ids[:, None]])
+
+    # Relationships: 1 cell node and 3 ghost nodes
+    new_additions = []
+    for id_cell, num_cell in enumerate(x_internal):
+        face_id = x_face_ids[id_cell]
+        vertices_to_connect = edges_of_vertices[id_cell]
+        new_additions.extend(np.hstack([np.repeat(np.array([[num_cell, face_id]]), len(vertices_to_connect), axis=0),
+                                        x_vertices_ids[vertices_to_connect]]))
+    twg = np.vstack([twg, new_additions])
+
+    # Relationships: 2 ghost nodes, two cell nodes
+    twg_sorted = np.sort(twg[np.any(np.isin(twg, x_ids), axis=1)], axis=1)
+    internal_neighbour_network = [neighbour for neighbour in neighbours_network if
+                                  np.any(np.isin(neighbour, x_internal))]
+    internal_neighbour_network = np.unique(np.sort(internal_neighbour_network, axis=1), axis=0)
+
+    new_additions = []
+    for num_pair in range(internal_neighbour_network.shape[0]):
+        found = np.isin(twg_sorted, internal_neighbour_network[num_pair])
+        new_connections = np.unique(twg_sorted[np.sum(found, axis=1) == 2, 3])
+        if len(new_connections) > 1:
+            new_connections_pairs = np.array(list(combinations(new_connections, 2)))
+            new_additions.extend([np.hstack([internal_neighbour_network[num_pair], new_connections_pair])
+                                  for new_connections_pair in new_connections_pairs])
+        else:
+            raise ValueError('Error while creating the connections and initial topology')
+    twg = np.vstack([twg, new_additions])
+
+    return twg
+
+
+def calculate_cell_height_on_model(img2DLabelled, main_cells, c_set):
+    """
+    Calculate the cell height on the model regarding the diameter of the cells.
+    :param img2DLabelled:
+    :param main_cells:
+    :return:
+    """
+    properties = regionprops(img2DLabelled)
+    # Extract major axis lengths
+    avg_diameter = np.mean([prop.major_axis_length for prop in properties if prop.label in main_cells])
+    cell_height = avg_diameter * c_set.CellHeight
+    return cell_height
 
 
 class VertexModel:
@@ -48,7 +171,7 @@ class VertexModel:
             self.set.cyst()
             #self.set.NoBulk_110()
             if self.set.ablation:
-                self.set.woundDefault()
+                self.set.wound_default()
             self.set.update_derived_parameters()
 
         # Redirect output
@@ -81,7 +204,8 @@ class VertexModel:
         all_tets_unique = np.unique(all_tets, axis=0)
 
         # Generate random displacements with a normal distribution for each dimension
-        displacements = scale * (self.geo.Cells[0].X - self.geo.Cells[1].X) * np.random.randn(all_tets_unique.shape[0], 3)
+        displacements = scale * (self.geo.Cells[0].X - self.geo.Cells[1].X) * np.random.randn(all_tets_unique.shape[0],
+                                                                                              3)
 
         # Update vertex positions based on 3D Brownian motion displacements
         for cell in [c for c in self.geo.Cells if c.AliveStatus is not None and c.ID not in self.geo.BorderCells]:
@@ -105,11 +229,13 @@ class VertexModel:
 
         if self.geo_n is None:
             self.geo_n = self.geo.copy(update_measurements=False)
+
+        # Count the number of faces in average has a cell per domain
+        self.geo.update_barrier_tri0_based_on_number_of_faces()
         self.backupVars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
 
         print("File: ", self.set.OutputFolder)
-
-        # save_state(self, os.path.join(self.set.OutputFolder, 'data_step_0.pkl'))
+        self.save_v_model_state()
 
         while self.t <= self.set.tend and not self.didNotConverge:
             self.set.currentT = self.t
@@ -121,6 +247,9 @@ class VertexModel:
                 # Ablate cells if needed
                 if self.set.ablation:
                     self.geo.ablate_cells(self.set, self.t)
+                    self.geo_n = self.geo.copy()
+                    # Update the degrees of freedom
+                    self.Dofs.get_dofs(self.geo, self.set)
 
                 self.Dofs.ApplyBoundaryCondition(self.t, self.geo, self.set)
                 # IMPORTANT: Here it updates: Areas, Volumes, etc... Should be
@@ -128,13 +257,13 @@ class VertexModel:
                 self.geo.update_measures()
 
             if self.set.implicit_method is True:
-                g, K, _, energies = newtonRaphson.KgGlobal(self.geo_0, self.geo_n, self.geo, self.set, self.set.implicit_method)
+                g, K, _, energies = newtonRaphson.KgGlobal(self.geo_0, self.geo_n, self.geo, self.set,
+                                                           self.set.implicit_method)
             else:
                 K = 0
-                g, energies = newtonRaphson.gGlobal(self.geo_0, self.geo_n, self.geo, self.set, self.set.implicit_method)
+                g, energies = newtonRaphson.gGlobal(self.geo_0, self.geo_n, self.geo, self.set,
+                                                    self.set.implicit_method)
 
-            self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
-            self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
             for key, energy in energies.items():
                 logger.info(f"{key}: {energy}")
 
@@ -182,7 +311,7 @@ class VertexModel:
             self.set.nu = 10 * self.set.nu0
         else:
             if (self.set.iter >= self.set.MaxIter and
-                    (self.set.dt / self.set.dt0) > 1e-6):
+                    (self.set.dt / self.set.dt0) > 1e-8):
                 self.set.MaxIter = self.set.MaxIter0
                 self.set.nu = self.set.nu0
                 self.set.dt = self.set.dt / 2
@@ -199,9 +328,6 @@ class VertexModel:
             # STEP has converged
             logger.info(f"STEP {str(self.set.i_incr)} has converged ...")
 
-            # for c in range(self.geo.nCells):
-            #    face_centres_to_middle_of_neighbours_vertices(self.geo, c)
-
             # Remodelling
             if abs(self.t - self.tr) >= self.set.RemodelingFrequency:
                 if self.set.Remodelling:
@@ -217,7 +343,6 @@ class VertexModel:
                         self.Dofs.get_dofs(self.geo, self.set)
                         gr = np.linalg.norm(g[self.Dofs.Free])
 
-
             # Append Energies
             # energies_per_time_step.append(energies)
 
@@ -232,34 +357,16 @@ class VertexModel:
             #self.check_integrity()
 
             if abs(self.t - self.tr) >= self.set.RemodelingFrequency:
-                # Create VTK files for the current state
-                self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
-                self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
+                self.save_v_model_state()
 
-                # Save Data of the current step
-                save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
+                # Reset noise to be comparable between simulations
+                self.reset_noisy_parameters()
                 self.tr = self.t
-            else:
+
                 # Brownian Motion
-                if self.set.brownian_motion is False:
+                if self.set.brownian_motion is True:
                     self.brownian_motion(self.set.brownian_motion_scale)
 
-            # Reset Contractility Value and Edge Length
-            for num_cell in range(len(self.geo.Cells)):
-                c_cell = self.geo.Cells[num_cell]
-                c_cell.lambda_s1_noise = None
-                c_cell.lambda_s2_noise = None
-                c_cell.lambda_s3_noise = None
-                for n_face in range(len(c_cell.Faces)):
-                    face = c_cell.Faces[n_face]
-                    for n_tri in range(len(face.Tris)):
-                        tri = face.Tris[n_tri]
-                        tri.past_contractility_value = tri.ContractilityValue
-                        tri.ContractilityValue = None
-                        # tri.edge_length_time.append([self.t, tri.edge_length])
-                        self.geo.Cells[num_cell].Faces[n_face].Tris[n_tri] = tri
-
-            # New Step
             self.t = self.t + self.set.dt
             self.set.dt = np.min([self.set.dt + self.set.dt * 0.5, self.set.dt0])
             self.set.MaxIter = self.set.MaxIter0
@@ -276,6 +383,34 @@ class VertexModel:
         else:
             self.set.nu = np.max([self.set.nu / 2, self.set.nu0])
             self.relaxingNu = True
+
+    def save_v_model_state(self):
+        # Create VTK files for the current state
+        self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
+        self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
+        temp_dir = os.path.join(self.set.OutputFolder, 'images')
+        self.screenshot(temp_dir)
+        # Save Data of the current step
+        save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
+
+    def reset_noisy_parameters(self):
+        for num_cell in range(len(self.geo.Cells)):
+            c_cell = self.geo.Cells[num_cell]
+            self.geo.Cells[num_cell].contractlity_noise = None
+            self.geo.Cells[num_cell].lambda_s1_noise = None
+            self.geo.Cells[num_cell].lambda_s2_noise = None
+            self.geo.Cells[num_cell].lambda_s3_noise = None
+            self.geo.Cells[num_cell].lambda_v_noise = None
+            for n_face in range(len(c_cell.Faces)):
+                face = c_cell.Faces[n_face]
+                for n_tri in range(len(face.Tris)):
+                    tri = face.Tris[n_tri]
+                    tri.ContractilityValue = None
+                    tri.lambda_r_noise = None
+                    tri.lambda_b_noise = None
+                    tri.k_substrate_noise = None
+                    # tri.edge_length_time.append([self.t, tri.edge_length])
+                    self.geo.Cells[num_cell].Faces[n_face].Tris[n_tri] = tri
 
     def check_integrity(self):
         """
@@ -325,81 +460,6 @@ class VertexModel:
                                    tris.LengthsToCentre), "Triangle lengths to centre are too low"
                         assert tris.Area > min_error_area, "Triangle area is too low"
 
-    def initialize_average_cell_props(self):
-        """
-        Initializes the average cell properties. This method calculates the average area of all triangles (tris) in the
-        geometry (Geo) structure, and sets the upper and lower area thresholds based on the standard deviation of the areas.
-        It also calculates the minimum edge length and the minimum area of all tris, and sets the initial values for
-        BarrierTri0 and lmin0 based on these calculations. The method also calculates the average edge lengths for tris
-        located at the top, bottom, and lateral sides of the cells. Finally, it initializes an empty list for storing
-        removed debris cells.
-
-        :return: None
-        """
-        # Concatenate all faces from all cells in the Geo structure
-        all_faces = np.concatenate([cell.Faces for cell in self.geo.Cells if cell.AliveStatus is not None])
-        # Concatenate all tris from all faces
-        all_tris = np.concatenate([face.Tris for face in all_faces])
-        # Calculate the average area of all tris
-        avgArea = np.mean([tri.Area for tri in all_tris])
-        # Calculate the standard deviation of the areas of all tris
-        stdArea = np.std([tri.Area for tri in all_tris])
-        # Set the upper and lower area thresholds based on the average area and standard deviation
-        self.geo.upperAreaThreshold = avgArea + stdArea
-        self.geo.lowerAreaThreshold = avgArea - stdArea
-        # Assemble nodes from all cells that are not None
-        self.geo.AssembleNodes = [i for i, cell in enumerate(self.geo.Cells) if cell.AliveStatus is not None]
-        # Initialize BarrierTri0 and lmin0 with the maximum possible float value
-        self.geo.BarrierTri0 = np.finfo(float).max
-        self.geo.lmin0 = np.finfo(float).max
-        # Initialize lists for storing edge lengths of tris located at the top, bottom, and lateral sides of the cells
-        edgeLengths_Top = []
-        edgeLengths_Bottom = []
-        edgeLengths_Lateral = []
-        # Initialize list for storing minimum lengths to the centre and edge lengths of tris
-        lmin_values = []
-        # Iterate over all cells in the Geo structure
-        for c in range(self.geo.nCells):
-            # Iterate over all faces in the current cell
-            for f in range(len(self.geo.Cells[c].Faces)):
-                Face = self.geo.Cells[c].Faces[f]
-                # Update BarrierTri0 with the minimum area of all tris in the current face
-                self.geo.BarrierTri0 = min([min([tri.Area for tri in Face.Tris]), self.geo.BarrierTri0])
-                # Iterate over all tris in the current face
-                for nTris in range(len(self.geo.Cells[c].Faces[f].Tris)):
-                    tri = self.geo.Cells[c].Faces[f].Tris[nTris]
-                    # Append the minimum length to the centre and the edge length of the current tri to lmin_values
-                    lmin_values.append(min(tri.LengthsToCentre))
-                    lmin_values.append(tri.EdgeLength)
-                    # Depending on the location of the tri, append the edge length to the corresponding list
-                    if tri.Location == 'Top':
-                        edgeLengths_Top.append(tri.compute_edge_length(self.geo.Cells[c].Y))
-                    elif tri.Location == 'Bottom':
-                        edgeLengths_Bottom.append(tri.compute_edge_length(self.geo.Cells[c].Y))
-                    else:
-                        edgeLengths_Lateral.append(tri.compute_edge_length(self.geo.Cells[c].Y))
-        # Update lmin0 with the minimum value in lmin_values
-        self.geo.lmin0 = min(lmin_values)
-        # Calculate the average edge lengths for tris located at the top, bottom, and lateral sides of the cells
-        self.geo.AvgEdgeLength_Top = np.mean(edgeLengths_Top)
-        self.geo.AvgEdgeLength_Bottom = np.mean(edgeLengths_Bottom)
-        self.geo.AvgEdgeLength_Lateral = np.mean(edgeLengths_Lateral)
-        # Update BarrierTri0 and lmin0 based on their initial values
-        self.geo.BarrierTri0 = self.geo.BarrierTri0 / 10
-        self.geo.lmin0 = self.geo.lmin0 * 10
-        # Initialize an empty list for storing removed debris cells
-        self.geo.RemovedDebrisCells = []
-
-        self.geo.non_dead_cells = [cell.ID for cell in self.geo.Cells if cell.AliveStatus is not None]
-
-        # Obtain the original cell height
-        min_zs = np.min([np.min(cell.Y[:, 2]) for cell in self.geo.Cells if cell.Y is not None])
-        self.geo.CellHeightOriginal = np.abs(min_zs)
-        if min_zs > 0:
-            self.geo.SubstrateZ = min_zs * 0.99
-        else:
-            self.geo.SubstrateZ = min_zs * 1.01
-
     def analyse_vertex_model(self):
         """
         Analyse the vertex model.
@@ -409,7 +469,10 @@ class VertexModel:
         cell_features = []
         debris_features = []
 
-        wound_centre = self.geo.compute_wound_centre()
+        wound_centre, debris_cells = self.geo.compute_wound_centre()
+        list_of_cell_distances = self.geo.compute_cell_distance_to_wound(debris_cells, location_filter=None)
+        list_of_cell_distances_top = self.geo.compute_cell_distance_to_wound(debris_cells, location_filter=0)
+        list_of_cell_distances_bottom = self.geo.compute_cell_distance_to_wound(debris_cells, location_filter=2)
 
         # Analyse the alive cells
         for cell_id, cell in enumerate(self.geo.Cells):
@@ -419,14 +482,21 @@ class VertexModel:
                 debris_features.append(cell.compute_features())
 
         # Calculate average of cell features
-        avg_cell_features = pd.DataFrame(cell_features).mean()
-        avg_cell_features["time"] = self.t
+        all_cell_features = pd.DataFrame(cell_features)
+        all_cell_features["cell_distance_to_wound"] = list_of_cell_distances
+        all_cell_features["cell_distance_to_wound_top"] = list_of_cell_distances_top
+        all_cell_features["cell_distance_to_wound_bottom"] = list_of_cell_distances_bottom
+        all_cell_features["time"] = self.t
+        avg_cell_features = all_cell_features.mean()
 
         # Compute wound features
-        wound_features = self.compute_wound_features()
-        avg_cell_features = pd.concat([avg_cell_features, pd.Series(wound_features)])
+        try:
+            wound_features = self.compute_wound_features()
+            avg_cell_features = pd.concat([avg_cell_features, pd.Series(wound_features)])
+        except Exception as e:
+            pass
 
-        return avg_cell_features
+        return all_cell_features, avg_cell_features
 
     def compute_wound_features(self):
         """
@@ -449,4 +519,70 @@ class VertexModel:
 
         return wound_features
 
+    def screenshot(self, temp_dir, selected_cells=None):
+        """
+        Create a screenshot of the current state of the model.
+        :param selected_cells:
+        :param temp_dir:
+        :return:
+        """
 
+        # Create a plotter
+        if selected_cells is None:
+            selected_cells = []
+
+        plotter = pv.Plotter(off_screen=True)
+        for _, cell in enumerate(self.geo.Cells):
+            if cell.AliveStatus == 1 and (cell.ID in selected_cells or selected_cells is not []):
+                # Load the VTK file as a pyvista mesh
+                mesh = cell.create_pyvista_mesh()
+
+                # Add the mesh to the plotter
+                plotter.add_mesh(mesh, scalars='ID', lighting=True, cmap='prism', show_edges=True, edge_opacity=0.5,
+                                 edge_color='grey')
+        # Set a fixed camera zoom level
+        fixed_zoom_level = 1
+        plotter.camera.zoom(fixed_zoom_level)
+
+        # Add text to the plotter
+        if self.set.ablation:
+            timeAfterAblation = float(self.t) - float(self.set.TInitAblation)
+            text_content = f"Ablation time: {timeAfterAblation:.2f}"
+            plotter.add_text(text_content, position='upper_right', font_size=12, color='black')
+        else:
+            text_content = f"Time: {self.t:.2f}"
+            plotter.add_text(text_content, position='upper_right', font_size=12, color='black')
+
+        # Render the scene and capture a screenshot
+        img = plotter.screenshot()
+        # Save the image to a temporary file
+        temp_file = os.path.join(temp_dir, f'vModel_perspective_{self.numStep}.png')
+        imageio.imwrite(temp_file, img)
+
+        # True 2D
+        plotter.enable_parallel_projection()
+        plotter.enable_image_style()
+
+        # Set the camera to the top view
+        plotter.view_xy()
+
+        img = plotter.screenshot()
+        temp_file = os.path.join(temp_dir, f'vModel_top_{self.numStep}.png')
+        imageio.imwrite(temp_file, img)
+
+        # Set the camera to the front view
+        plotter.view_xz()
+
+        img = plotter.screenshot()
+        temp_file = os.path.join(temp_dir, f'vModel_front_{self.numStep}.png')
+        imageio.imwrite(temp_file, img)
+
+        # Set the camera to the bottom view
+        plotter.view_xy(negative=True)
+
+        img = plotter.screenshot()
+        temp_file = os.path.join(temp_dir, f'vModel_bottom_{self.numStep}.png')
+        imageio.imwrite(temp_file, img)
+
+        # Close the plotter
+        plotter.close()

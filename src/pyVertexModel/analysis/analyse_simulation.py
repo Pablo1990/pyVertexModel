@@ -17,24 +17,51 @@ def analyse_simulation(folder):
     """
 
     # Check if the pkl file exists
-    if not os.path.exists(os.path.join(folder, 'features_per_time.pkl')):
+    if not os.path.exists(os.path.join(folder, 'features_per_time.pkl')) or True:
         vModel = VertexModel(create_output_folder=False)
 
         features_per_time = []
+        features_per_time_all_cells = []
 
         # Go through all the files in the folder
-        for file_id, file in enumerate(os.listdir(folder)):
+        all_files = os.listdir(folder)
+        all_files.sort()
+        for file_id, file in enumerate(all_files):
             if file.endswith('.pkl') and not file.__contains__('data_step_before_remodelling'):
                 # Load the state of the model
                 load_state(vModel, os.path.join(folder, file))
 
                 # Analyse the simulation
-                features_per_time.append(vModel.analyse_vertex_model())
+                all_cells, avg_cells = vModel.analyse_vertex_model()
+                features_per_time_all_cells.append(all_cells)
+                features_per_time.append(avg_cells)
+
+                # Create a temporary directory to store the images
+                temp_dir = os.path.join(folder, 'images')
+                if not os.path.exists(temp_dir):
+                    os.mkdir(temp_dir)
+                vModel.screenshot(temp_dir)
+
+                # temp_dir = os.path.join(folder, 'images_wound_edge')
+                # if not os.path.exists(temp_dir):
+                #     os.mkdir(temp_dir)
+                # _, debris_cells = vModel.geo.compute_wound_centre()
+                # list_of_cell_distances_top = vModel.geo.compute_cell_distance_to_wound(debris_cells, location_filter=0)
+                # alive_cells = [cell.ID for cell in vModel.geo.Cells if cell.AliveStatus == 1]
+                # wound_edge_cells = []
+                # for cell_num, cell_id in enumerate(alive_cells):
+                #     if list_of_cell_distances_top[cell_num] == 1:
+                #         wound_edge_cells.append(cell_id)
+                # vModel.screenshot(temp_dir, wound_edge_cells)
 
         if not features_per_time:
             return None, None, None
 
         # Export to xlsx
+        features_per_time_all_cells_df = pd.DataFrame(np.concatenate(features_per_time_all_cells), columns=features_per_time_all_cells[0].columns)
+        features_per_time_all_cells_df.sort_values(by='time', inplace=True)
+        features_per_time_all_cells_df.to_excel(os.path.join(folder, 'features_per_time_all_cells.xlsx'))
+
         features_per_time_df = pd.DataFrame(features_per_time)
         features_per_time_df.sort_values(by='time', inplace=True)
         features_per_time_df.to_excel(os.path.join(folder, 'features_per_time.xlsx'))
@@ -58,7 +85,8 @@ def analyse_simulation(folder):
 
                 if feature == 'time':
                     continue
-                post_wound_features.loc[:, feature] = (post_wound_features[feature] / np.array(pre_wound_features[feature])) * 100
+                post_wound_features.loc[:, feature] = (post_wound_features[feature] / np.array(
+                    pre_wound_features[feature])) * 100
 
             # Export to xlsx
             post_wound_features.to_excel(os.path.join(folder, 'post_wound_features.xlsx'))
@@ -81,6 +109,7 @@ def analyse_simulation(folder):
             pickle.dump(features_per_time_df, f)
             pickle.dump(important_features, f)
             pickle.dump(post_wound_features, f)
+            pickle.dump(features_per_time_all_cells_df, f)
 
     else:
         # Load dataframes from pkl
@@ -88,6 +117,7 @@ def analyse_simulation(folder):
             features_per_time_df = pickle.load(f)
             important_features = pickle.load(f)
             post_wound_features = pickle.load(f)
+            features_per_time_all_cells_df = pickle.load(f)
 
         important_features = calculate_important_features(post_wound_features)
 
@@ -107,7 +137,7 @@ def plot_feature(folder, post_wound_features, name='wound_area_top'):
     # Change axis limits
     plt.xlim([0, 60])
     plt.ylim([0, 200])
-    plt.savefig(os.path.join(folder,  name + '.png'))
+    plt.savefig(os.path.join(folder, name + '.png'))
     plt.close()
 
 
@@ -155,37 +185,3 @@ def calculate_important_features(post_wound_features):
 
     return important_features
 
-
-folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/Results/Relevant/'
-all_files_features = []
-lst = os.listdir(folder)
-lst.sort(reverse=True)
-for file_id, file in enumerate(lst):
-    print(file)
-    # if file is a directory
-    if os.path.isdir(os.path.join(folder, file)):
-        # Analyse the simulation
-        features_per_time_df, post_wound_features, important_features = (
-            analyse_simulation(os.path.join(folder, file)))
-
-        if important_features is not None and len(important_features) > 5:
-            important_features['folder'] = file
-
-            # Extract the variables from folder name
-            file_splitted = file.split('_')
-            variables_to_show = {'Cells', 'visc', 'lVol', 'kSubs', 'lt', 'noise', 'brownian', 'eTriAreaBarrier',
-                                 'eARBarrier', 'RemStiff', 'lS1', 'lS2', 'lS3', 'pString'}
-            for i in range(3, len(file_splitted), 2):
-                if file_splitted[i] in variables_to_show:
-                    important_features[file_splitted[i]] = file_splitted[i + 1]
-
-            # Transform the dictionary into a dataframe
-            important_features = pd.DataFrame([important_features])
-            all_files_features.append(important_features)
-
-# Concatenate the elements of the list all_files_features
-all_files_features = pd.concat(all_files_features, axis=0)
-
-# Export to xls file
-df = pd.DataFrame(all_files_features)
-df.to_excel(os.path.join(folder, 'all_files_features.xlsx'))

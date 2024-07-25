@@ -7,6 +7,9 @@ from src.pyVertexModel.Kg.kg import Kg, add_noise_to_parameter
 
 
 class KgSurfaceCellBasedAdhesion(Kg):
+    """
+    Class to compute the work and Jacobian for the SurfaceCellBasedAdhesion energy.
+    """
     def compute_work(self, Geo, Set, Geo_n=None, calculate_K=True):
         Energy = {}
         start = time.time()
@@ -31,11 +34,11 @@ class KgSurfaceCellBasedAdhesion(Kg):
         ge = np.zeros(self.g.shape, dtype=self.precision_type)
         fact0 = 0
 
-        if Cell.lambda_s1_noise is None:
-            Cell.lambda_s1_noise = add_noise_to_parameter(Set.lambdaS1, 0)
-            Cell.lambda_s2_noise = add_noise_to_parameter(Set.lambdaS2, 0)
-            Cell.lambda_s3_noise = add_noise_to_parameter(Set.lambdaS3, 0)
+        Cell.lambda_s1_noise = add_noise_to_parameter(Set.lambdaS1, 0)
+        Cell.lambda_s2_noise = add_noise_to_parameter(Set.lambdaS2, 0)
+        Cell.lambda_s3_noise = add_noise_to_parameter(Set.lambdaS3, 0)
 
+        # Calculate the fact0 for each type of interface
         for face in Cell.Faces:
             if face.InterfaceType == 'Top' or face.InterfaceType == 0:
                 Lambda = Cell.lambda_s1_noise
@@ -46,7 +49,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
             else:
                 raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
 
-            fact0 += (Lambda * face.Area)
+            fact0 += (Lambda * (face.Area - face.Area0))
 
         fact = fact0 / Cell.Area0 ** 2
 
@@ -71,7 +74,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
                     continue
 
                 if calculate_K:
-                    ge = self.calculate_Kg(Lambda, fact, ge, nY, y1, y2, y3)
+                    ge = self.calculate_kg(Lambda, fact, ge, nY, y1, y2, y3)
                 else:
                     ge = self.calculate_g(Lambda, ge, nY, y1, y2, y3)
 
@@ -80,9 +83,14 @@ class KgSurfaceCellBasedAdhesion(Kg):
             self.K = kg_functions.compute_finalK_SurfaceEnergy(ge, self.K, Cell.Area0)
 
         Energy_c += (1 / 2) * fact0 * fact
+
+        Cell.lambda_s1_noise = None
+        Cell.lambda_s2_noise = None
+        Cell.lambda_s3_noise = None
+
         return Energy_c
 
-    def calculate_Kg(self, Lambda, fact, ge, nY, y1, y2, y3):
+    def calculate_kg(self, Lambda, fact, ge, nY, y1, y2, y3):
         gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)
         gs = Lambda * gs
         ge = self.assemble_g(ge, gs, np.array(nY, dtype='int'))
@@ -97,7 +105,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
         ge = self.assemble_g(ge, gs, np.array(nY, dtype='int'))
         return ge
 
-    def compute_finalK_SurfaceEnergy(self, ge, K, Area0):
+    def compute_final_k_surface_energy(self, ge, K, Area0):
         """
         Helper function to compute the final K for the Surface energy.
         :param ge: The residual g.

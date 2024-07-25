@@ -242,7 +242,7 @@ def get_4_fold_tets(Geo):
     :param Geo:
     :return:
     """
-    allTets = np.vstack([cell.T for cell in Geo.Cells])
+    allTets = np.vstack([cell.T for cell in Geo.Cells if cell.AliveStatus is not None])
 
     ghostNodesWithoutDebris = np.setdiff1d(Geo.XgID, Geo.RemovedDebrisCells)
 
@@ -267,14 +267,14 @@ def y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo,
 
     # Temporary remove 4-cell tetrahedra
     tets4_cells = get_4_fold_tets(Geo)
-    Geo.remove_tetrahedra(tets4_cells)
-    tets4_cells = np.unique(np.sort(tets4_cells, axis=1), axis=0)
+    ys_4_cells = Geo.remove_tetrahedra(tets4_cells)
+    #tets4_cells = np.unique(np.sort(tets4_cells, axis=1), axis=0)
     ghost_nodes_without_debris = np.setdiff1d(Geo.XgID, Geo.RemovedDebrisCells)
 
     Xs = np.unique(old_tets)
     Xs_c = Xs[~np.isin(Xs, ghost_nodes_without_debris)]
     intercalation_flip = 0
-    if len(Xs_c) == 4:
+    if len(Xs_c) > 3:
         intercalation_flip = 1
 
     # Step 1: Keep the boundary of tets not changed.
@@ -309,7 +309,7 @@ def y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo,
                                                            endNode,
                                                            ghost_nodes_without_debris, intercalation_flip, old_tets,
                                                            parentNode,
-                                                           tets4_cells, treeOfPossibilities, xs_to_disconnect,
+                                                           tets4_cells, ys_4_cells, treeOfPossibilities, xs_to_disconnect,
                                                            cell_to_split_from)
 
     # Get the last combination from new_tets_tree
@@ -338,7 +338,7 @@ def dfs(graph, start, end):
 
 def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercalate_with, endNode,
                                   ghost_nodes_without_debris, intercalation_flip, old_tets, parentNode, tets4_cells,
-                                  treeOfPossibilities, xs_to_disconnect, cell_to_split_from):
+                                  ys_4_cells, treeOfPossibilities, xs_to_disconnect, cell_to_split_from):
     """
     Get the best combination of new tets
     :param Geo:
@@ -359,6 +359,7 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
     Geo_final = Geo
     new_tets_tree = None
     valence_segment = np.inf
+    best_gr = np.inf
 
     xs_to_disconnect_cells = xs_to_disconnect[~np.isin(xs_to_disconnect, Geo.XgID)]
 
@@ -367,7 +368,7 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
         new_tets = np.vstack(old_tets)
 
         for posPath in c_path[c_path > 1]:
-            toAdd = Tnew[posPath]
+            toAdd = np.sort(Tnew[posPath])
             toRemove = TRemoved[posPath]
             new_tets = new_tets[~ismember_rows(np.sort(new_tets, 1), np.sort(toRemove, 1))[0]]
             new_tets = np.vstack((new_tets, toAdd))
@@ -383,8 +384,9 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
             if current_valence_segment < valence_segment:
                 try:
                     Geo_new = Geo.copy()
-                    Geo_new.remove_tetrahedra(old_tets)
-                    Geo_new.add_tetrahedra(Geo, np.concatenate((new_tets, tets4_cells)), None, Set)
+                    Geo_new.add_tetrahedra(Geo, tets4_cells, ys_4_cells, ys_4_cells, Set)
+                    old_ys = Geo_new.remove_tetrahedra(old_tets)
+                    Geo_new.add_tetrahedra(Geo, new_tets, old_ys, None, Set)
                     Geo_new.rebuild(Geo_new.copy(), Set)
                     Geo_new.build_global_ids()
 
