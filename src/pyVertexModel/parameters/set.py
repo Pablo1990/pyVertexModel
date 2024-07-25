@@ -14,7 +14,9 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
-        self.initial_filename_state = 'input/wing_disc_150.mat'
+        self.cLineTension_external = None
+        self.Contractility_external = None
+        self.initial_filename_state = 'Input/wing_disc_150.mat'
         self.delay_lateral_cables = None
         self.delay_purse_string = None
         self.ref_A0 = None
@@ -184,8 +186,9 @@ class Set:
 
         current_datetime = datetime.now()
         new_outputFolder = ''.join([PROJECT_DIRECTORY, '/Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")),
-                                    self.InputGeo, '_Cells_', str(self.TotalCells), '_visc_', str(self.nu), '_lVol_',
+                                    '_Cells_', str(self.TotalCells), '_visc_', str(self.nu), '_lVol_',
                                     str(self.lambdaV), '_kSubs_', str(self.kSubstrate), '_lt_', str(self.cLineTension),
+                                    '_ltExt_', str(self.cLineTension_external),
                                     '_noise_', str(self.noise_random), '_ref_A0_', str(self.ref_A0),
                                     '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
                                     '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
@@ -219,7 +222,7 @@ class Set:
 
     def wing_disc(self):
         self.InputGeo = 'VertexModelTime'
-        #self.initial_filename_state = 'input/initial_lambdaS_0.3.pkl'
+        #self.initial_filename_state = 'Input/initial_lambdaS_0.3.pkl'
         # 40 cells 3 cells to ablate
         # 110 cells 7 cells to ablate
         self.TotalCells = 150
@@ -243,6 +246,8 @@ class Set:
         self.lambdaV = 1
         self.kSubstrate = 0
         self.cLineTension = 0.0025
+        self.Contractility_external = True
+        self.cLineTension_external = 0.0001
 
         self.brownian_motion = False
         self.brownian_motion_scale = 0

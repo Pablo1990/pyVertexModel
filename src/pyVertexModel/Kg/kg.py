@@ -27,6 +27,9 @@ def add_noise_to_parameter(avg_parameter, noise, random_number=random.random()):
 
 
 class Kg:
+    """
+    Abstract class to compute the work and Jacobian for the energy.
+    """
 
     def __init__(self, Geo=None):
         self.precision_type = np.float64

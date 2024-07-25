@@ -4,6 +4,7 @@ import numpy as np
 from scipy.optimize import minimize, Bounds
 
 from src.pyVertexModel.Kg.kgContractility import KgContractility
+from src.pyVertexModel.Kg.kgContractility_external import KgContractilityExternal
 from src.pyVertexModel.Kg.kgSubstrate import KgSubstrate
 from src.pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
 from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
@@ -303,6 +304,14 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
         energy_total += kg_lt.energy
         energies["Contractility"] = kg_lt.energy
 
+    if Set.Contractility_external:
+        kg_ext = KgContractilityExternal(Geo)
+        kg_ext.compute_work(Geo, Set)
+        g += kg_ext.g
+        K += kg_ext.K
+        energy_total += kg_ext.energy
+        energies["Contractility_external"] = kg_ext.energy
+
     # Substrate
     if Set.Substrate == 2:
         kg_subs = KgSubstrate(Geo)
@@ -410,6 +419,13 @@ def gGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
         kg_lt.compute_work(Geo, Set, None, False)
         g += kg_lt.g
         energies["Contractility"] = kg_lt.energy
+
+    # Contractility as external force
+    if Set.Contractility_external:
+        kg_ext = KgContractilityExternal(Geo)
+        kg_ext.compute_work(Geo, Set, None, False)
+        g += kg_ext.g
+        energies["Contractility_external"] = kg_ext.energy
 
     # Substrate
     if Set.Substrate == 2:
