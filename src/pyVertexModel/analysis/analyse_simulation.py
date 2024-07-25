@@ -55,7 +55,7 @@ def analyse_simulation(folder):
                 # vModel.screenshot(temp_dir, wound_edge_cells)
 
         if not features_per_time:
-            return None, None, None
+            return None, None, None, None
 
         # Export to xlsx
         features_per_time_all_cells_df = pd.DataFrame(np.concatenate(features_per_time_all_cells), columns=features_per_time_all_cells[0].columns)
@@ -126,7 +126,7 @@ def analyse_simulation(folder):
     plot_feature(folder, post_wound_features, name='wound_height')
     plot_feature(folder, post_wound_features, name='num_cells_wound_edge_top')
 
-    return features_per_time_df, post_wound_features, important_features
+    return features_per_time_df, post_wound_features, important_features, features_per_time_all_cells_df
 
 
 def plot_feature(folder, post_wound_features, name='wound_area_top'):
