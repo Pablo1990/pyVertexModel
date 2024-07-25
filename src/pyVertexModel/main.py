@@ -1,5 +1,6 @@
 import os
 
+from src.pyVertexModel.algorithm.VertexModelVoronoi3D import VertexModelVoronoi3D
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from src.pyVertexModel.algorithm.vertexModelBubbles import VertexModelBubbles
 from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
