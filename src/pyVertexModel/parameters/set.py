@@ -20,7 +20,7 @@ class Set:
         self.initial_filename_state = 'Input/wing_disc_150.mat'
         self.delay_lateral_cables = None
         self.delay_purse_string = None
-        self.ref_A0 = None
+        self.ref_A0 = 0.8
         self.lateralCablesStrength = None
         self.tol0 = None
         self.dt = None
