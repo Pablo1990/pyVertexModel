@@ -86,16 +86,11 @@ def get_node_neighbours(geo, node, main_node=None):
     :param main_node:
     :return:
     """
-
-    if main_node is not None:
-        all_node_tets = [tet for c_cell in geo.Cells if c_cell.ID == node and c_cell.T is not None for tet in c_cell.T]
-        node_neighbours = set()
-        for tet in all_node_tets:
-            if any(n in tet for n in main_node):
-                node_neighbours.update(tet)
-    else:
-        node_neighbours = set(tuple(tet) for c_cell in geo.Cells if c_cell.ID == node and c_cell.T is not None
-                              for tet in c_cell.T)
+    all_node_tets = [tet for c_cell in geo.Cells if c_cell.ID == node and c_cell.T is not None for tet in c_cell.T]
+    node_neighbours = set()
+    for tet in all_node_tets:
+        if main_node is None or any(n in tet for n in main_node):
+            node_neighbours.update(tet)
 
     node_neighbours.discard(node)
 
@@ -654,17 +649,20 @@ class Geo:
         # for c in range(self.nCells):
         #    self.Cells[c].cglobalIds = c + self.numY + self.numF
 
-    def rebuild(self, old_geo, Set):
+    def rebuild(self, old_geo, Set, cells_to_rebuild=None):
         """
         Rebuild the geometry
+        :param cells_to_rebuild:
         :param old_geo:
         :param Set:
         :return:
         """
         alive_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1]
         debris_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
+        if cells_to_rebuild is None:
+            cells_to_rebuild = alive_cells + debris_cells
 
-        for cc in alive_cells + debris_cells:
+        for cc in cells_to_rebuild:
             c_cell = self.Cells[cc]
             neigh_nodes = np.unique(c_cell.T)
             neigh_nodes = neigh_nodes[neigh_nodes != cc]
@@ -998,8 +996,12 @@ class Geo:
                     # Combine the debris cells
                     self.combine_two_nodes([uniqueDebrisCell, debrisCell], c_set)
 
-                # Rebuild the geometry
-                self.rebuild(old_geo, c_set)
+                # Get the cells that have changed to rebuild
+                cells_to_rebuild = get_node_neighbours(self, uniqueDebrisCell)
+                cells_to_rebuild.append(uniqueDebrisCell)
+
+                # Rebuild the geometry of only the selected cells
+                self.rebuild(old_geo, c_set, cells_to_rebuild=cells_to_rebuild)
                 self.build_global_ids()
                 self.update_measures()
                 self.Cells[uniqueDebrisCell].Vol0 = total_vol
