@@ -15,6 +15,7 @@ from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
 from src.pyVertexModel.parameters.set import Set
 from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars
+import matplotlib.pyplot as plt
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -151,6 +152,7 @@ class VertexModel:
         :param c_set:
         """
 
+        self.color_mapping = None
         self.OutputFolder = None
         self.numStep = None
         self.backupVars = None
@@ -526,6 +528,15 @@ class VertexModel:
         :param temp_dir:
         :return:
         """
+        total_real_cells = len([cell.ID for cell in self.geo.Cells if cell.AliveStatus is not None])
+
+        # Create a colormap
+        if self.color_mapping is None:
+            new_colours = True
+            colormap = plt.get_cmap('prism', total_real_cells)
+            self.color_mapping = {}
+        else:
+            new_colours = False
 
         # Create a plotter
         if selected_cells is None:
@@ -536,9 +547,12 @@ class VertexModel:
             if cell.AliveStatus == 1 and (cell.ID in selected_cells or selected_cells is not []):
                 # Load the VTK file as a pyvista mesh
                 mesh = cell.create_pyvista_mesh()
+                if new_colours:
+                    # Generate a new color from the colormap and store it in the dictionary
+                    self.color_mapping[cell.ID] = colormap(cell.ID / total_real_cells)[:3]
 
                 # Add the mesh to the plotter
-                plotter.add_mesh(mesh, scalars='ID', lighting=True, cmap='prism', show_edges=True, edge_opacity=0.5,
+                plotter.add_mesh(mesh, scalars='ID', lighting=True, color=self.color_mapping[cell.ID], show_edges=True, edge_opacity=0.5,
                                  edge_color='grey')
         # Set a fixed camera zoom level
         fixed_zoom_level = 1
