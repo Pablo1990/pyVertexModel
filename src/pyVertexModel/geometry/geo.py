@@ -661,6 +661,8 @@ class Geo:
         debris_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
         if cells_to_rebuild is None:
             cells_to_rebuild = alive_cells + debris_cells
+        else:
+            cells_to_rebuild = [c for c in cells_to_rebuild if c in alive_cells or c in debris_cells]
 
         for cc in cells_to_rebuild:
             c_cell = self.Cells[cc]
