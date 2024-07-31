@@ -979,9 +979,6 @@ class Geo:
                 # Combine the debris cells into 1
                 uniqueDebrisCell = self.cellsToAblate[0]
                 self.Cells[uniqueDebrisCell].AliveStatus = 0
-                self.Cells[uniqueDebrisCell].ExternalLambda = c_set.lambdaSFactor_Debris
-                self.Cells[uniqueDebrisCell].InternalLambda = c_set.lambdaSFactor_Debris
-                self.Cells[uniqueDebrisCell].SubstrateLambda = c_set.lambdaSFactor_Debris
 
                 # Compute properties of the debris cell
                 self.Cells[uniqueDebrisCell].X = np.mean([cell.X for cell in self.Cells if cell.ID
