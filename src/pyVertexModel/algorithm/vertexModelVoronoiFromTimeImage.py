@@ -495,6 +495,19 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
             #save_state(self.geo, 'voronoi_40cells.pkl')
 
+        # Add border cells to the shared cells
+        for cell in self.geo.Cells:
+            if cell.ID in self.geo.BorderCells:
+                for face in cell.Faces:
+                    for tris in face.Tris:
+                        tets_1 = cell.T[tris.Edge[0]]
+                        tets_2 = cell.T[tris.Edge[1]]
+                        shared_cells = np.intersect1d(tets_1, tets_2)
+                        if np.any(np.isin(self.geo.BorderGhostNodes, shared_cells)):
+                            shared_cells_list = list(tris.SharedByCells)
+                            shared_cells_list.append(shared_cells[np.isin(shared_cells, self.geo.BorderGhostNodes)][0])
+                            tris.SharedByCells = np.array(shared_cells_list)
+
         if self.set.ablation:
             self.geo.cellsToAblate = self.set.cellsToAblate
 

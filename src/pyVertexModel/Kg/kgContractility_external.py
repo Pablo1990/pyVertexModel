@@ -36,8 +36,8 @@ class KgContractilityExternal(KgContractility):
                 l_i0 = geo.EdgeLengthAvg_0[next(key for key, value in currentFace.InterfaceType_allValues.items()
                                                 if
                                                 value == currentFace.InterfaceType or key == currentFace.InterfaceType)]
-                if currentFace.InterfaceType == 1 or currentFace.InterfaceType == 'Lateral':
-                    continue
+                # if currentFace.InterfaceType == 1 or currentFace.InterfaceType == 'Lateral':
+                #     continue
 
                 for tri_id, currentTri in enumerate(currentFace.Tris):
                     tets_1 = cell.T[currentTri.Edge[0]]
