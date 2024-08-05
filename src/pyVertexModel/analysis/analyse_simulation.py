@@ -17,7 +17,7 @@ def analyse_simulation(folder):
     """
 
     # Check if the pkl file exists
-    if not os.path.exists(os.path.join(folder, 'features_per_time.pkl')) or True:
+    if not os.path.exists(os.path.join(folder, 'features_per_time.pkl')):
         vModel = VertexModel(create_output_folder=False)
 
         features_per_time = []

@@ -31,7 +31,7 @@ class Set:
         self.Contractility_Variability_PurseString = None
         self.purseStringStrength = None
         self.TEndAblation = None
-        self.lambdaSFactor_Debris = None
+        self.debris_contribution = None
         self.TInitAblation = None
         self.RemodelingFrequency = None
         self.i_incr = None
@@ -222,12 +222,12 @@ class Set:
 
     def wing_disc(self):
         self.InputGeo = 'VertexModelTime'
-        #self.initial_filename_state = 'Input/initial_lambdaS_0.3.pkl'
+        #self.initial_filename_state = 'Input/data_step_68.pkl'
         # 40 cells 3 cells to ablate
         # 110 cells 7 cells to ablate
         self.TotalCells = 150
         self.CellHeight = 15
-        self.tend = 61
+        self.tend = 45
         self.Nincr = self.tend * 10
 
         self.nu = 100
@@ -244,10 +244,10 @@ class Set:
             self.lambdaR = 0
 
         self.lambdaV = 1
-        self.kSubstrate = 0
-        self.cLineTension = 0.0025
+        self.kSubstrate = 0.01
+        self.cLineTension = 0.0015
         self.Contractility_external = True
-        self.cLineTension_external = self.cLineTension
+        self.cLineTension_external = self.cLineTension / 10
 
         self.brownian_motion = False
         self.brownian_motion_scale = 0
@@ -255,11 +255,11 @@ class Set:
         self.noise_random = 0
         self.TypeOfPurseString = 2
         self.Remodelling = 1
-        self.RemodelStiffness = 0.9
-        self.ref_A0 = 0.8
-        self.lambdaS1 = 0.1
-        self.lambdaS2 = self.lambdaS1
-        self.lambdaS3 = self.lambdaS1
+        self.RemodelStiffness = 0.95
+        self.ref_A0 = 1
+        self.lambdaS1 = 4
+        self.lambdaS2 = self.lambdaS1 / 10
+        self.lambdaS3 = self.lambdaS1 / 10
         self.lambdaS4 = self.lambdaS2
         self.VTK = False
 
@@ -273,19 +273,19 @@ class Set:
     def wound_default(self):
         # ============================== Ablation ============================
         self.cellsToAblate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-        self.TInitAblation = 1
+        self.TInitAblation = 30
         self.TEndAblation = self.tend
-        self.lambdaSFactor_Debris = np.finfo(float).eps
+        self.debris_contribution = np.finfo(float).eps
         # =========================== Contractility ==========================
         self.Contractility = True
         self.TypeOfPurseString = 2
         # 0: Intensity-based purse string
         # 1: Strain-based purse string (delayed)
         # 2: Fixed with linear increase purse string
-        self.purseStringStrength = 5
-        self.lateralCablesStrength = 1
-        self.delay_purse_string = 5.5
-        self.delay_lateral_cables = 1
+        self.purseStringStrength = self.cLineTension * 5
+        self.lateralCablesStrength = self.cLineTension
+        self.delay_purse_string = 6
+        self.delay_lateral_cables = 0.2
 
     def menu_input(self, inputMode=None, batchMode=None):
         if inputMode == 7:

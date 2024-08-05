@@ -220,6 +220,10 @@ class VertexModel:
         updating measures, and checking for convergence.
         :return:
         """
+        temp_dir = os.path.join(self.set.OutputFolder, 'images')
+        if not os.path.exists(temp_dir):
+            os.makedirs(temp_dir)
+
         if self.set.Substrate == 1:
             self.Dofs.GetDOFsSubstrate(self.geo, self.set)
         else:

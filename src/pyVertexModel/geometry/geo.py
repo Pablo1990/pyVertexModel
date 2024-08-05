@@ -297,10 +297,6 @@ class Geo:
 
                 self.Cells[c].compute_area()
                 self.Cells[c].compute_volume()
-                self.Cells[c].ExternalLambda = 1
-                self.Cells[c].InternalLambda = 1
-                self.Cells[c].SubstrateLambda = 1
-                self.Cells[c].lambdaB_perc = 1
 
         # Initialize reference values
         self.init_reference_cell_values(c_set)
@@ -1179,7 +1175,7 @@ class Geo:
                             break
                     cell_distance += 1
                     cell_neighbours = np.unique(np.concatenate([self.Cells[c].compute_neighbours(location_filter)
-                                                                for c in cell_neighbours]))
+                                                                for c in cell_neighbours if self.Cells[c].AliveStatus is not None]))
 
             elif cell.AliveStatus == 0 or cell.ID in wound_cells:
                 list_of_cells[num_cell] = 0
