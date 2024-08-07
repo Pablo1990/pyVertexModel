@@ -30,18 +30,20 @@ def analyse_edge_recoil(v_model, n_ablations=1, location_filter=0):
 
         # Ablate the edge
         v_model.set.ablation = True
-        v_model.set.cells_to_ablate = cells_to_ablate
+        v_model.set.cellsToAblate = cells_to_ablate
+        v_model.set.TInitAblation = v_model.t
         v_model.geo.ablate_cells(v_model.set, v_model.t)
 
         # Relax the system
         v_model.set.tend = v_model.t + 1
+        v_model.set.ablation = False
         v_model.iterate_over_time()
 
         # Get the edge length
         edge_length_final = get_edge_length(cells_to_ablate, location_filter, v_model)
 
         # Calculate the recoil
-        recoil[i] = (edge_length_init - edge_length_final) / edge_length_init
+        recoil[i] = (edge_length_final - edge_length_init) / edge_length_init
 
     return np.mean(recoil)
 
