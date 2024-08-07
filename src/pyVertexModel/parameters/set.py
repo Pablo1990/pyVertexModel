@@ -189,7 +189,7 @@ class Set:
                                     '_Cells_', str(self.TotalCells), '_visc_', str(self.nu), '_lVol_',
                                     str(self.lambdaV), '_kSubs_', str(self.kSubstrate), '_lt_', str(self.cLineTension),
                                     '_ltExt_', str(self.cLineTension_external),
-                                    '_noise_', str(self.noise_random), '_ref_A0_', str(self.ref_A0),
+                                    '_noise_', str(self.noise_random), '_refA0_', str(self.ref_A0),
                                     '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
                                     '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
                                     '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3),

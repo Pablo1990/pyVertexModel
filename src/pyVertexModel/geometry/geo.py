@@ -963,7 +963,7 @@ class Geo:
 
         return vtk_cells
 
-    def ablate_cells(self, c_set, t):
+    def ablate_cells(self, c_set, t, combine_cells=True):
         """
         Ablate the cells
         :param c_set:
@@ -981,30 +981,31 @@ class Geo:
                 uniqueDebrisCell = self.cellsToAblate[0]
                 self.Cells[uniqueDebrisCell].AliveStatus = 0
 
-                # Compute properties of the debris cell
-                self.Cells[uniqueDebrisCell].X = np.mean([cell.X for cell in self.Cells if cell.ID
-                                                          in self.cellsToAblate], axis=0)
+                if combine_cells:
+                    # Compute properties of the debris cell
+                    self.Cells[uniqueDebrisCell].X = np.mean([cell.X for cell in self.Cells if cell.ID
+                                                              in self.cellsToAblate], axis=0)
 
-                # Get the remaining debris cells
-                remainingDebrisCells = np.setdiff1d(self.cellsToAblate, uniqueDebrisCell)
+                    # Get the remaining debris cells
+                    remainingDebrisCells = np.setdiff1d(self.cellsToAblate, uniqueDebrisCell)
 
-                old_geo = self.copy()
-                total_vol = sum([cell.Vol0 for cell in self.Cells if cell.ID in self.cellsToAblate])
+                    old_geo = self.copy()
+                    total_vol = sum([cell.Vol0 for cell in self.Cells if cell.ID in self.cellsToAblate])
 
-                # Iterate over the remaining debris cells
-                for debrisCell in remainingDebrisCells:
-                    # Combine the debris cells
-                    self.combine_two_nodes([uniqueDebrisCell, debrisCell], c_set)
+                    # Iterate over the remaining debris cells
+                    for debrisCell in remainingDebrisCells:
+                        # Combine the debris cells
+                        self.combine_two_nodes([uniqueDebrisCell, debrisCell], c_set)
 
-                # Get the cells that have changed to rebuild
-                cells_to_rebuild = get_node_neighbours(self, uniqueDebrisCell, [uniqueDebrisCell])
-                cells_to_rebuild.append(uniqueDebrisCell)
+                    # Get the cells that have changed to rebuild
+                    cells_to_rebuild = get_node_neighbours(self, uniqueDebrisCell, [uniqueDebrisCell])
+                    cells_to_rebuild.append(uniqueDebrisCell)
 
-                # Rebuild the geometry of only the selected cells
-                self.rebuild(old_geo, c_set, cells_to_rebuild=cells_to_rebuild)
-                self.build_global_ids()
-                self.update_measures()
-                self.Cells[uniqueDebrisCell].Vol0 = total_vol
+                    # Rebuild the geometry of only the selected cells
+                    self.rebuild(old_geo, c_set, cells_to_rebuild=cells_to_rebuild)
+                    self.build_global_ids()
+                    self.update_measures()
+                    self.Cells[uniqueDebrisCell].Vol0 = total_vol
 
                 # Create baseline results to compare with
 
