@@ -135,7 +135,7 @@ def get_contractility_based_on_location(current_face, current_tri, geo, c_set, c
             elif c_set.TypeOfPurseString == 2:
                 contractilityValue = get_intensity_based_contractility(c_set, current_face, intensity_images=False)
         else:
-            contractilityValue = 1
+            contractilityValue = c_set.cLineTension
 
         if len(current_tri.SharedByCells) == 1:
             contractilityValue = 0
