@@ -24,7 +24,7 @@ for _, file in enumerate(lst):
 
                 # Extract the variables from folder name
                 file_splitted = file.split('_')
-                variables_to_show = {'Cells', 'visc', 'lVol', 'kSubs', 'lt', 'noise', 'brownian', 'eTriAreaBarrier',
+                variables_to_show = {'Cells', 'visc', 'lVol', 'kSubs', 'lt', 'ltExt', 'refA0', 'eTriAreaBarrier',
                                      'eARBarrier', 'RemStiff', 'lS1', 'lS2', 'lS3', 'pString'}
                 for i in range(3, len(file_splitted), 1):
                     if file_splitted[i] in variables_to_show:
