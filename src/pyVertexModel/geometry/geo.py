@@ -977,11 +977,12 @@ class Geo:
             if self.cellsToAblate is not None:
                 # Log the ablation process
                 logger.info(' ---- Performing ablation')
-                # Combine the debris cells into 1
-                uniqueDebrisCell = self.cellsToAblate[0]
-                self.Cells[uniqueDebrisCell].AliveStatus = 0
 
                 if combine_cells:
+                    # Combine the debris cells into 1
+                    uniqueDebrisCell = self.cellsToAblate[0]
+                    self.Cells[uniqueDebrisCell].AliveStatus = 0
+
                     # Compute properties of the debris cell
                     self.Cells[uniqueDebrisCell].X = np.mean([cell.X for cell in self.Cells if cell.ID
                                                               in self.cellsToAblate], axis=0)
@@ -1006,6 +1007,9 @@ class Geo:
                     self.build_global_ids()
                     self.update_measures()
                     self.Cells[uniqueDebrisCell].Vol0 = total_vol
+                else:
+                    for id_to_ablate in self.cellsToAblate:
+                        self.Cells[id_to_ablate].AliveStatus = 0
 
                 # Create baseline results to compare with
 
