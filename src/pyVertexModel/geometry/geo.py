@@ -997,7 +997,7 @@ class Geo:
                     self.combine_two_nodes([uniqueDebrisCell, debrisCell], c_set)
 
                 # Get the cells that have changed to rebuild
-                cells_to_rebuild = get_node_neighbours(self, uniqueDebrisCell)
+                cells_to_rebuild = get_node_neighbours(self, uniqueDebrisCell, [uniqueDebrisCell])
                 cells_to_rebuild.append(uniqueDebrisCell)
 
                 # Rebuild the geometry of only the selected cells
