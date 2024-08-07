@@ -966,6 +966,7 @@ class Geo:
     def ablate_cells(self, c_set, t, combine_cells=True):
         """
         Ablate the cells
+        :param combine_cells:
         :param c_set:
         :param t:
         :return:
@@ -976,7 +977,7 @@ class Geo:
             # Check if the list of cells to ablate is not empty
             if self.cellsToAblate is not None:
                 # Log the ablation process
-                logger.info(' ---- Performing ablation')
+                logger.info(' ---- Performing ablation: ' + str(self.cellsToAblate))
 
                 if combine_cells:
                     # Combine the debris cells into 1

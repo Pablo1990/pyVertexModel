@@ -15,7 +15,8 @@ def analyse_edge_recoil(v_model, n_ablations=1, location_filter=0):
     recoil = np.zeros(n_ablations)
     for i in range(n_ablations):
         # Cells to ablate
-        cell_to_ablate = np.random.choice(possible_cells_to_ablate, 1)
+        #cell_to_ablate = np.random.choice(possible_cells_to_ablate, 1)
+        cell_to_ablate = [v_model.geo.Cells[0]]
 
         # Pick the neighbouring cell to ablate
         neighbours = cell_to_ablate[0].compute_neighbours(location_filter)
@@ -30,9 +31,9 @@ def analyse_edge_recoil(v_model, n_ablations=1, location_filter=0):
 
         # Ablate the edge
         v_model.set.ablation = True
-        v_model.set.cellsToAblate = cells_to_ablate
+        v_model.geo.cellsToAblate = cells_to_ablate
         v_model.set.TInitAblation = v_model.t
-        v_model.geo.ablate_cells(v_model.set, v_model.t)
+        v_model.geo.ablate_cells(v_model.set, v_model.t, combine_cells=False)
 
         # Relax the system
         v_model.set.tend = v_model.t + 1
@@ -77,7 +78,7 @@ v_model = VertexModelVoronoiFromTimeImage()
 output_folder = v_model.set.OutputFolder
 load_state(v_model,
            '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/'
-           '08-07_083904__Cells_150_visc_100_lVol_1_kSubs_10_lt_0.0015_ltExt_0.0015_noise_0_ref_A0_1.05_eTriAreaBarrier_0_eARBarrier_0_RemStiff_0.95_lS1_4_lS2_0.4_lS3_4_pString_0.009000000000000001/'
-           'data_step_300.pkl')
+           '08-07_114514__Cells_150_visc_100_lVol_1_kSubs_1_lt_0.001_ltExt_0.001_noise_0_refA0_1_eTriAreaBarrier_0_eARBarrier_0_RemStiff_0.95_lS1_4_lS2_0.4_lS3_4_pString_0.006'
+           '/data_step_300.pkl')
 v_model.set.OutputFolder = output_folder
 print(analyse_edge_recoil(v_model, n_ablations=1))
