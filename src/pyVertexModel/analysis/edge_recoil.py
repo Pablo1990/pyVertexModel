@@ -14,6 +14,7 @@ def analyse_edge_recoil(v_model, n_ablations=1, location_filter=0):
                                 in v_model.geo.BorderCells]
     recoil = np.zeros(n_ablations)
     for i in range(n_ablations):
+        v_model_copy = v_model.copy()
         # Cells to ablate
         #cell_to_ablate = np.random.choice(possible_cells_to_ablate, 1)
         cell_to_ablate = [v_model.geo.Cells[0]]
@@ -45,6 +46,8 @@ def analyse_edge_recoil(v_model, n_ablations=1, location_filter=0):
 
         # Calculate the recoil
         recoil[i] = (edge_length_final - edge_length_init) / edge_length_init
+
+        v_model = v_model_copy.copy()
 
     return np.mean(recoil)
 
@@ -81,4 +84,4 @@ load_state(v_model,
            '08-07_114514__Cells_150_visc_100_lVol_1_kSubs_1_lt_0.001_ltExt_0.001_noise_0_refA0_1_eTriAreaBarrier_0_eARBarrier_0_RemStiff_0.95_lS1_4_lS2_0.4_lS3_4_pString_0.006'
            '/data_step_300.pkl')
 v_model.set.OutputFolder = output_folder
-print(analyse_edge_recoil(v_model, n_ablations=1))
+print(analyse_edge_recoil(v_model, n_ablations=5))
