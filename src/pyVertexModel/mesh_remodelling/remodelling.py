@@ -385,7 +385,7 @@ class Remodelling:
                 for c_face in current_faces:
                     for current_tri in c_face.Tris:
                         if (len(current_tri.SharedByCells) > 1 and
-                                not np.any(np.isin(current_tri.SharedByCells, self.Geo.BorderCells))):
+                                not np.any(np.isin(current_tri.SharedByCells, self.Geo.BorderGhostNodes))):
                             shared_cells = [c for c in current_tri.SharedByCells if c != num_cell]
                             for num_shared_cell in shared_cells:
                                 if c_face.InterfaceType == 0 or c_face.InterfaceType == 'Top':
@@ -406,7 +406,7 @@ class Remodelling:
 
         for _, segment_feature in segment_features_filtered.iterrows():
             g_node_neighbours = get_node_neighbours(self.Geo, segment_feature.node_pair_g)
-            g_nodes_neighbours_shared = np.unique(np.concatenate(g_node_neighbours))
+            g_nodes_neighbours_shared = np.unique(np.concatenate(np.array(g_node_neighbours)))
             cell_nodes_shared = g_nodes_neighbours_shared[~np.isin(g_nodes_neighbours_shared, self.Geo.XgID)]
 
             if sum([self.Geo.Cells[node].AliveStatus == 0 for node in cell_nodes_shared]) < 2 and len(
