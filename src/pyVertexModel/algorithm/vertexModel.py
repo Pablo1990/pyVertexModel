@@ -14,7 +14,7 @@ from src.pyVertexModel.geometry import degreesOfFreedom
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
 from src.pyVertexModel.parameters.set import Set
-from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars
+from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars, copy_non_mutable_attributes
 import matplotlib.pyplot as plt
 
 logger = logging.getLogger("pyVertexModel")
@@ -597,3 +597,13 @@ class VertexModel:
 
         # Close the plotter
         plotter.close()
+
+    def copy(self):
+        """
+        Copy the VertexModel object.
+        :return:
+        """
+        new_v_model = VertexModel()
+        copy_non_mutable_attributes(self, '', new_v_model)
+
+        return new_v_model

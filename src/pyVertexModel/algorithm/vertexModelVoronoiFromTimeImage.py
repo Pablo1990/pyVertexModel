@@ -641,3 +641,9 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         self.geo.Main_cells = newIds[np.isin(oldIds, self.geo.Main_cells)]
         # Return the renumbered tetrahedra and coordinates arrays
         return Twg, X
+
+    def copy(self):
+        """
+        Copy the object.
+        """
+        return super().copy()

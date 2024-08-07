@@ -453,3 +453,10 @@ class VertexModelBubbles(VertexModel):
             Xg = Xg[Xg[:, 2] > np.mean(self.X[:, 2]), :]
             self.geo.XgID = np.arange(self.X.shape[0], self.X.shape[0] + Xg.shape[0] + 2)
             self.X = np.concatenate((self.X, Xg, [np.mean(self.X[:, 0]), np.mean(self.X[:, 1]), -50]), axis=0)
+
+    def copy(self):
+        """
+        Copy the object
+        :return:
+        """
+        return super().copy()

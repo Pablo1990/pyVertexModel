@@ -125,6 +125,13 @@ def ismember_rows(a, b):
 
 
 def copy_non_mutable_attributes(class_to_change, attr_not_to_change, new_cell):
+    """
+    Copy the non-mutable attributes of class_to_change to new_cell
+    :param class_to_change:
+    :param attr_not_to_change:
+    :param new_cell:
+    :return:
+    """
     for attr, value in class_to_change.__dict__.items():
         # check if attr is mutable
         if attr == attr_not_to_change:
