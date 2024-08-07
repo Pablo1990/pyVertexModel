@@ -5,6 +5,7 @@ from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
 from src.pyVertexModel.util.utils import load_state
 
 vModel = VertexModelVoronoiFromTimeImage()
+output_folder = vModel.set.OutputFolder
 
 start_new = True
 if start_new == True:
@@ -17,6 +18,7 @@ else:
                'data_step_300.pkl')
     vModel.set.wing_disc()
     vModel.set.wound_default()
+    vModel.set.OutputFolder = output_folder
     vModel.iterate_over_time()
 
 analyse_simulation(vModel.set.OutputFolder)
