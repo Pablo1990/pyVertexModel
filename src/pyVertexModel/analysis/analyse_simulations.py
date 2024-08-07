@@ -26,7 +26,7 @@ for _, file in enumerate(lst):
                 file_splitted = file.split('_')
                 variables_to_show = {'Cells', 'visc', 'lVol', 'kSubs', 'lt', 'noise', 'brownian', 'eTriAreaBarrier',
                                      'eARBarrier', 'RemStiff', 'lS1', 'lS2', 'lS3', 'pString'}
-                for i in range(3, len(file_splitted), 2):
+                for i in range(3, len(file_splitted), 1):
                     if file_splitted[i] in variables_to_show:
                         important_features[file_splitted[i]] = file_splitted[i + 1]
 

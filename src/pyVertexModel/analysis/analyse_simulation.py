@@ -159,7 +159,7 @@ def calculate_important_features(post_wound_features):
         }
 
         # Extrapolate features to a given time
-        times_to_extrapolate = {6.0, 9.0, 12.0, 15.0, 21.0, 30.0, 36.0, 45.0, 51.0, 60.0}
+        times_to_extrapolate = {3.0, 6.0, 9.0, 12.0, 15.0, 21.0, 30.0, 36.0, 45.0, 51.0, 60.0}
         columns_to_extrapolate = {'wound_area_top', 'wound_height'}  # post_wound_features.columns
         for feature in columns_to_extrapolate:
             for time in times_to_extrapolate:
@@ -168,12 +168,12 @@ def calculate_important_features(post_wound_features):
                                                                                        post_wound_features['time'],
                                                                                        post_wound_features[feature])
 
-        # Get ratio from area the first time to the other times
-        for time in times_to_extrapolate:
-            if time != 6.0:
-                important_features['ratio_area_top_' + str(time)] = (
-                        important_features['wound_area_top_extrapolated_' + str(time)] /
-                        important_features['wound_area_top_extrapolated_6.0'])
+        # # Get ratio from area the first time to the other times
+        # for time in times_to_extrapolate:
+        #     if time != 6.0:
+        #         important_features['ratio_area_top_' + str(time)] = (
+        #                 important_features['wound_area_top_extrapolated_' + str(time)] /
+        #                 important_features['wound_area_top_extrapolated_6.0'])
 
     else:
         important_features = {
