@@ -274,7 +274,7 @@ class Set:
         # ============================== Ablation ============================
         self.cellsToAblate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
         self.TInitAblation = 30
-        self.TEndAblation = self.tend
+        self.TEndAblation = self.TInitAblation + 60
         self.debris_contribution = np.finfo(float).eps
         # =========================== Contractility ==========================
         self.Contractility = True
@@ -282,9 +282,9 @@ class Set:
         # 0: Intensity-based purse string
         # 1: Strain-based purse string (delayed)
         # 2: Fixed with linear increase purse string
-        self.purseStringStrength = self.cLineTension * 5
-        self.lateralCablesStrength = self.cLineTension
-        self.delay_purse_string = 6
+        self.purseStringStrength = self.cLineTension * 6
+        self.lateralCablesStrength = self.cLineTension / 10
+        self.delay_purse_string = 5.8
         self.delay_lateral_cables = 0.2
 
     def menu_input(self, inputMode=None, batchMode=None):
