@@ -52,6 +52,34 @@ def save_variables(vars, filename):
             pickle.dump({var: vars[var]}, f)
 
 
+def load_variables(filename):
+    """
+    Load state of the different variables from filename
+    :param filename:
+    :return:
+    """
+    vars = {}
+    try:
+        with lzma.open(filename, 'rb') as f:
+            while True:
+                try:
+                    data = pickle.load(f)
+                    for var, value in data.items():
+                        vars[var] = value
+                except EOFError:
+                    break
+    except gzip.BadGzipFile:
+        with open(filename, 'rb') as f:
+            while True:
+                try:
+                    data = pickle.load(f)
+                    for var, value in data.items():
+                        vars[var] = value
+                except EOFError:
+                    break
+    return vars
+
+
 def load_state(obj, filename, objs_to_load=None):
     """
     Load state of the different attributes of obj from filename
