@@ -233,6 +233,9 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0):
 
         # Get the centre of the tissue
         centre_of_tissue = v_model.geo.compute_centre_of_tissue()
+        neighbour_to_ablate_cell = [cell for cell in v_model.geo.Cells if cell.ID == neighbour_to_ablate[0]][0]
+        distance_to_centre = np.mean([cell_to_ablate[0].compute_distance_to_centre(centre_of_tissue),
+                                      neighbour_to_ablate_cell.compute_distance_to_centre(centre_of_tissue)])
 
         # Pick the neighbour and put it in the list
         cells_to_ablate = [cell_to_ablate[0].ID, neighbour_to_ablate[0]]
@@ -247,7 +250,7 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0):
         v_model.geo.ablate_cells(v_model.set, v_model.t, combine_cells=False)
 
         # Relax the system
-        v_model.set.tend = v_model.t + 1
+        v_model.set.tend = v_model.t + 0.1
         v_model.set.ablation = False
         v_model.iterate_over_time()
 
@@ -255,18 +258,17 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0):
         edge_length_final = get_edge_length(cells_to_ablate, location_filter, v_model)
 
         # Calculate the recoil
-        recoil_speed = (edge_length_final - edge_length_init) / edge_length_init
+        recoil_speed = (edge_length_final - edge_length_init) / edge_length_init / v_model.t
 
         # Save the results
         dict_to_save = {
             'cell_to_ablate': cell_to_ablate[0].ID,
-            'neighbour_to_ablate': neighbour_to_ablate[0].ID,
+            'neighbour_to_ablate': neighbour_to_ablate[0],
             'edge_length_init': edge_length_init,
             'edge_length_final': edge_length_final,
             'scutoid_face': scutoid_face,
             'location_filter': location_filter,
-            'distance_to_centre': np.mean([cell_to_ablate[0].compute_distance_to_centre(centre_of_tissue),
-                                           neighbour_to_ablate[0].compute_distance_to_centre(centre_of_tissue)]),
+            'distance_to_centre': distance_to_centre,
             'recoil_speed': recoil_speed
         }
         list_of_dicts_to_save.append(dict_to_save)

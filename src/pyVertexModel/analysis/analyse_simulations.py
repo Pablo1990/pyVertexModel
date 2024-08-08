@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pandas as pd
 
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
@@ -23,7 +24,21 @@ for _, file in enumerate(lst):
 
             # Analyse the edge recoil
             if os.path.exists(os.path.join(folder, file, 'data_step_300.pkl')):
-                recoiling_info = analyse_edge_recoil(os.path.join(folder, file, 'data_step_300.pkl'), n_ablations=1)
+                recoiling_info = analyse_edge_recoil(os.path.join(folder, file, 'data_step_300.pkl'), n_ablations=5,
+                                                     location_filter=0)
+                recoiling_info_df = pd.DataFrame(recoiling_info)
+                recoiling_info_df.to_excel(os.path.join(folder, file, 'recoil_info_apical.xlsx'))
+
+                important_features['recoiling_speed_apical'] = np.mean(recoiling_info['recoil_speed'])
+                important_features['recoiling_speed_apical_std'] = np.std(recoiling_info['recoil_speed'])
+
+                recoiling_info = analyse_edge_recoil(os.path.join(folder, file, 'data_step_300.pkl'), n_ablations=5,
+                                                     location_filter=2)
+                recoiling_info_df = pd.DataFrame(recoiling_info)
+                recoiling_info_df.to_excel(os.path.join(folder, file, 'recoil_info_apical.xlsx'))
+                important_features['recoiling_speed_basal'] = np.mean(recoiling_info['recoil_speed'])
+                important_features['recoiling_speed_basal_std'] = np.std(recoiling_info['recoil_speed'])
+
 
             if important_features is not None and len(important_features) > 5:
                 important_features['folder'] = file
