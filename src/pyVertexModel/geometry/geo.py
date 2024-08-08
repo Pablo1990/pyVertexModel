@@ -1253,3 +1253,11 @@ class Geo:
 
         # Remove the second node
         self.Cells[nodes_to_combine[1]].kill_cell()
+
+    def compute_centre_of_tissue(self):
+        """
+        Compute the centre of the tissue
+        :return:
+        """
+        centre_of_tissue = np.mean([c_cell.X for c_cell in self.Cells if c_cell.AliveStatus is not None], axis=0)
+        return centre_of_tissue

@@ -509,5 +509,12 @@ class Cell:
         self.ExternalLambda = None
         self.axes_lengths = None
 
+    def compute_distance_to_centre(self, centre_of_tissue):
+        """
+        Compute the distance from the centre of the cell to the centre of the tissue
+        :return:
+        """
+        return np.linalg.norm(self.Y - centre_of_tissue)
+
 
 
