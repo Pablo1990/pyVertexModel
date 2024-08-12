@@ -14,6 +14,7 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.ref_V0 = None
         self.cLineTension_external = None
         self.Contractility_external = None
         self.initial_filename_state = 'Input/wing_disc_150.mat'
@@ -186,8 +187,9 @@ class Set:
 
         current_datetime = datetime.now()
         new_outputFolder = ''.join([PROJECT_DIRECTORY, '/Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")),
-                                    '_Cells_', str(self.TotalCells), '_visc_', str(self.nu), '_lVol_',
-                                    str(self.lambdaV), '_kSubs_', str(self.kSubstrate), '_lt_', str(self.cLineTension),
+                                    '_Cells_', str(self.TotalCells), '_visc_', str(self.nu),
+                                    '_lVol_', str(self.lambdaV), '_refV0_', str(self.ref_V0),
+                                    '_kSubs_', str(self.kSubstrate), '_lt_', str(self.cLineTension),
                                     '_ltExt_', str(self.cLineTension_external),
                                     '_noise_', str(self.noise_random), '_refA0_', str(self.ref_A0),
                                     '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
@@ -244,7 +246,7 @@ class Set:
             self.lambdaR = 0
 
         self.lambdaV = 1
-        self.kSubstrate = 0.01
+        self.ref_V0 = 1
         self.cLineTension = 0.0015
         self.Contractility_external = True
         self.cLineTension_external = self.cLineTension / 10
