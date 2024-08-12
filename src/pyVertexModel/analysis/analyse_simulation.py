@@ -188,9 +188,10 @@ def calculate_important_features(post_wound_features):
     return important_features
 
 
-def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0):
+def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_end=0.1):
     """
     Analyse how much an edge recoil if we ablate an edge of a cell
+    :param t_end: Time to iterate after the ablation
     :param file_name_v_model: file nae of the Vertex model
     :param n_ablations: Number of ablations to perform
     :param location_filter: Location filter
@@ -250,7 +251,7 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0):
         v_model.geo.ablate_cells(v_model.set, v_model.t, combine_cells=False)
 
         # Relax the system
-        v_model.set.tend = v_model.t + 0.1
+        v_model.set.tend = v_model.t + t_end
         v_model.set.ablation = False
         v_model.iterate_over_time()
 
