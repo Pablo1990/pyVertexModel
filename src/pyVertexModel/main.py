@@ -1,7 +1,7 @@
 import os
 
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
-from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
+from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation, analyse_edge_recoil
 from src.pyVertexModel.util.utils import load_state
 
 vModel = VertexModelVoronoiFromTimeImage()
@@ -22,3 +22,7 @@ else:
     vModel.iterate_over_time()
 
 analyse_simulation(vModel.set.OutputFolder)
+n_ablations = 1
+t_end = 5
+recoiling_info = analyse_edge_recoil(os.path.join(vModel.set.OutputFolder, 'data_step_300.pkl'),
+                                     n_ablations=n_ablations, location_filter=0, t_end=t_end)
