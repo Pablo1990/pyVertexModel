@@ -263,7 +263,8 @@ class VertexModel:
 
             # Ablate cells if needed
             if self.set.ablation:
-                self.save_v_model_state(file_name='before_ablation')
+                if self.set.ablation and self.set.TInitAblation <= self.t and self.geo.cellsToAblate is not None:
+                    self.save_v_model_state(file_name='before_ablation')
                 self.geo.ablate_cells(self.set, self.t)
                 self.geo_n = self.geo.copy()
                 # Update the degrees of freedom
