@@ -263,6 +263,7 @@ class VertexModel:
 
             # Ablate cells if needed
             if self.set.ablation:
+                self.save_v_model_state(file_name='before_ablation')
                 self.geo.ablate_cells(self.set, self.t)
                 self.geo_n = self.geo.copy()
                 # Update the degrees of freedom
@@ -395,14 +396,17 @@ class VertexModel:
             self.set.nu = np.max([self.set.nu / 2, self.set.nu0])
             self.relaxingNu = True
 
-    def save_v_model_state(self):
+    def save_v_model_state(self, file_name=None):
         # Create VTK files for the current state
         self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
         self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
         temp_dir = os.path.join(self.set.OutputFolder, 'images')
         self.screenshot(temp_dir)
         # Save Data of the current step
-        save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
+        if file_name is None:
+            save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
+        else:
+            save_state(self, os.path.join(self.set.OutputFolder, file_name + '.pkl'))
 
     def reset_noisy_parameters(self):
         for num_cell in range(len(self.geo.Cells)):
