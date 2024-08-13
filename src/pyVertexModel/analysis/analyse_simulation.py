@@ -7,7 +7,6 @@ from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
-from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from src.pyVertexModel.util.utils import load_state
 
 
@@ -200,11 +199,12 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
     """
 
     list_of_dicts_to_save = []
-    for i in range(n_ablations):
-        v_model = VertexModelVoronoiFromTimeImage()
-        output_folder = v_model.set.OutputFolder
+    for num_ablation in range(n_ablations):
+        v_model = VertexModel(create_output_folder=False)
         load_state(v_model, file_name_v_model)
-        v_model.set.OutputFolder = output_folder
+        # Change name of folder and create it
+        v_model.set.OutputFolder = v_model.set.OutputFolder + '_ablation_' + str(num_ablation)
+        os.mkdir(v_model.set.OutputFolder)
 
         possible_cells_to_ablate = [cell.ID for cell in v_model.geo.Cells if
                                     cell.AliveStatus == 1 and cell.ID not in v_model.geo.BorderCells]
@@ -214,9 +214,11 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
         cell_to_ablate = [v_model.geo.Cells[0]]
 
         # Pick the neighbouring cell to ablate
-        neighbours = cell_to_ablate[0].compute_neighbours(location_filter)
-        possible_neighbours = [neighbour for neighbour in neighbours if neighbour in possible_cells_to_ablate]
-        neighbour_to_ablate = np.random.choice(possible_neighbours, 1)
+        #neighbours = cell_to_ablate[0].compute_neighbours(location_filter)
+        #possible_neighbours = [neighbour for neighbour in neighbours if neighbour in possible_cells_to_ablate]
+        #neighbour_to_ablate = np.random.choice(possible_neighbours, 1)
+        neighbour_to_ablate = [4]
+
 
         # Calculate if the cell is neighbour on both sides
         scutoid_face = None
