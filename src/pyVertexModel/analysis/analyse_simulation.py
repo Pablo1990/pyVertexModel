@@ -4,6 +4,7 @@ import pickle
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from scipy.optimize import curve_fit
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
@@ -205,8 +206,8 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
         load_state(v_model, file_name_v_model)
         v_model.set.OutputFolder = output_folder
 
-        possible_cells_to_ablate = [cell.ID for cell in v_model.geo.Cells if cell.AliveStatus == 1 and cell.ID not
-                                    in v_model.geo.BorderCells]
+        possible_cells_to_ablate = [cell.ID for cell in v_model.geo.Cells if
+                                    cell.AliveStatus == 1 and cell.ID not in v_model.geo.BorderCells]
 
         # Cells to ablate
         # cell_to_ablate = np.random.choice(possible_cells_to_ablate, 1)
@@ -251,15 +252,38 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
         v_model.geo.ablate_cells(v_model.set, v_model.t, combine_cells=False)
 
         # Relax the system
+        initial_time = v_model.t
         v_model.set.tend = v_model.t + t_end
         v_model.set.ablation = False
-        v_model.iterate_over_time()
+        v_model.set.export_images = False
+        edge_length_final_normalized = [0]
+        edge_length_final = [0]
+        recoil_speed = [0]
+        time_steps = [0]
+        while v_model.t <= v_model.set.tend and not v_model.didNotConverge:
+            gr = v_model.single_iteration()
 
-        # Get the edge length
-        edge_length_final = get_edge_length(cells_to_ablate, location_filter, v_model)
+            # Get the edge length
+            edge_length_final.append(get_edge_length(cells_to_ablate, location_filter, v_model))
+            edge_length_final_normalized.append((edge_length_final[-1] - edge_length_init) / edge_length_init)
 
-        # Calculate the recoil
-        recoil_speed = (edge_length_final - edge_length_init) / edge_length_init / v_model.t
+            # In seconds. 1 t = 1 minute = 60 seconds
+            time_steps.append((v_model.t - initial_time) * 60)
+
+            # Calculate the recoil
+            recoil_speed.append(edge_length_final_normalized[-1] / time_steps[-1])
+
+            if np.isnan(gr):
+                break
+
+        # Calculate the recoil values. Thanks to Veronika Lachina
+        def recoil_model(x, initial_recoil, K):
+            return (initial_recoil / K) * (1 - np.exp(-K * x))
+
+        # Fit the model to the data
+        [params, covariance] = curve_fit(recoil_model, time_steps, edge_length_final,
+                                         p0=[0.00001, 3], bounds=(0, np.inf))
+        initial_recoil, K = params
 
         # Save the results
         dict_to_save = {
@@ -267,10 +291,11 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
             'neighbour_to_ablate': neighbour_to_ablate[0],
             'edge_length_init': edge_length_init,
             'edge_length_final': edge_length_final,
+            'initial_recoil_in_s': initial_recoil,
+            'K': K,
             'scutoid_face': scutoid_face,
             'location_filter': location_filter,
             'distance_to_centre': distance_to_centre,
-            'recoil_speed': recoil_speed
         }
         list_of_dicts_to_save.append(dict_to_save)
 
