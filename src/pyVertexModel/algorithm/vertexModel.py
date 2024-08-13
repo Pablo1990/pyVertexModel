@@ -244,45 +244,50 @@ class VertexModel:
         self.save_v_model_state()
 
         while self.t <= self.set.tend and not self.didNotConverge:
-            self.set.currentT = self.t
-            logger.info("Time: " + str(self.t))
+            gr = self.single_iteration()
 
-            if not self.relaxingNu:
-                self.set.i_incr = self.numStep
-
-                # Ablate cells if needed
-                if self.set.ablation:
-                    self.geo.ablate_cells(self.set, self.t)
-                    self.geo_n = self.geo.copy()
-                    # Update the degrees of freedom
-                    self.Dofs.get_dofs(self.geo, self.set)
-
-                self.Dofs.ApplyBoundaryCondition(self.t, self.geo, self.set)
-                # IMPORTANT: Here it updates: Areas, Volumes, etc... Should be
-                # up-to-date
-                self.geo.update_measures()
-
-            if self.set.implicit_method is True:
-                g, K, _, energies = newtonRaphson.KgGlobal(self.geo_0, self.geo_n, self.geo, self.set,
-                                                           self.set.implicit_method)
-            else:
-                K = 0
-                g, energies = newtonRaphson.gGlobal(self.geo_0, self.geo_n, self.geo, self.set,
-                                                    self.set.implicit_method)
-
-            for key, energy in energies.items():
-                logger.info(f"{key}: {energy}")
-
-            self.geo, g, __, __, self.set, gr, dyr, dy = newtonRaphson.newton_raphson(self.geo_0, self.geo_n, self.geo,
-                                                                                      self.Dofs, self.set, K, g,
-                                                                                      self.numStep, self.t,
-                                                                                      self.set.implicit_method)
-            if not np.isnan(gr):
-                self.post_newton_raphson(dy, dyr, g, gr)
-            else:
+            if np.isnan(gr):
                 break
 
         return self.didNotConverge
+
+    def single_iteration(self):
+        """
+        Perform a single iteration of the model.
+        :return:
+        """
+        self.set.currentT = self.t
+        logger.info("Time: " + str(self.t))
+        if not self.relaxingNu:
+            self.set.i_incr = self.numStep
+
+            # Ablate cells if needed
+            if self.set.ablation:
+                self.geo.ablate_cells(self.set, self.t)
+                self.geo_n = self.geo.copy()
+                # Update the degrees of freedom
+                self.Dofs.get_dofs(self.geo, self.set)
+
+            self.Dofs.ApplyBoundaryCondition(self.t, self.geo, self.set)
+            # IMPORTANT: Here it updates: Areas, Volumes, etc... Should be
+            # up-to-date
+            self.geo.update_measures()
+        if self.set.implicit_method is True:
+            g, K, _, energies = newtonRaphson.KgGlobal(self.geo_0, self.geo_n, self.geo, self.set,
+                                                       self.set.implicit_method)
+        else:
+            K = 0
+            g, energies = newtonRaphson.gGlobal(self.geo_0, self.geo_n, self.geo, self.set,
+                                                self.set.implicit_method)
+        for key, energy in energies.items():
+            logger.info(f"{key}: {energy}")
+        self.geo, g, __, __, self.set, gr, dyr, dy = newtonRaphson.newton_raphson(self.geo_0, self.geo_n, self.geo,
+                                                                                  self.Dofs, self.set, K, g,
+                                                                                  self.numStep, self.t,
+                                                                                  self.set.implicit_method)
+        if not np.isnan(gr):
+            self.post_newton_raphson(dy, dyr, g, gr)
+        return gr
 
     def post_newton_raphson(self, dy, dyr, g, gr):
         """
@@ -532,6 +537,11 @@ class VertexModel:
         :param temp_dir:
         :return:
         """
+        # if exists variable export_images in set
+        if hasattr(self.set, 'export_images'):
+            if self.set.export_images is False:
+                return
+
         total_real_cells = len([cell.ID for cell in self.geo.Cells if cell.AliveStatus is not None])
 
         # Create a colormap_lim

@@ -12,8 +12,12 @@ from src.pyVertexModel.util.utils import copy_non_mutable_attributes
 logger = logging.getLogger("pyVertexModel")
 
 
+
+
+
 class Set:
     def __init__(self, mat_file=None):
+        self.export_images = None
         self.ref_V0 = None
         self.cLineTension_external = None
         self.Contractility_external = None
@@ -137,6 +141,33 @@ class Set:
         else:
             self.read_mat_file(mat_file)
 
+    def check_for_non_used_parameters(self):
+        """
+        Check for non-used parameters and put the alternative to zero
+        :return:
+        """
+        if self.EnergyBarrierA:
+            self.lambdaB = 0
+
+        if self.EnergyBarrierAR:
+            self.lambdaR = 0
+
+        if self.Bending:
+            self.lambdaBend = 0
+
+        if self.Contractility_external:
+            self.cLineTension_external = 0
+
+        if self.Contractility:
+            self.cLineTension = 0
+
+        if self.brownian_motion:
+            self.brownian_motion_scale = 0
+
+        if self.implicit_method is False:
+            self.tol = 100
+            self.tol0 = 5  #self.nu/20
+
     def redirect_output(self):
         os.makedirs(self.OutputFolder, exist_ok=True)
         handler = logging.FileHandler(os.path.join(self.OutputFolder, 'log.out'))
@@ -234,43 +265,37 @@ class Set:
 
         self.nu = 100
         self.EnergyBarrierA = False
-        if self.EnergyBarrierA:
-            self.lambdaB = 20
-        else:
-            self.lambdaB = 0
+        self.lambdaB = 20
 
         self.EnergyBarrierAR = False
-        if self.EnergyBarrierAR:
-            self.lambdaR = 0.000001
-        else:
-            self.lambdaR = 0
+        self.lambdaR = 0.000001
 
         self.lambdaV = 1
         self.ref_V0 = 1
-        self.cLineTension = 0.0015
+        self.kSubstrate = 1
+        self.cLineTension = 0.001
         self.Contractility_external = True
-        self.cLineTension_external = self.cLineTension / 10
+        self.cLineTension_external = 0.001
 
         self.brownian_motion = False
         self.brownian_motion_scale = 0
 
         self.noise_random = 0
         self.TypeOfPurseString = 2
-        self.Remodelling = 1
+        self.Remodelling = 0
         self.RemodelStiffness = 0.95
         self.ref_A0 = 1
         self.lambdaS1 = 4
-        self.lambdaS2 = self.lambdaS1 / 10
-        self.lambdaS3 = self.lambdaS1 / 10
+        self.lambdaS2 = 0.4
+        self.lambdaS3 = 4
         self.lambdaS4 = self.lambdaS2
         self.VTK = False
 
         self.implicit_method = False
-        if self.implicit_method is False:
-            self.tol = 100
-            self.tol0 = 5  #self.nu/20
 
         self.ablation = True
+
+        self.check_for_non_used_parameters()
 
     def wound_default(self):
         # ============================== Ablation ============================
