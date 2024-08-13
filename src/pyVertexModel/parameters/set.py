@@ -146,22 +146,22 @@ class Set:
         Check for non-used parameters and put the alternative to zero
         :return:
         """
-        if self.EnergyBarrierA:
+        if not self.EnergyBarrierA:
             self.lambdaB = 0
 
-        if self.EnergyBarrierAR:
+        if not self.EnergyBarrierAR:
             self.lambdaR = 0
 
-        if self.Bending:
+        if not self.Bending:
             self.lambdaBend = 0
 
-        if self.Contractility_external:
+        if not self.Contractility_external:
             self.cLineTension_external = 0
 
-        if self.Contractility:
+        if not self.Contractility:
             self.cLineTension = 0
 
-        if self.brownian_motion:
+        if not self.brownian_motion:
             self.brownian_motion_scale = 0
 
         if self.implicit_method is False:
