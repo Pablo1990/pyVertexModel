@@ -17,6 +17,7 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.Contractility_external_axis = None
         self.export_images = None
         self.ref_V0 = None
         self.cLineTension_external = None
@@ -275,6 +276,7 @@ class Set:
         self.kSubstrate = 1
         self.cLineTension = 0.001
         self.Contractility_external = True
+        self.Contractility_external_axis = [0, 1, 2]
         self.cLineTension_external = 0.001
 
         self.brownian_motion = False

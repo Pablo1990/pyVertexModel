@@ -45,8 +45,6 @@ class KgContractilityExternal(KgContractility):
                 elif currentFace.InterfaceType == 2 or currentFace.InterfaceType == 'Bottom':
                     C = c_set.cLineTension_external / 10
 
-                #TODO: I HAVE CHANGED THIS BECAUSE LATERAL VERTICES WERE MOVING TOO MUCH AWAY FROM THE BORDER
-
                 for tri_id, currentTri in enumerate(currentFace.Tris):
                     for edge_id in currentTri.Edge:
                         c_tets = cell.T[edge_id]
@@ -66,6 +64,10 @@ class KgContractilityExternal(KgContractility):
                             if geo.remodelling and not np.any(np.isin(cell.globalIds[edge_id],
                                                                       geo.Cells[c].vertices_and_faces_to_remodel)):
                                 continue
+
+                            if c_set.Contractility_external_axis is not None:
+                                axis_not_changing = np.setdiff1d([0, 1, 2], c_set.Contractility_external_axis)
+                                y_1[axis_not_changing] = y_2[axis_not_changing]
 
                             g_current = self.compute_g_contractility(l_i0, y_1, y_2, C)
                             ge = self.assemble_g(ge[:], g_current[:3], [cell.globalIds[edge_id]])
