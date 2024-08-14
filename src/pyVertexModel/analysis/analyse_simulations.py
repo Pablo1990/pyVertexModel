@@ -9,7 +9,7 @@ from src.pyVertexModel.util.utils import save_variables, load_variables
 folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/'
 all_files_features = []
 lst = os.listdir(folder)
-lst.sort(reverse=True)
+lst.sort(reverse=False)
 for _, file in enumerate(lst):
     print(file)
 
@@ -17,12 +17,9 @@ for _, file in enumerate(lst):
     if os.path.isdir(os.path.join(folder, file)):
         files_within_folder = os.listdir(os.path.join(folder, file))
         if len(files_within_folder) > 300:
-            # Analyse the simulation
-            features_per_time_df, post_wound_features, important_features, features_per_time_all_cells_df = (
-                analyse_simulation(os.path.join(folder, file)))
 
             # Analyse the edge recoil
-            if os.path.exists(os.path.join(folder, file, 'data_step_300.pkl')):
+            if os.path.exists(os.path.join(folder, file, 'before_ablation.pkl')):
                 # if the analysis file exists, load it
                 if os.path.exists(os.path.join(folder, file, 'recoil_info_apical.pkl')):
                     # recoiling_info_df_basal = load_variables(
@@ -30,9 +27,10 @@ for _, file in enumerate(lst):
                     recoiling_info_df_apical = load_variables(
                         os.path.join(folder, file, 'recoil_info_apical.pkl'))['recoiling_info_df_apical']
                 else:
+                    file_name = os.path.join(folder, file, 'before_ablation.pkl')
                     n_ablations = 1
                     t_end = 5
-                    recoiling_info = analyse_edge_recoil(os.path.join(folder, file, 'data_step_300.pkl'),
+                    recoiling_info = analyse_edge_recoil(os.path.join(folder, file, 'before_ablation.pkl'),
                                                          n_ablations=n_ablations, location_filter=0, t_end=t_end)
                     recoiling_info_df_apical = pd.DataFrame(recoiling_info)
                     recoiling_info_df_apical.to_excel(os.path.join(folder, file, 'recoil_info_apical.xlsx'))
@@ -45,6 +43,10 @@ for _, file in enumerate(lst):
                     # recoiling_info_df_basal.to_excel(os.path.join(folder, file, 'recoil_info_basal.xlsx'))
                     # save_variables({'recoiling_info_df_basal': recoiling_info_df_basal},
                     #                os.path.join(folder, file, 'recoil_info_basal.pkl'))
+
+            # Analyse the simulation
+            features_per_time_df, post_wound_features, important_features, features_per_time_all_cells_df = (
+                analyse_simulation(os.path.join(folder, file)))
 
             if important_features is not None and len(important_features) > 5:
                 important_features['recoiling_speed_apical'] = np.mean(recoiling_info_df_apical['initial_recoil_in_s'])
