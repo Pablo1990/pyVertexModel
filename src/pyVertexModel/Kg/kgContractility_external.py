@@ -60,12 +60,15 @@ class KgContractilityExternal(KgContractility):
                             elif currentFace.InterfaceType == 2 or currentFace.InterfaceType == 'Bottom':
                                 z_position = [cell.X for cell in geo.Cells if cell.ID == geo.XgBottom[0]][0][2]
                                 y_2[2] = z_position / 2
+                            else:
+                                # Lateral domain won't care about z, just in xy
+                                y_2[2] = y_1[2]
 
                             if geo.remodelling and not np.any(np.isin(cell.globalIds[edge_id],
                                                                       geo.Cells[c].vertices_and_faces_to_remodel)):
                                 continue
 
-                            if c_set.Contractility_external_axis is not None:
+                            if hasattr(c_set, 'Contractility_external_axis') and c_set.Contractility_external_axis is not None:
                                 axis_not_changing = np.setdiff1d([0, 1, 2], c_set.Contractility_external_axis)
                                 y_1[axis_not_changing] = y_2[axis_not_changing]
 
