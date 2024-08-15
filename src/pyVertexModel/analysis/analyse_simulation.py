@@ -289,18 +289,18 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
             recoil_speed = []
             time_steps = []
 
-            if os.path.exists(v_model.set.OutputFolder):
-                list_of_files = os.listdir(v_model.set.OutputFolder)
-                # Get file modification times and sort files by date
-                files_with_dates = [(file, os.path.getmtime(os.path.join(v_model.set.OutputFolder, file))) for file in
-                                    list_of_files]
-                files_with_dates.sort(key=lambda x: x[1])
-                for file in files_with_dates:
-                    load_state(v_model, os.path.join(v_model.set.OutputFolder, file[0]))
-                    compute_edge_length_v_model(cells_to_ablate, edge_length_final, edge_length_final_normalized,
-                                                edge_length_init, initial_time, location_filter, recoil_speed,
-                                                time_steps,
-                                                v_model)
+            # if os.path.exists(v_model.set.OutputFolder):
+            #     list_of_files = os.listdir(v_model.set.OutputFolder)
+            #     # Get file modification times and sort files by date
+            #     files_with_dates = [(file, os.path.getmtime(os.path.join(v_model.set.OutputFolder, file))) for file in
+            #                         list_of_files]
+            #     files_with_dates.sort(key=lambda x: x[1])
+            #     for file in files_with_dates:
+            #         load_state(v_model, os.path.join(v_model.set.OutputFolder, file[0]))
+            #         compute_edge_length_v_model(cells_to_ablate, edge_length_final, edge_length_final_normalized,
+            #                                     edge_length_init, initial_time, location_filter, recoil_speed,
+            #                                     time_steps,
+            #                                     v_model)
 
             while v_model.t <= v_model.set.tend and not v_model.didNotConverge:
                 gr = v_model.single_iteration()

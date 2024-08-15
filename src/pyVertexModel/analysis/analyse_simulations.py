@@ -9,7 +9,7 @@ from src.pyVertexModel.util.utils import save_variables, load_variables
 folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/'
 all_files_features = []
 lst = os.listdir(folder)
-lst.sort(reverse=False)
+lst.sort(reverse=True)
 for _, file in enumerate(lst):
     print(file)
 
