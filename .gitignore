@@ -178,3 +178,5 @@ Result/*
 src/pyVertexModel/Result/*
 
 *.xz
+
+data/
