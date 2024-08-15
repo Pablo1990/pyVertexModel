@@ -6,8 +6,8 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 
-from src.pyVertexModel.algorithm.vertexModel import VertexModel
-from src.pyVertexModel.util.utils import load_state
+from src.pyVertexModel.algorithm.vertexModel import VertexModel, logger
+from src.pyVertexModel.util.utils import load_state, load_variables
 
 
 def analyse_simulation(folder):
@@ -202,81 +202,118 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
     for num_ablation in range(n_ablations):
         v_model = VertexModel(create_output_folder=False)
         load_state(v_model, file_name_v_model)
-        # Change name of folder and create it
-        v_model.set.OutputFolder = v_model.set.OutputFolder + '_ablation_' + str(num_ablation)
-        os.mkdir(v_model.set.OutputFolder)
+        try:
+            vars = load_variables(file_name_v_model.replace('before_ablation.pkl', 'recoil_info_apical.pkl'))
+            list_of_dicts_to_save_loaded = vars['recoiling_info_df_apical']
 
-        possible_cells_to_ablate = [cell.ID for cell in v_model.geo.Cells if
-                                    cell.AliveStatus == 1 and cell.ID not in v_model.geo.BorderCells]
-
-        # Cells to ablate
-        # cell_to_ablate = np.random.choice(possible_cells_to_ablate, 1)
-        cell_to_ablate = [v_model.geo.Cells[0]]
-
-        # Pick the neighbouring cell to ablate
-        #neighbours = cell_to_ablate[0].compute_neighbours(location_filter)
-        #possible_neighbours = [neighbour for neighbour in neighbours if neighbour in possible_cells_to_ablate]
-        #neighbour_to_ablate = np.random.choice(possible_neighbours, 1)
-        neighbour_to_ablate = [4]
-
-
-        # Calculate if the cell is neighbour on both sides
-        scutoid_face = None
-        if location_filter == 0:
-            neighbours_other_side = cell_to_ablate[0].compute_neighbours(location_filter=2)
-            scutoid_face = np.nan
-        elif location_filter == 2:
-            neighbours_other_side = cell_to_ablate[0].compute_neighbours(location_filter=0)
-            scutoid_face = np.nan
-
-        if scutoid_face is not None:
-            if neighbour_to_ablate[0] in neighbours_other_side:
-                scutoid_face = True
+            cell_to_ablate = list_of_dicts_to_save_loaded['cell_to_ablate'][num_ablation]
+            neighbour_to_ablate = list_of_dicts_to_save_loaded['neighbour_to_ablate'][num_ablation]
+            edge_length_init = list_of_dicts_to_save_loaded['edge_length_init'][num_ablation]
+            edge_length_final = list_of_dicts_to_save_loaded['edge_length_final'][num_ablation]
+            initial_recoil = list_of_dicts_to_save_loaded['initial_recoil_in_s'][num_ablation]
+            K = list_of_dicts_to_save_loaded['K'][num_ablation]
+            scutoid_face = list_of_dicts_to_save_loaded['scutoid_face'][num_ablation]
+            distance_to_centre = list_of_dicts_to_save_loaded['distance_to_centre'][num_ablation]
+            if 'time_steps' in list_of_dicts_to_save_loaded:
+                time_steps = list_of_dicts_to_save_loaded['time_steps'][num_ablation]
             else:
-                scutoid_face = False
+                time_steps = np.arange(0, len(edge_length_final)) * 6
 
-        # Get the centre of the tissue
-        centre_of_tissue = v_model.geo.compute_centre_of_tissue()
-        neighbour_to_ablate_cell = [cell for cell in v_model.geo.Cells if cell.ID == neighbour_to_ablate[0]][0]
-        distance_to_centre = np.mean([cell_to_ablate[0].compute_distance_to_centre(centre_of_tissue),
-                                      neighbour_to_ablate_cell.compute_distance_to_centre(centre_of_tissue)])
+            if edge_length_final[0] == 0:
+                # Remove the first element
+                edge_length_final = edge_length_final[1:]
+                time_steps = time_steps[1:]
+        except FileNotFoundError as e:
+            logger.info('File not found. Performing the analysis' + str(e))
+            # Change name of folder and create it
+            v_model.set.OutputFolder = v_model.set.OutputFolder + '_ablation_' + str(num_ablation)
+            if not os.path.exists(v_model.set.OutputFolder):
+                os.mkdir(v_model.set.OutputFolder)
 
-        # Pick the neighbour and put it in the list
-        cells_to_ablate = [cell_to_ablate[0].ID, neighbour_to_ablate[0]]
+            possible_cells_to_ablate = [cell.ID for cell in v_model.geo.Cells if
+                                        cell.AliveStatus == 1 and cell.ID not in v_model.geo.BorderCells]
 
-        # Get the edge that share both cells
-        edge_length_init = get_edge_length(cells_to_ablate, location_filter, v_model)
+            # Cells to ablate
+            # cell_to_ablate = np.random.choice(possible_cells_to_ablate, 1)
+            cell_to_ablate = [v_model.geo.Cells[0]]
 
-        # Ablate the edge
-        v_model.set.ablation = True
-        v_model.geo.cellsToAblate = cells_to_ablate
-        v_model.set.TInitAblation = v_model.t
-        v_model.geo.ablate_cells(v_model.set, v_model.t, combine_cells=False)
+            # Pick the neighbouring cell to ablate
+            # neighbours = cell_to_ablate[0].compute_neighbours(location_filter)
+            # possible_neighbours = [neighbour for neighbour in neighbours if neighbour in possible_cells_to_ablate]
+            # neighbour_to_ablate = np.random.choice(possible_neighbours, 1)
+            neighbour_to_ablate = [4]
 
-        # Relax the system
-        initial_time = v_model.t
-        v_model.set.tend = v_model.t + t_end
-        v_model.set.ablation = False
-        v_model.set.export_images = False
-        edge_length_final_normalized = [0]
-        edge_length_final = [0]
-        recoil_speed = [0]
-        time_steps = [0]
-        while v_model.t <= v_model.set.tend and not v_model.didNotConverge:
-            gr = v_model.single_iteration()
+            # Calculate if the cell is neighbour on both sides
+            scutoid_face = None
+            if location_filter == 0:
+                neighbours_other_side = cell_to_ablate[0].compute_neighbours(location_filter=2)
+                scutoid_face = np.nan
+            elif location_filter == 2:
+                neighbours_other_side = cell_to_ablate[0].compute_neighbours(location_filter=0)
+                scutoid_face = np.nan
 
-            # Get the edge length
-            edge_length_final.append(get_edge_length(cells_to_ablate, location_filter, v_model))
-            edge_length_final_normalized.append((edge_length_final[-1] - edge_length_init) / edge_length_init)
+            if scutoid_face is not None:
+                if neighbour_to_ablate[0] in neighbours_other_side:
+                    scutoid_face = True
+                else:
+                    scutoid_face = False
 
-            # In seconds. 1 t = 1 minute = 60 seconds
-            time_steps.append((v_model.t - initial_time) * 60)
+            # Get the centre of the tissue
+            centre_of_tissue = v_model.geo.compute_centre_of_tissue()
+            neighbour_to_ablate_cell = [cell for cell in v_model.geo.Cells if cell.ID == neighbour_to_ablate[0]][0]
+            distance_to_centre = np.mean([cell_to_ablate[0].compute_distance_to_centre(centre_of_tissue),
+                                          neighbour_to_ablate_cell.compute_distance_to_centre(centre_of_tissue)])
 
-            # Calculate the recoil
-            recoil_speed.append(edge_length_final_normalized[-1] / time_steps[-1])
+            # Pick the neighbour and put it in the list
+            cells_to_ablate = [cell_to_ablate[0].ID, neighbour_to_ablate[0]]
 
-            if np.isnan(gr):
-                break
+            # Get the edge that share both cells
+            edge_length_init = get_edge_length(cells_to_ablate, location_filter, v_model)
+
+            # Ablate the edge
+            v_model.set.ablation = True
+            v_model.geo.cellsToAblate = cells_to_ablate
+            v_model.set.TInitAblation = v_model.t
+            v_model.geo.ablate_cells(v_model.set, v_model.t, combine_cells=False)
+
+            # Relax the system
+            initial_time = v_model.t
+            v_model.set.tend = v_model.t + t_end
+            v_model.set.dt = 0.1
+            v_model.set.dt0 = v_model.set.dt
+            v_model.set.RemodelingFrequency = v_model.set.dt
+            v_model.set.ablation = False
+            v_model.set.export_images = False
+            edge_length_final_normalized = []
+            edge_length_final = []
+            recoil_speed = []
+            time_steps = []
+
+            if os.path.exists(v_model.set.OutputFolder):
+                list_of_files = os.listdir(v_model.set.OutputFolder)
+                # Get file modification times and sort files by date
+                files_with_dates = [(file, os.path.getmtime(os.path.join(v_model.set.OutputFolder, file))) for file in
+                                    list_of_files]
+                files_with_dates.sort(key=lambda x: x[1])
+                for file in files_with_dates:
+                    load_state(v_model, os.path.join(v_model.set.OutputFolder, file[0]))
+                    compute_edge_length_v_model(cells_to_ablate, edge_length_final, edge_length_final_normalized,
+                                                edge_length_init, initial_time, location_filter, recoil_speed,
+                                                time_steps,
+                                                v_model)
+
+            while v_model.t <= v_model.set.tend and not v_model.didNotConverge:
+                gr = v_model.single_iteration()
+
+                compute_edge_length_v_model(cells_to_ablate, edge_length_final, edge_length_final_normalized,
+                                            edge_length_init, initial_time, location_filter, recoil_speed, time_steps,
+                                            v_model)
+
+                if np.isnan(gr):
+                    break
+
+            cell_to_ablate = cell_to_ablate[0].ID
+            neighbour_to_ablate = neighbour_to_ablate[0]
 
         # Calculate the recoil values. Thanks to Veronika Lachina
         def recoil_model(x, initial_recoil, K):
@@ -289,8 +326,8 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
 
         # Save the results
         dict_to_save = {
-            'cell_to_ablate': cell_to_ablate[0].ID,
-            'neighbour_to_ablate': neighbour_to_ablate[0],
+            'cell_to_ablate': cell_to_ablate,
+            'neighbour_to_ablate': neighbour_to_ablate,
             'edge_length_init': edge_length_init,
             'edge_length_final': edge_length_final,
             'initial_recoil_in_s': initial_recoil,
@@ -298,10 +335,23 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
             'scutoid_face': scutoid_face,
             'location_filter': location_filter,
             'distance_to_centre': distance_to_centre,
+            'time_steps': time_steps,
         }
         list_of_dicts_to_save.append(dict_to_save)
-
     return list_of_dicts_to_save
+
+
+def compute_edge_length_v_model(cells_to_ablate, edge_length_final, edge_length_final_normalized, edge_length_init,
+                                initial_time, location_filter, recoil_speed, time_steps, v_model):
+    if v_model.t == initial_time:
+        return
+    # Get the edge length
+    edge_length_final.append(get_edge_length(cells_to_ablate, location_filter, v_model))
+    edge_length_final_normalized.append((edge_length_final[-1] - edge_length_init) / edge_length_init)
+    # In seconds. 1 t = 1 minute = 60 seconds
+    time_steps.append((v_model.t - initial_time) * 60)
+    # Calculate the recoil
+    recoil_speed.append(edge_length_final_normalized[-1] / time_steps[-1])
 
 
 def get_edge_length(cells_to_ablate, location_filter, v_model):
