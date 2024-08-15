@@ -210,6 +210,10 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
             neighbour_to_ablate = list_of_dicts_to_save_loaded['neighbour_to_ablate'][num_ablation]
             edge_length_init = list_of_dicts_to_save_loaded['edge_length_init'][num_ablation]
             edge_length_final = list_of_dicts_to_save_loaded['edge_length_final'][num_ablation]
+            if 'edge_length_final_normalized' in list_of_dicts_to_save_loaded:
+                edge_length_final_normalized = list_of_dicts_to_save_loaded['edge_length_final_normalized'][num_ablation]
+            else:
+                edge_length_final_normalized = (edge_length_final - edge_length_init) / edge_length_init
             initial_recoil = list_of_dicts_to_save_loaded['initial_recoil_in_s'][num_ablation]
             K = list_of_dicts_to_save_loaded['K'][num_ablation]
             scutoid_face = list_of_dicts_to_save_loaded['scutoid_face'][num_ablation]
@@ -315,14 +319,7 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
             cell_to_ablate = cell_to_ablate[0].ID
             neighbour_to_ablate = neighbour_to_ablate[0]
 
-        # Calculate the recoil values. Thanks to Veronika Lachina
-        def recoil_model(x, initial_recoil, K):
-            return (initial_recoil / K) * (1 - np.exp(-K * x))
-
-        # Fit the model to the data
-        [params, covariance] = curve_fit(recoil_model, time_steps, edge_length_final,
-                                         p0=[0.00001, 3], bounds=(0, np.inf))
-        initial_recoil, K = params
+        K, initial_recoil = fit_ablation_equation(edge_length_final_normalized, time_steps)
 
         # Save the results
         dict_to_save = {
@@ -330,6 +327,7 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
             'neighbour_to_ablate': neighbour_to_ablate,
             'edge_length_init': edge_length_init,
             'edge_length_final': edge_length_final,
+            'edge_length_final_normalized': edge_length_final_normalized,
             'initial_recoil_in_s': initial_recoil,
             'K': K,
             'scutoid_face': scutoid_face,
@@ -339,6 +337,18 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
         }
         list_of_dicts_to_save.append(dict_to_save)
     return list_of_dicts_to_save
+
+
+def fit_ablation_equation(edge_length_final_normalized, time_steps):
+    # Calculate the recoil values. Thanks to Veronika Lachina
+    def recoil_model(x, initial_recoil, K):
+        return (initial_recoil / K) * (1 - np.exp(-K * x))
+
+    # Fit the model to the data
+    [params, covariance] = curve_fit(recoil_model, time_steps, edge_length_final_normalized,
+                                     p0=[0.00001, 3], bounds=(0, np.inf))
+    initial_recoil, K = params
+    return K, initial_recoil
 
 
 def compute_edge_length_v_model(cells_to_ablate, edge_length_final, edge_length_final_normalized, edge_length_init,
