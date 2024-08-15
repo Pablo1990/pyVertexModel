@@ -51,6 +51,7 @@ for _, file in enumerate(lst):
             if important_features is not None and len(important_features) > 5:
                 important_features['recoiling_speed_apical'] = np.mean(recoiling_info_df_apical['initial_recoil_in_s'])
                 important_features['recoiling_speed_apical_std'] = np.std(recoiling_info_df_apical['initial_recoil_in_s'])
+                important_features['K'] = np.mean(recoiling_info_df_apical['K'])
 
                 # important_features['recoiling_speed_basal'] = np.mean(recoiling_info_df_basal['initial_recoil_in_s'])
                 # important_features['recoiling_speed_basal_std'] = np.std(recoiling_info_df_basal['initial_recoil_in_s'])
