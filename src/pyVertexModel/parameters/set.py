@@ -166,8 +166,8 @@ class Set:
             self.brownian_motion_scale = 0
 
         if self.implicit_method is False:
-            self.tol = 100
-            self.tol0 = 5  #self.nu/20
+            self.tol = self.nu
+            self.tol0 = self.nu/20
 
     def redirect_output(self):
         os.makedirs(self.OutputFolder, exist_ok=True)
