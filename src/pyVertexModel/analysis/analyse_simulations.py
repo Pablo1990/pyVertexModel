@@ -16,7 +16,7 @@ for _, file in enumerate(lst):
     # if file is a directory
     if os.path.isdir(os.path.join(folder, file)):
         files_within_folder = os.listdir(os.path.join(folder, file))
-        if len(files_within_folder) > 300:
+        if len(files_within_folder) > 290:
 
             # Analyse the edge recoil
             if os.path.exists(os.path.join(folder, file, 'before_ablation.pkl')):
