@@ -108,6 +108,8 @@ def load_state(obj, filename, objs_to_load=None):
                             setattr(obj, attr, value)
                 except EOFError:
                     break
+                except:
+                    print('Error loading file: ', filename)
 
 
 def ismember_rows(a, b):
