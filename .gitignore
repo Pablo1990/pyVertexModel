@@ -180,3 +180,5 @@ src/pyVertexModel/Result/*
 *.xz
 
 data/
+
+.nextflow/
