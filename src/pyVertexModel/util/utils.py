@@ -110,6 +110,7 @@ def load_state(obj, filename, objs_to_load=None):
                     break
                 except:
                     print('Error loading file: ', filename)
+                    break
 
 
 def ismember_rows(a, b):
