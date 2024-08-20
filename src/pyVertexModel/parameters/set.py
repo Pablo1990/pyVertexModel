@@ -261,23 +261,23 @@ class Set:
         # 110 cells 7 cells to ablate
         self.TotalCells = 150
         self.CellHeight = 15
-        self.tend = 45
+        self.tend = 50
         self.Nincr = self.tend * 10
 
-        self.nu = 100
+        self.nu = 16
         self.EnergyBarrierA = False
         self.lambdaB = 20
 
         self.EnergyBarrierAR = False
-        self.lambdaR = 0.000001
+        self.lambdaR = 0.0001
 
         self.lambdaV = 1
         self.ref_V0 = 1
         self.kSubstrate = 1
-        self.cLineTension = 0.001
+        self.cLineTension = 0.00035
         self.Contractility_external = True
-        self.Contractility_external_axis = [0, 1, 2]
-        self.cLineTension_external = 0.001
+        self.Contractility_external_axis = [0, 1]
+        self.cLineTension_external = self.cLineTension
 
         self.brownian_motion = False
         self.brownian_motion_scale = 0
@@ -286,10 +286,10 @@ class Set:
         self.TypeOfPurseString = 2
         self.Remodelling = 0
         self.RemodelStiffness = 0.95
-        self.ref_A0 = 1
-        self.lambdaS1 = 4
+        self.ref_A0 = 0.95
+        self.lambdaS1 = 10
         self.lambdaS2 = 0.4
-        self.lambdaS3 = 4
+        self.lambdaS3 = self.lambdaS1 / 10
         self.lambdaS4 = self.lambdaS2
         self.VTK = False
 
