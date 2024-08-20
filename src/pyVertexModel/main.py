@@ -24,5 +24,5 @@ else:
 analyse_simulation(vModel.set.OutputFolder)
 n_ablations = 1
 t_end = 5
-recoiling_info = analyse_edge_recoil(os.path.join(vModel.set.OutputFolder, 'data_step_300.pkl'),
+recoiling_info = analyse_edge_recoil(os.path.join(vModel.set.OutputFolder, 'before_ablation.pkl'),
                                      n_ablations=n_ablations, location_filter=0, t_end=t_end)

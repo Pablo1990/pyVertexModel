@@ -19,6 +19,7 @@ def analyse_simulation(folder):
 
     # Check if the pkl file exists
     if not os.path.exists(os.path.join(folder, 'features_per_time.pkl')):
+        #return None, None, None, None
         vModel = VertexModel(create_output_folder=False)
 
         features_per_time = []
@@ -227,8 +228,8 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
                 # Remove the first element
                 edge_length_final = edge_length_final[1:]
                 time_steps = time_steps[1:]
-        except FileNotFoundError as e:
-            logger.info('File not found. Performing the analysis' + str(e))
+        except Exception as e:
+            logger.info('Performing the analysis...' + str(e))
             # Change name of folder and create it
             v_model.set.OutputFolder = v_model.set.OutputFolder + '_ablation_' + str(num_ablation)
             if not os.path.exists(v_model.set.OutputFolder):
