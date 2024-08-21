@@ -19,23 +19,23 @@ def get_intensity_based_contractility(c_set, current_face, intensity_images=True
         contractility_time_variability = (np.arange(0, 60 + 3, 3)) / 60 * (c_set.TEndAblation - c_set.TInitAblation)
         contractility_variability_purse_string = np.power(np.array(
             [1.0, 0.96, 1.007, 1.74, 2.37, 2.61, 2.487, 2.536, 2.46, 2.52, 2.606, 2.456, 2.387, 2.52, 2.31, 2.328,
-             2.134, 2.07, 2.055, 1.9, 1.9]), c_set.purseStringStrength)
+             2.134, 2.07, 2.055, 1.9, 1.9]), c_set.purseStringStrength) * c_set.cLineTension
 
         contractility_variability_lateral_cables = np.power(np.array(
             [0.45, 0.53, 0.76, 1.15, 1.28, 1.22, 1.38, 1.33, 1.28, 1.4, 1.25, 1.298, 1.45, 1.31, 1.29, 1.42, 1.31,
-             1.41, 1.42, 1.37, 1.28]), c_set.lateralCablesStrength)
+             1.41, 1.42, 1.37, 1.28]), c_set.lateralCablesStrength) * c_set.cLineTension / 10
     else:
         contractility_time_variability = np.linspace(0, (c_set.TEndAblation - c_set.TInitAblation), int((c_set.TEndAblation - c_set.TInitAblation) * 20))
 
         contractility_variability_purse_string = (np.ones(len(contractility_time_variability)) *
-                                                  c_set.purseStringStrength)
+                                                  2 ** c_set.purseStringStrength) * c_set.cLineTension
         contractility_variability_purse_string[
             contractility_time_variability < c_set.delay_purse_string] = c_set.cLineTension
 
         contractility_variability_lateral_cables = (np.ones(len(contractility_time_variability)) *
-                                                    c_set.lateralCablesStrength)
+                                                    2 ** c_set.lateralCablesStrength) * c_set.cLineTension / 10
         contractility_variability_lateral_cables[
-            contractility_time_variability < c_set.delay_lateral_cables] = c_set.cLineTension
+            contractility_time_variability < c_set.delay_lateral_cables] = c_set.cLineTension / 10
 
     time_after_ablation = float(c_set.currentT) - float(c_set.TInitAblation)
     contractility_value = 0
