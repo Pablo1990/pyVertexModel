@@ -227,7 +227,7 @@ class Set:
                                     '_eTriAreaBarrier_', str(self.lambdaB), '_eARBarrier_', str(self.lambdaR),
                                     '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
                                     '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3),
-                                    '_pString_', str(self.purseStringStrength)])
+                                    '_ps_', str(self.purseStringStrength), '_psType_', str(self.TypeOfPurseString)])
         self.define_if_not_defined("OutputFolder", new_outputFolder)
 
     def stretch(self):
