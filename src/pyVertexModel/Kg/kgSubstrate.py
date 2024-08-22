@@ -7,6 +7,14 @@ from src.pyVertexModel.Kg.kg import Kg
 
 class KgSubstrate(Kg):
     def compute_work(self, Geo, Set, Geo_n=None, calculate_K=True):
+        """
+        Compute the work done by the substrate
+        :param Geo:
+        :param Set:
+        :param Geo_n:
+        :param calculate_K:
+        :return:
+        """
 
         start = time.time()
         self.energy = 0
@@ -72,16 +80,38 @@ class KgSubstrate(Kg):
 
 
 def computeKSubstrate(self, kSubstrate):
+    """
+    Compute the Jacobian for the substrate
+    :param self:
+    :param kSubstrate:
+    :return:
+    """
     result = np.zeros([3, 3], dtype=self.precision_type)
     result[2, 2] = kSubstrate
     return result
 
 
 def computeGSubstrate(self, K, Yz, Yz0):
+    """
+    Compute the residual g for the substrate
+    :param self:
+    :param K:
+    :param Yz:
+    :param Yz0:
+    :return:
+    """
     result = np.zeros(3, dtype=self.precision_type)
     result[2] = K * (Yz - Yz0)
     return result
 
 
 def computeEnergySubstrate(self, K, Yz, Yz0):
+    """
+    Compute the energy for the substrate
+    :param self:
+    :param K:
+    :param Yz:
+    :param Yz0:
+    :return:
+    """
     return 0.5 * K * (Yz - Yz0) ** 2

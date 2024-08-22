@@ -268,7 +268,7 @@ def y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo,
     # Temporary remove 4-cell tetrahedra
     tets4_cells = get_4_fold_tets(Geo)
     ys_4_cells = Geo.remove_tetrahedra(tets4_cells)
-    #tets4_cells = np.unique(np.sort(tets4_cells, axis=1), axis=0)
+    # tets4_cells = np.unique(np.sort(tets4_cells, axis=1), axis=0)
     ghost_nodes_without_debris = np.setdiff1d(Geo.XgID, Geo.RemovedDebrisCells)
 
     Xs = np.unique(old_tets)
@@ -309,7 +309,8 @@ def y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo,
                                                            endNode,
                                                            ghost_nodes_without_debris, intercalation_flip, old_tets,
                                                            parentNode,
-                                                           tets4_cells, ys_4_cells, treeOfPossibilities, xs_to_disconnect,
+                                                           tets4_cells, ys_4_cells, treeOfPossibilities,
+                                                           xs_to_disconnect,
                                                            cell_to_split_from)
 
     # Get the last combination from new_tets_tree

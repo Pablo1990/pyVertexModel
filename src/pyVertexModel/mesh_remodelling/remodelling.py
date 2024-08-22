@@ -295,7 +295,7 @@ class Remodelling:
                     logger.info(f'=>> Full-Flip accepted')
                     self.Geo_n = self.Geo.copy(update_measurements=False)
                     backup_vars = save_backup_vars(self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs)
-                    #break
+                    # break
             else:
                 # Go back to initial state
                 self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs = load_backup_vars(backup_vars)
@@ -359,7 +359,7 @@ class Remodelling:
                     valence_segment, old_tets, old_ys = edge_valence(self.Geo, nodes_pair_provisional)
                     cell_nodes = [cell for cell in self.Geo.non_dead_cells if cell in old_tets.flatten()]
                     cell_node_alive = [cell for cell in cell_nodes if self.Geo.Cells[cell].AliveStatus == 1]
-                    #print(cell_node_alive)
+                    # print(cell_node_alive)
 
                 # TODO: SELECT THE BEST GHOST NODE
             else:
@@ -439,7 +439,8 @@ class Remodelling:
     def flip_nm(self, segment_to_change, cell_to_intercalate_with, old_tets, old_ys, cell_to_split_from):
         hasConverged = False
         old_geo = self.Geo.copy()
-        t_new, y_new, self.Geo = y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, segment_to_change, self.Geo, self.Set,
+        t_new, y_new, self.Geo = y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, segment_to_change, self.Geo,
+                                           self.Set,
                                            cell_to_split_from)
 
         if t_new is not None:
