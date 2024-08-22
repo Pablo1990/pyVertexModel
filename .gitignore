@@ -182,3 +182,5 @@ src/pyVertexModel/Result/*
 data/
 
 .nextflow/
+
+.idea/misc.xml
