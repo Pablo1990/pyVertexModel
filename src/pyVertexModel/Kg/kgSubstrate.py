@@ -9,7 +9,6 @@ class KgSubstrate(Kg):
     def compute_work(self, Geo, Set, Geo_n=None, calculate_K=True):
 
         start = time.time()
-        kSubstrate = Set.kSubstrate
         self.energy = 0
 
         energy_per_cell = []
@@ -27,11 +26,17 @@ class KgSubstrate(Kg):
                 currentFace = Geo.Cells[c].Faces[numFace]
 
                 if currentFace.InterfaceType == 'Bottom' or currentFace.InterfaceType == 2:
+                        #or currentFace.InterfaceType == 0 or currentFace.InterfaceType == 'Top'):
                     c_tris = np.concatenate([tris.Edge for tris in currentFace.Tris])
                     c_tris = np.append(c_tris, currentFace.globalIds.astype(int))
                     c_tris = np.unique(c_tris)
                     for currentVertex in c_tris:
+                        #if currentFace.InterfaceType == 'Bottom' or currentFace.InterfaceType == 2
                         z0 = Geo.SubstrateZ
+                        kSubstrate = Set.kSubstrate
+                        # elif currentFace.InterfaceType == 'Top' or currentFace.InterfaceType == 0
+                        #     z0 = Geo.CeilingZ
+                        #     kSubstrate = -Set.kCeiling
 
                         if currentVertex <= len(Geo.Cells[c].globalIds):
                             currentVertexYs = currentCell.Y[currentVertex, :]
