@@ -30,6 +30,8 @@ for _, file in enumerate(lst):
             t_end = 1.2
             recoiling_info = analyse_edge_recoil(os.path.join(folder, file, 'before_ablation.pkl'),
                                                  n_ablations=n_ablations, location_filter=0, t_end=t_end)
+            if recoiling_info is None:
+                continue
             recoiling_info_df_apical = pd.DataFrame(recoiling_info)
             recoiling_info_df_apical.to_excel(os.path.join(folder, file, 'recoil_info_apical.xlsx'))
             save_variables({'recoiling_info_df_apical': recoiling_info_df_apical},
