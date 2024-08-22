@@ -1,9 +1,8 @@
 import numpy as np
 from scipy.spatial import Delaunay, Voronoi
 
-from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrahedra_from_information, \
-    create_tetrahedra, add_faces_and_vertices_to_x
-from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import generate_neighbours_network, boundary_of_cell
+from src.pyVertexModel.algorithm.vertexModel import VertexModel, create_tetrahedra, add_faces_and_vertices_to_x
+from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import generate_neighbours_network
 
 
 def relax_points(X):
@@ -102,7 +101,8 @@ class VertexModelVoronoi3D(VertexModel):
             # Get the neighbours of each cell
             current_connected_cells = []
             for id_cell in range(self.set.TotalCells):
-                unique_neighbourhood = np.unique([cell for cell in neighbours_network if np.any(np.isin(cell, id_cell))])
+                unique_neighbourhood = np.unique(
+                    [cell for cell in neighbours_network if np.any(np.isin(cell, id_cell))])
                 unique_neighbourhood = np.delete(unique_neighbourhood, np.where(unique_neighbourhood == id_cell))
                 current_connected_cells.append(unique_neighbourhood)
 
@@ -113,9 +113,5 @@ class VertexModelVoronoi3D(VertexModel):
                 cell_edges.append([vertex for vertex in vor.regions[vor.point_region[id_cell]] if vertex != -1])
 
             # Create tetrahedra
-            Twg_numPlane = create_tetrahedra(triangles_connectivity, neighbours_network, cell_edges, range(self.set.TotalCells), Xg_faceIds, Xg_verticesIds)
-
-
-
-
-
+            Twg_numPlane = create_tetrahedra(triangles_connectivity, neighbours_network, cell_edges,
+                                             range(self.set.TotalCells), Xg_faceIds, Xg_verticesIds)
