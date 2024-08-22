@@ -26,12 +26,12 @@ class KgSubstrate(Kg):
                 currentFace = Geo.Cells[c].Faces[numFace]
 
                 if currentFace.InterfaceType == 'Bottom' or currentFace.InterfaceType == 2:
-                        #or currentFace.InterfaceType == 0 or currentFace.InterfaceType == 'Top'):
+                    # or currentFace.InterfaceType == 0 or currentFace.InterfaceType == 'Top')
                     c_tris = np.concatenate([tris.Edge for tris in currentFace.Tris])
                     c_tris = np.append(c_tris, currentFace.globalIds.astype(int))
                     c_tris = np.unique(c_tris)
                     for currentVertex in c_tris:
-                        #if currentFace.InterfaceType == 'Bottom' or currentFace.InterfaceType == 2
+                        # if currentFace.InterfaceType == 'Bottom' or currentFace.InterfaceType == 2
                         z0 = Geo.SubstrateZ
                         kSubstrate = Set.kSubstrate
                         # elif currentFace.InterfaceType == 'Top' or currentFace.InterfaceType == 0
@@ -63,22 +63,25 @@ class KgSubstrate(Kg):
 
                         # Calculate energy
                         Energy_c = Energy_c + self.computeEnergySubstrate(kSubstrate, currentVertexYs[2], z0)
-
             self.g = self.g + ge
             energy_per_cell.append(Energy_c)
             self.energy += Energy_c
+
         end = time.time()
         self.timeInSeconds = f"Time at Substrate: {end - start} seconds"
 
-    def computeKSubstrate(self, kSubstrate):
-        result = np.zeros([3, 3], dtype=self.precision_type)
-        result[2, 2] = kSubstrate
-        return result
 
-    def computeGSubstrate(self, K, Yz, Yz0):
-        result = np.zeros(3, dtype=self.precision_type)
-        result[2] = K * (Yz - Yz0)
-        return result
+def computeKSubstrate(self, kSubstrate):
+    result = np.zeros([3, 3], dtype=self.precision_type)
+    result[2, 2] = kSubstrate
+    return result
 
-    def computeEnergySubstrate(self, K, Yz, Yz0):
-        return 0.5 * K * (Yz - Yz0) ** 2
+
+def computeGSubstrate(self, K, Yz, Yz0):
+    result = np.zeros(3, dtype=self.precision_type)
+    result[2] = K * (Yz - Yz0)
+    return result
+
+
+def computeEnergySubstrate(self, K, Yz, Yz0):
+    return 0.5 * K * (Yz - Yz0) ** 2

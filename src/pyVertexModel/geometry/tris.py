@@ -14,6 +14,7 @@ class Tris:
     """
     Class to store information about the triangles in the mesh.
     """
+
     def __init__(self, mat_file=None):
         """
         Initialize the triangles.

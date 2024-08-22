@@ -2,7 +2,7 @@ import numpy as np
 from scipy.spatial import Delaunay, Voronoi
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrahedra_from_information, \
-    create_tetrahedra, add_faces_and_vertices_to_X
+    create_tetrahedra, add_faces_and_vertices_to_x
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import generate_neighbours_network, boundary_of_cell
 
 
@@ -85,7 +85,7 @@ class VertexModelVoronoi3D(VertexModel):
             # Generate the points and vertices with noise from the other points
             X_face_centres, X_vertices_centres = generate_points_from_other_points(X, noise=0.1)
 
-            X, Xg_faceIds, Xg_ids, Xg_verticesIds = add_faces_and_vertices_to_X(X, X_face_centres, X_vertices_centres)
+            X, Xg_faceIds, Xg_ids, Xg_verticesIds = add_faces_and_vertices_to_x(X, X_face_centres, X_vertices_centres)
 
             # Fill Geo info
             if id_plane == bottom_plane:

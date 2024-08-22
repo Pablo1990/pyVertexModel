@@ -46,7 +46,7 @@ def generate_tetrahedra_from_information(X, cell_edges, cell_height, cell_centro
     for idPlane, numPlane in enumerate(selected_planes):
         # Using the centroids and vertices of the cells of each 2D image as ghost nodes
         X, Xg_faceIds, Xg_ids, Xg_verticesIds = (
-            add_faces_and_vertices_to_X(X,
+            add_faces_and_vertices_to_x(X,
                                         np.hstack((cell_centroids[numPlane][:, 1:3], np.tile(z_coordinate[idPlane],
                                                                       (len(cell_centroids[numPlane][:, 1:3]), 1)))),
                                         np.hstack((np.fliplr(vertices_of_cell_pos[numPlane]),
@@ -68,7 +68,14 @@ def generate_tetrahedra_from_information(X, cell_edges, cell_height, cell_centro
     return Twg, X
 
 
-def add_faces_and_vertices_to_X(X, Xg_faceCentres2D, Xg_vertices2D):
+def add_faces_and_vertices_to_x(X, Xg_faceCentres2D, Xg_vertices2D):
+    """
+    Add faces and vertices to the X matrix.
+    :param X:
+    :param Xg_faceCentres2D:
+    :param Xg_vertices2D:
+    :return:
+    """
     Xg_nodes = np.vstack((Xg_faceCentres2D, Xg_vertices2D))
     Xg_ids = np.arange(X.shape[0] + 1, X.shape[0] + Xg_nodes.shape[0] + 1)
     Xg_faceIds = Xg_ids[0:Xg_faceCentres2D.shape[0]]
@@ -397,6 +404,11 @@ class VertexModel:
             self.relaxingNu = True
 
     def save_v_model_state(self, file_name=None):
+        """
+        Save the state of the vertex model.
+        :param file_name:
+        :return:
+        """
         # Create VTK files for the current state
         self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
         self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
@@ -409,6 +421,10 @@ class VertexModel:
             save_state(self, os.path.join(self.set.OutputFolder, file_name + '.pkl'))
 
     def reset_noisy_parameters(self):
+        """
+        Reset noisy parameters.
+        :return:
+        """
         for num_cell in range(len(self.geo.Cells)):
             c_cell = self.geo.Cells[num_cell]
             self.geo.Cells[num_cell].contractlity_noise = None

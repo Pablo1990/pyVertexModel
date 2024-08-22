@@ -515,6 +515,3 @@ class Cell:
         :return:
         """
         return np.linalg.norm(self.Y - centre_of_tissue)
-
-
-
