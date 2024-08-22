@@ -19,7 +19,7 @@ def analyse_simulation(folder):
 
     # Check if the pkl file exists
     if not os.path.exists(os.path.join(folder, 'features_per_time.pkl')):
-        #return None, None, None, None
+        # return None, None, None, None
         vModel = VertexModel(create_output_folder=False)
 
         features_per_time = []
@@ -212,7 +212,8 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
             edge_length_init = list_of_dicts_to_save_loaded['edge_length_init'][num_ablation]
             edge_length_final = list_of_dicts_to_save_loaded['edge_length_final'][num_ablation]
             if 'edge_length_final_normalized' in list_of_dicts_to_save_loaded:
-                edge_length_final_normalized = list_of_dicts_to_save_loaded['edge_length_final_normalized'][num_ablation]
+                edge_length_final_normalized = list_of_dicts_to_save_loaded['edge_length_final_normalized'][
+                    num_ablation]
             else:
                 edge_length_final_normalized = (edge_length_final - edge_length_init) / edge_length_init
             initial_recoil = list_of_dicts_to_save_loaded['initial_recoil_in_s'][num_ablation]
@@ -322,6 +323,21 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
 
         K, initial_recoil = fit_ablation_equation(edge_length_final_normalized, time_steps)
 
+        # Generate a plot with the edge length final and the fit for each ablation
+        plt.figure()
+        plt.plot(time_steps, edge_length_final_normalized, 'o')
+        # Plot fit line of the Kelvin-Voigt model
+        plt.plot(time_steps, recoil_model(time_steps, initial_recoil, K), 'r')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Edge length final')
+        plt.title('Ablation fit')
+
+        # Save plot
+        plt.savefig(
+            os.path.join(file_name_v_model.replace('before_ablation.pkl', 'ablation_fit_' + str(num_ablation) + '.png'))
+        )
+        plt.close()
+
         # Save the results
         dict_to_save = {
             'cell_to_ablate': cell_to_ablate,
@@ -339,8 +355,10 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
         list_of_dicts_to_save.append(dict_to_save)
     return list_of_dicts_to_save
 
+
 def recoil_model(x, initial_recoil, K):
     return (initial_recoil / K) * (1 - np.exp(-K * x))
+
 
 def fit_ablation_equation(edge_length_final_normalized, time_steps):
     # Calculate the recoil values. Thanks to Veronika Lachina
