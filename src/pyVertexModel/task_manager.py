@@ -20,16 +20,16 @@ async def async_add_task(pool, process_id):
 
 # Procesa la cola de tareas
 async def process_queue(queue, pool, max_processes):
-    active_tasks = []
+    active_tasks = set()
 
     while True:
         if len(active_tasks) < max_processes and not queue.empty():
             process_id = await queue.get()
-            task = async_add_task(pool, process_id)
-            active_tasks.append(task)
+            task = asyncio.create_task(async_add_task(pool, process_id))
+            active_tasks.add(task)
 
-        if active_tasks:
-            done, active_tasks = await asyncio.wait(active_tasks, return_when=asyncio.FIRST_COMPLETED)
+            # Limpia las tareas completadas
+            task.add_done_callback(active_tasks.discard)
 
         await asyncio.sleep(0.1)
 
