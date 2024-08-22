@@ -10,13 +10,13 @@ import scipy
 from numpy import arange
 from scipy.spatial.distance import squareform, pdist, cdist
 from skimage import io
-from skimage.measure import regionprops_table, regionprops
+from skimage.measure import regionprops_table
 from skimage.morphology import dilation, disk, square
 from skimage.segmentation import find_boundaries
 
 from src import PROJECT_DIRECTORY
-from src.pyVertexModel.algorithm.vertexModel import VertexModel, create_tetrahedra, \
-    generate_tetrahedra_from_information, calculate_cell_height_on_model
+from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrahedra_from_information, \
+    calculate_cell_height_on_model
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.util.utils import ismember_rows, save_variables, load_state
 
@@ -286,7 +286,7 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, total_cells):
     if quartets is not None:
         img_neighbours = divide_quartets_neighbours(img_neighbours, labelled_img, quartets)
 
-    #labelled_img[~np.isin(labelled_img, border_of_border_cells_and_main_cells)] = 0
+    # labelled_img[~np.isin(labelled_img, border_of_border_cells_and_main_cells)] = 0
     vertices_info = populate_vertices_info(border_cells_and_main_cells, img_neighbours,
                                            labelled_img, main_cells, ratio)
 
@@ -493,7 +493,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
             # Save state with filename using the number of cells
             filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
-            #save_state(self.geo, 'voronoi_40cells.pkl')
+            # save_state(self.geo, 'voronoi_40cells.pkl')
 
         # Add border cells to the shared cells
         for cell in self.geo.Cells:
@@ -599,8 +599,8 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         Twg = Twg[~np.all(np.isin(Twg, self.geo.XgID), axis=1)]
 
         # Remove tetrahedra with cells that are not in all_main_cells
-        #cells_to_remove = np.setdiff1d(range(1, np.max(all_main_cells) + 1), all_main_cells)
-        #Twg = Twg[~np.any(np.isin(Twg, cells_to_remove), axis=1)]
+        # cells_to_remove = np.setdiff1d(range(1, np.max(all_main_cells) + 1), all_main_cells)
+        # Twg = Twg[~np.any(np.isin(Twg, cells_to_remove), axis=1)]
 
         # Re-number the surviving tets
         Twg, X = self.renumber_tets_xs(Twg, X)

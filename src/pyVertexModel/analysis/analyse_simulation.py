@@ -133,6 +133,13 @@ def analyse_simulation(folder):
 
 
 def plot_feature(folder, post_wound_features, name='wound_area_top'):
+    """
+    Plot a feature and save it to a file
+    :param folder:
+    :param post_wound_features:
+    :param name:
+    :return:
+    """
     plt.figure()
     plt.plot(post_wound_features['time'], post_wound_features[name])
     plt.xlabel('Time (h)')
@@ -145,6 +152,11 @@ def plot_feature(folder, post_wound_features, name='wound_area_top'):
 
 
 def calculate_important_features(post_wound_features):
+    """
+    Calculate important features from the post-wound features
+    :param post_wound_features:
+    :return:
+    """
     # Obtain important features for post-wound
     if not post_wound_features['wound_area_top'].empty and post_wound_features['time'].iloc[-1] > 4:
         important_features = {
@@ -357,11 +369,23 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
 
 
 def recoil_model(x, initial_recoil, K):
+    """
+    Model of the recoil based on a Kelvin-Voigt model
+    :param x:
+    :param initial_recoil:
+    :param K:
+    :return:   Recoil
+    """
     return (initial_recoil / K) * (1 - np.exp(-K * x))
 
 
 def fit_ablation_equation(edge_length_final_normalized, time_steps):
-    # Calculate the recoil values. Thanks to Veronika Lachina
+    """
+    Fit the ablation equation. Thanks to Veronika Lachina.
+    :param edge_length_final_normalized:
+    :param time_steps:
+    :return:    K, initial_recoil
+    """
 
     # Fit the model to the data
     [params, covariance] = curve_fit(recoil_model, time_steps, edge_length_final_normalized,
@@ -372,6 +396,19 @@ def fit_ablation_equation(edge_length_final_normalized, time_steps):
 
 def compute_edge_length_v_model(cells_to_ablate, edge_length_final, edge_length_final_normalized, edge_length_init,
                                 initial_time, location_filter, recoil_speed, time_steps, v_model):
+    """
+    Compute the edge length of the edge that share the cells_to_ablate
+    :param cells_to_ablate:
+    :param edge_length_final:
+    :param edge_length_final_normalized:
+    :param edge_length_init:
+    :param initial_time:
+    :param location_filter:
+    :param recoil_speed:
+    :param time_steps:
+    :param v_model:
+    :return:
+    """
     if v_model.t == initial_time:
         return
     # Get the edge length
