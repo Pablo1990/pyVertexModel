@@ -339,7 +339,7 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
         plt.figure()
         plt.plot(time_steps, edge_length_final_normalized, 'o')
         # Plot fit line of the Kelvin-Voigt model
-        plt.plot(time_steps, recoil_model(time_steps, initial_recoil, K), 'r')
+        plt.plot(time_steps, recoil_model(np.array(time_steps), initial_recoil, K), 'r')
         plt.xlabel('Time (s)')
         plt.ylabel('Edge length final')
         plt.title('Ablation fit')

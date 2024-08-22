@@ -27,7 +27,7 @@ for _, file in enumerate(lst):
             # else:
             file_name = os.path.join(folder, file, 'before_ablation.pkl')
             n_ablations = 1
-            t_end = 8
+            t_end = 1.2
             recoiling_info = analyse_edge_recoil(os.path.join(folder, file, 'before_ablation.pkl'),
                                                  n_ablations=n_ablations, location_filter=0, t_end=t_end)
             recoiling_info_df_apical = pd.DataFrame(recoiling_info)
