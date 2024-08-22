@@ -434,11 +434,17 @@ class Geo:
 
         # Obtain the original cell height
         min_zs = np.min([np.min(cell.Y[:, 2]) for cell in self.Cells if cell.Y is not None])
+        max_zs = np.max([np.max(cell.Y[:, 2]) for cell in self.Cells if cell.Y is not None])
         self.CellHeightOriginal = np.abs(min_zs)
         if min_zs > 0:
             self.SubstrateZ = min_zs * 0.99
         else:
             self.SubstrateZ = min_zs * 1.01
+
+        if max_zs < 0:
+            self.CeilingZ = max_zs * 0.5
+        else:
+            self.CeilingZ = max_zs * 2
 
     def update_barrier_tri0_based_on_number_of_faces(self):
         number_of_faces_per_cell_only_top_and_bottom = []
