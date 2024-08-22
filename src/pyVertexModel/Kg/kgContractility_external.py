@@ -3,9 +3,7 @@ import time
 
 import numpy as np
 
-from src.pyVertexModel.Kg.kg import Kg, add_noise_to_parameter
-from src.pyVertexModel.Kg.kgContractility import KgContractility, compute_energy_contractility, \
-    get_contractility_based_on_location
+from src.pyVertexModel.Kg.kgContractility import KgContractility, compute_energy_contractility
 
 
 class KgContractilityExternal(KgContractility):
