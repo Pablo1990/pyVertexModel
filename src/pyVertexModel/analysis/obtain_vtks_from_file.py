@@ -3,7 +3,7 @@ import os
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.util.utils import load_state
 
-folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/Results/Relevant/ToUse'
+folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/VTK_files'
 lst = os.listdir(folder)
 lst.sort(reverse=True)
 
