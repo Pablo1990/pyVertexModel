@@ -339,11 +339,11 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
         list_of_dicts_to_save.append(dict_to_save)
     return list_of_dicts_to_save
 
+def recoil_model(x, initial_recoil, K):
+    return (initial_recoil / K) * (1 - np.exp(-K * x))
 
 def fit_ablation_equation(edge_length_final_normalized, time_steps):
     # Calculate the recoil values. Thanks to Veronika Lachina
-    def recoil_model(x, initial_recoil, K):
-        return (initial_recoil / K) * (1 - np.exp(-K * x))
 
     # Fit the model to the data
     [params, covariance] = curve_fit(recoil_model, time_steps, edge_length_final_normalized,
