@@ -58,7 +58,7 @@ class KgSubstrate(Kg):
                             continue
 
                         # Calculate residual g
-                        g_current = self.computeGSubstrate(kSubstrate, currentVertexYs[2], z0)
+                        g_current = self.compute_g_substrate(kSubstrate, currentVertexYs[2], z0)
                         ge = self.assemble_g(ge, g_current, currentGlobalID)
 
                         # TODO: Save contractile forces (g) to output
@@ -66,11 +66,11 @@ class KgSubstrate(Kg):
 
                         if calculate_K:
                             # Calculate Jacobian
-                            K_current = self.computeKSubstrate(kSubstrate)
+                            K_current = self.compute_k_substrate(kSubstrate)
                             self.assemble_k(K_current, currentGlobalID)
 
                         # Calculate energy
-                        Energy_c = Energy_c + self.computeEnergySubstrate(kSubstrate, currentVertexYs[2], z0)
+                        Energy_c = Energy_c + self.compute_energy_substrate(kSubstrate, currentVertexYs[2], z0)
             self.g = self.g + ge
             energy_per_cell.append(Energy_c)
             self.energy += Energy_c
@@ -79,39 +79,39 @@ class KgSubstrate(Kg):
         self.timeInSeconds = f"Time at Substrate: {end - start} seconds"
 
 
-def computeKSubstrate(self, kSubstrate):
-    """
-    Compute the Jacobian for the substrate
-    :param self:
-    :param kSubstrate:
-    :return:
-    """
-    result = np.zeros([3, 3], dtype=self.precision_type)
-    result[2, 2] = kSubstrate
-    return result
+    def compute_k_substrate(self, kSubstrate):
+        """
+        Compute the Jacobian for the substrate
+        :param self:
+        :param kSubstrate:
+        :return:
+        """
+        result = np.zeros([3, 3], dtype=self.precision_type)
+        result[2, 2] = kSubstrate
+        return result
 
 
-def computeGSubstrate(self, K, Yz, Yz0):
-    """
-    Compute the residual g for the substrate
-    :param self:
-    :param K:
-    :param Yz:
-    :param Yz0:
-    :return:
-    """
-    result = np.zeros(3, dtype=self.precision_type)
-    result[2] = K * (Yz - Yz0)
-    return result
+    def compute_g_substrate(self, K, Yz, Yz0):
+        """
+        Compute the residual g for the substrate
+        :param self:
+        :param K:
+        :param Yz:
+        :param Yz0:
+        :return:
+        """
+        result = np.zeros(3, dtype=self.precision_type)
+        result[2] = K * (Yz - Yz0)
+        return result
 
 
-def computeEnergySubstrate(self, K, Yz, Yz0):
-    """
-    Compute the energy for the substrate
-    :param self:
-    :param K:
-    :param Yz:
-    :param Yz0:
-    :return:
-    """
-    return 0.5 * K * (Yz - Yz0) ** 2
+    def compute_energy_substrate(self, K, Yz, Yz0):
+        """
+        Compute the energy for the substrate
+        :param self:
+        :param K:
+        :param Yz:
+        :param Yz0:
+        :return:
+        """
+        return 0.5 * K * (Yz - Yz0) ** 2
