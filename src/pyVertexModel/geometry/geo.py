@@ -1123,7 +1123,7 @@ class Geo:
             wound_volume = 0
             logger.info('Possible error computing wound volume')
 
-        #TODO: THIS WOUND FORMULA DOESN'T CONTEMPLATE THE MIDDLE VERTEX
+        # TODO: THIS WOUND FORMULA DOESN'T CONTEMPLATE THE MIDDLE VERTEX
 
         return wound_volume
 
@@ -1192,7 +1192,8 @@ class Geo:
                             break
                     cell_distance += 1
                     cell_neighbours = np.unique(np.concatenate([self.Cells[c].compute_neighbours(location_filter)
-                                                                for c in cell_neighbours if self.Cells[c].AliveStatus is not None]))
+                                                                for c in cell_neighbours if
+                                                                self.Cells[c].AliveStatus is not None]))
 
             elif cell.AliveStatus == 0 or cell.ID in wound_cells:
                 list_of_cells[num_cell] = 0
