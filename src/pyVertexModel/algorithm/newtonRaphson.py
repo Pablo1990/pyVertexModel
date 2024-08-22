@@ -375,7 +375,7 @@ def gGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
     if Set.lambdaV > 0:
         kg_Vol = KgVolume(Geo)
         kg_Vol.compute_work(Geo, Set, None, False)
-        g+= kg_Vol.g[:]
+        g += kg_Vol.g[:]
         energies["Volume"] = kg_Vol.energy
 
     if implicit_method is True:

@@ -48,7 +48,9 @@ def generate_tetrahedra_from_information(X, cell_edges, cell_height, cell_centro
         X, Xg_faceIds, Xg_ids, Xg_verticesIds = (
             add_faces_and_vertices_to_x(X,
                                         np.hstack((cell_centroids[numPlane][:, 1:3], np.tile(z_coordinate[idPlane],
-                                                                      (len(cell_centroids[numPlane][:, 1:3]), 1)))),
+                                                                                             (len(cell_centroids[
+                                                                                                      numPlane][:,
+                                                                                                  1:3]), 1)))),
                                         np.hstack((np.fliplr(vertices_of_cell_pos[numPlane]),
                                                    np.tile(z_coordinate[idPlane],
                                                            (len(vertices_of_cell_pos[numPlane]), 1))))))
@@ -372,8 +374,8 @@ class VertexModel:
             self.set.last_t_converged = self.t
 
             # Test Geo
-            #TODO: CHECK
-            #self.check_integrity()
+            # TODO: CHECK
+            # self.check_integrity()
 
             if abs(self.t - self.tr) >= self.set.RemodelingFrequency:
                 self.save_v_model_state()
