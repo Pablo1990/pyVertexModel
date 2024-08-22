@@ -15,7 +15,6 @@ from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
 from src.pyVertexModel.parameters.set import Set
 from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars, copy_non_mutable_attributes
-import matplotlib.pyplot as plt
 
 logger = logging.getLogger("pyVertexModel")
 
