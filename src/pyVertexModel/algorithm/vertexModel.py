@@ -7,6 +7,7 @@ import imageio
 import numpy as np
 import pandas as pd
 import pyvista as pv
+from scipy.stats import zscore
 from skimage.measure import regionprops
 
 from src.pyVertexModel.algorithm import newtonRaphson
@@ -639,3 +640,30 @@ class VertexModel:
         copy_non_mutable_attributes(self, '', new_v_model)
 
         return new_v_model
+
+    def calculate_error(self):
+        """
+        Calculate the error of the model.
+        :return:
+        """
+        # The error consist on:
+        # - There shouldn't be any cells with very small area in the top or bottom domain.
+        # - It should get until the end of the simulation (tend).
+        # - When ablating, it should get to: 165 percentage of area at 35.8 minutes.
+        error = 0
+
+        # Check if the simulation reached the end
+        if self.t < self.set.tend:
+            error += (self.t - self.set.tend) ** 2
+
+        # Check how many cells have a very small area
+        zscore_area_top = zscore([cell.compute_area(location_filter='Top') for cell in self.geo.Cells])
+        zscore_area_bottom = zscore([cell.compute_area(location_filter='Bottom') for cell in self.geo.Cells])
+        error += zscore_area_top ** 2
+        error += zscore_area_bottom ** 2
+
+        # Check if the simulation reached the ablation percentage
+        wound_percentage_area = 165
+
+
+        return error
