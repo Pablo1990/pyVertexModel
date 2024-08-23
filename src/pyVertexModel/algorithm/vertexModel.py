@@ -641,7 +641,7 @@ class VertexModel:
 
         return new_v_model
 
-    def calculate_error(self):
+    def calculate_error(self, K, initial_recoil):
         """
         Calculate the error of the model.
         :return:
@@ -662,8 +662,10 @@ class VertexModel:
         error += zscore_area_top ** 2
         error += zscore_area_bottom ** 2
 
-        # Check if the simulation reached the ablation percentage
-        wound_percentage_area = 165
-
+        # Check how similar the recoil from in vivo is to the initial recoil and K value
+        correct_K = 0.126
+        correct_initial_recoil = 0.213
+        error += (K - correct_K) ** 2
+        error += (initial_recoil - correct_initial_recoil) ** 2
 
         return error
