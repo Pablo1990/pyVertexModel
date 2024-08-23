@@ -657,15 +657,19 @@ class VertexModel:
             error += (self.t - self.set.tend) ** 2
 
         # Check how many cells have a very small area
-        zscore_area_top = zscore([cell.compute_area(location_filter='Top') for cell in self.geo.Cells])
-        zscore_area_bottom = zscore([cell.compute_area(location_filter='Bottom') for cell in self.geo.Cells])
+        std_area_top = np.std([cell.compute_area(location_filter=0) for cell in self.geo.Cells if cell.AliveStatus == 1])
+        std_area_bottom = np.std([cell.compute_area(location_filter=2) for cell in self.geo.Cells if cell.AliveStatus == 1])
+        mean_area_top = np.mean([cell.compute_area(location_filter=0) for cell in self.geo.Cells if cell.AliveStatus == 1])
+        mean_area_bottom = np.mean([cell.compute_area(location_filter=2) for cell in self.geo.Cells if cell.AliveStatus == 1])
+        zscore_area_top = std_area_top / mean_area_top
+        zscore_area_bottom = std_area_bottom / mean_area_bottom
         error += zscore_area_top ** 2
         error += zscore_area_bottom ** 2
 
         # Check how similar the recoil from in vivo is to the initial recoil and K value
         correct_K = 0.126
         correct_initial_recoil = 0.213
-        error += (K - correct_K) ** 2
-        error += (initial_recoil - correct_initial_recoil) ** 2
+        error += np.abs((K[0] - correct_K) / correct_K) * 10
+        error += np.abs((initial_recoil[0] - correct_initial_recoil) / correct_initial_recoil) * 10
 
         return error
