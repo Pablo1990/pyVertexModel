@@ -17,7 +17,7 @@ if start_new == True:
     storage_name = "sqlite:///{}.db".format(study_name)
     study = optuna.create_study(study_name=study_name, storage=storage_name, direction='minimize',
                                 load_if_exists=True)
-    #load_simulations(study)
+    load_simulations(study)
     study.optimize(objective, n_trials=1000)
 
     print("Best parameters:", study.best_params)

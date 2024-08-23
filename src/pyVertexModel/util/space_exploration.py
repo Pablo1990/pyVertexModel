@@ -101,12 +101,17 @@ def load_simulations(study):
                 error = v_model.calculate_error(K=recoiling_info['K'],
                                                 initial_recoil=recoiling_info['initial_recoil_in_s'])
 
+                if not hasattr(v_model.set, 'ref_V0'):
+                    ref_V0 = 1
+                else:
+                    ref_V0 = v_model.set.ref_V0
+
                 # Create trial
                 trial = optuna.trial.create_trial(
                     params={
                         'nu': v_model.set.nu,
                         'lambdaV': v_model.set.lambdaV,
-                        'ref_V0': v_model.set.ref_V0,
+                        'ref_V0': ref_V0,
                         'kSubstrate': v_model.set.kSubstrate,
                         'cLineTension': v_model.set.cLineTension,
                         'cLineTension_external': v_model.set.cLineTension_external,
