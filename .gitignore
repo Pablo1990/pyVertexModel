@@ -184,3 +184,5 @@ data/
 .nextflow/
 
 .idea/misc.xml
+
+*.db
