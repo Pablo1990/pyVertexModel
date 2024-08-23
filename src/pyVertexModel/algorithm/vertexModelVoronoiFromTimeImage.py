@@ -485,6 +485,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         elif filename.endswith('.mat'):
             mat_info = scipy.io.loadmat(filename)
             self.geo = Geo(mat_info['Geo'])
+            self.geo.update_measures()
         else:
             # Load the image and obtain the initial X and tetrahedra
             Twg, X = self.obtain_initial_x_and_tetrahedra()
@@ -647,3 +648,9 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         Copy the object.
         """
         return super().copy()
+
+    def calculate_error(self, K, initial_recoil):
+        """
+        Calculate the error.
+        """
+        return super().calculate_error(K, initial_recoil)
