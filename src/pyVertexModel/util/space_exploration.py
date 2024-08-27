@@ -1,13 +1,14 @@
 import os
 
 import optuna
+import pandas as pd
 from optuna.trial import FrozenTrial
 from scipy.signal import step2
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from src.pyVertexModel.analysis.analyse_simulation import analyse_edge_recoil
-from src.pyVertexModel.util.utils import load_state, load_variables
+from src.pyVertexModel.util.utils import load_state, load_variables, save_variables
 
 
 def objective(trial):
@@ -88,18 +89,23 @@ def load_simulations(study):
                 load_state(v_model, file_name_v_model)
                 try:
                     vars = load_variables(file_name_v_model.replace('before_ablation.pkl', 'recoil_info_apical.pkl'))
-                    recoiling_info = vars['recoiling_info_df_apical']
+                    recoiling_info_df_apical = vars['recoiling_info_df_apical']
                 except Exception as e:
                     n_ablations = 1
                     t_end = 1.2
                     recoiling_info = analyse_edge_recoil(file_name_v_model, n_ablations=n_ablations, location_filter=0,
                                                          t_end=t_end)
+                    recoiling_info_df_apical = pd.DataFrame(recoiling_info)
+                    recoiling_info_df_apical.to_excel(os.path.join(folder, file, 'recoil_info_apical.xlsx'))
+                    save_variables({'recoiling_info_df_apical': recoiling_info_df_apical},
+                                   os.path.join(folder, file, 'recoil_info_apical.pkl'))
+
 
                 # Load the last state of the simulation
                 file_name = os.path.join(folder, file, 'data_step_{}.pkl'.format(files_within_folder[-1]))
                 load_state(v_model, file_name)
-                error = v_model.calculate_error(K=recoiling_info['K'],
-                                                initial_recoil=recoiling_info['initial_recoil_in_s'])
+                error = v_model.calculate_error(K=recoiling_info_df_apical['K'],
+                                                initial_recoil=recoiling_info_df_apical['initial_recoil_in_s'])
 
                 if not hasattr(v_model.set, 'ref_V0'):
                     ref_V0 = 1
@@ -123,7 +129,7 @@ def load_simulations(study):
                     },
                     distributions={
                         'nu': optuna.distributions.UniformDistribution(0.01, 150),
-                        'lambdaV': optuna.distributions.UniformDistribution(0.01, 100),
+                        'lambdaV': optuna.distributions.UniformDistribution(0.0001, 100),
                         'ref_V0': optuna.distributions.UniformDistribution(0.5, 2),
                         'kSubstrate': optuna.distributions.UniformDistribution(0, 100),
                         'cLineTension': optuna.distributions.UniformDistribution(0, 1e-2),
