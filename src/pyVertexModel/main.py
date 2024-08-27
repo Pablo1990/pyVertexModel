@@ -13,11 +13,42 @@ start_new = True
 if start_new == True:
     # Create a study object and optimize the objective function
     # Add stream handler of stdout to show the messages
-    study_name = "VertexModel"  # Unique identifier of the study.
+    study_name = "VertexModel_simpler_error"  # Unique identifier of the study.
     storage_name = "sqlite:///{}.db".format(study_name)
+
+    # Samplers:
+    # optuna.samplers.RandomSampler=)
+    # optuna.samplers.TPESampler=)
+    #agent_sampler = optuna.samplers.CmaEsSampler()
+    # optuna.samplers.GridSampler=)
+    # optuna.samplers.NSGAIIISampler=)
+    #gaussian_sampler = optuna.samplers.GPSampler(deterministic_objective=True)
+    # optuna.samplers.QMCSampler=)
+    num_params = 10
+    genetic_sampler = optuna.samplers.NSGAIISampler(population_size=10, mutation_prob=1.0 / num_params,
+                                                    crossover_prob = 0.9, swapping_prob = 0.5)
     study = optuna.create_study(study_name=study_name, storage=storage_name, direction='minimize',
                                 load_if_exists=True)
-    load_simulations(study)
+
+    #load_simulations(study)
+    fixed_params = {
+        'lambdaR': 0,
+        'cLineTension': 0,
+        'cLineTension_external': 0,
+        'lambdaS2': 0.01,
+        'ref_A0': 0.8,
+        'ref_V0': 1,
+        'kSubstrate': 1,
+        'lambdaV': 1,
+    }
+    partial_sampler = optuna.samplers.PartialFixedSampler(fixed_params, study.sampler)
+
+    #agent_sampler = optuna.samplers.CmaEsSampler(source_trials=study.trials)
+    study = optuna.create_study(study_name=study_name, storage=storage_name, direction='minimize',
+                                load_if_exists=True,
+                                sampler=partial_sampler)
+
+
     study.optimize(objective, n_trials=1000)
 
     print("Best parameters:", study.best_params)
