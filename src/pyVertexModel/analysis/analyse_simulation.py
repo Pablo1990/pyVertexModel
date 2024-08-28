@@ -297,7 +297,7 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
             # Relax the system
             initial_time = v_model.t
             v_model.set.tend = v_model.t + t_end
-            v_model.set.dt = 0.1
+            v_model.set.dt = 0.02
             v_model.set.dt0 = v_model.set.dt
             v_model.set.RemodelingFrequency = v_model.set.dt
             v_model.set.ablation = False
