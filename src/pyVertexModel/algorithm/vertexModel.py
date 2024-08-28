@@ -155,7 +155,7 @@ class VertexModel:
     iterating over time, applying Brownian motion, and checking the integrity of the model.
     """
 
-    def __init__(self, c_set=None, create_output_folder=True):
+    def __init__(self, c_set=None, create_output_folder=True, update_derived_parameters=True):
         """
         Vertex Model class.
         :param c_set:
@@ -183,7 +183,9 @@ class VertexModel:
             self.set.wing_disc()
             if self.set.ablation:
                 self.set.wound_default()
-            self.set.update_derived_parameters()
+
+            if update_derived_parameters:
+                self.set.update_derived_parameters()
 
         # Redirect output
         if self.set.OutputFolder is not None and create_output_folder:
@@ -641,7 +643,7 @@ class VertexModel:
 
         return new_v_model
 
-    def calculate_error(self, K, initial_recoil):
+    def calculate_error(self, K, initial_recoil, error_type=None):
         """
         Calculate the error of the model.
         :return:
@@ -657,19 +659,23 @@ class VertexModel:
             error += (self.t - self.set.tend) ** 2
 
         # # Check how many cells have a very small area
-        # std_area_top = np.std([cell.compute_area(location_filter=0) for cell in self.geo.Cells if cell.AliveStatus == 1])
-        # std_area_bottom = np.std([cell.compute_area(location_filter=2) for cell in self.geo.Cells if cell.AliveStatus == 1])
-        # mean_area_top = np.mean([cell.compute_area(location_filter=0) for cell in self.geo.Cells if cell.AliveStatus == 1])
-        # mean_area_bottom = np.mean([cell.compute_area(location_filter=2) for cell in self.geo.Cells if cell.AliveStatus == 1])
-        # zscore_area_top = std_area_top / mean_area_top
-        # zscore_area_bottom = std_area_bottom / mean_area_bottom
-        # error += zscore_area_top ** 2
-        # error += zscore_area_bottom ** 2
+        if error_type == 'None' or error_type == 'SmallArea':
+            std_area_top = np.std([cell.compute_area(location_filter=0) for cell in self.geo.Cells if cell.AliveStatus == 1])
+            std_area_bottom = np.std([cell.compute_area(location_filter=2) for cell in self.geo.Cells if cell.AliveStatus == 1])
+            mean_area_top = np.mean([cell.compute_area(location_filter=0) for cell in self.geo.Cells if cell.AliveStatus == 1])
+            mean_area_bottom = np.mean([cell.compute_area(location_filter=2) for cell in self.geo.Cells if cell.AliveStatus == 1])
+            zscore_area_top = std_area_top / mean_area_top
+            zscore_area_bottom = std_area_bottom / mean_area_bottom
+            error += zscore_area_top ** 2
+            error += zscore_area_bottom ** 2
 
         # Check how similar the recoil from in vivo is to the initial recoil and K value
         correct_K = 0.126
         correct_initial_recoil = 0.213
-        error += np.abs((K[0] - correct_K) / correct_K) * 10
-        error += np.abs((initial_recoil[0] - correct_initial_recoil) / correct_initial_recoil) * 10
+        if error_type == 'None' or error_type == 'K':
+            error += np.abs((K[0] - correct_K) / correct_K) * 10
+
+        if error_type == 'None' or error_type == 'InitialRecoil':
+            error += np.abs((initial_recoil[0] - correct_initial_recoil) / correct_initial_recoil) * 10
 
         return error
