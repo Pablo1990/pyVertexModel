@@ -55,7 +55,7 @@ def objective(trial):
         error = vModel.calculate_error(K=recoiling_info['K'], initial_recoil=recoiling_info['initial_recoil_in_s'],
                                        error_type=error_type)
     except Exception as e:
-        error = vModel.calculate_error(K=1, initial_recoil=1, error_type=error_type)
+        error = vModel.calculate_error(K=[1], initial_recoil=[1], error_type=error_type)
 
     return error
 
