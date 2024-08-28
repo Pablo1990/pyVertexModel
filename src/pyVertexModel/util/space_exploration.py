@@ -8,8 +8,8 @@ from scipy.signal import step2
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from src.pyVertexModel.analysis.analyse_simulation import analyse_edge_recoil
+from src.pyVertexModel.parameters.set import Set
 from src.pyVertexModel.util.utils import load_state, load_variables, save_variables
-
 
 def objective(trial):
     """
@@ -17,29 +17,32 @@ def objective(trial):
     :param trial:
     :return:
     """
-    # Initialize the model with the parameters
-    vModel = VertexModelVoronoiFromTimeImage()
-    vModel.initialize()
+    new_set = Set()
+    new_set.wing_disc()
+    new_set.wound_default()
 
     # Set and define the parameters space
-    vModel.set.nu = round(trial.suggest_float('nu', 0.01, 1, step=0.01), 2)
-    vModel.set.lambdaV = round(trial.suggest_float('lambdaV', 0.01, 100, step=0.01), 2)
-    vModel.set.ref_V0 = round(trial.suggest_float('ref_V0', 0.5, 2, step=0.01), 2)
-    vModel.set.kSubstrate = round(trial.suggest_float('kSubstrate', 0.01, 100, step=0.01), 2)
-    vModel.set.cLineTension = trial.suggest_float('cLineTension', 1e-6, 1e-2)
-    vModel.set.cLineTension_external = trial.suggest_float('cLineTension_external', 1e-6, 1e-2)
-    vModel.set.ref_A0 = round(trial.suggest_float('ref_A0', 0.5, 2, step=0.01), 2)
-    vModel.set.lambdaS1 = round(trial.suggest_float('lambdaS1', 0.01, 100, step=0.01), 2)
-    vModel.set.lambdaS2 = round(trial.suggest_float('lambdaS2', 0.01, 100, step=0.01), 2)
-    vModel.set.lambdaS3 = round(trial.suggest_float('lambdaS3', 0.01, 100, step=0.01), 2)
-    vModel.set.lambdaR = trial.suggest_float('lambdaR', 1e-10, 1)
+    new_set.nu = round(trial.suggest_float('nu', 0.01, 20, step=0.01), 2)
+    new_set.lambdaV = round(trial.suggest_float('lambdaV', 0.01, 100, step=0.01), 2)
+    new_set.ref_V0 = round(trial.suggest_float('ref_V0', 0.5, 2, step=0.01), 2)
+    new_set.kSubstrate = round(trial.suggest_float('kSubstrate', 0.01, 100, step=0.01), 2)
+    new_set.cLineTension = trial.suggest_float('cLineTension', 1e-6, 1e-2)
+    new_set.cLineTension_external = trial.suggest_float('cLineTension_external', 1e-6, 1e-2)
+    new_set.ref_A0 = round(trial.suggest_float('ref_A0', 0.5, 2, step=0.01), 2)
+    new_set.lambdaS1 = round(trial.suggest_float('lambdaS1', 0.01, 100, step=0.01), 2)
+    new_set.lambdaS2 = round(trial.suggest_float('lambdaS2', 0.01, 100, step=0.01), 2)
+    new_set.lambdaS3 = round(trial.suggest_float('lambdaS3', 0.01, 100, step=0.01), 2)
+    new_set.lambdaR = trial.suggest_float('lambdaR', 1e-10, 1)
+    new_set.update_derived_parameters()
 
-    # Update the derived parameters
-    vModel.set.OutputFolder = None
-    vModel.set.update_derived_parameters()
+    # Initialize the model with the parameters
+    vModel = VertexModelVoronoiFromTimeImage(set_test=new_set)
 
     # Run the simulation
+    vModel.initialize()
     vModel.iterate_over_time()
+
+    error_type = 'InitialRecoil'
 
     # Analyse the edge recoil
     try:
@@ -49,16 +52,17 @@ def objective(trial):
         recoiling_info = analyse_edge_recoil(file_name, n_ablations=n_ablations, location_filter=0, t_end=t_end)
 
         # Return a metric to minimize
-        error = vModel.calculate_error(K=recoiling_info['K'], initial_recoil=recoiling_info['initial_recoil_in_s'])
+        error = vModel.calculate_error(K=recoiling_info['K'], initial_recoil=recoiling_info['initial_recoil_in_s'],
+                                       error_type=error_type)
     except Exception as e:
-        print(e)
-        error = 1e10
+        error = vModel.calculate_error(K=1, initial_recoil=1, error_type=error_type)
 
     return error
 
-def load_simulations(study):
+def load_simulations(study, error_type=None):
     """
     Load the simulations
+    :param error_type:
     :param study:
     :return:
     """
@@ -105,7 +109,8 @@ def load_simulations(study):
                 file_name = os.path.join(folder, file, 'data_step_{}.pkl'.format(files_within_folder[-1]))
                 load_state(v_model, file_name)
                 error = v_model.calculate_error(K=recoiling_info_df_apical['K'],
-                                                initial_recoil=recoiling_info_df_apical['initial_recoil_in_s'])
+                                                initial_recoil=recoiling_info_df_apical['initial_recoil_in_s'],
+                                                error_type=error_type)
 
                 if not hasattr(v_model.set, 'ref_V0'):
                     ref_V0 = 1
@@ -143,5 +148,7 @@ def load_simulations(study):
                     value=error,
                 )
 
-                # Add the FrozenTrial to the study
+                # Check if the trial is already in the study
+                if trial.params in [t.params for t in study.trials]:
+                    continue
                 study.add_trial(trial)
