@@ -8,13 +8,16 @@ from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation, an
 from src.pyVertexModel.util.space_exploration import objective, load_simulations
 from src.pyVertexModel.util.utils import load_state
 
-
 start_new = True
 if start_new == True:
     # Create a study object and optimize the objective function
     # Add stream handler of stdout to show the messages
-    study_name = "VertexModel_simpler_error"  # Unique identifier of the study.
-    storage_name = "sqlite:///{}.db".format(study_name)
+    error_type = 'InitialRecoil'
+    if error_type is not None:
+        study_name = "VertexModel" + '_' + error_type  # Unique identifier of the study.
+    else:
+        study_name = "VertexModel"
+    storage_name = "sqlite:///{}.db".format("VertexModel")
 
     # Samplers:
     # optuna.samplers.RandomSampler=)
@@ -28,15 +31,18 @@ if start_new == True:
     genetic_sampler = optuna.samplers.NSGAIISampler(population_size=10, mutation_prob=1.0 / num_params,
                                                     crossover_prob = 0.9, swapping_prob = 0.5)
     study = optuna.create_study(study_name=study_name, storage=storage_name, direction='minimize',
-                                load_if_exists=True)
+                                load_if_exists=True, sampler=genetic_sampler)
 
-    #load_simulations(study)
+    #load_simulations(study, error_type=error_type)
+
     fixed_params = {
-        'lambdaR': 0,
-        'cLineTension': 0,
-        'cLineTension_external': 0,
+        'lambdaR': 1e-8,
+        'cLineTension': 0.000001,
+        'cLineTension_external': 0.000001,
+        'lambdaS1': 1,
         'lambdaS2': 0.01,
-        'ref_A0': 0.8,
+        'lambdaS3': 0.1,
+        'ref_A0': 1,
         'ref_V0': 1,
         'kSubstrate': 1,
         'lambdaV': 1,
