@@ -365,6 +365,12 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
             'time_steps': time_steps,
         }
         list_of_dicts_to_save.append(dict_to_save)
+
+    recoiling_info_df_apical = pd.DataFrame(list_of_dicts_to_save)
+    recoiling_info_df_apical.to_excel(file_name_v_model.replace('before_ablation.pkl', 'recoil_info_apical.xlsx'))
+    save_variables({'recoiling_info_df_apical': recoiling_info_df_apical},
+                   file_name_v_model.replace('before_ablation.pkl', 'recoil_info_apical.pkl'))
+
     return list_of_dicts_to_save
 
 
