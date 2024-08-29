@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel, logger
-from src.pyVertexModel.util.utils import load_state, load_variables
+from src.pyVertexModel.util.utils import load_state, load_variables, save_variables
 
 
 def analyse_simulation(folder):
@@ -297,6 +297,8 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
             # Relax the system
             initial_time = v_model.t
             v_model.set.tend = v_model.t + t_end
+            v_model.set.tol = 100
+            v_model.set.tol0 = 100
             v_model.set.dt = 0.02
             v_model.set.dt0 = v_model.set.dt
             v_model.set.RemodelingFrequency = v_model.set.dt
