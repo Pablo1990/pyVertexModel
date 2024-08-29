@@ -52,7 +52,7 @@ def objective(trial):
         recoiling_info = analyse_edge_recoil(file_name, n_ablations=n_ablations, location_filter=0, t_end=t_end)
 
         # Return a metric to minimize
-        error = vModel.calculate_error(K=recoiling_info['K'], initial_recoil=recoiling_info['initial_recoil_in_s'],
+        error = vModel.calculate_error(K=[recoiling_info['K']], initial_recoil=[recoiling_info['initial_recoil_in_s']],
                                        error_type=error_type)
     except Exception as e:
         error = vModel.calculate_error(K=[1], initial_recoil=[1], error_type=error_type)
