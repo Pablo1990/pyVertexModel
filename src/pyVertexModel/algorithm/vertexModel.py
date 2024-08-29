@@ -314,10 +314,10 @@ class VertexModel:
         if (gr < self.set.tol and dyr < self.set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
                 np.all(~np.isnan(dy[self.Dofs.Free]))):
             self.iteration_converged()
-            if self.set.implicit_method is False:
-                self.set.tol = gr
-                if self.set.tol < self.set.tol0:
-                    self.set.tol = self.set.tol0
+            # if self.set.implicit_method is False:
+            #     self.set.tol = gr
+            #     if self.set.tol < self.set.tol0:
+            #         self.set.tol = self.set.tol0
         else:
             self.iteration_did_not_converged()
 
