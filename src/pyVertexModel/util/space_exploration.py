@@ -22,17 +22,17 @@ def objective(trial):
     new_set.wound_default()
 
     # Set and define the parameters space
-    new_set.nu = round(trial.suggest_float('nu', 0.01, 20, step=0.01), 2)
-    new_set.lambdaV = round(trial.suggest_float('lambdaV', 0.01, 100, step=0.01), 2)
-    new_set.ref_V0 = round(trial.suggest_float('ref_V0', 0.5, 2, step=0.01), 2)
-    new_set.kSubstrate = round(trial.suggest_float('kSubstrate', 0.01, 100, step=0.01), 2)
-    new_set.cLineTension = trial.suggest_float('cLineTension', 1e-6, 1e-2)
-    new_set.cLineTension_external = trial.suggest_float('cLineTension_external', 1e-6, 1e-2)
-    new_set.ref_A0 = round(trial.suggest_float('ref_A0', 0.5, 2, step=0.01), 2)
-    new_set.lambdaS1 = round(trial.suggest_float('lambdaS1', 0.01, 100, step=0.01), 2)
-    new_set.lambdaS2 = round(trial.suggest_float('lambdaS2', 0.01, 100, step=0.01), 2)
-    new_set.lambdaS3 = round(trial.suggest_float('lambdaS3', 0.01, 100, step=0.01), 2)
-    new_set.lambdaR = trial.suggest_float('lambdaR', 1e-10, 1)
+    new_set.nu = round(trial.suggest_float('nu', 0.001, 1, step=0.01), 2)
+    # new_set.lambdaV = round(trial.suggest_float('lambdaV', 0.01, 100, step=0.01), 2)
+    # new_set.ref_V0 = round(trial.suggest_float('ref_V0', 0.5, 2, step=0.01), 2)
+    # new_set.kSubstrate = round(trial.suggest_float('kSubstrate', 0.01, 100, step=0.01), 2)
+    # new_set.cLineTension = trial.suggest_float('cLineTension', 1e-6, 1e-2)
+    # new_set.cLineTension_external = trial.suggest_float('cLineTension_external', 1e-6, 1e-2)
+    # new_set.ref_A0 = round(trial.suggest_float('ref_A0', 0.5, 2, step=0.01), 2)
+    # new_set.lambdaS1 = round(trial.suggest_float('lambdaS1', 0.01, 100, step=0.01), 2)
+    # new_set.lambdaS2 = round(trial.suggest_float('lambdaS2', 0.01, 100, step=0.01), 2)
+    # new_set.lambdaS3 = round(trial.suggest_float('lambdaS3', 0.01, 100, step=0.01), 2)
+    # new_set.lambdaR = trial.suggest_float('lambdaR', 1e-10, 1)
     new_set.update_derived_parameters()
 
     # Initialize the model with the parameters
