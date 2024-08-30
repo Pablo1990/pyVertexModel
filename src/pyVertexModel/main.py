@@ -12,7 +12,7 @@ start_new = True
 if start_new == True:
     # Create a study object and optimize the objective function
     # Add stream handler of stdout to show the messages
-    error_type = 'InitialRecoil'
+    error_type = 'InitialRecoil_only_nu'
     if error_type is not None:
         study_name = "VertexModel" + '_' + error_type  # Unique identifier of the study.
     else:
@@ -27,32 +27,34 @@ if start_new == True:
     # optuna.samplers.NSGAIIISampler=)
     #gaussian_sampler = optuna.samplers.GPSampler(deterministic_objective=True)
     # optuna.samplers.QMCSampler=)
-    num_params = 10
-    genetic_sampler = optuna.samplers.NSGAIISampler(population_size=10, mutation_prob=1.0 / num_params,
-                                                    crossover_prob = 0.9, swapping_prob = 0.5)
+
+    # With one it doesn't work so well...
+    #num_params = 1
+    #genetic_sampler = optuna.samplers.NSGAIISampler(population_size=5, mutation_prob=1.0 / num_params,
+    #                                                crossover_prob = 0.9, swapping_prob = 0.5)
     study = optuna.create_study(study_name=study_name, storage=storage_name, direction='minimize',
-                                load_if_exists=True, sampler=genetic_sampler)
+                                load_if_exists=True)
 
     #load_simulations(study, error_type=error_type)
 
-    fixed_params = {
-        'lambdaR': 1e-8,
-        'cLineTension': 0.000001,
-        'cLineTension_external': 0.000001,
-        'lambdaS1': 1,
-        'lambdaS2': 0.01,
-        'lambdaS3': 0.1,
-        'ref_A0': 1,
-        'ref_V0': 1,
-        'kSubstrate': 1,
-        'lambdaV': 1,
-    }
-    partial_sampler = optuna.samplers.PartialFixedSampler(fixed_params, study.sampler)
-
-    #agent_sampler = optuna.samplers.CmaEsSampler(source_trials=study.trials)
-    study = optuna.create_study(study_name=study_name, storage=storage_name, direction='minimize',
-                                load_if_exists=True,
-                                sampler=partial_sampler)
+    # fixed_params = {
+    #     'lambdaR': 1e-8,
+    #     'cLineTension': 0.00001,
+    #     'cLineTension_external': 0.00001,
+    #     'lambdaS1': 1,
+    #     'lambdaS2': 0.01,
+    #     'lambdaS3': 0.1,
+    #     'ref_A0': 1,
+    #     'ref_V0': 1,
+    #     'kSubstrate': 1,
+    #     'lambdaV': 1,
+    # }
+    # partial_sampler = optuna.samplers.PartialFixedSampler(fixed_params, study.sampler)
+    #
+    # #agent_sampler = optuna.samplers.CmaEsSampler(source_trials=study.trials)
+    # study = optuna.create_study(study_name=study_name, storage=storage_name, direction='minimize',
+    #                             load_if_exists=True,
+    #                             sampler=partial_sampler)
 
 
     study.optimize(objective, n_trials=1000)
