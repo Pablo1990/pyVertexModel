@@ -7,6 +7,7 @@ from scipy.signal import step2
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
+from src.pyVertexModel.analysis.analyse_in_vivo_ablation_data import initial_recoil
 from src.pyVertexModel.analysis.analyse_simulation import analyse_edge_recoil
 from src.pyVertexModel.parameters.set import Set
 from src.pyVertexModel.util.utils import load_state, load_variables, save_variables
@@ -22,7 +23,7 @@ def objective(trial):
     new_set.wound_default()
 
     # Set and define the parameters space
-    new_set.nu = round(trial.suggest_float('nu', 0.001, 1, step=0.01), 2)
+    new_set.nu = round(trial.suggest_float('nu', 0.0001, 1), 4)
     # new_set.lambdaV = round(trial.suggest_float('lambdaV', 0.01, 100, step=0.01), 2)
     # new_set.ref_V0 = round(trial.suggest_float('ref_V0', 0.5, 2, step=0.01), 2)
     # new_set.kSubstrate = round(trial.suggest_float('kSubstrate', 0.01, 100, step=0.01), 2)
@@ -42,7 +43,7 @@ def objective(trial):
     vModel.initialize()
     vModel.iterate_over_time()
 
-    error_type = 'InitialRecoil'
+    error_type = '_K_InitialRecoil_only_nu'
 
     # Analyse the edge recoil
     try:
@@ -52,10 +53,13 @@ def objective(trial):
         recoiling_info = analyse_edge_recoil(file_name, n_ablations=n_ablations, location_filter=0, t_end=t_end)
 
         # Return a metric to minimize
-        error = vModel.calculate_error(K=[recoiling_info['K']], initial_recoil=[recoiling_info['initial_recoil_in_s']],
-                                       error_type=error_type)
+        K = recoiling_info[0]['K']
+        initial_recoil = recoiling_info[0]['initial_recoil_in_s']
     except Exception as e:
-        error = vModel.calculate_error(K=[1], initial_recoil=[1], error_type=error_type)
+        K = [1]
+        initial_recoil = [1]
+
+    error = vModel.calculate_error(K=K, initial_recoil=initial_recoil, error_type=error_type)
 
     return error
 
@@ -112,6 +116,8 @@ def load_simulations(study, error_type=None):
                                                 initial_recoil=recoiling_info_df_apical['initial_recoil_in_s'],
                                                 error_type=error_type)
 
+                print('Error:', error)
+
                 if not hasattr(v_model.set, 'ref_V0'):
                     ref_V0 = 1
                 else:
@@ -133,7 +139,7 @@ def load_simulations(study, error_type=None):
                         'lambdaR': v_model.set.lambdaR,
                     },
                     distributions={
-                        'nu': optuna.distributions.UniformDistribution(0.01, 150),
+                        'nu': optuna.distributions.UniformDistribution(0.00001, 150),
                         'lambdaV': optuna.distributions.UniformDistribution(0.0001, 100),
                         'ref_V0': optuna.distributions.UniformDistribution(0.5, 2),
                         'kSubstrate': optuna.distributions.UniformDistribution(0, 100),
