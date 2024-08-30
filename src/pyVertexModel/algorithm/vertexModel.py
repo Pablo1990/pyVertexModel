@@ -659,7 +659,7 @@ class VertexModel:
             error += (self.t - self.set.tend) ** 2
 
         # # Check how many cells have a very small area
-        if error_type == 'None' or error_type == 'SmallArea':
+        if error_type == 'None' or 'SmallArea' in error_type:
             std_area_top = np.std([cell.compute_area(location_filter=0) for cell in self.geo.Cells if cell.AliveStatus == 1])
             std_area_bottom = np.std([cell.compute_area(location_filter=2) for cell in self.geo.Cells if cell.AliveStatus == 1])
             mean_area_top = np.mean([cell.compute_area(location_filter=0) for cell in self.geo.Cells if cell.AliveStatus == 1])
@@ -672,10 +672,10 @@ class VertexModel:
         # Check how similar the recoil from in vivo is to the initial recoil and K value
         correct_K = 0.126
         correct_initial_recoil = 0.213
-        if error_type == 'None' or error_type == 'K':
-            error += np.abs((K[0] - correct_K) / correct_K) * 10
+        if error_type == 'None' or 'K' in error_type:
+            error += np.abs(K[0] - correct_K) * 100
 
-        if error_type == 'None' or error_type == 'InitialRecoil':
-            error += np.abs((initial_recoil[0] - correct_initial_recoil) / correct_initial_recoil) * 10
+        if error_type == 'None' or 'InitialRecoil' in error_type:
+            error += np.abs(initial_recoil[0] - correct_initial_recoil) * 100
 
         return error
