@@ -12,9 +12,10 @@ start_new = True
 if start_new == True:
     # Create a study object and optimize the objective function
     # Add stream handler of stdout to show the messages
-    error_type = 'InitialRecoil_only_nu'
+    # CHANGE IT IN SPACE EXPLORATION TOO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    error_type = '_gr_'
     if error_type is not None:
-        study_name = "VertexModel" + '_' + error_type  # Unique identifier of the study.
+        study_name = "VertexModel" + error_type  # Unique identifier of the study.
     else:
         study_name = "VertexModel"
     storage_name = "sqlite:///{}.db".format("VertexModel")
@@ -57,7 +58,7 @@ if start_new == True:
     #                             sampler=partial_sampler)
 
 
-    study.optimize(objective, n_trials=1000)
+    study.optimize(objective, n_trials=10000)
 
     print("Best parameters:", study.best_params)
     print("Best value:", study.best_value)

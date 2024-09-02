@@ -1,3 +1,4 @@
+import logging
 import os
 
 import optuna
@@ -18,12 +19,18 @@ def objective(trial):
     :param trial:
     :return:
     """
+
+    # Supress the output to the logger
+    logger = logging.getLogger("pyVertexModel")
+    logger.propagate = False
+    logger.setLevel(logging.CRITICAL)
+
     new_set = Set()
     new_set.wing_disc()
     new_set.wound_default()
 
     # Set and define the parameters space
-    new_set.nu = round(trial.suggest_float('nu', 0.0001, 1), 4)
+    # new_set.nu = round(trial.suggest_float('nu', 0.000001, 0.001), 6)
     # new_set.lambdaV = round(trial.suggest_float('lambdaV', 0.01, 100, step=0.01), 2)
     # new_set.ref_V0 = round(trial.suggest_float('ref_V0', 0.5, 2, step=0.01), 2)
     # new_set.kSubstrate = round(trial.suggest_float('kSubstrate', 0.01, 100, step=0.01), 2)
@@ -34,34 +41,54 @@ def objective(trial):
     # new_set.lambdaS2 = round(trial.suggest_float('lambdaS2', 0.01, 100, step=0.01), 2)
     # new_set.lambdaS3 = round(trial.suggest_float('lambdaS3', 0.01, 100, step=0.01), 2)
     # new_set.lambdaR = trial.suggest_float('lambdaR', 1e-10, 1)
+    new_set.Nincr = trial.suggest_float('Nincr', 10, 1000) * new_set.tend
+    new_set.cLineTension = trial.suggest_float('cLineTension', 1e-6, 1e-2)
+    new_set.cLineTension_external = new_set.cLineTension
+    new_set.lambdaS1 = round(trial.suggest_float('lambdaS1', 0.01, 100), 2)
+    new_set.lambdaS2 = new_set.lambdaS1 / 100
+    new_set.lambdaS3 = new_set.lambdaS1 / 10
     new_set.update_derived_parameters()
+    new_set.OutputFolder = None
 
     # Initialize the model with the parameters
-    vModel = VertexModelVoronoiFromTimeImage(set_test=new_set)
+    vModel = VertexModelVoronoiFromTimeImage(set_test=new_set, create_output_folder=False)
 
     # Run the simulation
     vModel.initialize()
-    vModel.iterate_over_time()
 
-    error_type = '_K_InitialRecoil_only_nu'
+    error_type = '_gr_'
 
-    # Analyse the edge recoil
-    try:
-        file_name = os.path.join(vModel.set.OutputFolder, 'before_ablation.pkl')
-        n_ablations = 1
-        t_end = 1.2
-        recoiling_info = analyse_edge_recoil(file_name, n_ablations=n_ablations, location_filter=0, t_end=t_end)
+    if error_type == '_gr_':
+        gr = vModel.single_iteration(post_operations=False)
+        return gr
+    else:
+        vModel.iterate_over_time()
 
-        # Return a metric to minimize
-        K = recoiling_info[0]['K']
-        initial_recoil = recoiling_info[0]['initial_recoil_in_s']
-    except Exception as e:
-        K = [1]
-        initial_recoil = [1]
+        # Analyse the edge recoil
+        try:
+            file_name = os.path.join(vModel.set.OutputFolder, 'before_ablation.pkl')
+            n_ablations = 1
+            t_end = 1.2
+            recoiling_info = analyse_edge_recoil(file_name, n_ablations=n_ablations, location_filter=0, t_end=t_end)
 
-    error = vModel.calculate_error(K=K, initial_recoil=initial_recoil, error_type=error_type)
+            # Return a metric to minimize
+            K = recoiling_info[0]['K']
+            initial_recoil = recoiling_info[0]['initial_recoil_in_s']
+        except Exception as e:
+            K = [1]
+            initial_recoil = [1]
 
-    return error
+        error = vModel.calculate_error(K=K, initial_recoil=initial_recoil, error_type=error_type)
+
+        return error
+
+def objetive_gradient(trial):
+    """
+    Objective function to minimize the gradient at the very beggining
+    :param trial:
+    :return:
+    """
+
 
 def load_simulations(study, error_type=None):
     """

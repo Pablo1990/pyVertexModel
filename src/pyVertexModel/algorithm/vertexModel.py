@@ -160,7 +160,6 @@ class VertexModel:
         Vertex Model class.
         :param c_set:
         """
-
         self.colormap_lim = None
         self.OutputFolder = None
         self.numStep = None
@@ -262,7 +261,7 @@ class VertexModel:
 
         return self.didNotConverge
 
-    def single_iteration(self):
+    def single_iteration(self, post_operations=True):
         """
         Perform a single iteration of the model.
         :return:
@@ -298,7 +297,7 @@ class VertexModel:
                                                                                   self.Dofs, self.set, K, g,
                                                                                   self.numStep, self.t,
                                                                                   self.set.implicit_method)
-        if not np.isnan(gr):
+        if not np.isnan(gr) and post_operations:
             self.post_newton_raphson(dy, dyr, g, gr)
         return gr
 
