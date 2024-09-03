@@ -3,6 +3,7 @@ import os
 
 import optuna
 import pandas as pd
+import plotly
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
@@ -183,3 +184,55 @@ def load_simulations(study, error_type=None):
                 if trial.params in [t.params for t in study.trials]:
                     continue
                 study.add_trial(trial)
+
+
+def plot_optuna_all(output_directory, study_name, study):
+    """
+    Plot all the optuna plots
+    :param output_directory:
+    :param study_name:
+    :param study:
+    :return:
+    """
+    # Create the output directory
+    output_dir_study = os.path.join(output_directory, study_name)
+    if not os.path.exists(output_dir_study):
+        os.makedirs(output_dir_study)
+
+    # Create a dataframe from the study.
+    df = study.trials_dataframe()
+    df.to_excel(output_dir_study + '/df.xlsx')
+    # Plot the contour of the study
+    fig = optuna.visualization.plot_contour(study, params=["x", "y"])
+    plotly.io.write_image(fig, output_dir_study + '/countour.png')
+    # Plot the edf of the study
+    fig = optuna.visualization.plot_edf(study)
+    plotly.io.write_image(fig, output_dir_study + '/edf.png')
+    # Plot the parallel coordinates of the study
+    fig = optuna.visualization.plot_parallel_coordinate(study)
+    plotly.io.write_image(fig, output_dir_study + '/parallel_coordinate.png')
+    # Plot the intermediate values of the study
+    fig = optuna.visualization.plot_intermediate_values(study)
+    plotly.io.write_image(fig, output_dir_study + '/intermediate_values.png')
+    # Plot the optimization history of the study
+    fig = optuna.visualization.plot_optimization_history(study)
+    plotly.io.write_image(fig, output_dir_study + '/optimization_history.png')
+    # Plot the parameter importance of the study
+    fig = optuna.visualization.plot_param_importances(study)
+    plotly.io.write_image(fig, output_dir_study + '/param_importances.png')
+    # Plot the pareto front of the study
+    fig = optuna.visualization.plot_pareto_front(
+        study,
+        targets=lambda t: (t.values[0], t.values[1]),
+        target_names=["Objective 0", "Objective 1"],
+    )
+    plotly.io.write_image(fig, output_dir_study + '/pareto_front.png')
+    # Plot the rankings of the study
+    fig = optuna.visualization.plot_ranks(study)
+    plotly.io.write_image(fig, output_dir_study + '/ranks.png')
+    # Plot the slice of the study
+    fig = optuna.visualization.plot_slice(study)
+    plotly.io.write_image(fig, output_dir_study + '/slice.png')
+    # Plot the termination plot of the study
+    fig = optuna.visualization.plot_terminator_improvement(study, plot_error=True)
+    plotly.io.write_image(fig, output_dir_study + '/terminator_improvement.png')
