@@ -3,8 +3,6 @@ import os
 
 import optuna
 import pandas as pd
-from optuna.trial import FrozenTrial
-from scipy.signal import step2
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
