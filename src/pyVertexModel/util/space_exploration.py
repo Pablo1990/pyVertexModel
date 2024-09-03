@@ -202,37 +202,35 @@ def plot_optuna_all(output_directory, study_name, study):
     # Create a dataframe from the study.
     df = study.trials_dataframe()
     df.to_excel(output_dir_study + '/df.xlsx')
-    # Plot the contour of the study
-    fig = optuna.visualization.plot_contour(study, params=["x", "y"])
-    plotly.io.write_image(fig, output_dir_study + '/countour.png')
     # Plot the edf of the study
     fig = optuna.visualization.plot_edf(study)
-    plotly.io.write_image(fig, output_dir_study + '/edf.png')
+    plotly.io.write_image(fig, output_dir_study + '/1_edf.png', scale=2)
     # Plot the parallel coordinates of the study
     fig = optuna.visualization.plot_parallel_coordinate(study)
-    plotly.io.write_image(fig, output_dir_study + '/parallel_coordinate.png')
-    # Plot the intermediate values of the study
-    fig = optuna.visualization.plot_intermediate_values(study)
-    plotly.io.write_image(fig, output_dir_study + '/intermediate_values.png')
+    plotly.io.write_image(fig, output_dir_study + '/2_parallel_coordinate.png', scale=2)
     # Plot the optimization history of the study
     fig = optuna.visualization.plot_optimization_history(study)
-    plotly.io.write_image(fig, output_dir_study + '/optimization_history.png')
+    fig.ax.set_yscale('log')
+    plotly.io.write_image(fig, output_dir_study + '/3_optimization_history.png', scale=2)
     # Plot the parameter importance of the study
     fig = optuna.visualization.plot_param_importances(study)
-    plotly.io.write_image(fig, output_dir_study + '/param_importances.png')
+    plotly.io.write_image(fig, output_dir_study + '/4_param_importances.png', scale=2)
     # Plot the pareto front of the study
     fig = optuna.visualization.plot_pareto_front(
         study,
-        targets=lambda t: (t.values[0], t.values[1]),
-        target_names=["Objective 0", "Objective 1"],
+        targets=lambda t: (t.values[0]),
+        target_names=["Objective 0"],
     )
-    plotly.io.write_image(fig, output_dir_study + '/pareto_front.png')
+    plotly.io.write_image(fig, output_dir_study + '/5_pareto_front.png', scale=2)
     # Plot the rankings of the study
-    fig = optuna.visualization.plot_ranks(study)
-    plotly.io.write_image(fig, output_dir_study + '/ranks.png')
+    fig = optuna.visualization.plot_rank(study)
+    plotly.io.write_image(fig, output_dir_study + '/6_ranks.png', scale=2)
     # Plot the slice of the study
     fig = optuna.visualization.plot_slice(study)
-    plotly.io.write_image(fig, output_dir_study + '/slice.png')
+    plotly.io.write_image(fig, output_dir_study + '/7_slice.png', scale=2)
     # Plot the termination plot of the study
     fig = optuna.visualization.plot_terminator_improvement(study, plot_error=True)
-    plotly.io.write_image(fig, output_dir_study + '/terminator_improvement.png')
+    plotly.io.write_image(fig, output_dir_study + '/8_terminator_improvement.png', scale=2)
+    # Plot the contour of the study for each pair of parameters
+    fig = optuna.visualization.plot_contour(study)
+    plotly.io.write_image(fig, output_dir_study + '/9_countour.png', scale=2)
