@@ -3,9 +3,10 @@ import os
 
 import optuna
 
+from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation, analyse_edge_recoil
-from src.pyVertexModel.util.space_exploration import objective, load_simulations
+from src.pyVertexModel.util.space_exploration import objective, load_simulations, plot_optuna_all
 from src.pyVertexModel.util.utils import load_state
 
 start_new = True
@@ -63,6 +64,7 @@ if start_new == True:
     print("Best parameters:", study.best_params)
     print("Best value:", study.best_value)
     print("Best trial:", study.best_trial)
+    plot_optuna_all(os.path.join(PROJECT_DIRECTORY, 'Result'), study_name, study)
 else:
     vModel = VertexModelVoronoiFromTimeImage()
     output_folder = vModel.set.OutputFolder
