@@ -18,11 +18,14 @@ def objective(trial):
     :param trial:
     :return:
     """
+    # Define the error type
+    error_type = '_K_'
 
     # Supress the output to the logger
-    logger = logging.getLogger("pyVertexModel")
-    logger.propagate = False
-    logger.setLevel(logging.CRITICAL)
+    if error_type == '_gr_':
+        logger = logging.getLogger("pyVertexModel")
+        logger.propagate = False
+        logger.setLevel(logging.CRITICAL)
 
     new_set = Set()
     new_set.wing_disc()
@@ -40,27 +43,31 @@ def objective(trial):
     # new_set.lambdaS2 = round(trial.suggest_float('lambdaS2', 0.01, 100, step=0.01), 2)
     # new_set.lambdaS3 = round(trial.suggest_float('lambdaS3', 0.01, 100, step=0.01), 2)
     # new_set.lambdaR = trial.suggest_float('lambdaR', 1e-10, 1)
-    new_set.Nincr = trial.suggest_float('Nincr', 10, 1000) * new_set.tend
-    new_set.cLineTension = trial.suggest_float('cLineTension', 1e-6, 1e-2)
+    # new_set.Nincr = trial.suggest_float('Nincr', 200, 1000) * new_set.tend
+    new_set.cLineTension = trial.suggest_float('cLineTension', 1e-8, 1e-5)
     new_set.cLineTension_external = new_set.cLineTension
-    new_set.lambdaS1 = round(trial.suggest_float('lambdaS1', 0.01, 100), 2)
-    new_set.lambdaS2 = new_set.lambdaS1 / 100
-    new_set.lambdaS3 = new_set.lambdaS1 / 10
+    new_set.lambdaS1 = round(trial.suggest_float('lambdaS1', 0.5, 1.8), 2)
+    new_set.lambdaS2 = round(new_set.lambdaS1 / 100, 2)
+    new_set.lambdaS3 = round(new_set.lambdaS1 / 10, 2)
     new_set.update_derived_parameters()
-    new_set.OutputFolder = None
 
-    # Initialize the model with the parameters
-    vModel = VertexModelVoronoiFromTimeImage(set_test=new_set, create_output_folder=False)
-
-    # Run the simulation
-    vModel.initialize()
-
-    error_type = '_gr_'
 
     if error_type == '_gr_':
+        new_set.OutputFolder = None
+
+        # Initialize the model with the parameters
+        vModel = VertexModelVoronoiFromTimeImage(set_test=new_set, create_output_folder=False)
+
+        # Run the simulation
+        vModel.initialize()
         gr = vModel.single_iteration(post_operations=False)
         return gr
     else:
+        # Initialize the model with the parameters
+        vModel = VertexModelVoronoiFromTimeImage(set_test=new_set)
+
+        # Run the simulation
+        vModel.initialize()
         vModel.iterate_over_time()
 
         # Analyse the edge recoil
@@ -71,8 +78,8 @@ def objective(trial):
             recoiling_info = analyse_edge_recoil(file_name, n_ablations=n_ablations, location_filter=0, t_end=t_end)
 
             # Return a metric to minimize
-            K = recoiling_info[0]['K']
-            initial_recoil = recoiling_info[0]['initial_recoil_in_s']
+            K = recoiling_info['K']
+            initial_recoil = recoiling_info['initial_recoil_in_s']
         except Exception as e:
             K = [1]
             initial_recoil = [1]
@@ -80,13 +87,6 @@ def objective(trial):
         error = vModel.calculate_error(K=K, initial_recoil=initial_recoil, error_type=error_type)
 
         return error
-
-def objetive_gradient(trial):
-    """
-    Objective function to minimize the gradient at the very beggining
-    :param trial:
-    :return:
-    """
 
 
 def load_simulations(study, error_type=None):
@@ -210,18 +210,14 @@ def plot_optuna_all(output_directory, study_name, study):
     plotly.io.write_image(fig, output_dir_study + '/2_parallel_coordinate.png', scale=2)
     # Plot the optimization history of the study
     fig = optuna.visualization.plot_optimization_history(study)
-    fig.ax.set_yscale('log')
+    fig.update_yaxes(type="log")
     plotly.io.write_image(fig, output_dir_study + '/3_optimization_history.png', scale=2)
     # Plot the parameter importance of the study
     fig = optuna.visualization.plot_param_importances(study)
     plotly.io.write_image(fig, output_dir_study + '/4_param_importances.png', scale=2)
-    # Plot the pareto front of the study
-    fig = optuna.visualization.plot_pareto_front(
-        study,
-        targets=lambda t: (t.values[0]),
-        target_names=["Objective 0"],
-    )
-    plotly.io.write_image(fig, output_dir_study + '/5_pareto_front.png', scale=2)
+    # # Plot the pareto front of the study
+    # fig = optuna.visualization.plot_pareto_front(study)
+    # plotly.io.write_image(fig, output_dir_study + '/5_pareto_front.png', scale=2)
     # Plot the rankings of the study
     fig = optuna.visualization.plot_rank(study)
     plotly.io.write_image(fig, output_dir_study + '/6_ranks.png', scale=2)
@@ -229,7 +225,8 @@ def plot_optuna_all(output_directory, study_name, study):
     fig = optuna.visualization.plot_slice(study)
     plotly.io.write_image(fig, output_dir_study + '/7_slice.png', scale=2)
     # Plot the termination plot of the study
-    fig = optuna.visualization.plot_terminator_improvement(study, plot_error=True)
+    fig = optuna.visualization.plot_terminator_improvement(study)
+    fig.update_yaxes(type="log")
     plotly.io.write_image(fig, output_dir_study + '/8_terminator_improvement.png', scale=2)
     # Plot the contour of the study for each pair of parameters
     fig = optuna.visualization.plot_contour(study)
