@@ -672,9 +672,15 @@ class VertexModel:
         correct_K = 0.126
         correct_initial_recoil = 0.213
         if error_type == 'None' or 'K' in error_type:
-            error += np.abs(K[0] - correct_K) * 100
+            try:
+                error += np.abs(K[0] - correct_K) * 100
+            except IndexError:
+                error += np.abs(K - correct_K) * 100
 
         if error_type == 'None' or 'InitialRecoil' in error_type:
-            error += np.abs(initial_recoil[0] - correct_initial_recoil) * 100
+            try:
+                error += np.abs(initial_recoil[0] - correct_initial_recoil) * 100
+            except IndexError:
+                error += np.abs(initial_recoil - correct_initial_recoil) * 100
 
         return error
