@@ -220,7 +220,7 @@ def plot_optuna_all(output_directory, study_name, study):
     # plotly.io.write_image(fig, output_dir_study + '/5_pareto_front.png', scale=2)
     # Plot the rankings of the study
     fig = optuna.visualization.plot_rank(study)
-    plotly.io.write_image(fig, output_dir_study + '/6_ranks.png', scale=2)
+    plotly.io.write_image(fig, output_dir_study + '/6_ranks.png', width=1920*2, height=1080*2, scale=2)
     # Plot the slice of the study
     fig = optuna.visualization.plot_slice(study)
     plotly.io.write_image(fig, output_dir_study + '/7_slice.png', scale=2)
@@ -230,4 +230,4 @@ def plot_optuna_all(output_directory, study_name, study):
     plotly.io.write_image(fig, output_dir_study + '/8_terminator_improvement.png', scale=2)
     # Plot the contour of the study for each pair of parameters
     fig = optuna.visualization.plot_contour(study)
-    plotly.io.write_image(fig, output_dir_study + '/9_countour.png', scale=2)
+    plotly.io.write_image(fig, output_dir_study + '/9_countour.png', width=1920*2, height=1080*2, scale=2)
