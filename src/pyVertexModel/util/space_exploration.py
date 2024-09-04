@@ -202,6 +202,28 @@ def plot_optuna_all(output_directory, study_name, study):
     # Create a dataframe from the study.
     df = study.trials_dataframe()
     df.to_excel(output_dir_study + '/df.xlsx')
+    # Compute correlations between parameters and error
+    params_columns = [col for col in df.columns if col.startswith('params_')]
+    columns_to_correlate = params_columns + ['value']
+    correlations = df[columns_to_correlate].corr()
+
+    # Convert the Series to a DataFrame
+    correlations_only_error = correlations[['value']].copy()
+    # Remove the value column
+    correlations_only_error = correlations_only_error.drop('value')
+    correlations_only_error.columns = ['correlation_with_value']
+
+    # Plot the heatmap using plotly.graph_objects
+    fig = plotly.graph_objects.Figure(data=plotly.graph_objects.Heatmap(
+        z=correlations_only_error.values,
+        x=correlations_only_error.columns,
+        y=correlations_only_error.index,
+        text=correlations_only_error.values,
+        texttemplate="%{text:.2f}"
+    ))
+    fig.update_layout(title='Correlation Matrix')
+    plotly.io.write_image(fig, output_dir_study + '/0_correlation_matrix.png', scale=2)
+
     # Plot the edf of the study
     fig = optuna.visualization.plot_edf(study)
     plotly.io.write_image(fig, output_dir_study + '/1_edf.png', scale=2)
