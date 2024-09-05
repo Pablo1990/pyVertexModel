@@ -165,6 +165,8 @@ class Set:
         if self.implicit_method is False:
             self.tol = self.nu
             self.tol0 = self.nu/20
+            #self.tol = 100
+            #self.tol0 = 100
 
     def redirect_output(self):
         os.makedirs(self.OutputFolder, exist_ok=True)
@@ -219,9 +221,9 @@ class Set:
                                     '_Cells_', str(self.TotalCells), '_visc_', str(self.nu),
                                     '_lVol_', str(self.lambdaV), '_refV0_', str(self.ref_V0),
                                     '_kSubs_', str(self.kSubstrate), '_kCeil_', str(self.kCeiling),
-                                    '_lt_', str(self.cLineTension), '_ltExt_', str(self.cLineTension_external),
+                                    '_lt_', '{:0.2e}'.format(self.cLineTension), '_ltExt_', '{:0.2e}'.format(self.cLineTension_external),
                                     '_noise_', str(self.noise_random), '_refA0_', str(self.ref_A0),
-                                    '_eARBarrier_', str(self.lambdaR),
+                                    '_eARBarrier_', '{:0.2e}'.format(self.lambdaR),
                                     '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
                                     '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3),
                                     '_ps_', str(self.purseStringStrength), '_psType_', str(self.TypeOfPurseString)])
@@ -258,20 +260,21 @@ class Set:
         # 110 cells 7 cells to ablate
         self.TotalCells = 150
         self.CellHeight = 15
-        self.tend = 50
-        self.Nincr = self.tend * 10
+        self.tend = 16
+        self.Nincr = self.tend * 100
 
-        self.nu = 16
+        self.nu = 0.07
         self.EnergyBarrierA = False
         self.lambdaB = 20
 
-        self.EnergyBarrierAR = False
-        self.lambdaR = 0.0001
+        self.EnergyBarrierAR = True
+        self.lambdaR = 1e-8
 
-        self.lambdaV = 1
-        self.ref_V0 = 1
-        self.kSubstrate = 1
-        self.cLineTension = 0.00035
+        self.lambdaV = 50
+        self.ref_V0 = 0.99
+        self.kSubstrate = 0
+        self.kCeiling = 0
+        self.cLineTension = 1e-8
         self.Contractility_external = True
         self.Contractility_external_axis = [0, 1]
         self.cLineTension_external = self.cLineTension
@@ -283,33 +286,31 @@ class Set:
         self.TypeOfPurseString = 2
         self.Remodelling = 0
         self.RemodelStiffness = 0.95
-        self.ref_A0 = 0.95
-        self.lambdaS1 = 10
-        self.lambdaS2 = 0.4
+        self.ref_A0 = 1
+        self.lambdaS1 = 0.5
+        self.lambdaS2 = self.lambdaS1 / 100
         self.lambdaS3 = self.lambdaS1 / 10
         self.lambdaS4 = self.lambdaS2
+
         self.VTK = False
-
         self.implicit_method = False
-
         self.ablation = True
-
         self.check_for_non_used_parameters()
 
     def wound_default(self):
         # ============================== Ablation ============================
         self.cellsToAblate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-        self.TInitAblation = 30
+        self.TInitAblation = 10
         self.TEndAblation = self.TInitAblation + 60
         self.debris_contribution = np.finfo(float).eps
         # =========================== Contractility ==========================
         self.Contractility = True
-        self.TypeOfPurseString = 2
+        self.TypeOfPurseString = 0
         # 0: Intensity-based purse string
         # 1: Strain-based purse string (delayed)
         # 2: Fixed with linear increase purse string
-        self.purseStringStrength = self.cLineTension * 6
-        self.lateralCablesStrength = self.cLineTension / 10
+        self.purseStringStrength = 0
+        self.lateralCablesStrength = 0
         self.delay_purse_string = 5.8
         self.delay_lateral_cables = 0.2
 
