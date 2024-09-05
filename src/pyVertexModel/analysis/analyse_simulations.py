@@ -64,7 +64,7 @@ for _, file in enumerate(lst):
                 try:
                 important_features['cells_area_top_lower_than_average_diff'] = count_of_smalls_cells_per_time_ablation.loc[id_before_ablation].ID - count_of_smalls_cells_per_time_0.loc[0].ID
                 except KeyError as e:
-                    print("Error: ", e)
+                    print("Error cells_area_top_lower_than_average_diff: ", e)
                     important_features['cells_area_top_lower_than_average_diff'] = np.nan
 
                 important_features['folder'] = file

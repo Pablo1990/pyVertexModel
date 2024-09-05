@@ -59,7 +59,7 @@ if start_new == True:
     #                             sampler=partial_sampler)
 
 
-    study.optimize(objective, n_trials=10000)
+    study.optimize(objective, n_trials=100000)
 
     print("Best parameters:", study.best_params)
     print("Best value:", study.best_value)
