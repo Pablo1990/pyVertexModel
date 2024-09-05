@@ -61,7 +61,11 @@ for _, file in enumerate(lst):
                 features_per_time_df_mean = features_per_time_all_cells_df.groupby(by='time').mean().reset_index()
                 count_of_smalls_cells_per_time_0 = features_per_time_all_cells_df[features_per_time_all_cells_df.Area_top < features_per_time_df_mean.loc[0].Area_top].groupby(by='time').count().reset_index()
                 count_of_smalls_cells_per_time_ablation = features_per_time_all_cells_df[features_per_time_all_cells_df.Area_top < features_per_time_df_mean.loc[id_before_ablation].Area_top].groupby(by='time').count().reset_index()
+                try:
                 important_features['cells_area_top_lower_than_average_diff'] = count_of_smalls_cells_per_time_ablation.loc[id_before_ablation].ID - count_of_smalls_cells_per_time_0.loc[0].ID
+                except KeyError as e:
+                    print("Error: ", e)
+                    important_features['cells_area_top_lower_than_average_diff'] = np.nan
 
                 important_features['folder'] = file
 
