@@ -29,7 +29,7 @@ def analyse_simulation(folder):
         all_files = os.listdir(folder)
         all_files.sort()
         for file_id, file in enumerate(all_files):
-            if file.endswith('.pkl') and not file.__contains__('data_step_before_remodelling'):
+            if file.endswith('.pkl') and not file.__contains__('data_step_before_remodelling') and not file.__contains__('recoil'):
                 # Load the state of the model
                 load_state(vModel, os.path.join(folder, file))
 
