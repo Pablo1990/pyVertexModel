@@ -9,7 +9,7 @@ from src.pyVertexModel.util.utils import save_variables, load_variables
 folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/'
 all_files_features = []
 lst = os.listdir(folder)
-lst.sort(reverse=True)
+lst.sort(reverse=False)
 for _, file in enumerate(lst):
     print(file)
 
@@ -62,7 +62,7 @@ for _, file in enumerate(lst):
                 count_of_smalls_cells_per_time_0 = features_per_time_all_cells_df[features_per_time_all_cells_df.Area_top < features_per_time_df_mean.loc[0].Area_top].groupby(by='time').count().reset_index()
                 count_of_smalls_cells_per_time_ablation = features_per_time_all_cells_df[features_per_time_all_cells_df.Area_top < features_per_time_df_mean.loc[id_before_ablation].Area_top].groupby(by='time').count().reset_index()
                 try:
-                important_features['cells_area_top_lower_than_average_diff'] = count_of_smalls_cells_per_time_ablation.loc[id_before_ablation].ID - count_of_smalls_cells_per_time_0.loc[0].ID
+                    important_features['cells_area_top_lower_than_average_diff'] = count_of_smalls_cells_per_time_ablation.loc[id_before_ablation].ID - count_of_smalls_cells_per_time_0.loc[0].ID
                 except KeyError as e:
                     print("Error cells_area_top_lower_than_average_diff: ", e)
                     important_features['cells_area_top_lower_than_average_diff'] = np.nan
