@@ -299,9 +299,9 @@ def analyse_edge_recoil(file_name_v_model, n_ablations=1, location_filter=0, t_e
             v_model.set.tend = v_model.t + t_end
             v_model.set.tol = 100
             v_model.set.tol0 = 100
-            v_model.set.dt = 0.02
+            v_model.set.dt = 0.005
             v_model.set.dt0 = v_model.set.dt
-            v_model.set.RemodelingFrequency = v_model.set.dt
+            v_model.set.RemodelingFrequency = 0.02
             v_model.set.ablation = False
             v_model.set.export_images = False
             edge_length_final_normalized = []
