@@ -14,6 +14,7 @@ txt_files.sort()
 K_values = []
 initial_recoil_values = []
 file_names = []
+fig_with_all_plots = plt.figure()
 for txt_file in txt_files:
     table_info = pd.read_csv(os.path.join(input_folder, txt_file), sep=',')
     edge_length_final = table_info['Length'].values - table_info['Length'][0]
@@ -44,9 +45,21 @@ for txt_file in txt_files:
     plt.savefig(os.path.join(input_folder, txt_file.replace('.csv', '.png')))
     plt.close()
 
+    # plot to fig_with_all_plots
+    plt.plot(time_steps_normalized, edge_length_final, '-', label=txt_file)
+
+    ## Plot fit line of the Kelvin-Voigt model with the same colour as the previous plot
+    #plt.plot(time_steps_normalized, recoil_model(time_steps_normalized, initial_recoil, K), label=txt_file)
 
     K_values.append(K)
     initial_recoil_values.append(initial_recoil)
     file_names.append(txt_file)
 
+# Save fig_with_all_plots
+fig_with_all_plots.savefig(os.path.join(input_folder, 'all_plots.png'))
+plt.xlabel('Time (s)')
+plt.ylabel('Edge length final')
+plt.title('Ablation fit')
+plt.ylim([0, 3.25])
+plt.legend()
 pd.DataFrame({'K': K_values, 'initial_recoil': initial_recoil_values, 'file': file_names}).to_excel(input_folder + '/ablation_fits.xlsx')
