@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 
 from src.pyVertexModel.analysis.analyse_simulation import fit_ablation_equation, recoil_model
 
-input_folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/data/yw_071217'
+input_folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/data/RnG4EcadGFP_UASMbsRNAi_310317'
 txt_files = [f for f in os.listdir(input_folder) if f.endswith('.csv')]
 txt_files.sort()
 
@@ -19,7 +19,7 @@ for txt_file in txt_files:
     edge_length_final = table_info['Length'].values - table_info['Length'][0]
     time_slices = table_info['Slice'].values
 
-    time_info = pd.read_csv(os.path.join(input_folder, txt_file.replace('.csv', '.txt')), sep=',', header=None)
+    time_info = pd.read_csv(os.path.join(input_folder, txt_file.replace('.csv', '_timestamps.txt')), sep=',', header=None)
     time_steps = time_info[1].values
 
     # Index time_steps_normalized with time_slices
