@@ -34,28 +34,29 @@ class KgTriEnergyBarrier(Kg):
                     if Tris[t].lambda_b_noise is None:
                         Tris[t].lambda_b_noise = add_noise_to_parameter(lambdaB, 0)
 
-                    fact = -((Tris[t].lambda_b_noise * Set.Beta) / barrier_tri0) * np.exp(
-                        Tris[t].lambda_b_noise * (1 - Set.Beta * Face.Tris[t].Area / barrier_tri0))
-                    fact2 = fact * -((Tris[t].lambda_b_noise * Set.Beta) / barrier_tri0)
-                    y1 = Ys[Tris[t].Edge[0], :]
-                    y2 = Ys[Tris[t].Edge[1], :]
-                    y3 = Cell.Faces[f].Centre
-                    n3 = Cell.Faces[f].globalIds
-                    nY = [Cell.globalIds[edge] for edge in Tris[t].Edge] + [n3]
+                    if np.all(~np.isin(Tris[t].Edge, Geo.y_ablated)):
+                        fact = -((Tris[t].lambda_b_noise * Set.Beta) / barrier_tri0) * np.exp(
+                            Tris[t].lambda_b_noise * (1 - Set.Beta * Face.Tris[t].Area / barrier_tri0))
+                        fact2 = fact * -((Tris[t].lambda_b_noise * Set.Beta) / barrier_tri0)
+                        y1 = Ys[Tris[t].Edge[0], :]
+                        y2 = Ys[Tris[t].Edge[1], :]
+                        y3 = Cell.Faces[f].Centre
+                        n3 = Cell.Faces[f].globalIds
+                        nY = [Cell.globalIds[edge] for edge in Tris[t].Edge] + [n3]
 
-                    if Geo.remodelling and not np.any(np.isin(nY, Cell.vertices_and_faces_to_remodel)):
-                        continue
+                        if Geo.remodelling and not np.any(np.isin(nY, Cell.vertices_and_faces_to_remodel)):
+                            continue
 
-                    gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)
-                    gs_fact = gs * fact
-                    self.g = self.assemble_g(self.g[:], gs_fact[:], np.array(nY, dtype='int'))
-                    if calculate_K:
-                        gs_transpose = gs.reshape((1, gs.size))
-                        gs_ = gs.reshape((gs.size, 1))
-                        Ks = (np.dot(gs_, gs_transpose) * fact2) + Ks * fact + Kss * fact
-                        self.assemble_k(Ks, np.array(nY, dtype='int'))
-                    self.energy += np.exp(Tris[t].lambda_b_noise * (1 - Set.Beta *
-                                                                    Face.Tris[t].Area / barrier_tri0))
+                        gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)
+                        gs_fact = gs * fact
+                        self.g = self.assemble_g(self.g[:], gs_fact[:], np.array(nY, dtype='int'))
+                        if calculate_K:
+                            gs_transpose = gs.reshape((1, gs.size))
+                            gs_ = gs.reshape((gs.size, 1))
+                            Ks = (np.dot(gs_, gs_transpose) * fact2) + Ks * fact + Kss * fact
+                            self.assemble_k(Ks, np.array(nY, dtype='int'))
+                        self.energy += np.exp(Tris[t].lambda_b_noise * (1 - Set.Beta *
+                                                                        Face.Tris[t].Area / barrier_tri0))
 
         end = time.time()
         self.timeInSeconds = f"Time at EnergyBarrier: {end - start} seconds"

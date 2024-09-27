@@ -206,7 +206,7 @@ class KgContractility(Kg):
                                                 if
                                                 value == currentFace.InterfaceType or key == currentFace.InterfaceType)]
                 for tri_id, currentTri in enumerate(currentFace.Tris):
-                    if len(currentTri.SharedByCells) > 1:
+                    if len(currentTri.SharedByCells) > 1 and np.all(~np.isin(currentTri.Edge, geo.y_ablated)):
                         C, geo = get_contractility_based_on_location(currentFace, currentTri, geo, c_set,
                                                                      cell_noise=cell.contractility_noise)
 

@@ -29,7 +29,12 @@ for _, file in enumerate(lst):
             n_ablations = 1
             t_end = 1.2
             recoiling_info_df_apical = analyse_edge_recoil(os.path.join(folder, file, 'before_ablation.pkl'),
-                                                 n_ablations=n_ablations, location_filter=0, t_end=t_end)
+                                                           type_of_ablation='recoil_info_apical',
+                                                           n_ablations=n_ablations, location_filter=0, t_end=t_end)
+
+            recoiling_edge_info_df_apical = analyse_edge_recoil(os.path.join(folder, file, 'before_ablation.pkl'),
+                                                           type_of_ablation='recoil_edge_info_apical',
+                                                           n_ablations=n_ablations, location_filter=0, t_end=t_end)
             if recoiling_info_df_apical is None:
                 continue
 
@@ -46,8 +51,10 @@ for _, file in enumerate(lst):
 
             if important_features is not None and len(important_features) > 5:
                 important_features['recoiling_speed_apical'] = recoiling_info_df_apical[0]['initial_recoil_in_s']
-                important_features['recoiling_speed_apical_std'] = recoiling_info_df_apical[0]['initial_recoil_in_s']
                 important_features['K'] = recoiling_info_df_apical[0]['K']
+
+                important_features['K_edge'] = recoiling_edge_info_df_apical[0]['K']
+                important_features['recoiling_speed_edge_apical'] = recoiling_edge_info_df_apical[0]['initial_recoil_in_s']
 
                 # important_features['recoiling_speed_basal'] = np.mean(recoiling_info_df_basal['initial_recoil_in_s'])
                 # important_features['recoiling_speed_basal_std'] = np.std(recoiling_info_df_basal['initial_recoil_in_s'])

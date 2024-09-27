@@ -189,6 +189,7 @@ class Geo:
         self.BorderGhostNodes = []
         self.RemovedDebrisCells = []
         self.AssembleNodes = []
+        self.y_ablated = []
 
         if mat_file is None:
             self.numF = None
@@ -1023,9 +1024,46 @@ class Geo:
                 # Empty the list of cells to ablate
                 self.cellsToAblate = None
 
+    def ablate_edge(self, c_set, t, domain='Top'):
+        """
+        Ablate the edge shared between two cells
+        :param c_set:
+        :param t:
+        :param domain:
+        :return:
+        """
+
+        # Populate the ys ablated with the vertices that are shared only by those two cells or one of them
+        y_ablated = []
+
+        if c_set.ablation and c_set.TInitAblation <= t:
+            # Check if the list of cells to ablate is not empty
+            if self.cellsToAblate is not None and len(self.cellsToAblate) == 2:
+                # Log the ablation process
+                logger.info(' ---- Performing edge ablation: ' + str(self.cellsToAblate))
+
+                for cell_id in self.cellsToAblate:
+                    cell = self.Cells[cell_id]
+
+                    # Get ids of regular cells
+                    regular_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]
+
+                    # Get the ids of the vertices that are shared only by this cell
+                    cell_global_ids_only_this_cell = cell.globalIds[np.sum(np.isin(cell.T, regular_cells), axis=1) == 1]
+                    y_ablated.extend(cell_global_ids_only_this_cell.tolist())
+
+                    # Get the ids of the vertices that are shared by both cells
+                    for tet_id, tet  in enumerate(cell.T):
+                        if np.sum(np.isin(tet, regular_cells)) == 2 and np.all(np.isin(self.cellsToAblate, tet)):
+                            y_ablated.append(cell.globalIds[tet_id])
+
+        return y_ablated
+
+
+
     def compute_cells_wound_edge(self, location_filter=None):
         """
-        Compute the cells at the wound edge
+        Compute the cells at the wound edge[
         :param location_filter:
         :return:
         """

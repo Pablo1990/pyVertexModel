@@ -64,19 +64,20 @@ class KgSurfaceCellBasedAdhesion(Kg):
                 raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
 
             for t in face.Tris:
-                y1 = Ys[t.Edge[0]]
-                y2 = Ys[t.Edge[1]]
-                y3 = face.Centre
-                n3 = face.globalIds
-                nY = [Cell.globalIds[edge] for edge in t.Edge] + [n3]
+                if np.all(~np.isin(t.Edge, Geo.y_ablated)):
+                    y1 = Ys[t.Edge[0]]
+                    y2 = Ys[t.Edge[1]]
+                    y3 = face.Centre
+                    n3 = face.globalIds
+                    nY = [Cell.globalIds[edge] for edge in t.Edge] + [n3]
 
-                if Geo.remodelling and not np.any(np.isin(nY, Cell.vertices_and_faces_to_remodel)):
-                    continue
+                    if Geo.remodelling and not np.any(np.isin(nY, Cell.vertices_and_faces_to_remodel)):
+                        continue
 
-                if calculate_K:
-                    ge = self.calculate_kg(Lambda, fact, ge, nY, y1, y2, y3)
-                else:
-                    ge = self.calculate_g(Lambda, ge, nY, y1, y2, y3)
+                    if calculate_K:
+                        ge = self.calculate_kg(Lambda, fact, ge, nY, y1, y2, y3)
+                    else:
+                        ge = self.calculate_g(Lambda, ge, nY, y1, y2, y3)
 
         self.g += ge * fact
         if calculate_K:
