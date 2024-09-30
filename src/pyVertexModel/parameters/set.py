@@ -218,15 +218,16 @@ class Set:
 
         current_datetime = datetime.now()
         new_outputFolder = ''.join([PROJECT_DIRECTORY, '/Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")),
-                                    '_Cells_', str(self.TotalCells), '_visc_', str(self.nu),
-                                    '_lVol_', str(self.lambdaV), '_refV0_', str(self.ref_V0),
-                                    '_kSubs_', str(self.kSubstrate), '_kCeil_', str(self.kCeiling),
-                                    '_lt_', '{:0.2e}'.format(self.cLineTension), '_ltExt_', '{:0.2e}'.format(self.cLineTension_external),
-                                    '_noise_', str(self.noise_random), '_refA0_', str(self.ref_A0),
-                                    '_eARBarrier_', '{:0.2e}'.format(self.lambdaR),
-                                    '_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
-                                    '_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3),
-                                    '_ps_', str(self.purseStringStrength), '_psType_', str(self.TypeOfPurseString)])
+                                    ])
+                                    #'_Cells_', str(self.TotalCells), '_visc_', str(self.nu),
+                                    #'_lVol_', str(self.lambdaV), '_refV0_', str(self.ref_V0),
+                                    #'_kSubs_', str(self.kSubstrate), '_kCeil_', str(self.kCeiling),
+                                    #'_lt_', '{:0.2e}'.format(self.cLineTension), '_ltExt_', '{:0.2e}'.format(self.cLineTension_external),
+                                    #'_noise_', str(self.noise_random), '_refA0_', str(self.ref_A0),
+                                    #'_eARBarrier_', '{:0.2e}'.format(self.lambdaR),
+                                    #'_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
+                                    #'_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3),
+                                    #'_ps_', str(self.purseStringStrength), '_psType_', str(self.TypeOfPurseString)
         self.define_if_not_defined("OutputFolder", new_outputFolder)
 
     def stretch(self):
