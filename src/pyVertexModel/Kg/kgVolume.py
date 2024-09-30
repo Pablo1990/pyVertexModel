@@ -65,7 +65,7 @@ class KgVolume(Kg):
             ge = np.zeros(self.g.shape, dtype=self.precision_type)
             for face in Cell.Faces:
                 for tri in face.Tris:
-                    if np.all(~np.isin(tri.Edge, Geo.y_ablated)):
+                    if np.all(~np.isin(Cell.globalIds[tri.Edge], Geo.y_ablated)):
                         y1 = Ys[tri.Edge[0]]
                         y2 = Ys[tri.Edge[1]]
                         y3 = face.Centre

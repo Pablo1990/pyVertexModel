@@ -64,7 +64,7 @@ class KgSurfaceCellBasedAdhesion(Kg):
                 raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
 
             for t in face.Tris:
-                if np.all(~np.isin(t.Edge, Geo.y_ablated)):
+                if np.all(~np.isin(Cell.globalIds[t.Edge], Geo.y_ablated)):
                     y1 = Ys[t.Edge[0]]
                     y2 = Ys[t.Edge[1]]
                     y3 = face.Centre
