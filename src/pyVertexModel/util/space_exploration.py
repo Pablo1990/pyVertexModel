@@ -7,7 +7,6 @@ import plotly
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
-from src.pyVertexModel.analysis.analyse_in_vivo_ablation_data import initial_recoil
 from src.pyVertexModel.analysis.analyse_simulation import analyse_edge_recoil
 from src.pyVertexModel.parameters.set import Set
 from src.pyVertexModel.util.utils import load_state, load_variables, save_variables
@@ -19,7 +18,7 @@ def objective(trial):
     :return:
     """
     # Define the error type
-    error_type = '_K_'
+    error_type = '_K_InitialRecoil_'
 
     # Supress the output to the logger
     if error_type == '_gr_':
@@ -32,25 +31,22 @@ def objective(trial):
     new_set.wound_default()
 
     # Set and define the parameters space
-    # new_set.nu = round(trial.suggest_float('nu', 0.000001, 0.001), 6)
-    # new_set.lambdaV = round(trial.suggest_float('lambdaV', 0.01, 100, step=0.01), 2)
-    # new_set.ref_V0 = round(trial.suggest_float('ref_V0', 0.5, 2, step=0.01), 2)
-    # new_set.kSubstrate = round(trial.suggest_float('kSubstrate', 0.01, 100, step=0.01), 2)
-    # new_set.cLineTension = trial.suggest_float('cLineTension', 1e-6, 1e-2)
-    # new_set.cLineTension_external = trial.suggest_float('cLineTension_external', 1e-6, 1e-2)
-    # new_set.ref_A0 = round(trial.suggest_float('ref_A0', 0.5, 2, step=0.01), 2)
-    # new_set.lambdaS1 = round(trial.suggest_float('lambdaS1', 0.01, 100, step=0.01), 2)
-    # new_set.lambdaS2 = round(trial.suggest_float('lambdaS2', 0.01, 100, step=0.01), 2)
-    # new_set.lambdaS3 = round(trial.suggest_float('lambdaS3', 0.01, 100, step=0.01), 2)
-    # new_set.lambdaR = trial.suggest_float('lambdaR', 1e-10, 1)
-    # new_set.Nincr = trial.suggest_float('Nincr', 200, 1000) * new_set.tend
-    new_set.cLineTension = trial.suggest_float('cLineTension', 1e-8, 1e-5)
-    new_set.cLineTension_external = new_set.cLineTension
-    new_set.lambdaS1 = round(trial.suggest_float('lambdaS1', 0.5, 1.8), 2)
-    new_set.lambdaS2 = round(new_set.lambdaS1 / 100, 2)
-    new_set.lambdaS3 = round(new_set.lambdaS1 / 10, 2)
+    #new_set.nu = trial.suggest_float('nu', 0.05, 0.1, step=0.01)
+    new_set.lambdaV = trial.suggest_float('lambdaV', 0.01, 5, step=0.01)
+    new_set.ref_V0 = trial.suggest_float('ref_V0', 0.9, 1.1, step=0.01)
+    #new_set.kSubstrate = trial.suggest_float('kSubstrate', 0.01, 0.5, step=0.01)
+    #new_set.cLineTension = trial.suggest_float('cLineTension', 1e-6, 1e-2, step=1e-6)
+    #new_set.cLineTension_external = trial.suggest_float('cLineTension_external', 1e-6, 1e-2, step=1e-6)
+    #new_set.ref_A0 = round(trial.suggest_float('ref_A0', 0.1, 0.5, step=0.01), 2)
+    #new_set.lambdaS1 = round(trial.suggest_float('lambdaS1', 0.1, 1.5, step=0.1), 2)
+    #new_set.lambdaS2 = trial.suggest_float('lambdaS2', 0.1, 1.5, step=0.1)
+    #new_set.lambdaS3 = trial.suggest_float('lambdaS3', 0.09, 0.11, step=0.01)
+    #new_set.lambdaR = trial.suggest_float('lambdaR', 1e-7, 1e-5, step=1e-7)
+    #new_set.lambdaS2 = trial.suggest_float('lambdaS2', 0.001, 1, step=0.001)
+    #new_set.lambdaS3 = trial.suggest_float('lambdaS3', new_set.lambdaS1/10 , new_set.lambdaS1, step=new_set.lambdaS1/10)
+    #new_set.lambdaS2 = round(new_set.lambdaS1 / 100, 2)
+    #new_set.lambdaS3 = round(new_set.lambdaS1 / 10, 2)
     new_set.update_derived_parameters()
-
 
     if error_type == '_gr_':
         new_set.OutputFolder = None
