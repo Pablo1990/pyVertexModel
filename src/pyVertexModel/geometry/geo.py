@@ -1049,12 +1049,24 @@ class Geo:
                     regular_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]
 
                     # Get the ids of the vertices that are shared only by this cell
-                    cell_global_ids_only_this_cell = cell.globalIds[np.sum(np.isin(cell.T, regular_cells), axis=1) == 1]
+                    cell_ids_only_this_cell = np.sum(np.isin(cell.T, regular_cells), axis=1) == 1
+
+                    if domain == 'Top':
+                        cell_ids_domain = np.any(np.isin(cell.T, self.XgTop), axis=1)
+                    elif domain == 'Bottom':
+                        cell_ids_domain = np.any(np.isin(cell.T, self.XgBottom), axis=1)
+                    elif domain == 'Lateral':
+                        cell_ids_domain = ~np.any(np.isin(cell.T, np.concatenate([self.XgTop, self.XgBottom])), axis=1)
+                    else:
+                        cell_ids_domain = np.ones(cell.T.shape[0], dtype=bool)
+
+                    cell_global_ids_only_this_cell = cell.globalIds[cell_ids_only_this_cell & cell_ids_domain]
                     y_ablated.extend(cell_global_ids_only_this_cell.tolist())
 
                     # Get the ids of the vertices that are shared by both cells
                     for tet_id, tet  in enumerate(cell.T):
-                        if np.sum(np.isin(tet, regular_cells)) == 2 and np.all(np.isin(self.cellsToAblate, tet)):
+                        if (np.sum(np.isin(tet, regular_cells)) == 2 and np.all(np.isin(self.cellsToAblate, tet))
+                                and cell_ids_domain[tet_id]):
                             y_ablated.append(cell.globalIds[tet_id])
 
         return y_ablated
