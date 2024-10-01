@@ -212,16 +212,29 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical'
     :return:
     """
 
+    v_model = VertexModel(create_output_folder=False)
+    load_state(v_model, file_name_v_model)
+
+    # Cells to ablate
+    # cell_to_ablate = np.random.choice(possible_cells_to_ablate, 1)
+    cell_to_ablate = [v_model.geo.Cells[0]]
+
+    #Pick the neighbouring cell to ablate
+    neighbours = cell_to_ablate[0].compute_neighbours(location_filter)
+
+    # Random order of neighbours
+    np.random.seed(0)
+    np.random.shuffle(neighbours)
+
     list_of_dicts_to_save = []
     for num_ablation in range(n_ablations):
-        v_model = VertexModel(create_output_folder=False)
         load_state(v_model, file_name_v_model)
         try:
             vars = load_variables(file_name_v_model.replace('before_ablation.pkl', type_of_ablation + '.pkl'))
             list_of_dicts_to_save_loaded = vars['recoiling_info_df_apical']
 
-            cell_to_ablate = list_of_dicts_to_save_loaded['cell_to_ablate'][num_ablation]
-            neighbour_to_ablate = list_of_dicts_to_save_loaded['neighbour_to_ablate'][num_ablation]
+            cell_to_ablate_ID = list_of_dicts_to_save_loaded['cell_to_ablate'][num_ablation]
+            neighbour_to_ablate_ID = list_of_dicts_to_save_loaded['neighbour_to_ablate'][num_ablation]
             edge_length_init = list_of_dicts_to_save_loaded['edge_length_init'][num_ablation]
             edge_length_final = list_of_dicts_to_save_loaded['edge_length_final'][num_ablation]
             if 'edge_length_final_normalized' in list_of_dicts_to_save_loaded:
@@ -254,22 +267,11 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical'
             if not os.path.exists(v_model.set.OutputFolder):
                 os.mkdir(v_model.set.OutputFolder)
 
-
-            possible_cells_to_ablate = [cell.ID for cell in v_model.geo.Cells if
-                                        cell.AliveStatus == 1 and cell.ID not in v_model.geo.BorderCells]
-
-            # Cells to ablate
-            # cell_to_ablate = np.random.choice(possible_cells_to_ablate, 1)
-            cell_to_ablate = [v_model.geo.Cells[0]]
-
-            # Pick the neighbouring cell to ablate
-            # neighbours = cell_to_ablate[0].compute_neighbours(location_filter)
-            # possible_neighbours = [neighbour for neighbour in neighbours if neighbour in possible_cells_to_ablate]
-            # neighbour_to_ablate = np.random.choice(possible_neighbours, 1)
-            neighbour_to_ablate = [4]
+            neighbour_to_ablate = [neighbours[num_ablation]]
 
             # Calculate if the cell is neighbour on both sides
             scutoid_face = None
+            neighbours_other_side = []
             if location_filter == 0:
                 neighbours_other_side = cell_to_ablate[0].compute_neighbours(location_filter=2)
                 scutoid_face = np.nan
@@ -311,15 +313,15 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical'
             if type_of_ablation == 'recoil_info_apical':
                 v_model.set.dt = 0.005
             elif type_of_ablation == 'recoil_edge_info_apical':
-                v_model.set.dt = 0.0001
+                v_model.set.dt = 0.005
 
             v_model.set.dt0 = v_model.set.dt
             if type_of_ablation == 'recoil_edge_info_apical':
-                v_model.set.RemodelingFrequency = v_model.set.dt
-            else:
                 v_model.set.RemodelingFrequency = 0.02
+            else:
+                v_model.set.RemodelingFrequency = 100
             v_model.set.ablation = False
-            v_model.set.export_images = True
+            v_model.set.export_images = False
             if v_model.set.export_images and not os.path.exists(v_model.set.OutputFolder + '/images'):
                 os.mkdir(v_model.set.OutputFolder + '/images')
             edge_length_final_normalized = []
@@ -350,8 +352,8 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical'
                 if np.isnan(gr):
                     break
 
-            cell_to_ablate = cell_to_ablate[0].ID
-            neighbour_to_ablate = neighbour_to_ablate[0]
+            cell_to_ablate_ID = cell_to_ablate[0].ID
+            neighbour_to_ablate_ID = neighbour_to_ablate[0]
 
         K, initial_recoil, error_bars = fit_ablation_equation(edge_length_final_normalized, time_steps)
 
@@ -377,8 +379,8 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical'
 
         # Save the results
         dict_to_save = {
-            'cell_to_ablate': cell_to_ablate,
-            'neighbour_to_ablate': neighbour_to_ablate,
+            'cell_to_ablate': cell_to_ablate_ID,
+            'neighbour_to_ablate': neighbour_to_ablate_ID,
             'edge_length_init': edge_length_init,
             'edge_length_final': edge_length_final,
             'edge_length_final_normalized': edge_length_final_normalized,
