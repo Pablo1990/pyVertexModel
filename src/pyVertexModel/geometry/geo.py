@@ -1042,32 +1042,7 @@ class Geo:
                 # Log the ablation process
                 logger.info(' ---- Performing edge ablation: ' + str(self.cellsToAblate))
 
-                for cell_id in self.cellsToAblate:
-                    cell = self.Cells[cell_id]
-
-                    # Get ids of regular cells
-                    regular_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]
-
-                    # Get the ids of the vertices that are shared only by this cell
-                    cell_ids_only_this_cell = np.sum(np.isin(cell.T, regular_cells), axis=1) == 1
-
-                    if domain == 'Top':
-                        cell_ids_domain = np.any(np.isin(cell.T, self.XgTop), axis=1)
-                    elif domain == 'Bottom':
-                        cell_ids_domain = np.any(np.isin(cell.T, self.XgBottom), axis=1)
-                    elif domain == 'Lateral':
-                        cell_ids_domain = ~np.any(np.isin(cell.T, np.concatenate([self.XgTop, self.XgBottom])), axis=1)
-                    else:
-                        cell_ids_domain = np.ones(cell.T.shape[0], dtype=bool)
-
-                    cell_global_ids_only_this_cell = cell.globalIds[cell_ids_only_this_cell & cell_ids_domain]
-                    y_ablated.extend(cell_global_ids_only_this_cell.tolist())
-
-                    # Get the ids of the vertices that are shared by both cells
-                    for tet_id, tet  in enumerate(cell.T):
-                        if (np.sum(np.isin(tet, regular_cells)) == 2 and np.all(np.isin(self.cellsToAblate, tet))
-                                and cell_ids_domain[tet_id]):
-                            y_ablated.append(cell.globalIds[tet_id])
+                _, y_ablated = self.get_edges_vertices(self.cellsToAblate, domain)
 
         return y_ablated
 
@@ -1318,3 +1293,34 @@ class Geo:
         """
         centre_of_tissue = np.mean([c_cell.X for c_cell in self.Cells if c_cell.AliveStatus is not None], axis=0)
         return centre_of_tissue
+
+    def get_edge_length(self, cells_to_ablate, location_filter):
+        """
+        Get the edge length of the edge that share the cells_to_ablate
+        :param cells_to_ablate:
+        :param location_filter:
+        :param v_model:
+        :return:
+        """
+
+        vertices, _ = self.get_edges_vertices(cells_to_ablate, location_filter)
+        # Get the edge length
+        edge_length_init = 0
+        for num_vertex in range(0, len(vertices), 2):
+            edge_length_init += np.linalg.norm(vertices[num_vertex] - vertices[num_vertex + 1])
+
+        return edge_length_init
+
+    def get_edges_vertices(self, cells_to_ablate, location_filter):
+        vertices = []
+        vertices_globald_ids = []
+        c_cell = [c_cell for c_cell in self.Cells if c_cell.ID == cells_to_ablate[0]][0]
+        for c_face in c_cell.Faces:
+            if c_face.InterfaceType == location_filter:
+                for c_tri in c_face.Tris:
+                    if np.all(np.isin(cells_to_ablate, c_tri.SharedByCells)):
+                        vertices.append(c_cell.Y[c_tri.Edge[0]])
+                        vertices.append(c_cell.Y[c_tri.Edge[1]])
+                        vertices_globald_ids.append(c_cell.globalIds[c_tri.Edge[0]])
+                        vertices_globald_ids.append(c_cell.globalIds[c_tri.Edge[1]])
+        return vertices, vertices_globald_ids

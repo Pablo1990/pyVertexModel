@@ -295,7 +295,7 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical'
             cells_to_ablate = [cell_to_ablate[0].ID, neighbour_to_ablate[0]]
 
             # Get the edge that share both cells
-            edge_length_init = get_edge_length(cells_to_ablate, location_filter, v_model)
+            edge_length_init = v_model.geo.get_edge_length(cells_to_ablate, location_filter)
 
             # Ablate the edge
             v_model.set.ablation = True
@@ -305,7 +305,7 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical'
                 v_model.geo.ablate_cells(v_model.set, v_model.t, combine_cells=False)
                 v_model.geo.y_ablated = []
             elif type_of_ablation == 'recoil_edge_info_apical':
-                v_model.geo.y_ablated = v_model.geo.ablate_edge(v_model.set, v_model.t, domain='Top')
+                v_model.geo.y_ablated = v_model.geo.ablate_edge(v_model.set, v_model.t, domain=location_filter)
 
             # Relax the system
             initial_time = v_model.t
@@ -321,7 +321,7 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical'
             else:
                 v_model.set.RemodelingFrequency = 100
             v_model.set.ablation = False
-            v_model.set.export_images = False
+            v_model.set.export_images = True
             if v_model.set.export_images and not os.path.exists(v_model.set.OutputFolder + '/images'):
                 os.mkdir(v_model.set.OutputFolder + '/images')
             edge_length_final_normalized = []
@@ -364,7 +364,7 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical'
         plt.plot(time_steps, recoil_model(np.array(time_steps), initial_recoil, K), 'r')
         plt.xlabel('Time (s)')
         plt.ylabel('Edge length final')
-        plt.title('Ablation fit')
+        plt.title('Ablation fit' + str(cell_to_ablate_ID) + ' ' + str(neighbour_to_ablate_ID))
 
         # Save plot
         if type_of_ablation == 'recoil_info_apical':
@@ -449,36 +449,10 @@ def compute_edge_length_v_model(cells_to_ablate, edge_length_final, edge_length_
     if v_model.t == initial_time:
         return
     # Get the edge length
-    edge_length_final.append(get_edge_length(cells_to_ablate, location_filter, v_model))
+    edge_length_final.append(v_model.geo.get_edge_length(cells_to_ablate, location_filter))
     edge_length_final_normalized.append((edge_length_final[-1] - edge_length_init) / edge_length_init)
     print('Edge length final: ', edge_length_final[-1])
     # In seconds. 1 t = 1 minute = 60 seconds
     time_steps.append((v_model.t - initial_time) * 60)
     # Calculate the recoil
     recoil_speed.append(edge_length_final_normalized[-1] / time_steps[-1])
-
-
-
-def get_edge_length(cells_to_ablate, location_filter, v_model):
-    """
-    Get the edge length of the edge that share the cells_to_ablate
-    :param cells_to_ablate:
-    :param location_filter:
-    :param v_model:
-    :return:
-    """
-
-    vertices = []
-    cell = [cell for cell in v_model.geo.Cells if cell.ID == cells_to_ablate[0]][0]
-    for c_face in cell.Faces:
-        if c_face.InterfaceType == location_filter:
-            for c_tri in c_face.Tris:
-                if np.all(np.isin(cells_to_ablate, c_tri.SharedByCells)):
-                    vertices.append(cell.Y[c_tri.Edge[0]])
-                    vertices.append(cell.Y[c_tri.Edge[1]])
-    # Get the edge length
-    edge_length_init = 0
-    for num_vertex in range(0, len(vertices), 2):
-        edge_length_init += np.linalg.norm(vertices[num_vertex] - vertices[num_vertex + 1])
-
-    return edge_length_init
