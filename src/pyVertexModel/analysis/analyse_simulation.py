@@ -305,7 +305,8 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical'
                 v_model.geo.ablate_cells(v_model.set, v_model.t, combine_cells=False)
                 v_model.geo.y_ablated = []
             elif type_of_ablation == 'recoil_edge_info_apical':
-                v_model.geo.y_ablated = v_model.geo.ablate_edge(v_model.set, v_model.t, domain=location_filter)
+                v_model.geo.y_ablated = v_model.geo.ablate_edge(v_model.set, v_model.t, domain=location_filter,
+                                                                adjacent_surface=False)
 
             # Relax the system
             initial_time = v_model.t
@@ -317,7 +318,7 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical'
 
             v_model.set.dt0 = v_model.set.dt
             if type_of_ablation == 'recoil_edge_info_apical':
-                v_model.set.RemodelingFrequency = 0.02
+                v_model.set.RemodelingFrequency = 0.05
             else:
                 v_model.set.RemodelingFrequency = 100
             v_model.set.ablation = False
@@ -364,7 +365,7 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical'
         plt.plot(time_steps, recoil_model(np.array(time_steps), initial_recoil, K), 'r')
         plt.xlabel('Time (s)')
         plt.ylabel('Edge length final')
-        plt.title('Ablation fit' + str(cell_to_ablate_ID) + ' ' + str(neighbour_to_ablate_ID))
+        plt.title('Ablation fit - ' + str(cell_to_ablate_ID) + ' ' + str(neighbour_to_ablate_ID))
 
         # Save plot
         if type_of_ablation == 'recoil_info_apical':

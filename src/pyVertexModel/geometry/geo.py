@@ -1024,9 +1024,10 @@ class Geo:
                 # Empty the list of cells to ablate
                 self.cellsToAblate = None
 
-    def ablate_edge(self, c_set, t, domain='Top'):
+    def ablate_edge(self, c_set, t, domain='Top', adjacent_surface=True):
         """
         Ablate the edge shared between two cells
+        :param adjacent_surface:
         :param c_set:
         :param t:
         :param domain:
@@ -1043,6 +1044,39 @@ class Geo:
                 logger.info(' ---- Performing edge ablation: ' + str(self.cellsToAblate))
 
                 _, y_ablated = self.get_edges_vertices(self.cellsToAblate, domain)
+
+                # Get only duplicated vertices. In this way, we remove the vertices that are shared by more than two cells
+                y_ablated = list(set([item for item in y_ablated if y_ablated.count(item) > 1]))
+
+                # Add the vertices from the two cells to be ablated if required
+                for cell_id in self.cellsToAblate:
+                    cell = self.Cells[cell_id]
+
+                    # Get ids of regular cells
+                    regular_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]
+
+                    if adjacent_surface:
+                        # Get the ids of the vertices that are shared only by this cell
+                        cell_ids_only_this_cell = np.sum(np.isin(cell.T, regular_cells), axis=1) == 1
+
+                        if domain == 0:
+                            cell_ids_domain = ~np.any(np.isin(cell.T, self.XgBottom), axis=1)
+                        elif domain == 2:
+                            cell_ids_domain = ~np.any(np.isin(cell.T, self.XgTop), axis=1)
+                        elif domain == 1:
+                            cell_ids_domain = ~np.any(np.isin(cell.T, np.concatenate([self.XgTop, self.XgBottom])),
+                                                      axis=1)
+                        else:
+                            cell_ids_domain = np.ones(cell.T.shape[0], dtype=bool)
+
+                        cell_global_ids_only_this_cell = cell.globalIds[cell_ids_only_this_cell & cell_ids_domain]
+                        y_ablated.extend(cell_global_ids_only_this_cell.tolist())
+
+                    # # Get the ids of the vertices that are shared by both cells
+                    # for tet_id, tet in enumerate(cell.T):
+                    #     if (np.sum(np.isin(tet, regular_cells)) == 2 and np.all(np.isin(self.cellsToAblate, tet))
+                    #             and cell_ids_domain[tet_id]):
+                    #         y_ablated.append(cell.globalIds[tet_id])
 
         return y_ablated
 

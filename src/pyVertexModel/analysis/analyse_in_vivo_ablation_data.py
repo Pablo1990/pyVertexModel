@@ -26,7 +26,6 @@ for txt_file in txt_files:
     # Index time_steps_normalized with time_slices
     time_steps_normalized_sliced = np.array([time_steps[i] for i in time_slices - 1])
 
-
     time_steps_normalized = time_steps_normalized_sliced - time_steps_normalized_sliced[0]
 
     # Generate a plot with the edge length final and the fit for each ablation

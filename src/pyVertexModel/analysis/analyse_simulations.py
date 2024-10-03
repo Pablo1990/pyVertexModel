@@ -26,16 +26,13 @@ for _, file in enumerate(lst):
             #         os.path.join(folder, file, 'recoil_info_apical.pkl'))['recoiling_info_df_apical']
             # else:
             file_name = os.path.join(folder, file, 'before_ablation.pkl')
-            n_ablations = 1
-            t_end = 1.2
-            recoiling_info_df_apical = analyse_edge_recoil(os.path.join(folder, file, 'before_ablation.pkl'),
-                                                           type_of_ablation='recoil_info_apical',
-                                                           n_ablations=n_ablations, location_filter=0, t_end=t_end)
 
+            t_end = 0.5
+            n_ablations = 2
             recoiling_edge_info_df_apical = analyse_edge_recoil(os.path.join(folder, file, 'before_ablation.pkl'),
                                                            type_of_ablation='recoil_edge_info_apical',
                                                            n_ablations=n_ablations, location_filter=0, t_end=t_end)
-            if recoiling_info_df_apical is None:
+            if recoiling_edge_info_df_apical is None:
                 continue
 
             # recoiling_info = analyse_edge_recoil(os.path.join(folder, file, 'data_step_300.pkl'),
@@ -50,8 +47,8 @@ for _, file in enumerate(lst):
                 analyse_simulation(os.path.join(folder, file)))
 
             if important_features is not None and len(important_features) > 5:
-                important_features['recoiling_speed_apical'] = recoiling_info_df_apical[0]['initial_recoil_in_s']
-                important_features['K'] = recoiling_info_df_apical[0]['K']
+                #important_features['recoiling_speed_apical'] = recoiling_info_df_apical[0]['initial_recoil_in_s']
+                #important_features['K'] = recoiling_info_df_apical[0]['K']
 
                 important_features['K_edge'] = recoiling_edge_info_df_apical[0]['K']
                 important_features['recoiling_speed_edge_apical'] = recoiling_edge_info_df_apical[0]['initial_recoil_in_s']
