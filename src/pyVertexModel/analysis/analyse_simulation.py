@@ -356,7 +356,7 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical'
             cell_to_ablate_ID = cell_to_ablate[0].ID
             neighbour_to_ablate_ID = neighbour_to_ablate[0]
 
-        K, initial_recoil, error_bars = fit_ablation_equation(edge_length_final_normalized, time_steps)
+        K, initial_recoil, error_bars = fit_ablation_equation(edge_length_final, time_steps)
 
         # Generate a plot with the edge length final and the fit for each ablation
         plt.figure()
@@ -420,6 +420,10 @@ def fit_ablation_equation(edge_length_final_normalized, time_steps):
     :param time_steps:
     :return:    K, initial_recoil
     """
+
+    # Normalize the edge length
+    edge_length_init = edge_length_final_normalized[0]
+    edge_length_final_normalized = (edge_length_final_normalized - edge_length_init) / edge_length_init
 
     # Fit the model to the data
     [params, covariance] = curve_fit(recoil_model, time_steps, edge_length_final_normalized,
