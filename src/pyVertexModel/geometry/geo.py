@@ -1358,3 +1358,29 @@ class Geo:
                         vertices_globald_ids.append(c_cell.globalIds[c_tri.Edge[0]])
                         vertices_globald_ids.append(c_cell.globalIds[c_tri.Edge[1]])
         return vertices, vertices_globald_ids
+
+    def apply_periodic_boundary_conditions(self):
+        # Identify boundary vertices
+        top_boundary_vertices = self.XgTop
+        bottom_boundary_vertices = self.XgBottom
+
+        # Create a mapping between top and bottom boundary vertices
+        boundary_mapping = self.create_boundary_mapping(top_boundary_vertices, bottom_boundary_vertices)
+
+        # Update the positions and connectivity of the cells
+        self.update_cells_for_periodic_boundary(boundary_mapping)
+
+    def create_boundary_mapping(self, top_boundary, bottom_boundary):
+        # Assuming the vertices are ordered in a way that they correspond to each other
+        mapping = {}
+        for top_vertex, bottom_vertex in zip(top_boundary, bottom_boundary):
+            mapping[top_vertex] = bottom_vertex
+            mapping[bottom_vertex] = top_vertex
+        return mapping
+
+    def update_cells_for_periodic_boundary(self, boundary_mapping):
+        for cell in self.Cells:
+            for i, vertex in enumerate(cell.T):
+                if vertex in boundary_mapping:
+                    cell.T[i] = boundary_mapping[vertex]
+            cell.Y = self.recalculate_ys_from_previous(cell.T, cell.ID, cell.Set)
