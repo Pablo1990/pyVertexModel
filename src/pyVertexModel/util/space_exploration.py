@@ -31,21 +31,18 @@ def objective(trial):
     new_set.wound_default()
 
     # Set and define the parameters space
-    #new_set.nu = trial.suggest_float('nu', 0.05, 0.1, step=0.01)
-    new_set.lambdaV = trial.suggest_float('lambdaV', 0.01, 5, step=0.01)
-    new_set.ref_V0 = trial.suggest_float('ref_V0', 0.9, 1.1, step=0.01)
-    #new_set.kSubstrate = trial.suggest_float('kSubstrate', 0.01, 0.5, step=0.01)
-    #new_set.cLineTension = trial.suggest_float('cLineTension', 1e-6, 1e-2, step=1e-6)
-    #new_set.cLineTension_external = trial.suggest_float('cLineTension_external', 1e-6, 1e-2, step=1e-6)
-    #new_set.ref_A0 = round(trial.suggest_float('ref_A0', 0.1, 0.5, step=0.01), 2)
-    #new_set.lambdaS1 = round(trial.suggest_float('lambdaS1', 0.1, 1.5, step=0.1), 2)
-    #new_set.lambdaS2 = trial.suggest_float('lambdaS2', 0.1, 1.5, step=0.1)
-    #new_set.lambdaS3 = trial.suggest_float('lambdaS3', 0.09, 0.11, step=0.01)
-    #new_set.lambdaR = trial.suggest_float('lambdaR', 1e-7, 1e-5, step=1e-7)
-    #new_set.lambdaS2 = trial.suggest_float('lambdaS2', 0.001, 1, step=0.001)
-    #new_set.lambdaS3 = trial.suggest_float('lambdaS3', new_set.lambdaS1/10 , new_set.lambdaS1, step=new_set.lambdaS1/10)
-    #new_set.lambdaS2 = round(new_set.lambdaS1 / 100, 2)
-    #new_set.lambdaS3 = round(new_set.lambdaS1 / 10, 2)
+    percentage_deviation = 0.01
+    new_set.nu = trial.suggest_float('nu', new_set.nu - (new_set.nu * percentage_deviation), new_set.nu + (new_set.nu * percentage_deviation))
+    new_set.lambdaV = trial.suggest_float('lambdaV', new_set.lambdaV - (new_set.lambdaV * percentage_deviation), new_set.lambdaV + (new_set.lambdaV * percentage_deviation))
+    new_set.ref_V0 = trial.suggest_float('ref_V0', new_set.ref_V0 - (new_set.ref_V0 * percentage_deviation), new_set.ref_V0 + (new_set.ref_V0 * percentage_deviation))
+    new_set.kSubstrate = trial.suggest_float('kSubstrate', new_set.kSubstrate - (new_set.kSubstrate * percentage_deviation), new_set.kSubstrate + (new_set.kSubstrate * percentage_deviation))
+    new_set.cLineTension = trial.suggest_float('cLineTension', new_set.cLineTension - (new_set.cLineTension * percentage_deviation), new_set.cLineTension + (new_set.cLineTension * percentage_deviation))
+    new_set.cLineTension_external = trial.suggest_float('cLineTension_external', new_set.cLineTension_external - (new_set.cLineTension_external * percentage_deviation), new_set.cLineTension_external + (new_set.cLineTension_external * percentage_deviation))
+    new_set.ref_A0 = trial.suggest_float('ref_A0', new_set.ref_A0 - (new_set.ref_A0 * percentage_deviation), new_set.ref_A0 + (new_set.ref_A0 * percentage_deviation))
+    new_set.lambdaS1 = trial.suggest_float('lambdaS1', new_set.lambdaS1 - (new_set.lambdaS1 * percentage_deviation), new_set.lambdaS1 + (new_set.lambdaS1 * percentage_deviation))
+    new_set.lambdaS2 = trial.suggest_float('lambdaS2', new_set.lambdaS2 - (new_set.lambdaS2 * percentage_deviation), new_set.lambdaS2 + (new_set.lambdaS2 * percentage_deviation))
+    new_set.lambdaS3 = trial.suggest_float('lambdaS3', new_set.lambdaS3 - (new_set.lambdaS3 * percentage_deviation), new_set.lambdaS3 + (new_set.lambdaS3 * percentage_deviation))
+    new_set.lambdaR = trial.suggest_float('lambdaR', new_set.lambdaR - (new_set.lambdaR * percentage_deviation), new_set.lambdaR + (new_set.lambdaR * percentage_deviation))
     new_set.update_derived_parameters()
 
     if error_type == '_gr_':
