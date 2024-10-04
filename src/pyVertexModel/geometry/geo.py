@@ -1360,6 +1360,10 @@ class Geo:
         return vertices, vertices_globald_ids
 
     def apply_periodic_boundary_conditions(self):
+        """
+        Apply periodic boundary conditions.
+        :return:
+        """
         # Identify boundary vertices
         top_boundary_vertices = self.XgTop
         bottom_boundary_vertices = self.XgBottom
@@ -1371,6 +1375,12 @@ class Geo:
         self.update_cells_for_periodic_boundary(boundary_mapping)
 
     def create_boundary_mapping(self, top_boundary, bottom_boundary):
+        """
+        Create a mapping between the top and bottom boundary vertices.
+        :param top_boundary:
+        :param bottom_boundary:
+        :return:
+        """
         # Assuming the vertices are ordered in a way that they correspond to each other
         mapping = {}
         for top_vertex, bottom_vertex in zip(top_boundary, bottom_boundary):
@@ -1379,6 +1389,11 @@ class Geo:
         return mapping
 
     def update_cells_for_periodic_boundary(self, boundary_mapping):
+        """
+        Update the cells for periodic boundary conditions.
+        :param boundary_mapping:
+        :return:
+        """
         for cell in self.Cells:
             for i, vertex in enumerate(cell.T):
                 if vertex in boundary_mapping:
