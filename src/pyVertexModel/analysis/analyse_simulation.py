@@ -201,7 +201,7 @@ def calculate_important_features(post_wound_features):
     return important_features
 
 
-def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical', n_ablations=1, location_filter=0, t_end=0.1):
+def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_edge_info_apical', n_ablations=2, location_filter=0, t_end=0.5):
     """
     Analyse how much an edge recoil if we ablate an edge of a cell
     :param type_of_ablation:
