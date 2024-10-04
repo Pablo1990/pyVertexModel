@@ -1294,7 +1294,7 @@ class Geo:
 
         return np.mean(wound_height)
 
-    def combine_two_nodes(self, nodes_to_combine, c_set):
+    def combine_two_nodes(self, nodes_to_combine, c_set, recalculate_ys=True):
         """
         Combine two nodes into one node
         :param nodes_to_combine:
@@ -1316,7 +1316,8 @@ class Geo:
             if c_cell.ID not in nodes_to_combine:
                 remove_duplicates(c_cell, nodes_to_combine)
 
-        new_cell.Y = self.recalculate_ys_from_previous(new_cell.T, new_cell.ID, c_set)
+        if recalculate_ys:
+            new_cell.Y = self.recalculate_ys_from_previous(new_cell.T, new_cell.ID, c_set)
 
         # Remove the second node
         self.Cells[nodes_to_combine[1]].kill_cell()
@@ -1399,15 +1400,12 @@ class Geo:
                 list_of_opposite_cells.append(cell.ID)
                 print(f'Cell {cell.ID} is opposite to {cell.opposite_cell}')
 
+                self.combine_two_nodes([cell.ID, cell.opposite_cell], c_set, recalculate_ys=False)
+
         # Check if there are any cells that are not opposite to any other cell
         np.setxor1d(self.BorderCells, list_of_opposite_cells)
 
         # 79: is not a border cell.
-
-        # Combine the cells
-        for cell in self.Cells:
-            if cell.AliveStatus is not None and cell.ID in list_of_opposite_cells:
-                self.combine_two_nodes([cell.ID, cell.opposite_cell], c_set)
 
         return boundary_mapping
 
@@ -1446,7 +1444,7 @@ class Geo:
         cell_ids = []
         distances = []
         for border_cell in self.BorderCells:
-            if border_cell == cell.ID or border_cell in neighbour_cells:
+            if border_cell == cell.ID or border_cell in neighbour_cells or self.Cells[border_cell].AliveStatus is None:
                 continue
             border_node = self.Cells[border_cell].X
             vector_to_border_node = centre_of_tissue - border_node
