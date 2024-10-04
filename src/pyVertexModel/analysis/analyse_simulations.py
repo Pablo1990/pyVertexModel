@@ -9,7 +9,7 @@ from src.pyVertexModel.util.utils import save_variables, load_variables
 folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/'
 all_files_features = []
 lst = os.listdir(folder)
-lst.sort(reverse=False)
+lst.sort(reverse=True)
 for _, file in enumerate(lst):
     print(file)
 
@@ -50,8 +50,10 @@ for _, file in enumerate(lst):
                 #important_features['recoiling_speed_apical'] = recoiling_info_df_apical[0]['initial_recoil_in_s']
                 #important_features['K'] = recoiling_info_df_apical[0]['K']
 
-                important_features['K_edge'] = recoiling_edge_info_df_apical[0]['K']
-                important_features['recoiling_speed_edge_apical'] = recoiling_edge_info_df_apical[0]['initial_recoil_in_s']
+                important_features['K_edge'] = np.mean([recoiling_edge_info_df_apical[i]['K'] for i in range(n_ablations) if
+                                                        1 > recoiling_edge_info_df_apical[i]['K'] > 1e-5])
+                important_features['recoiling_speed_edge_apical'] = np.mean([recoiling_edge_info_df_apical[i]['initial_recoil_in_s'] for i in range(n_ablations) if
+                                                                             1 > recoiling_edge_info_df_apical[i]['initial_recoil_in_s'] > 1e-5])
 
                 # important_features['recoiling_speed_basal'] = np.mean(recoiling_info_df_basal['initial_recoil_in_s'])
                 # important_features['recoiling_speed_basal_std'] = np.std(recoiling_info_df_basal['initial_recoil_in_s'])
@@ -68,14 +70,14 @@ for _, file in enumerate(lst):
                 try:
                     important_features['cells_area_top_lower_than_average_diff'] = count_of_smalls_cells_per_time_ablation.loc[id_before_ablation].ID - count_of_smalls_cells_per_time_0.loc[0].ID
                 except KeyError as e:
-                    print("Error cells_area_top_lower_than_average_diff: ", e)
+                    #print("Error cells_area_top_lower_than_average_diff: ", e)
                     important_features['cells_area_top_lower_than_average_diff'] = np.nan
 
                 important_features['folder'] = file
 
                 # Extract the variables from folder name
                 file_splitted = file.split('_')
-                variables_to_show = {'Cells', 'visc', 'lVol', 'kSubs', 'lt', 'ltExt', 'refA0', 'eTriAreaBarrier',
+                variables_to_show = {'Cells', 'visc', 'lVol', 'refV0', 'kSubs', 'lt', 'ltExt', 'refA0', 'eTriAreaBarrier',
                                      'eARBarrier', 'RemStiff', 'lS1', 'lS2', 'lS3', 'pString'}
                 for i in range(3, len(file_splitted), 1):
                     if file_splitted[i] in variables_to_show:
