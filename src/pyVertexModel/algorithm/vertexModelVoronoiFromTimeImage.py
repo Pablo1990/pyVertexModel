@@ -510,7 +510,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                             tris.SharedByCells = np.array(shared_cells_list)
 
         # Create periodic boundary conditions
-        self.geo.apply_periodic_boundary_conditions()
+        self.geo.apply_periodic_boundary_conditions(self.set)
 
         if self.set.ablation:
             self.geo.cellsToAblate = self.set.cellsToAblate

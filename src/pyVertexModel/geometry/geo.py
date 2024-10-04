@@ -3,6 +3,7 @@ import os
 
 import numpy as np
 import vtk
+from numpy.ma.extras import setxor1d
 from scipy.spatial import ConvexHull
 
 from src.pyVertexModel.geometry import face, cell
@@ -1359,34 +1360,58 @@ class Geo:
                         vertices_globald_ids.append(c_cell.globalIds[c_tri.Edge[1]])
         return vertices, vertices_globald_ids
 
-    def apply_periodic_boundary_conditions(self):
+    def apply_periodic_boundary_conditions(self, c_set):
         """
         Apply periodic boundary conditions.
         :return:
         """
         # Identify boundary vertices
-        top_boundary_vertices = self.XgTop
-        bottom_boundary_vertices = self.XgBottom
+        border_cells = self.BorderCells
 
-        # Create a mapping between top and bottom boundary vertices
-        boundary_mapping = self.create_boundary_mapping(top_boundary_vertices, bottom_boundary_vertices)
+        # Generate a mapping where every border cell should have a corresponding cell on the other side of the boundary at least
+        self.create_boundary_mapping(border_cells, c_set, location_filter=0)
 
-        # Update the positions and connectivity of the cells
-        self.update_cells_for_periodic_boundary(boundary_mapping)
-
-    def create_boundary_mapping(self, top_boundary, bottom_boundary):
+    def create_boundary_mapping(self, border_cells, c_set, location_filter):
         """
-        Create a mapping between the top and bottom boundary vertices.
-        :param top_boundary:
-        :param bottom_boundary:
+        Generate a mapping every border cell is mapped to a cell on the other side of the boundary. For that, we should
+        get the cells that are on the other side of the boundary and have the same IDs as the border cells on the other
+        side.
+        :param c_set:
+        :param border_cells:
+        :param location_filter:
         :return:
         """
-        # Assuming the vertices are ordered in a way that they correspond to each other
-        mapping = {}
-        for top_vertex, bottom_vertex in zip(top_boundary, bottom_boundary):
-            mapping[top_vertex] = bottom_vertex
-            mapping[bottom_vertex] = top_vertex
-        return mapping
+        centre_of_tissue = self.compute_centre_of_tissue()
+
+        boundary_mapping = {}
+
+        list_of_opposite_cells = []
+
+        for cell in self.Cells:
+            if (cell.AliveStatus is not None and cell.ID in border_cells and np.any(np.isin(self.XgLateral, cell.T)) and
+                    cell.opposite_cell is None):
+                # Get the cell on the opoosite side of the boundary
+                cell_ids_by_distance, distances = self.get_opposite_border_cell(cell, centre_of_tissue, location_filter)
+
+                cell.opposite_cell = cell_ids_by_distance[0]
+                self.Cells[cell.opposite_cell].opposite_cell = cell.ID
+                list_of_opposite_cells.append(cell.opposite_cell)
+                list_of_opposite_cells.append(cell.ID)
+                print(f'Cell {cell.ID} is opposite to {cell.opposite_cell}')
+
+        # Check if there are any cells that are not opposite to any other cell
+        np.setxor1d(self.BorderCells, list_of_opposite_cells)
+
+        # 79: is not a border cell.
+
+        # Combine the cells
+        for cell in self.Cells:
+            if cell.AliveStatus is not None and cell.ID in list_of_opposite_cells:
+                self.combine_two_nodes([cell.ID, cell.opposite_cell], c_set)
+
+        return boundary_mapping
+
+
 
     def update_cells_for_periodic_boundary(self, boundary_mapping):
         """
@@ -1399,3 +1424,38 @@ class Geo:
                 if vertex in boundary_mapping:
                     cell.T[i] = boundary_mapping[vertex]
             cell.Y = self.recalculate_ys_from_previous(cell.T, cell.ID, cell.Set)
+
+    def get_opposite_border_cell(self, cell, centre_of_tissue, location_filter):
+        """
+        Get the cell on the opposite side of the boundary.
+        :param cell:
+        :param centre_of_tissue:
+        :param location_filter:
+        :return:
+        """
+        # Get the node of the cell
+        node = cell.X
+
+        # Get neighbour nodes
+        neighbour_cells = cell.compute_neighbours(location_filter)
+
+        # Get the vector of the centre of the tissue to the node
+        vector_to_node = node - centre_of_tissue
+
+        # Get the border cell located closest to the vector from the centre of the tissue to the node
+        cell_ids = []
+        distances = []
+        for border_cell in self.BorderCells:
+            if border_cell == cell.ID or border_cell in neighbour_cells:
+                continue
+            border_node = self.Cells[border_cell].X
+            vector_to_border_node = centre_of_tissue - border_node
+            distances.append(np.linalg.norm(vector_to_node - vector_to_border_node))
+            cell_ids.append(border_cell)
+
+        # Sort the distances and the cell_ids
+        cell_ids = [cell_id for _, cell_id in sorted(zip(distances, cell_ids))]
+        distances = sorted(distances)
+
+        return cell_ids, distances
+

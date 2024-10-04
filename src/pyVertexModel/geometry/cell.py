@@ -71,6 +71,7 @@ class Cell:
         Constructor of the class
         :param mat_file:
         """
+        self.opposite_cell = None
         self.lambda_s1_noise = None
         self.lambda_s2_noise = None
         self.lambda_s3_noise = None
