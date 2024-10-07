@@ -1304,9 +1304,15 @@ class Geo:
         cells_to_combine = [c_cell for c_cell in self.Cells if c_cell.ID in nodes_to_combine]
 
         new_cell = cells_to_combine[0]
-        new_cell.X = np.mean([c_cell.X for c_cell in cells_to_combine], axis=0)
+        if recalculate_ys:
+            new_cell.X = np.mean([c_cell.X for c_cell in cells_to_combine], axis=0)
+        else:
+            new_cell.X = np.concatenate([c_cell.X for c_cell in cells_to_combine], axis=0)
+            new_cell.cglobalids = np.concatenate([c_cell.globalIds for c_cell in cells_to_combine], axis=0)
         new_cell.T = np.concatenate([c_cell.T for c_cell in cells_to_combine], axis=0)
         new_cell.Y = np.concatenate([c_cell.Y for c_cell in cells_to_combine], axis=0)
+
+        prev_number_of_tets = len(new_cell.T)
 
         # Replace old for new ID
         remove_duplicates(new_cell, nodes_to_combine)
@@ -1318,6 +1324,18 @@ class Geo:
 
         if recalculate_ys:
             new_cell.Y = self.recalculate_ys_from_previous(new_cell.T, new_cell.ID, c_set)
+        else:
+            new_cell.globalIds = np.concatenate([c_cell.globalIds for c_cell in cells_to_combine], axis=0)
+            new_cell.Faces = np.concatenate([c_cell.Faces for c_cell in cells_to_combine], axis=0)
+
+            # Update the sharedByCells of the faces
+            for c_face in new_cell.Faces:
+                if np.any(np.isin(c_face.ij, nodes_to_combine[1])):
+                    c_face.ij[np.where(c_face.ij == nodes_to_combine[1])[0][0]] = nodes_to_combine[0]
+                for c_tri in c_face.Tris:
+                    if np.any(np.isin(c_tri.SharedByCells, nodes_to_combine[1])):
+                        c_tri.SharedByCells[np.where(c_tri.SharedByCells == nodes_to_combine[1])[0][0]] = nodes_to_combine[0]
+                        c_tri.Edge = c_tri.Edge + prev_number_of_tets
 
         # Remove the second node
         self.Cells[nodes_to_combine[1]].kill_cell()
@@ -1384,6 +1402,10 @@ class Geo:
         """
         centre_of_tissue = self.compute_centre_of_tissue()
 
+        neighbours_of_border_cells = np.unique(np.concatenate([c_cell.compute_neighbours(location_filter) for c_cell in self.Cells
+                                      if c_cell.ID in border_cells]))
+        neighbours_of_border_cells = np.setdiff1d(neighbours_of_border_cells, border_cells)
+
         boundary_mapping = {}
 
         list_of_opposite_cells = []
@@ -1392,7 +1414,8 @@ class Geo:
             if (cell.AliveStatus is not None and cell.ID in border_cells and np.any(np.isin(self.XgLateral, cell.T)) and
                     cell.opposite_cell is None):
                 # Get the cell on the opoosite side of the boundary
-                cell_ids_by_distance, distances = self.get_opposite_border_cell(cell, centre_of_tissue, location_filter)
+                cell_ids_by_distance, distances = self.get_opposite_border_cell(cell, neighbours_of_border_cells,
+                                                                                centre_of_tissue, location_filter)
 
                 cell.opposite_cell = cell_ids_by_distance[0]
                 self.Cells[cell.opposite_cell].opposite_cell = cell.ID
@@ -1404,6 +1427,8 @@ class Geo:
 
         # Check if there are any cells that are not opposite to any other cell
         np.setxor1d(self.BorderCells, list_of_opposite_cells)
+
+
 
         # 79: is not a border cell.
 
@@ -1423,7 +1448,7 @@ class Geo:
                     cell.T[i] = boundary_mapping[vertex]
             cell.Y = self.recalculate_ys_from_previous(cell.T, cell.ID, cell.Set)
 
-    def get_opposite_border_cell(self, cell, centre_of_tissue, location_filter):
+    def get_opposite_border_cell(self, cell, neighbours_of_border_cells, centre_of_tissue, location_filter):
         """
         Get the cell on the opposite side of the boundary.
         :param cell:
@@ -1443,8 +1468,9 @@ class Geo:
         # Get the border cell located closest to the vector from the centre of the tissue to the node
         cell_ids = []
         distances = []
-        for border_cell in self.BorderCells:
-            if border_cell == cell.ID or border_cell in neighbour_cells or self.Cells[border_cell].AliveStatus is None:
+        for border_cell in neighbours_of_border_cells:
+            if border_cell == cell.ID or border_cell in neighbour_cells or self.Cells[border_cell].AliveStatus is None \
+                    or self.Cells[border_cell].opposite_cell is not None:
                 continue
             border_node = self.Cells[border_cell].X
             vector_to_border_node = centre_of_tissue - border_node
