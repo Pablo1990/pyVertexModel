@@ -207,6 +207,9 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
                     else:
                         possible_tets = opposite_cell.T[[np.sum(np.isin(opposite_cells, tet)) >= 2 for tet in opposite_cell.T]]
 
+                    if possible_tets.shape[0] == 0:
+                        possible_tets = opposite_cell.T[[np.sum(np.isin(opposite_cells, tet)) == 1 for tet in opposite_cell.T]]
+
                     if possible_tets.shape[0] > 0:
                         # Filter the possible tets to get its correct location (XgTop, XgBottom or XgLateral)
                         if possible_tets.shape[0] > 1:
@@ -241,7 +244,7 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
                             if possible_tets.shape[0] == 0:
                                 possible_tets = old_possible_tets
                     else:
-                        print('Puta mierda')
+                        print('Error in Tet ID: ', tet)
 
                     if possible_tets.shape[0] == 1:
                         opposite_global_id = opposite_cell.globalIds[np.where(np.all(opposite_cell.T == possible_tets[0], axis=1))[0][0]]
@@ -261,8 +264,6 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
                             opposite_global_id = opposite_cell.globalIds[
                                 np.where(np.all(opposite_cell.T == possible_tets[0], axis=1))[0][0]]
                             dy[global_id * 3:global_id * 3 + 3, 0] = dy[opposite_global_id * 3:opposite_global_id * 3 + 3, 0]
-                    else:
-                        print('Error in Tet ID: ', tet)
 
     dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
     Geo.update_vertices(dy_reshaped)
