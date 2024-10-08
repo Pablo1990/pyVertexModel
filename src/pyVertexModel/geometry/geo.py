@@ -1388,11 +1388,12 @@ class Geo:
         # Identify boundary vertices
         border_cells = self.BorderCells
         border_ghost_nodes = self.BorderGhostNodes
+        border_and_ghost_nodes = np.concatenate([border_cells, border_ghost_nodes])
 
         #
         list_of_opposite_cells = []
 
-        for border_cell in border_ghost_nodes:
+        for border_cell in border_and_ghost_nodes:
             cell = self.Cells[border_cell]
             cell_ids_by_distance, distances = self.get_opposite_border_cell(cell, border_cells,
                                                                             centre_of_tissue)
@@ -1428,7 +1429,7 @@ class Geo:
                     cell.T[i] = boundary_mapping[vertex]
             cell.Y = self.recalculate_ys_from_previous(cell.T, cell.ID, cell.Set)
 
-    def get_opposite_border_cell(self, cell, neighbours_of_border_cells, centre_of_tissue):
+    def get_opposite_border_cell(self, cell, neighbours_of_border_cells, centre_of_tissue, location_filter=None):
         """
         Get the cell on the opposite side of the boundary.
         :param cell:
@@ -1449,8 +1450,7 @@ class Geo:
         cell_ids = []
         distances = []
         for border_cell in neighbours_of_border_cells:
-            if border_cell == cell.ID or border_cell in neighbour_cells or self.Cells[border_cell].AliveStatus is None \
-                    or self.Cells[border_cell].opposite_cell is not None:
+            if border_cell == cell.ID or border_cell in neighbour_cells:
                 continue
             border_node = self.Cells[border_cell].X
             vector_to_border_node = centre_of_tissue - border_node
