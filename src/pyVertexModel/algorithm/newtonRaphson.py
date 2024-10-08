@@ -250,7 +250,7 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
                         opposite_global_id = opposite_cell.globalIds[np.where(np.all(opposite_cell.T == possible_tets[0], axis=1))[0][0]]
                         dy[global_id * 3:global_id * 3 + 3, 0] = dy[opposite_global_id * 3:opposite_global_id * 3 + 3, 0]
                     elif possible_tets.shape[0] > 1:
-                        # TODO: It is either the first one or an average of the two
+                        # TODO: what happens if it is an scutoid
                         if scutoid:
                             avg_dy = np.zeros(3)
                             # Average of the dys
@@ -259,7 +259,9 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
                                     np.where(np.all(opposite_cell.T == c_tet, axis=1))[0][0]]
                                 avg_dy += dy[opposite_global_id * 3:opposite_global_id * 3 + 3, 0]
                             avg_dy /= possible_tets.shape[0]
-                            dy[global_id * 3:global_id * 3 + 3, 0] = avg_dy
+
+                            # NOW IT IS 0, WITH THE AVERAGE IT THERE WERE ERRORS
+                            dy[global_id * 3:global_id * 3 + 3, 0] = 0
                         else:
                             opposite_global_id = opposite_cell.globalIds[
                                 np.where(np.all(opposite_cell.T == possible_tets[0], axis=1))[0][0]]
