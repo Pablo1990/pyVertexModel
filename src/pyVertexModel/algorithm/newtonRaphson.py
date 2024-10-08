@@ -202,28 +202,46 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
                     opposite_cells = np.unique([Geo.Cells[int(t)].opposite_cell for t in tet if Geo.Cells[int(t)].opposite_cell is not None])
 
                     # Get the most similar tetrahedron in the opposite cell
-                    possible_tets = opposite_cell.T[[np.sum(np.isin(opposite_cells, tet)) > 1 for tet in opposite_cell.T]]
+                    if len(opposite_cells) < 3:
+                        possible_tets = opposite_cell.T[[np.sum(np.isin(opposite_cells, tet)) == len(opposite_cells) for tet in opposite_cell.T]]
+                    else:
+                        possible_tets = opposite_cell.T[[np.sum(np.isin(opposite_cells, tet)) >= 2 for tet in opposite_cell.T]]
 
-                    # Filter the possible tets to get its correct location (XgTop, XgBottom or XgLateral)
-                    if possible_tets.shape[0] > 1:
-                        scutoid = False
-                        if np.isin(tet, Geo.XgTop).any():
-                            possible_tets = possible_tets[np.isin(possible_tets, Geo.XgTop).any(axis=1)]
-                        elif np.isin(tet, Geo.XgBottom).any():
-                            possible_tets = possible_tets[np.isin(possible_tets, Geo.XgBottom).any(axis=1)]
-                        else:
-                            # Get the tets that are not in the top or bottom
-                            possible_tets = possible_tets[np.logical_not(np.isin(possible_tets, Geo.XgTop).any(axis=1))]
-                            scutoid = True
+                    if possible_tets.shape[0] > 0:
+                        # Filter the possible tets to get its correct location (XgTop, XgBottom or XgLateral)
+                        if possible_tets.shape[0] > 1:
+                            old_possible_tets = possible_tets
+                            scutoid = False
+                            if np.isin(tet, Geo.XgTop).any():
+                                possible_tets = possible_tets[np.isin(possible_tets, Geo.XgTop).any(axis=1)]
+                            elif np.isin(tet, Geo.XgBottom).any():
+                                possible_tets = possible_tets[np.isin(possible_tets, Geo.XgBottom).any(axis=1)]
+                            else:
+                                # Get the tets that are not in the top or bottom
+                                possible_tets = possible_tets[np.logical_not(np.isin(possible_tets, Geo.XgTop).any(axis=1))]
+                                scutoid = True
 
-                    # Compare tets with the number of ghost nodes
-                    if possible_tets.shape[0] > 1 and not scutoid:
-                        # Get the tets that have the same number of ghost nodes as the original tet
-                        possible_tets = possible_tets[np.sum(np.isin(tet[tet!=node], Geo.XgID)) == np.sum(np.isin(possible_tets, Geo.XgID), axis=1)]
+                            if possible_tets.shape[0] == 0:
+                                possible_tets = old_possible_tets
 
-                    if possible_tets.shape[0] > 1 and not scutoid:
-                        # Get the tet that has the same number of ghost nodes as the original tet
-                        possible_tets = possible_tets[np.sum(np.isin(tet[tet!=node], Geo.XgID)) == np.sum(np.isin(possible_tets, np.concatenate([Geo.XgTop, Geo.XgBottom])), axis=1)]
+                        # Compare tets with the number of ghost nodes
+                        if possible_tets.shape[0] > 1 and not scutoid:
+                            old_possible_tets = possible_tets
+                            # Get the tets that have the same number of ghost nodes as the original tet
+                            possible_tets = possible_tets[np.sum(np.isin(tet[tet!=node], Geo.XgID)) == np.sum(np.isin(possible_tets, Geo.XgID), axis=1)]
+
+                            if possible_tets.shape[0] == 0:
+                                possible_tets = old_possible_tets
+
+                        if possible_tets.shape[0] > 1 and not scutoid:
+                            old_possible_tets = possible_tets
+                            # Get the tet that has the same number of ghost nodes as the original tet
+                            possible_tets = possible_tets[np.sum(np.isin(tet[tet!=node], Geo.XgID)) == np.sum(np.isin(possible_tets, np.concatenate([Geo.XgTop, Geo.XgBottom])), axis=1)]
+
+                            if possible_tets.shape[0] == 0:
+                                possible_tets = old_possible_tets
+                    else:
+                        print('Puta mierda')
 
                     if possible_tets.shape[0] == 1:
                         opposite_global_id = opposite_cell.globalIds[np.where(np.all(opposite_cell.T == possible_tets[0], axis=1))[0][0]]
@@ -233,9 +251,9 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
                         if scutoid:
                             avg_dy = np.zeros(3)
                             # Average of the dys
-                            for tet in possible_tets:
+                            for c_tet in possible_tets:
                                 opposite_global_id = opposite_cell.globalIds[
-                                    np.where(np.all(opposite_cell.T == tet, axis=1))[0][0]]
+                                    np.where(np.all(opposite_cell.T == c_tet, axis=1))[0][0]]
                                 avg_dy += dy[opposite_global_id * 3:opposite_global_id * 3 + 3, 0]
                             avg_dy /= possible_tets.shape[0]
                             dy[global_id * 3:global_id * 3 + 3, 0] = avg_dy
