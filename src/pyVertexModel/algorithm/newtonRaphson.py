@@ -186,6 +186,66 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
     """
     dy[dof, 0] = -Set.dt / Set.nu * g[dof]
 
+    # Update border ghost nodes with the same displacement as the corresponding real nodes
+    for numCell in Geo.BorderCells:
+        cell = Geo.Cells[numCell]
+
+        tets_to_check = cell.T[np.any(np.isin(cell.T, Geo.BorderGhostNodes), axis=1)]
+        global_ids_to_update = cell.globalIds[np.any(np.isin(cell.T, Geo.BorderGhostNodes), axis=1)]
+
+        for i, tet in enumerate(tets_to_check):
+            for j, node in enumerate(tet):
+                if node in Geo.BorderGhostNodes:
+                    global_id = global_ids_to_update[i]
+                    # Iterate over each element in tet and access the opposite_cell attribute
+                    opposite_cell = Geo.Cells[Geo.Cells[int(node)].opposite_cell]
+                    opposite_cells = np.unique([Geo.Cells[int(t)].opposite_cell for t in tet if Geo.Cells[int(t)].opposite_cell is not None])
+
+                    # Get the most similar tetrahedron in the opposite cell
+                    possible_tets = opposite_cell.T[[np.sum(np.isin(opposite_cells, tet)) > 1 for tet in opposite_cell.T]]
+
+                    # Filter the possible tets to get its correct location (XgTop, XgBottom or XgLateral)
+                    if possible_tets.shape[0] > 1:
+                        scutoid = False
+                        if np.isin(tet, Geo.XgTop).any():
+                            possible_tets = possible_tets[np.isin(possible_tets, Geo.XgTop).any(axis=1)]
+                        elif np.isin(tet, Geo.XgBottom).any():
+                            possible_tets = possible_tets[np.isin(possible_tets, Geo.XgBottom).any(axis=1)]
+                        else:
+                            # Get the tets that are not in the top or bottom
+                            possible_tets = possible_tets[np.logical_not(np.isin(possible_tets, Geo.XgTop).any(axis=1))]
+                            scutoid = True
+
+                    # Compare tets with the number of ghost nodes
+                    if possible_tets.shape[0] > 1 and not scutoid:
+                        # Get the tets that have the same number of ghost nodes as the original tet
+                        possible_tets = possible_tets[np.sum(np.isin(tet[tet!=node], Geo.XgID)) == np.sum(np.isin(possible_tets, Geo.XgID), axis=1)]
+
+                    if possible_tets.shape[0] > 1 and not scutoid:
+                        # Get the tet that has the same number of ghost nodes as the original tet
+                        possible_tets = possible_tets[np.sum(np.isin(tet[tet!=node], Geo.XgID)) == np.sum(np.isin(possible_tets, np.concatenate([Geo.XgTop, Geo.XgBottom])), axis=1)]
+
+                    if possible_tets.shape[0] == 1:
+                        opposite_global_id = opposite_cell.globalIds[np.where(np.all(opposite_cell.T == possible_tets[0], axis=1))[0][0]]
+                        dy[global_id * 3:global_id * 3 + 3, 0] = dy[opposite_global_id * 3:opposite_global_id * 3 + 3, 0]
+                    elif possible_tets.shape[0] > 1:
+                        # TODO: It is either the first one or an average of the two
+                        if scutoid:
+                            avg_dy = np.zeros(3)
+                            # Average of the dys
+                            for tet in possible_tets:
+                                opposite_global_id = opposite_cell.globalIds[
+                                    np.where(np.all(opposite_cell.T == tet, axis=1))[0][0]]
+                                avg_dy += dy[opposite_global_id * 3:opposite_global_id * 3 + 3, 0]
+                            avg_dy /= possible_tets.shape[0]
+                            dy[global_id * 3:global_id * 3 + 3, 0] = avg_dy
+                        else:
+                            opposite_global_id = opposite_cell.globalIds[
+                                np.where(np.all(opposite_cell.T == possible_tets[0], axis=1))[0][0]]
+                            dy[global_id * 3:global_id * 3 + 3, 0] = dy[opposite_global_id * 3:opposite_global_id * 3 + 3, 0]
+                    else:
+                        print('Error in Tet ID: ', tet)
+
     dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
     Geo.update_vertices(dy_reshaped)
     Geo.update_measures()
