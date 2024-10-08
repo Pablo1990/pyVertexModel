@@ -1081,8 +1081,6 @@ class Geo:
 
         return y_ablated
 
-
-
     def compute_cells_wound_edge(self, location_filter=None):
         """
         Compute the cells at the wound edge[
@@ -1243,7 +1241,7 @@ class Geo:
         list_of_cells = np.zeros(len(self.Cells))
         for num_cell, cell in enumerate(self.Cells):
             if cell.AliveStatus == 1 and cell.ID not in wound_cells:
-                cell_neighbours = cell.compute_neighbours()
+                cell_neighbours = cell.compute_neighbours(location_filter)
                 cell_distance = 1
                 while list_of_cells[num_cell] == 0:
                     for c in cell_neighbours:
@@ -1334,7 +1332,8 @@ class Geo:
                     c_face.ij[np.where(c_face.ij == nodes_to_combine[1])[0][0]] = nodes_to_combine[0]
                 for c_tri in c_face.Tris:
                     if np.any(np.isin(c_tri.SharedByCells, nodes_to_combine[1])):
-                        c_tri.SharedByCells[np.where(c_tri.SharedByCells == nodes_to_combine[1])[0][0]] = nodes_to_combine[0]
+                        c_tri.SharedByCells[np.where(c_tri.SharedByCells == nodes_to_combine[1])[0][0]] = \
+                            nodes_to_combine[0]
                         c_tri.Edge = c_tri.Edge + prev_number_of_tets
 
         # Remove the second node
@@ -1384,57 +1383,38 @@ class Geo:
         Apply periodic boundary conditions.
         :return:
         """
-        # Identify boundary vertices
-        border_cells = self.BorderCells
-
-        # Generate a mapping where every border cell should have a corresponding cell on the other side of the boundary at least
-        self.create_boundary_mapping(border_cells, c_set, location_filter=0)
-
-    def create_boundary_mapping(self, border_cells, c_set, location_filter):
-        """
-        Generate a mapping every border cell is mapped to a cell on the other side of the boundary. For that, we should
-        get the cells that are on the other side of the boundary and have the same IDs as the border cells on the other
-        side.
-        :param c_set:
-        :param border_cells:
-        :param location_filter:
-        :return:
-        """
         centre_of_tissue = self.compute_centre_of_tissue()
 
-        neighbours_of_border_cells = np.unique(np.concatenate([c_cell.compute_neighbours(location_filter) for c_cell in self.Cells
-                                      if c_cell.ID in border_cells]))
-        neighbours_of_border_cells = np.setdiff1d(neighbours_of_border_cells, border_cells)
+        # Identify boundary vertices
+        border_cells = self.BorderCells
+        border_ghost_nodes = self.BorderGhostNodes
 
-        boundary_mapping = {}
-
+        #
         list_of_opposite_cells = []
 
-        for cell in self.Cells:
-            if (cell.AliveStatus is not None and cell.ID in border_cells and np.any(np.isin(self.XgLateral, cell.T)) and
-                    cell.opposite_cell is None):
-                # Get the cell on the opoosite side of the boundary
-                cell_ids_by_distance, distances = self.get_opposite_border_cell(cell, neighbours_of_border_cells,
-                                                                                centre_of_tissue, location_filter)
+        for border_cell in border_ghost_nodes:
+            cell = self.Cells[border_cell]
+            cell_ids_by_distance, distances = self.get_opposite_border_cell(cell, border_cells,
+                                                                            centre_of_tissue)
+            cell.opposite_cell = cell_ids_by_distance[0]
+            list_of_opposite_cells.append(cell.opposite_cell)
+            list_of_opposite_cells.append(cell.ID)
+            print(f'Cell {cell.ID} is opposite to {cell.opposite_cell} with a distance of {distances[0]}')
 
-                cell.opposite_cell = cell_ids_by_distance[0]
-                self.Cells[cell.opposite_cell].opposite_cell = cell.ID
-                list_of_opposite_cells.append(cell.opposite_cell)
-                list_of_opposite_cells.append(cell.ID)
-                print(f'Cell {cell.ID} is opposite to {cell.opposite_cell}')
+            # Create a 'fake' cell in the boundary ghost nodes with:
+            # - The ID I'm unsure. Two options:
+            #   * The ID of the cell on the other side of the boundary.
+            #   * The ID of the cell on the boundary. Thus, two different IDs.
+            # - The Xs of that boundary ghost node.
+            # - Ys should be rebuild.
+            # - T should be the same as the cell on the other side of the boundary.
+            # - Global IDs should be the same as the cell on the other side of the boundary.
 
-                self.combine_two_nodes([cell.ID, cell.opposite_cell], c_set, recalculate_ys=False)
+
+            # Ys should extrapolated from the other side using the distance between the Xs of the cells. Same for the face centres.
 
         # Check if there are any cells that are not opposite to any other cell
-        np.setxor1d(self.BorderCells, list_of_opposite_cells)
-
-
-
-        # 79: is not a border cell.
-
-        return boundary_mapping
-
-
+        print(list_of_opposite_cells)
 
     def update_cells_for_periodic_boundary(self, boundary_mapping):
         """
@@ -1448,7 +1428,7 @@ class Geo:
                     cell.T[i] = boundary_mapping[vertex]
             cell.Y = self.recalculate_ys_from_previous(cell.T, cell.ID, cell.Set)
 
-    def get_opposite_border_cell(self, cell, neighbours_of_border_cells, centre_of_tissue, location_filter):
+    def get_opposite_border_cell(self, cell, neighbours_of_border_cells, centre_of_tissue):
         """
         Get the cell on the opposite side of the boundary.
         :param cell:
@@ -1482,4 +1462,3 @@ class Geo:
         distances = sorted(distances)
 
         return cell_ids, distances
-
