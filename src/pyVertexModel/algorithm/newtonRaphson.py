@@ -187,6 +187,26 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
     dy[dof, 0] = -Set.dt / Set.nu * g[dof]
 
     # Update border ghost nodes with the same displacement as the corresponding real nodes
+    dy = map_vertices_periodic_boundaries(Geo, dy)
+
+    dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
+    Geo.update_vertices(dy_reshaped)
+    Geo.update_measures()
+
+    g, energies = gGlobal(Geo, Geo, Geo, Set, Set.implicit_method)
+    gr = np.linalg.norm(g[dof])
+    Set.iter = Set.MaxIter
+
+    return Geo, dy, gr
+
+
+def map_vertices_periodic_boundaries(Geo, dy):
+    """
+    Update the border ghost nodes with the same displacement as the corresponding real nodes
+    :param Geo:
+    :param dy:
+    :return:
+    """
     for numCell in Geo.BorderCells:
         cell = Geo.Cells[numCell]
 
@@ -198,17 +218,24 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
                 if node in Geo.BorderGhostNodes:
                     global_id = global_ids_to_update[i]
                     # Iterate over each element in tet and access the opposite_cell attribute
+                    if Geo.Cells[int(numCell)].opposite_cell is None:
+                        return dy
+                    
                     opposite_cell = Geo.Cells[Geo.Cells[int(node)].opposite_cell]
-                    opposite_cells = np.unique([Geo.Cells[int(t)].opposite_cell for t in tet if Geo.Cells[int(t)].opposite_cell is not None])
+                    opposite_cells = np.unique(
+                        [Geo.Cells[int(t)].opposite_cell for t in tet if Geo.Cells[int(t)].opposite_cell is not None])
 
                     # Get the most similar tetrahedron in the opposite cell
                     if len(opposite_cells) < 3:
-                        possible_tets = opposite_cell.T[[np.sum(np.isin(opposite_cells, tet)) == len(opposite_cells) for tet in opposite_cell.T]]
+                        possible_tets = opposite_cell.T[
+                            [np.sum(np.isin(opposite_cells, tet)) == len(opposite_cells) for tet in opposite_cell.T]]
                     else:
-                        possible_tets = opposite_cell.T[[np.sum(np.isin(opposite_cells, tet)) >= 2 for tet in opposite_cell.T]]
+                        possible_tets = opposite_cell.T[
+                            [np.sum(np.isin(opposite_cells, tet)) >= 2 for tet in opposite_cell.T]]
 
                     if possible_tets.shape[0] == 0:
-                        possible_tets = opposite_cell.T[[np.sum(np.isin(opposite_cells, tet)) == 1 for tet in opposite_cell.T]]
+                        possible_tets = opposite_cell.T[
+                            [np.sum(np.isin(opposite_cells, tet)) == 1 for tet in opposite_cell.T]]
 
                     if possible_tets.shape[0] > 0:
                         # Filter the possible tets to get its correct location (XgTop, XgBottom or XgLateral)
@@ -221,7 +248,8 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
                                 possible_tets = possible_tets[np.isin(possible_tets, Geo.XgBottom).any(axis=1)]
                             else:
                                 # Get the tets that are not in the top or bottom
-                                possible_tets = possible_tets[np.logical_not(np.isin(possible_tets, Geo.XgTop).any(axis=1))]
+                                possible_tets = possible_tets[
+                                    np.logical_not(np.isin(possible_tets, Geo.XgTop).any(axis=1))]
                                 scutoid = True
 
                             if possible_tets.shape[0] == 0:
@@ -231,7 +259,9 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
                         if possible_tets.shape[0] > 1 and not scutoid:
                             old_possible_tets = possible_tets
                             # Get the tets that have the same number of ghost nodes as the original tet
-                            possible_tets = possible_tets[np.sum(np.isin(tet[tet!=node], Geo.XgID)) == np.sum(np.isin(possible_tets, Geo.XgID), axis=1)]
+                            possible_tets = possible_tets[
+                                np.sum(np.isin(tet[tet != node], Geo.XgID)) == np.sum(np.isin(possible_tets, Geo.XgID),
+                                                                                      axis=1)]
 
                             if possible_tets.shape[0] == 0:
                                 possible_tets = old_possible_tets
@@ -239,7 +269,8 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
                         if possible_tets.shape[0] > 1 and not scutoid:
                             old_possible_tets = possible_tets
                             # Get the tet that has the same number of ghost nodes as the original tet
-                            possible_tets = possible_tets[np.sum(np.isin(tet[tet!=node], Geo.XgID)) == np.sum(np.isin(possible_tets, np.concatenate([Geo.XgTop, Geo.XgBottom])), axis=1)]
+                            possible_tets = possible_tets[np.sum(np.isin(tet[tet != node], Geo.XgID)) == np.sum(
+                                np.isin(possible_tets, np.concatenate([Geo.XgTop, Geo.XgBottom])), axis=1)]
 
                             if possible_tets.shape[0] == 0:
                                 possible_tets = old_possible_tets
@@ -247,8 +278,10 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
                         print('Error in Tet ID: ', tet)
 
                     if possible_tets.shape[0] == 1:
-                        opposite_global_id = opposite_cell.globalIds[np.where(np.all(opposite_cell.T == possible_tets[0], axis=1))[0][0]]
-                        dy[global_id * 3:global_id * 3 + 3, 0] = dy[opposite_global_id * 3:opposite_global_id * 3 + 3, 0]
+                        opposite_global_id = opposite_cell.globalIds[
+                            np.where(np.all(opposite_cell.T == possible_tets[0], axis=1))[0][0]]
+                        dy[global_id * 3:global_id * 3 + 3, 0] = dy[opposite_global_id * 3:opposite_global_id * 3 + 3,
+                                                                 0]
                     elif possible_tets.shape[0] > 1:
                         # TODO: what happens if it is an scutoid
                         if scutoid:
@@ -265,17 +298,10 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
                         else:
                             opposite_global_id = opposite_cell.globalIds[
                                 np.where(np.all(opposite_cell.T == possible_tets[0], axis=1))[0][0]]
-                            dy[global_id * 3:global_id * 3 + 3, 0] = dy[opposite_global_id * 3:opposite_global_id * 3 + 3, 0]
-
-    dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
-    Geo.update_vertices(dy_reshaped)
-    Geo.update_measures()
-
-    g, energies = gGlobal(Geo, Geo, Geo, Set, Set.implicit_method)
-    gr = np.linalg.norm(g[dof])
-    Set.iter = Set.MaxIter
-
-    return Geo, dy, gr
+                            dy[global_id * 3:global_id * 3 + 3, 0] = dy[
+                                                                     opposite_global_id * 3:opposite_global_id * 3 + 3,
+                                                                     0]
+    return dy
 
 
 def ml_divide(K, dof, g):
