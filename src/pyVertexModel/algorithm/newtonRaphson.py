@@ -217,10 +217,12 @@ def map_vertices_periodic_boundaries(Geo, dy):
             for j, node in enumerate(tet):
                 if node in Geo.BorderGhostNodes:
                     global_id = global_ids_to_update[i]
-                    # Iterate over each element in tet and access the opposite_cell attribute
-                    if Geo.Cells[int(numCell)].opposite_cell is None:
+
+                    # Check if the object has the attribute opposite_cell
+                    if not hasattr(Geo.Cells[int(node)], 'opposite_cell'):
                         return dy
-                    
+
+                    # Iterate over each element in tet and access the opposite_cell attribute
                     opposite_cell = Geo.Cells[Geo.Cells[int(node)].opposite_cell]
                     opposite_cells = np.unique(
                         [Geo.Cells[int(t)].opposite_cell for t in tet if Geo.Cells[int(t)].opposite_cell is not None])
