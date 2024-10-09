@@ -30,7 +30,7 @@ class KgTriAREnergyBarrier(Kg):
                         if Tris[t].lambda_r_noise is None:
                             Tris[t].lambda_r_noise = lambda_r_noise
 
-                        if np.all(~np.isin(Cell.globalIds[Tris[t].Edge], Geo.y_ablated)):
+                        if not np.all(np.isin(Cell.globalIds[Tris[t].Edge], Geo.y_ablated)):
                             fact = Tris[t].lambda_r_noise / Geo.lmin0 ** 4
                             n3 = Cell.Faces[f].globalIds
                             nY_original = np.array([Cell.globalIds[edge] for edge in Tris[t].Edge] + [n3], dtype=int)

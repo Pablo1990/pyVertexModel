@@ -1047,7 +1047,7 @@ class Geo:
                 _, y_ablated = self.get_edges_vertices(self.cellsToAblate, domain)
 
                 # Get only duplicated vertices. In this way, we remove the vertices that are shared by more than two cells
-                y_ablated = list(set([item for item in y_ablated if y_ablated.count(item) > 1]))
+                #y_ablated = list(set([item for item in y_ablated if y_ablated.count(item) > 1]))
 
                 # Add the vertices from the two cells to be ablated if required
                 for cell_id in self.cellsToAblate:

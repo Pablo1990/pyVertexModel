@@ -34,7 +34,7 @@ class KgTriEnergyBarrier(Kg):
                     if Tris[t].lambda_b_noise is None:
                         Tris[t].lambda_b_noise = add_noise_to_parameter(lambdaB, 0)
 
-                    if np.all(~np.isin(Cell.globalIds[Tris[t].Edge], Geo.y_ablated)):
+                    if not np.all(np.isin(Cell.globalIds[Tris[t].Edge], Geo.y_ablated)):
                         fact = -((Tris[t].lambda_b_noise * Set.Beta) / barrier_tri0) * np.exp(
                             Tris[t].lambda_b_noise * (1 - Set.Beta * Face.Tris[t].Area / barrier_tri0))
                         fact2 = fact * -((Tris[t].lambda_b_noise * Set.Beta) / barrier_tri0)
