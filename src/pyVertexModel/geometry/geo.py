@@ -1400,22 +1400,10 @@ class Geo:
             cell.opposite_cell = cell_ids_by_distance[0]
             list_of_opposite_cells.append(cell.opposite_cell)
             list_of_opposite_cells.append(cell.ID)
-            print(f'Cell {cell.ID} is opposite to {cell.opposite_cell} with a distance of {distances[0]}')
+            #print(f'Cell {cell.ID} is opposite to {cell.opposite_cell} with a distance of {distances[0]}')
 
-            # Create a 'fake' cell in the boundary ghost nodes with:
-            # - The ID I'm unsure. Two options:
-            #   * The ID of the cell on the other side of the boundary.
-            #   * The ID of the cell on the boundary. Thus, two different IDs.
-            # - The Xs of that boundary ghost node.
-            # - Ys should be rebuild.
-            # - T should be the same as the cell on the other side of the boundary.
-            # - Global IDs should be the same as the cell on the other side of the boundary.
-
-
-            # Ys should extrapolated from the other side using the distance between the Xs of the cells. Same for the face centres.
 
         # Check if there are any cells that are not opposite to any other cell
-        print(list_of_opposite_cells)
 
     def update_cells_for_periodic_boundary(self, boundary_mapping):
         """

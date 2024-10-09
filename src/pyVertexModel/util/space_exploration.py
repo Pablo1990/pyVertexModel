@@ -1,6 +1,7 @@
 import logging
 import os
 
+import numpy as np
 import optuna
 import pandas as pd
 import plotly
@@ -37,7 +38,6 @@ def objective(trial):
     new_set.ref_V0 = trial.suggest_float('ref_V0', new_set.ref_V0 - (new_set.ref_V0 * percentage_deviation), new_set.ref_V0 + (new_set.ref_V0 * percentage_deviation))
     new_set.kSubstrate = trial.suggest_float('kSubstrate', new_set.kSubstrate - (new_set.kSubstrate * percentage_deviation), new_set.kSubstrate + (new_set.kSubstrate * percentage_deviation))
     new_set.cLineTension = trial.suggest_float('cLineTension', new_set.cLineTension - (new_set.cLineTension * percentage_deviation), new_set.cLineTension + (new_set.cLineTension * percentage_deviation))
-    new_set.cLineTension_external = trial.suggest_float('cLineTension_external', new_set.cLineTension_external - (new_set.cLineTension_external * percentage_deviation), new_set.cLineTension_external + (new_set.cLineTension_external * percentage_deviation))
     new_set.ref_A0 = trial.suggest_float('ref_A0', new_set.ref_A0 - (new_set.ref_A0 * percentage_deviation), new_set.ref_A0 + (new_set.ref_A0 * percentage_deviation))
     new_set.lambdaS1 = trial.suggest_float('lambdaS1', new_set.lambdaS1 - (new_set.lambdaS1 * percentage_deviation), new_set.lambdaS1 + (new_set.lambdaS1 * percentage_deviation))
     new_set.lambdaS2 = trial.suggest_float('lambdaS2', new_set.lambdaS2 - (new_set.lambdaS2 * percentage_deviation), new_set.lambdaS2 + (new_set.lambdaS2 * percentage_deviation))
@@ -66,13 +66,13 @@ def objective(trial):
         # Analyse the edge recoil
         try:
             file_name = os.path.join(vModel.set.OutputFolder, 'before_ablation.pkl')
-            n_ablations = 1
-            t_end = 1.2
+            n_ablations = 2
+            t_end = 0.5
             recoiling_info = analyse_edge_recoil(file_name, n_ablations=n_ablations, location_filter=0, t_end=t_end)
 
             # Return a metric to minimize
-            K = recoiling_info['K']
-            initial_recoil = recoiling_info['initial_recoil_in_s']
+            K = np.mean(recoiling_info['K'])
+            initial_recoil = np.mean(recoiling_info['initial_recoil_in_s'])
         except Exception as e:
             K = [1]
             initial_recoil = [1]
