@@ -258,7 +258,7 @@ class Remodelling:
                 gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
                 cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
 
-                if len(np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])) > 3:
+                if len(np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])) > 3 and np.all(~np.isin(cellNodesShared, self.Geo.BorderCells)):
                     how_close_to_vertex = 0.2
                     strong_gradient = 0
                     self.Geo = (
