@@ -38,11 +38,11 @@ def analyse_simulation(folder):
                 features_per_time_all_cells.append(all_cells)
                 features_per_time.append(avg_cells)
 
-                # Create a temporary directory to store the images
-                temp_dir = os.path.join(folder, 'images')
-                if not os.path.exists(temp_dir):
-                    os.mkdir(temp_dir)
-                vModel.screenshot(temp_dir)
+                # # Create a temporary directory to store the images
+                # temp_dir = os.path.join(folder, 'images')
+                # if not os.path.exists(temp_dir):
+                #     os.mkdir(temp_dir)
+                # vModel.screenshot(temp_dir)
 
                 # temp_dir = os.path.join(folder, 'images_wound_edge')
                 # if not os.path.exists(temp_dir):
