@@ -316,6 +316,8 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_edge_info_ap
             elif type_of_ablation == 'recoil_edge_info_apical':
                 v_model.set.dt = 0.005
 
+            v_model.set.Remodelling = False
+
             v_model.set.dt0 = v_model.set.dt
             if type_of_ablation == 'recoil_edge_info_apical':
                 v_model.set.RemodelingFrequency = 0.05
