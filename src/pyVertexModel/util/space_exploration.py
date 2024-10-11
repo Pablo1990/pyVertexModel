@@ -33,7 +33,6 @@ def objective(trial):
 
     # Set and define the parameters space
     percentage_deviation = 0.01
-    new_set.nu = trial.suggest_float('nu', new_set.nu - (new_set.nu * percentage_deviation), new_set.nu + (new_set.nu * percentage_deviation))
     new_set.lambdaV = trial.suggest_float('lambdaV', new_set.lambdaV - (new_set.lambdaV * percentage_deviation), new_set.lambdaV + (new_set.lambdaV * percentage_deviation))
     new_set.ref_V0 = trial.suggest_float('ref_V0', new_set.ref_V0 - (new_set.ref_V0 * percentage_deviation), new_set.ref_V0 + (new_set.ref_V0 * percentage_deviation))
     new_set.kSubstrate = trial.suggest_float('kSubstrate', new_set.kSubstrate - (new_set.kSubstrate * percentage_deviation), new_set.kSubstrate + (new_set.kSubstrate * percentage_deviation))
@@ -43,6 +42,8 @@ def objective(trial):
     new_set.lambdaS2 = trial.suggest_float('lambdaS2', new_set.lambdaS2 - (new_set.lambdaS2 * percentage_deviation), new_set.lambdaS2 + (new_set.lambdaS2 * percentage_deviation))
     new_set.lambdaS3 = trial.suggest_float('lambdaS3', new_set.lambdaS3 - (new_set.lambdaS3 * percentage_deviation), new_set.lambdaS3 + (new_set.lambdaS3 * percentage_deviation))
     new_set.lambdaR = trial.suggest_float('lambdaR', new_set.lambdaR - (new_set.lambdaR * percentage_deviation), new_set.lambdaR + (new_set.lambdaR * percentage_deviation))
+    new_set.purseStringStrength = trial.suggest_float('purseStringStrength', new_set.purseStringStrength - (new_set.purseStringStrength * percentage_deviation), new_set.purseStringStrength + (new_set.purseStringStrength * percentage_deviation))
+    new_set.lateralCablesStrength = trial.suggest_float('lateralCablesStrength', new_set.lateralCablesStrength - (new_set.lateralCablesStrength * percentage_deviation), new_set.lateralCablesStrength + (new_set.lateralCablesStrength * percentage_deviation))
     new_set.update_derived_parameters()
 
     if error_type == '_gr_':
