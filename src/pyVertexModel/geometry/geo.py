@@ -7,6 +7,7 @@ from numpy.ma.extras import setxor1d
 from scipy.spatial import ConvexHull
 
 from src.pyVertexModel.geometry import face, cell
+from src.pyVertexModel.geometry.face import standard_interface_type
 from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes, calculate_polygon_area
 
 logger = logging.getLogger("pyVertexModel")
@@ -1369,7 +1370,7 @@ class Geo:
         vertices_globald_ids = []
         c_cell = [c_cell for c_cell in self.Cells if c_cell.ID == cells_to_ablate[0]][0]
         for c_face in c_cell.Faces:
-            if c_face.InterfaceType == location_filter:
+            if standard_interface_type(c_face.InterfaceType) == standard_interface_type(location_filter):
                 for c_tri in c_face.Tris:
                     if np.all(np.isin(cells_to_ablate, c_tri.SharedByCells)):
                         vertices.append(c_cell.Y[c_tri.Edge[0]])
