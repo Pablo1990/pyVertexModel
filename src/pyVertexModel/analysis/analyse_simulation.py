@@ -27,7 +27,9 @@ def analyse_simulation(folder):
 
         # Go through all the files in the folder
         all_files = os.listdir(folder)
-        all_files.sort()
+
+        # Sort files by date
+        all_files = sorted(all_files, key=lambda x: os.path.getmtime(os.path.join(folder, x)))
         for file_id, file in enumerate(all_files):
             if file.endswith('.pkl') and not file.__contains__('data_step_before_remodelling') and not file.__contains__('recoil'):
                 # Load the state of the model
@@ -70,9 +72,12 @@ def analyse_simulation(folder):
         features_per_time_df.to_excel(os.path.join(folder, 'features_per_time.xlsx'))
 
         # Obtain pre-wound features
-        pre_wound_features = features_per_time_df['time'][features_per_time_df['time'] < vModel.set.TInitAblation]
-        pre_wound_features = features_per_time_df[features_per_time_df['time'] ==
-                                                  pre_wound_features.iloc[-1]]
+        try:
+            pre_wound_features = features_per_time_df['time'][features_per_time_df['time'] < vModel.set.TInitAblation]
+            pre_wound_features = features_per_time_df[features_per_time_df['time'] ==
+                                                      pre_wound_features.iloc[-1]]
+        except Exception as e:
+            pre_wound_features = features_per_time_df.iloc[0]
 
         # Obtain post-wound features
         post_wound_features = features_per_time_df[features_per_time_df['time'] >= vModel.set.TInitAblation]
