@@ -316,7 +316,7 @@ class Set:
         self.lambdaS4 = self.lambdaS2
 
         # VTK
-        self.VTK = False
+        self.VTK = True
 
         # Implicit vs Explicit
         self.implicit_method = False
