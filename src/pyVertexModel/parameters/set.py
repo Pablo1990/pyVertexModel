@@ -66,7 +66,7 @@ class Set:
             # ============================ Mechanics =============================
             # Volumes
             self.lambdaV = 5.0
-            self.lambdaV_Debris = 0
+            self.lambdaV_Debris = 1e-8
             # Surface area
             self.SurfaceType = 1
             self.A0eq0 = True
@@ -218,16 +218,15 @@ class Set:
 
         current_datetime = datetime.now()
         new_outputFolder = ''.join([PROJECT_DIRECTORY, '/Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")),
-                                    ])
-                                    #'_Cells_', str(self.TotalCells), '_visc_', str(self.nu),
-                                    #'_lVol_', str(self.lambdaV), '_refV0_', str(self.ref_V0),
-                                    #'_kSubs_', str(self.kSubstrate), '_kCeil_', str(self.kCeiling),
-                                    #'_lt_', '{:0.2e}'.format(self.cLineTension), '_ltExt_', '{:0.2e}'.format(self.cLineTension_external),
-                                    #'_noise_', str(self.noise_random), '_refA0_', str(self.ref_A0),
-                                    #'_eARBarrier_', '{:0.2e}'.format(self.lambdaR),
-                                    #'_RemStiff_', str(self.RemodelStiffness), '_lS1_', str(self.lambdaS1),
-                                    #'_lS2_', str(self.lambdaS2), '_lS3_', str(self.lambdaS3),
-                                    #'_ps_', str(self.purseStringStrength), '_psType_', str(self.TypeOfPurseString)
+                                    'Cells_', str(self.TotalCells), '_visc_', '{:0.2e}'.format(self.nu),
+                                    '_lVol_', '{:0.2e}'.format(self.lambdaV), '_refV0_', '{:0.2e}'.format(self.ref_V0),
+                                    '_kSubs_', '{:0.2e}'.format(self.kSubstrate),
+                                    '_lt_', '{:0.2e}'.format(self.cLineTension),
+                                    '_refA0_', '{:0.2e}'.format(self.ref_A0),
+                                    '_eARBarrier_', '{:0.2e}'.format(self.lambdaR),
+                                    '_RemStiff_', str(self.RemodelStiffness), '_lS1_', '{:0.2e}'.format(self.lambdaS1),
+                                    '_lS2_', '{:0.2e}'.format(self.lambdaS2), '_lS3_', '{:0.2e}'.format(self.lambdaS3),
+                                    '_ps_', '{:0.2e}'.format(self.purseStringStrength), '_psType_', str(self.TypeOfPurseString)])
         self.define_if_not_defined("OutputFolder", new_outputFolder)
 
     def stretch(self):
@@ -260,58 +259,86 @@ class Set:
         # 40 cells 3 cells to ablate
         # 110 cells 7 cells to ablate
         self.TotalCells = 150
+        # per 1 micrometer of diameter on the top side of the cell
         self.CellHeight = 15
-        self.tend = 16
-        self.Nincr = self.tend * 100
+        # Tend is the final time of the simulation
+        self.tend = 50
+        # Nincr is the number of increments
+        self.Nincr = self.tend * 30
 
+        # Viscosity
         self.nu = 0.07
+        # Energy Barrier Area
         self.EnergyBarrierA = False
         self.lambdaB = 20
 
+        # Energy Barrier Aspect Ratio
         self.EnergyBarrierAR = True
-        self.lambdaR = 1e-8
+        self.lambdaR = 9.5e-9
 
-        self.lambdaV = 50
-        self.ref_V0 = 0.99
-        self.kSubstrate = 0
-        self.kCeiling = 0
-        self.cLineTension = 1e-8
-        self.Contractility_external = True
-        self.Contractility_external_axis = [0, 1]
-        self.cLineTension_external = self.cLineTension
+        # Volume
+        self.lambdaV = 1
+        self.ref_V0 = 1
 
+        # Substrate
+        self.kSubstrate = 0.1
+        #self.kCeiling = 0
+
+        # Contractility
+        self.cLineTension = 0
+
+        # Brownian motion
         self.brownian_motion = False
         self.brownian_motion_scale = 0
-
         self.noise_random = 0
+
+        # Purse String
         self.TypeOfPurseString = 2
-        self.Remodelling = 0
-        self.RemodelStiffness = 0.95
-        self.ref_A0 = 1
-        self.lambdaS1 = 0.5
+
+        # Remodelling
+        self.Remodelling = True
+        # How big or small the edge to remodel
+        # 0.15 is 15% of average the edge. This is a threshold to remodel the edge
+        if self.Remodelling:
+            self.RemodelStiffness = 0.9
+        else:
+            self.RemodelStiffness = 2
+
+        # Surface Area
+        self.ref_A0 = 0.92
+        # Top
+        self.lambdaS1 = 1.5
+        # c_cell-c_cell
         self.lambdaS2 = self.lambdaS1 / 100
+        # Bottom
         self.lambdaS3 = self.lambdaS1 / 10
+        # Substrate - c_cell
         self.lambdaS4 = self.lambdaS2
 
+        # VTK
         self.VTK = False
+
+        # Implicit vs Explicit
         self.implicit_method = False
+
+        # Ablation yes or no
         self.ablation = True
         self.check_for_non_used_parameters()
 
     def wound_default(self):
         # ============================== Ablation ============================
         self.cellsToAblate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-        self.TInitAblation = 10
+        self.TInitAblation = 20
         self.TEndAblation = self.TInitAblation + 60
         self.debris_contribution = np.finfo(float).eps
         # =========================== Contractility ==========================
         self.Contractility = True
-        self.TypeOfPurseString = 0
+        self.TypeOfPurseString = 2
         # 0: Intensity-based purse string
         # 1: Strain-based purse string (delayed)
         # 2: Fixed with linear increase purse string
-        self.purseStringStrength = 0
-        self.lateralCablesStrength = 0
+        self.purseStringStrength = 3.5e-5
+        self.lateralCablesStrength = self.purseStringStrength / 5
         self.delay_purse_string = 5.8
         self.delay_lateral_cables = 0.2
 
