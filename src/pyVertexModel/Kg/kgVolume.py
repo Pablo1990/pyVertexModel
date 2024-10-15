@@ -65,20 +65,19 @@ class KgVolume(Kg):
             ge = np.zeros(self.g.shape, dtype=self.precision_type)
             for face in Cell.Faces:
                 for tri in face.Tris:
-                    if np.all(~np.isin(tri.Edge, Geo.y_ablated)):
-                        y1 = Ys[tri.Edge[0]]
-                        y2 = Ys[tri.Edge[1]]
-                        y3 = face.Centre
-                        n3 = face.globalIds
-                        nY = [Cell.globalIds[tri.Edge[0]], Cell.globalIds[tri.Edge[1]], n3]
+                    y1 = Ys[tri.Edge[0]]
+                    y2 = Ys[tri.Edge[1]]
+                    y3 = face.Centre
+                    n3 = face.globalIds
+                    nY = [Cell.globalIds[tri.Edge[0]], Cell.globalIds[tri.Edge[1]], n3]
 
-                        if Geo.remodelling and not np.any(np.isin(nY, Cell.vertices_and_faces_to_remodel)):
-                            continue
+                    if Geo.remodelling and not np.any(np.isin(nY, Cell.vertices_and_faces_to_remodel)):
+                        continue
 
-                        gs, Ks = kg_functions.gKDet(y1, y2, y3)
-                        ge = self.assemble_g(ge, gs, np.array(nY, dtype='int'))
-                        if calculate_K:
-                            self.assemble_k(Ks * fact / 6, np.array(nY, dtype='int'))
+                    gs, Ks = kg_functions.gKDet(y1, y2, y3)
+                    ge = self.assemble_g(ge, gs, np.array(nY, dtype='int'))
+                    if calculate_K:
+                        self.assemble_k(Ks * fact / 6, np.array(nY, dtype='int'))
 
             self.g += ge * fact / 6  # Volume contribution of each triangle is det(Y1,Y2,Y3)/6
             if calculate_K:

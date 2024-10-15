@@ -3,9 +3,11 @@ import os
 
 import numpy as np
 import vtk
+from numpy.ma.extras import setxor1d
 from scipy.spatial import ConvexHull
 
 from src.pyVertexModel.geometry import face, cell
+from src.pyVertexModel.geometry.face import standard_interface_type
 from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes, calculate_polygon_area
 
 logger = logging.getLogger("pyVertexModel")
@@ -1024,9 +1026,10 @@ class Geo:
                 # Empty the list of cells to ablate
                 self.cellsToAblate = None
 
-    def ablate_edge(self, c_set, t, domain='Top'):
+    def ablate_edge(self, c_set, t, domain='Top', adjacent_surface=True):
         """
         Ablate the edge shared between two cells
+        :param adjacent_surface:
         :param c_set:
         :param t:
         :param domain:
@@ -1042,24 +1045,42 @@ class Geo:
                 # Log the ablation process
                 logger.info(' ---- Performing edge ablation: ' + str(self.cellsToAblate))
 
+                _, y_ablated = self.get_edges_vertices(self.cellsToAblate, domain)
+
+                # Get only duplicated vertices. In this way, we remove the vertices that are shared by more than two cells
+                #y_ablated = list(set([item for item in y_ablated if y_ablated.count(item) > 1]))
+
+                # Add the vertices from the two cells to be ablated if required
                 for cell_id in self.cellsToAblate:
                     cell = self.Cells[cell_id]
 
                     # Get ids of regular cells
                     regular_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]
 
-                    # Get the ids of the vertices that are shared only by this cell
-                    cell_global_ids_only_this_cell = cell.globalIds[np.sum(np.isin(cell.T, regular_cells), axis=1) == 1]
-                    y_ablated.extend(cell_global_ids_only_this_cell.tolist())
+                    if adjacent_surface:
+                        # Get the ids of the vertices that are shared only by this cell
+                        cell_ids_only_this_cell = np.sum(np.isin(cell.T, regular_cells), axis=1) == 1
 
-                    # Get the ids of the vertices that are shared by both cells
-                    for tet_id, tet  in enumerate(cell.T):
-                        if np.sum(np.isin(tet, regular_cells)) == 2 and np.all(np.isin(self.cellsToAblate, tet)):
-                            y_ablated.append(cell.globalIds[tet_id])
+                        if domain == 0:
+                            cell_ids_domain = ~np.any(np.isin(cell.T, self.XgBottom), axis=1)
+                        elif domain == 2:
+                            cell_ids_domain = ~np.any(np.isin(cell.T, self.XgTop), axis=1)
+                        elif domain == 1:
+                            cell_ids_domain = ~np.any(np.isin(cell.T, np.concatenate([self.XgTop, self.XgBottom])),
+                                                      axis=1)
+                        else:
+                            cell_ids_domain = np.ones(cell.T.shape[0], dtype=bool)
+
+                        cell_global_ids_only_this_cell = cell.globalIds[cell_ids_only_this_cell & cell_ids_domain]
+                        y_ablated.extend(cell_global_ids_only_this_cell.tolist())
+
+                    # # Get the ids of the vertices that are shared by both cells
+                    # for tet_id, tet in enumerate(cell.T):
+                    #     if (np.sum(np.isin(tet, regular_cells)) == 2 and np.all(np.isin(self.cellsToAblate, tet))
+                    #             and cell_ids_domain[tet_id]):
+                    #         y_ablated.append(cell.globalIds[tet_id])
 
         return y_ablated
-
-
 
     def compute_cells_wound_edge(self, location_filter=None):
         """
@@ -1221,7 +1242,7 @@ class Geo:
         list_of_cells = np.zeros(len(self.Cells))
         for num_cell, cell in enumerate(self.Cells):
             if cell.AliveStatus == 1 and cell.ID not in wound_cells:
-                cell_neighbours = cell.compute_neighbours()
+                cell_neighbours = cell.compute_neighbours(location_filter)
                 cell_distance = 1
                 while list_of_cells[num_cell] == 0:
                     for c in cell_neighbours:
@@ -1272,7 +1293,7 @@ class Geo:
 
         return np.mean(wound_height)
 
-    def combine_two_nodes(self, nodes_to_combine, c_set):
+    def combine_two_nodes(self, nodes_to_combine, c_set, recalculate_ys=True):
         """
         Combine two nodes into one node
         :param nodes_to_combine:
@@ -1282,9 +1303,15 @@ class Geo:
         cells_to_combine = [c_cell for c_cell in self.Cells if c_cell.ID in nodes_to_combine]
 
         new_cell = cells_to_combine[0]
-        new_cell.X = np.mean([c_cell.X for c_cell in cells_to_combine], axis=0)
+        if recalculate_ys:
+            new_cell.X = np.mean([c_cell.X for c_cell in cells_to_combine], axis=0)
+        else:
+            new_cell.X = np.concatenate([c_cell.X for c_cell in cells_to_combine], axis=0)
+            new_cell.cglobalids = np.concatenate([c_cell.globalIds for c_cell in cells_to_combine], axis=0)
         new_cell.T = np.concatenate([c_cell.T for c_cell in cells_to_combine], axis=0)
         new_cell.Y = np.concatenate([c_cell.Y for c_cell in cells_to_combine], axis=0)
+
+        prev_number_of_tets = len(new_cell.T)
 
         # Replace old for new ID
         remove_duplicates(new_cell, nodes_to_combine)
@@ -1294,7 +1321,21 @@ class Geo:
             if c_cell.ID not in nodes_to_combine:
                 remove_duplicates(c_cell, nodes_to_combine)
 
-        new_cell.Y = self.recalculate_ys_from_previous(new_cell.T, new_cell.ID, c_set)
+        if recalculate_ys:
+            new_cell.Y = self.recalculate_ys_from_previous(new_cell.T, new_cell.ID, c_set)
+        else:
+            new_cell.globalIds = np.concatenate([c_cell.globalIds for c_cell in cells_to_combine], axis=0)
+            new_cell.Faces = np.concatenate([c_cell.Faces for c_cell in cells_to_combine], axis=0)
+
+            # Update the sharedByCells of the faces
+            for c_face in new_cell.Faces:
+                if np.any(np.isin(c_face.ij, nodes_to_combine[1])):
+                    c_face.ij[np.where(c_face.ij == nodes_to_combine[1])[0][0]] = nodes_to_combine[0]
+                for c_tri in c_face.Tris:
+                    if np.any(np.isin(c_tri.SharedByCells, nodes_to_combine[1])):
+                        c_tri.SharedByCells[np.where(c_tri.SharedByCells == nodes_to_combine[1])[0][0]] = \
+                            nodes_to_combine[0]
+                        c_tri.Edge = c_tri.Edge + prev_number_of_tets
 
         # Remove the second node
         self.Cells[nodes_to_combine[1]].kill_cell()
@@ -1306,3 +1347,107 @@ class Geo:
         """
         centre_of_tissue = np.mean([c_cell.X for c_cell in self.Cells if c_cell.AliveStatus is not None], axis=0)
         return centre_of_tissue
+
+    def get_edge_length(self, cells_to_ablate, location_filter):
+        """
+        Get the edge length of the edge that share the cells_to_ablate
+        :param cells_to_ablate:
+        :param location_filter:
+        :param v_model:
+        :return:
+        """
+
+        vertices, _ = self.get_edges_vertices(cells_to_ablate, location_filter)
+        # Get the edge length
+        edge_length_init = 0
+        for num_vertex in range(0, len(vertices), 2):
+            edge_length_init += np.linalg.norm(vertices[num_vertex] - vertices[num_vertex + 1])
+
+        return edge_length_init
+
+    def get_edges_vertices(self, cells_to_ablate, location_filter):
+        vertices = []
+        vertices_globald_ids = []
+        c_cell = [c_cell for c_cell in self.Cells if c_cell.ID == cells_to_ablate[0]][0]
+        for c_face in c_cell.Faces:
+            if standard_interface_type(c_face.InterfaceType) == standard_interface_type(location_filter):
+                for c_tri in c_face.Tris:
+                    if np.all(np.isin(cells_to_ablate, c_tri.SharedByCells)):
+                        vertices.append(c_cell.Y[c_tri.Edge[0]])
+                        vertices.append(c_cell.Y[c_tri.Edge[1]])
+                        vertices_globald_ids.append(c_cell.globalIds[c_tri.Edge[0]])
+                        vertices_globald_ids.append(c_cell.globalIds[c_tri.Edge[1]])
+        return vertices, vertices_globald_ids
+
+    def apply_periodic_boundary_conditions(self, c_set):
+        """
+        Apply periodic boundary conditions.
+        :return:
+        """
+        centre_of_tissue = self.compute_centre_of_tissue()
+
+        # Identify boundary vertices
+        border_cells = self.BorderCells
+        border_ghost_nodes = self.BorderGhostNodes
+        border_and_ghost_nodes = np.concatenate([border_cells, border_ghost_nodes])
+
+        #
+        list_of_opposite_cells = []
+
+        for border_cell in border_and_ghost_nodes:
+            cell = self.Cells[border_cell]
+            cell_ids_by_distance, distances = self.get_opposite_border_cell(cell, border_cells,
+                                                                            centre_of_tissue)
+            cell.opposite_cell = cell_ids_by_distance[0]
+            list_of_opposite_cells.append(cell.opposite_cell)
+            list_of_opposite_cells.append(cell.ID)
+            #print(f'Cell {cell.ID} is opposite to {cell.opposite_cell} with a distance of {distances[0]}')
+
+
+        # Check if there are any cells that are not opposite to any other cell
+
+    def update_cells_for_periodic_boundary(self, boundary_mapping):
+        """
+        Update the cells for periodic boundary conditions.
+        :param boundary_mapping:
+        :return:
+        """
+        for cell in self.Cells:
+            for i, vertex in enumerate(cell.T):
+                if vertex in boundary_mapping:
+                    cell.T[i] = boundary_mapping[vertex]
+            cell.Y = self.recalculate_ys_from_previous(cell.T, cell.ID, cell.Set)
+
+    def get_opposite_border_cell(self, cell, neighbours_of_border_cells, centre_of_tissue, location_filter=None):
+        """
+        Get the cell on the opposite side of the boundary.
+        :param cell:
+        :param centre_of_tissue:
+        :param location_filter:
+        :return:
+        """
+        # Get the node of the cell
+        node = cell.X
+
+        # Get neighbour nodes
+        neighbour_cells = cell.compute_neighbours(location_filter)
+
+        # Get the vector of the centre of the tissue to the node
+        vector_to_node = node - centre_of_tissue
+
+        # Get the border cell located closest to the vector from the centre of the tissue to the node
+        cell_ids = []
+        distances = []
+        for border_cell in neighbours_of_border_cells:
+            if border_cell == cell.ID or border_cell in neighbour_cells:
+                continue
+            border_node = self.Cells[border_cell].X
+            vector_to_border_node = centre_of_tissue - border_node
+            distances.append(np.linalg.norm(vector_to_node - vector_to_border_node))
+            cell_ids.append(border_cell)
+
+        # Sort the distances and the cell_ids
+        cell_ids = [cell_id for _, cell_id in sorted(zip(distances, cell_ids))]
+        distances = sorted(distances)
+
+        return cell_ids, distances

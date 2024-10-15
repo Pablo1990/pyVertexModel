@@ -27,7 +27,9 @@ def analyse_simulation(folder):
 
         # Go through all the files in the folder
         all_files = os.listdir(folder)
-        all_files.sort()
+
+        # Sort files by date
+        all_files = sorted(all_files, key=lambda x: os.path.getmtime(os.path.join(folder, x)))
         for file_id, file in enumerate(all_files):
             if file.endswith('.pkl') and not file.__contains__('data_step_before_remodelling') and not file.__contains__('recoil'):
                 # Load the state of the model
@@ -38,11 +40,11 @@ def analyse_simulation(folder):
                 features_per_time_all_cells.append(all_cells)
                 features_per_time.append(avg_cells)
 
-                # Create a temporary directory to store the images
-                temp_dir = os.path.join(folder, 'images')
-                if not os.path.exists(temp_dir):
-                    os.mkdir(temp_dir)
-                vModel.screenshot(temp_dir)
+                # # Create a temporary directory to store the images
+                # temp_dir = os.path.join(folder, 'images')
+                # if not os.path.exists(temp_dir):
+                #     os.mkdir(temp_dir)
+                # vModel.screenshot(temp_dir)
 
                 # temp_dir = os.path.join(folder, 'images_wound_edge')
                 # if not os.path.exists(temp_dir):
@@ -70,9 +72,12 @@ def analyse_simulation(folder):
         features_per_time_df.to_excel(os.path.join(folder, 'features_per_time.xlsx'))
 
         # Obtain pre-wound features
-        pre_wound_features = features_per_time_df['time'][features_per_time_df['time'] < vModel.set.TInitAblation]
-        pre_wound_features = features_per_time_df[features_per_time_df['time'] ==
-                                                  pre_wound_features.iloc[-1]]
+        try:
+            pre_wound_features = features_per_time_df['time'][features_per_time_df['time'] < vModel.set.TInitAblation]
+            pre_wound_features = features_per_time_df[features_per_time_df['time'] ==
+                                                      pre_wound_features.iloc[-1]]
+        except Exception as e:
+            pre_wound_features = features_per_time_df.iloc[0]
 
         # Obtain post-wound features
         post_wound_features = features_per_time_df[features_per_time_df['time'] >= vModel.set.TInitAblation]
@@ -201,7 +206,7 @@ def calculate_important_features(post_wound_features):
     return important_features
 
 
-def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical', n_ablations=1, location_filter=0, t_end=0.1):
+def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_edge_info_apical', n_ablations=2, location_filter=0, t_end=0.5):
     """
     Analyse how much an edge recoil if we ablate an edge of a cell
     :param type_of_ablation:
@@ -212,16 +217,29 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical'
     :return:
     """
 
+    v_model = VertexModel(create_output_folder=False)
+    load_state(v_model, file_name_v_model)
+
+    # Cells to ablate
+    # cell_to_ablate = np.random.choice(possible_cells_to_ablate, 1)
+    cell_to_ablate = [v_model.geo.Cells[0]]
+
+    #Pick the neighbouring cell to ablate
+    neighbours = cell_to_ablate[0].compute_neighbours(location_filter)
+
+    # Random order of neighbours
+    np.random.seed(0)
+    np.random.shuffle(neighbours)
+
     list_of_dicts_to_save = []
     for num_ablation in range(n_ablations):
-        v_model = VertexModel(create_output_folder=False)
         load_state(v_model, file_name_v_model)
         try:
             vars = load_variables(file_name_v_model.replace('before_ablation.pkl', type_of_ablation + '.pkl'))
             list_of_dicts_to_save_loaded = vars['recoiling_info_df_apical']
 
-            cell_to_ablate = list_of_dicts_to_save_loaded['cell_to_ablate'][num_ablation]
-            neighbour_to_ablate = list_of_dicts_to_save_loaded['neighbour_to_ablate'][num_ablation]
+            cell_to_ablate_ID = list_of_dicts_to_save_loaded['cell_to_ablate'][num_ablation]
+            neighbour_to_ablate_ID = list_of_dicts_to_save_loaded['neighbour_to_ablate'][num_ablation]
             edge_length_init = list_of_dicts_to_save_loaded['edge_length_init'][num_ablation]
             edge_length_final = list_of_dicts_to_save_loaded['edge_length_final'][num_ablation]
             if 'edge_length_final_normalized' in list_of_dicts_to_save_loaded:
@@ -229,6 +247,7 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical'
                     num_ablation]
             else:
                 edge_length_final_normalized = (edge_length_final - edge_length_init) / edge_length_init
+
             initial_recoil = list_of_dicts_to_save_loaded['initial_recoil_in_s'][num_ablation]
             K = list_of_dicts_to_save_loaded['K'][num_ablation]
             scutoid_face = list_of_dicts_to_save_loaded['scutoid_face'][num_ablation]
@@ -245,25 +264,19 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical'
         except Exception as e:
             logger.info('Performing the analysis...' + str(e))
             # Change name of folder and create it
-            v_model.set.OutputFolder = v_model.set.OutputFolder + '_ablation_' + str(num_ablation)
+            if type_of_ablation == 'recoil_info_apical':
+                v_model.set.OutputFolder = v_model.set.OutputFolder + '_ablation_' + str(num_ablation)
+            else:
+                v_model.set.OutputFolder = v_model.set.OutputFolder + '_ablation_edge_' + str(num_ablation)
+
             if not os.path.exists(v_model.set.OutputFolder):
                 os.mkdir(v_model.set.OutputFolder)
 
-            possible_cells_to_ablate = [cell.ID for cell in v_model.geo.Cells if
-                                        cell.AliveStatus == 1 and cell.ID not in v_model.geo.BorderCells]
-
-            # Cells to ablate
-            # cell_to_ablate = np.random.choice(possible_cells_to_ablate, 1)
-            cell_to_ablate = [v_model.geo.Cells[0]]
-
-            # Pick the neighbouring cell to ablate
-            # neighbours = cell_to_ablate[0].compute_neighbours(location_filter)
-            # possible_neighbours = [neighbour for neighbour in neighbours if neighbour in possible_cells_to_ablate]
-            # neighbour_to_ablate = np.random.choice(possible_neighbours, 1)
-            neighbour_to_ablate = [4]
+            neighbour_to_ablate = [neighbours[num_ablation]]
 
             # Calculate if the cell is neighbour on both sides
             scutoid_face = None
+            neighbours_other_side = []
             if location_filter == 0:
                 neighbours_other_side = cell_to_ablate[0].compute_neighbours(location_filter=2)
                 scutoid_face = np.nan
@@ -287,27 +300,38 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical'
             cells_to_ablate = [cell_to_ablate[0].ID, neighbour_to_ablate[0]]
 
             # Get the edge that share both cells
-            edge_length_init = get_edge_length(cells_to_ablate, location_filter, v_model)
+            edge_length_init = v_model.geo.get_edge_length(cells_to_ablate, location_filter)
 
             # Ablate the edge
             v_model.set.ablation = True
             v_model.geo.cellsToAblate = cells_to_ablate
             v_model.set.TInitAblation = v_model.t
             if type_of_ablation == 'recoil_info_apical':
-                v_model.geo.ablate_cells(v_model.set, v_model.t, combine_cells=True)
+                v_model.geo.ablate_cells(v_model.set, v_model.t, combine_cells=False)
+                v_model.geo.y_ablated = []
             elif type_of_ablation == 'recoil_edge_info_apical':
-                v_model.geo.y_ablated = v_model.geo.ablate_edge(v_model.set, v_model.t, domain='Top')
+                v_model.geo.y_ablated = v_model.geo.ablate_edge(v_model.set, v_model.t, domain=location_filter,
+                                                                adjacent_surface=False)
 
             # Relax the system
             initial_time = v_model.t
             v_model.set.tend = v_model.t + t_end
-            v_model.set.tol = 100
-            v_model.set.tol0 = 100
-            v_model.set.dt = 0.005
+            if type_of_ablation == 'recoil_info_apical':
+                v_model.set.dt = 0.005
+            elif type_of_ablation == 'recoil_edge_info_apical':
+                v_model.set.dt = 0.005
+
+            v_model.set.Remodelling = False
+
             v_model.set.dt0 = v_model.set.dt
-            v_model.set.RemodelingFrequency = 0.02
+            if type_of_ablation == 'recoil_edge_info_apical':
+                v_model.set.RemodelingFrequency = 0.05
+            else:
+                v_model.set.RemodelingFrequency = 100
             v_model.set.ablation = False
-            v_model.set.export_images = False
+            v_model.set.export_images = True
+            if v_model.set.export_images and not os.path.exists(v_model.set.OutputFolder + '/images'):
+                os.mkdir(v_model.set.OutputFolder + '/images')
             edge_length_final_normalized = []
             edge_length_final = []
             recoil_speed = []
@@ -336,10 +360,10 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical'
                 if np.isnan(gr):
                     break
 
-            cell_to_ablate = cell_to_ablate[0].ID
-            neighbour_to_ablate = neighbour_to_ablate[0]
+            cell_to_ablate_ID = cell_to_ablate[0].ID
+            neighbour_to_ablate_ID = neighbour_to_ablate[0]
 
-        K, initial_recoil, error_bars = fit_ablation_equation(edge_length_final_normalized, time_steps)
+        K, initial_recoil, error_bars = fit_ablation_equation(edge_length_final, time_steps)
 
         # Generate a plot with the edge length final and the fit for each ablation
         plt.figure()
@@ -348,18 +372,23 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_info_apical'
         plt.plot(time_steps, recoil_model(np.array(time_steps), initial_recoil, K), 'r')
         plt.xlabel('Time (s)')
         plt.ylabel('Edge length final')
-        plt.title('Ablation fit')
+        plt.title('Ablation fit - ' + str(cell_to_ablate_ID) + ' ' + str(neighbour_to_ablate_ID))
 
         # Save plot
-        plt.savefig(
-            os.path.join(file_name_v_model.replace('before_ablation.pkl', 'ablation_fit_' + str(num_ablation) + '.png'))
-        )
+        if type_of_ablation == 'recoil_info_apical':
+            plt.savefig(
+                os.path.join(file_name_v_model.replace('before_ablation.pkl', 'ablation_fit_' + str(num_ablation) + '.png'))
+            )
+        elif type_of_ablation == 'recoil_edge_info_apical':
+            plt.savefig(
+                os.path.join(file_name_v_model.replace('before_ablation.pkl', 'ablation_edge_fit_' + str(num_ablation) + '.png'))
+            )
         plt.close()
 
         # Save the results
         dict_to_save = {
-            'cell_to_ablate': cell_to_ablate,
-            'neighbour_to_ablate': neighbour_to_ablate,
+            'cell_to_ablate': cell_to_ablate_ID,
+            'neighbour_to_ablate': neighbour_to_ablate_ID,
             'edge_length_init': edge_length_init,
             'edge_length_final': edge_length_final,
             'edge_length_final_normalized': edge_length_final_normalized,
@@ -399,6 +428,10 @@ def fit_ablation_equation(edge_length_final_normalized, time_steps):
     :return:    K, initial_recoil
     """
 
+    # Normalize the edge length
+    edge_length_init = edge_length_final_normalized[0]
+    edge_length_final_normalized = (edge_length_final_normalized - edge_length_init) / edge_length_init
+
     # Fit the model to the data
     [params, covariance] = curve_fit(recoil_model, time_steps, edge_length_final_normalized,
                                      p0=[0.00001, 3], bounds=(0, np.inf))
@@ -428,34 +461,10 @@ def compute_edge_length_v_model(cells_to_ablate, edge_length_final, edge_length_
     if v_model.t == initial_time:
         return
     # Get the edge length
-    edge_length_final.append(get_edge_length(cells_to_ablate, location_filter, v_model))
+    edge_length_final.append(v_model.geo.get_edge_length(cells_to_ablate, location_filter))
     edge_length_final_normalized.append((edge_length_final[-1] - edge_length_init) / edge_length_init)
+    print('Edge length final: ', edge_length_final[-1])
     # In seconds. 1 t = 1 minute = 60 seconds
     time_steps.append((v_model.t - initial_time) * 60)
     # Calculate the recoil
     recoil_speed.append(edge_length_final_normalized[-1] / time_steps[-1])
-
-
-def get_edge_length(cells_to_ablate, location_filter, v_model):
-    """
-    Get the edge length of the edge that share the cells_to_ablate
-    :param cells_to_ablate:
-    :param location_filter:
-    :param v_model:
-    :return:
-    """
-
-    vertices = []
-    cell = [cell for cell in v_model.geo.Cells if cell.ID == cells_to_ablate[0]][0]
-    for c_face in cell.Faces:
-        if c_face.InterfaceType == location_filter:
-            for c_tri in c_face.Tris:
-                if np.all(np.isin(cells_to_ablate, c_tri.SharedByCells)):
-                    vertices.append(cell.Y[c_tri.Edge[0]])
-                    vertices.append(cell.Y[c_tri.Edge[1]])
-    # Get the edge length
-    edge_length_init = 0
-    for num_vertex in range(0, len(vertices), 2):
-        edge_length_init += np.linalg.norm(vertices[num_vertex] - vertices[num_vertex + 1])
-
-    return edge_length_init

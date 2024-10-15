@@ -28,12 +28,12 @@ def get_intensity_based_contractility(c_set, current_face, intensity_images=True
         contractility_time_variability = np.linspace(0, (c_set.TEndAblation - c_set.TInitAblation), int((c_set.TEndAblation - c_set.TInitAblation) * 20))
 
         contractility_variability_purse_string = (np.ones(len(contractility_time_variability)) *
-                                                  2 ** c_set.purseStringStrength) * c_set.cLineTension
+                                                  c_set.purseStringStrength)
         contractility_variability_purse_string[
             contractility_time_variability < c_set.delay_purse_string] = c_set.cLineTension
 
         contractility_variability_lateral_cables = (np.ones(len(contractility_time_variability)) *
-                                                    2 ** c_set.lateralCablesStrength) * c_set.cLineTension / 10
+                                                    c_set.lateralCablesStrength)
         contractility_variability_lateral_cables[
             contractility_time_variability < c_set.delay_lateral_cables] = c_set.cLineTension / 10
 
@@ -206,7 +206,7 @@ class KgContractility(Kg):
                                                 if
                                                 value == currentFace.InterfaceType or key == currentFace.InterfaceType)]
                 for tri_id, currentTri in enumerate(currentFace.Tris):
-                    if len(currentTri.SharedByCells) > 1 and np.all(~np.isin(currentTri.Edge, geo.y_ablated)):
+                    if len(currentTri.SharedByCells) > 1 and not np.all(np.isin(cell.globalIds[currentTri.Edge], geo.y_ablated)):
                         C, geo = get_contractility_based_on_location(currentFace, currentTri, geo, c_set,
                                                                      cell_noise=cell.contractility_noise)
 
