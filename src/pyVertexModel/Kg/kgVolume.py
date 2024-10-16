@@ -57,7 +57,7 @@ class KgVolume(Kg):
                 lambdaV = Set.lambdaV
 
             if Cell.lambda_v_noise is None:
-                Cell.lambda_v_noise = add_noise_to_parameter(lambdaV, Set.noise_random)
+                Cell.lambda_v_noise = add_noise_to_parameter(lambdaV, 0)
                 lambdaV = Cell.lambda_v_noise
 
             fact = lambdaV * (Cell.Vol - Cell.Vol0) ** (n - 1) / Cell.Vol0 ** n
