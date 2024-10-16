@@ -214,18 +214,25 @@ class Face:
         for tri in self.Tris:
             tri.Location = face_interface_type
 
-    def compute_face_area(self, Y):
-        area = 0.0
-        trisArea = np.zeros(len(self.Tris))
-        for t in range(len(self.Tris)):
-            Tri = self.Tris[t]
-            Tri = Tri.Edge
-            Y3 = self.Centre
-            YTri = np.vstack([Y[Tri, :], Y3])
-            tri_area = (1 / 2) * np.linalg.norm(np.cross(YTri[1, :] - YTri[0, :], YTri[0, :] - YTri[2, :]))
-            trisArea[t] = tri_area
-            area = area + tri_area
-        return area, trisArea
+    def compute_face_area(self, y):
+        """
+        Compute the area of the face.
+        :param y:
+        :return:
+        """
+        tris_area = np.zeros(len(self.Tris))
+
+        for t, tri in enumerate(self.Tris):
+            y3 = self.Centre
+            y_tri = np.vstack([y[tri.Edge, :], y3])
+
+            # Calculate the area of the triangle
+            tri_area = 0.5 * np.linalg.norm(np.cross(y_tri[1, :] - y_tri[0, :], y_tri[0, :] - y_tri[2, :]))
+            tris_area[t] = tri_area
+
+        area = np.sum(tris_area)
+
+        return area, tris_area
 
     def compute_perimeter(self):
         """
