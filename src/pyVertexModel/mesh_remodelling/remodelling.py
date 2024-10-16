@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours_vertices
+from src.pyVertexModel.geometry.face import get_interface
 from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
 from src.pyVertexModel.util.utils import ismember_rows, save_backup_vars, load_backup_vars, compute_distance_3d, \
@@ -101,6 +102,8 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
     elif ghost_node in Geo.XgTop:
         interface_type = 'Top'
         all_T_filtered = all_T[np.any(np.isin(all_T, Geo.XgTop), axis=1)]
+    else:
+        return Geo
 
     possible_ref_tets = all_T_filtered[np.sum(np.isin(all_T_filtered, cell_nodes_shared), axis=1) == 3]
     possible_ref_tets = np.unique(np.sort(possible_ref_tets, axis=1), axis=0)
@@ -151,7 +154,7 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
         # Move the faces that share the ghost node closer to the reference point
         for face_id, face_r in enumerate(c_cell.Faces):
             if np.isin(face_r.globalIds, c_cell.vertices_and_faces_to_remodel):
-                if face_r.InterfaceType == interface_type:
+                if get_interface(face_r.InterfaceType) == get_interface(interface_type):
                     face_centre = face_r.Centre
                     distance = compute_distance_3d(ref_point_closer[0], face_centre)
                     weight = close_to_new_point * (distance / max_distance) ** (strong_gradient * 0.1)
@@ -388,9 +391,9 @@ class Remodelling:
                                 not np.any(np.isin(current_tri.SharedByCells, self.Geo.BorderGhostNodes))):
                             shared_cells = [c for c in current_tri.SharedByCells if c != num_cell]
                             for num_shared_cell in shared_cells:
-                                if c_face.InterfaceType == 0 or c_face.InterfaceType == 'Top':
+                                if get_interface(c_face.InterfaceType) == get_interface('Top'):
                                     edge_lengths_top[num_shared_cell] += current_tri.EdgeLength / top_area
-                                elif c_face.InterfaceType == 2 or c_face.InterfaceType == 'Bottom':
+                                elif get_interface(c_face.InterfaceType) == get_interface('Bottom'):
                                     edge_lengths_bottom[num_shared_cell] += current_tri.EdgeLength / bottom_area
 
                 segment_features = self.check_edges_to_intercalate(edge_lengths_top, num_cell, segment_features,

@@ -4,6 +4,7 @@ import time
 import numpy as np
 
 from src.pyVertexModel.Kg.kg import Kg, add_noise_to_parameter
+from src.pyVertexModel.geometry.face import get_interface
 
 
 def get_intensity_based_contractility(c_set, current_face, intensity_images=True):
@@ -46,11 +47,11 @@ def get_intensity_based_contractility(c_set, current_face, intensity_images=True
         indices_of_closest_time_points = np.argsort(distance_to_time_variables)
         closest_time_points_distance = 1 - distance_to_time_variables[indices_of_closest_time_points]
 
-        if current_face.InterfaceType == 'Top' or current_face.InterfaceType == 0:
+        if get_interface(current_face.InterfaceType) == get_interface('Top'):
             contractility_value = contractility_variability_purse_string[indices_of_closest_time_points[0]] * \
                                   closest_time_points_distance[0] + contractility_variability_purse_string[
                                       indices_of_closest_time_points[1]] * closest_time_points_distance[1]
-        elif current_face.InterfaceType == 'CellCell' or current_face.InterfaceType == 1:
+        elif get_interface(current_face.InterfaceType) == get_interface('CellCell'):
             contractility_value = contractility_variability_lateral_cables[indices_of_closest_time_points[0]] * \
                                   closest_time_points_distance[0] + contractility_variability_lateral_cables[
                                       indices_of_closest_time_points[1]] * closest_time_points_distance[1]
@@ -140,17 +141,17 @@ def get_contractility_based_on_location(current_face, current_tri, geo, c_set, c
         if len(current_tri.SharedByCells) == 1:
             contractilityValue = 0
         else:
-            if current_face.InterfaceType == 'Top' or current_face.InterfaceType == 0:  # Top
+            if get_interface(current_face.InterfaceType) == get_interface('Top'):  # Top
                 if any([geo.Cells[cell].AliveStatus == 0 for cell in current_tri.SharedByCells]):
                     pass
                 else:
                     contractilityValue = c_set.cLineTension
-            elif current_face.InterfaceType == 'CellCell' or current_face.InterfaceType == 1:
+            elif get_interface(current_face.InterfaceType) == get_interface('CellCell'):
                 if any([geo.Cells[cell].AliveStatus == 0 for cell in current_tri.SharedByCells]):
                     pass
                 else:
                     contractilityValue = c_set.cLineTension / 10
-            elif current_face.InterfaceType == 'Bottom' or current_face.InterfaceType == 2:
+            elif get_interface(current_face.InterfaceType) == get_interface('Bottom'):
                 contractilityValue = c_set.cLineTension / 10
             else:
                 contractilityValue = c_set.cLineTension
@@ -189,9 +190,6 @@ class KgContractility(Kg):
         :return:
         """
         start = time.time()
-        oldSize = self.K.shape[0]
-        # TODO:
-        # self.K = self.K[range(Geo.numY * 3), range(Geo.numY * 3)]
 
         Energy = {}
         for cell in [cell for cell in geo.Cells if cell.AliveStatus == 1]:
@@ -202,9 +200,7 @@ class KgContractility(Kg):
                 cell.contractility_noise = random.random()
 
             for face_id, currentFace in enumerate(cell.Faces):
-                l_i0 = geo.EdgeLengthAvg_0[next(key for key, value in currentFace.InterfaceType_allValues.items()
-                                                if
-                                                value == currentFace.InterfaceType or key == currentFace.InterfaceType)]
+                l_i0 = geo.EdgeLengthAvg_0[get_interface(currentFace.InterfaceType)]
                 for tri_id, currentTri in enumerate(currentFace.Tris):
                     if len(currentTri.SharedByCells) > 1 and not np.all(np.isin(cell.globalIds[currentTri.Edge], geo.y_ablated)):
                         C, geo = get_contractility_based_on_location(currentFace, currentTri, geo, c_set,
@@ -229,9 +225,6 @@ class KgContractility(Kg):
             self.g += ge
             Energy[c] = Energy_c
             cell.contractility_noise = None
-
-        # TODO:
-        # self.K = np.pad(self.K, ((0, oldSize - self.K.shape[0]), (0, oldSize - self.K.shape[1])), 'constant')
 
         self.energy = sum(Energy.values())
         end = time.time()

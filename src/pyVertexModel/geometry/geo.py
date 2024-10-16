@@ -5,9 +5,10 @@ import numpy as np
 import vtk
 from numpy.ma.extras import setxor1d
 from scipy.spatial import ConvexHull
+from torch.fx.experimental.unification.unification_tools import get_in
 
 from src.pyVertexModel.geometry import face, cell
-from src.pyVertexModel.geometry.face import standard_interface_type
+from src.pyVertexModel.geometry.face import get_interface
 from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes, calculate_polygon_area
 
 logger = logging.getLogger("pyVertexModel")
@@ -378,18 +379,18 @@ class Geo:
                 self.Cells[c].Area0 = avg_area
 
                 # Compute number of faces per domain
-                num_faces_top = sum([c_face.InterfaceType == 'Top' or c_face.InterfaceType == 0
+                num_faces_top = sum([get_interface(c_face.InterfaceType) == get_interface('Top')
                                      for c_face in self.Cells[c].Faces])
-                num_faces_bottom = sum([c_face.InterfaceType == 'Bottom' or c_face.InterfaceType == 2
+                num_faces_bottom = sum([get_interface(c_face.InterfaceType) == get_interface('Bottom')
                                         for c_face in self.Cells[c].Faces])
-                num_faces_lateral = sum([c_face.InterfaceType == 'Lateral' or c_face.InterfaceType == 1
+                num_faces_lateral = sum([get_interface(c_face.InterfaceType) == get_interface('CellCell')
                                          for c_face in self.Cells[c].Faces])
 
                 # Iterate over all faces in the current cell
                 for f in range(len(self.Cells[c].Faces)):
-                    if self.Cells[c].Faces[f].InterfaceType == 'Top' or self.Cells[c].Faces[f].InterfaceType == 0:
+                    if get_interface(self.Cells[c].Faces[f].InterfaceType) == get_interface('Top'):
                         self.Cells[c].Faces[f].Area0 = avg_area_top * c_set.ref_A0 / num_faces_top
-                    elif self.Cells[c].Faces[f].InterfaceType == 'Bottom' or self.Cells[c].Faces[f].InterfaceType == 2:
+                    elif get_interface(self.Cells[c].Faces[f].InterfaceType) == get_interface('Bottom'):
                         self.Cells[c].Faces[f].Area0 = avg_area_bottom * c_set.ref_A0 / num_faces_bottom
                     else:
                         self.Cells[c].Faces[f].Area0 = avg_area_lateral * c_set.ref_A0 / num_faces_lateral
@@ -456,9 +457,9 @@ class Geo:
                 number_of_faces_only_top = 0
                 number_of_faces_only_bottom = 0
                 for face in cell.Faces:
-                    if face.InterfaceType == 'Top' or face.InterfaceType == 0:
+                    if get_interface(face.InterfaceType) == get_interface('Top'):
                         number_of_faces_only_top += 1
-                    if face.InterfaceType == 2 or face.InterfaceType == 'Bottom':
+                    if get_interface(face.InterfaceType) == get_interface('Bottom'):
                         number_of_faces_only_bottom += 1
 
                 number_of_faces_per_cell_only_top_and_bottom.append(number_of_faces_only_top)
@@ -1213,7 +1214,7 @@ class Geo:
         perimeter = 0
         for c_cell in wound_edge_cells:
             for c_face in c_cell.Faces:
-                if c_face.InterfaceType == location_filter or location_filter is None:
+                if get_interface(c_face.InterfaceType) == get_interface(location_filter) or location_filter is None:
                     for tri in c_face.Tris:
                         if np.any(np.isin(tri.SharedByCells, debris_cells)):
                             perimeter += np.sum(tri.EdgeLength)
@@ -1279,7 +1280,7 @@ class Geo:
         wound_height = []
         for c_cell in wound_edge_cells:
             for c_face in c_cell.Faces:
-                if c_face.InterfaceType == 1 or c_face.InterfaceType == 'CellCell':
+                if get_interface(c_face.InterfaceType) == get_interface("CellCell"):
                     for tri in c_face.Tris:
                         if np.any(np.isin(tri.SharedByCells, debris_cells)) and len(tri.SharedByCells) > 2:
                             # Get the different nodes
@@ -1370,7 +1371,7 @@ class Geo:
         vertices_globald_ids = []
         c_cell = [c_cell for c_cell in self.Cells if c_cell.ID == cells_to_ablate[0]][0]
         for c_face in c_cell.Faces:
-            if standard_interface_type(c_face.InterfaceType) == standard_interface_type(location_filter):
+            if get_interface(c_face.InterfaceType) == get_interface(location_filter):
                 for c_tri in c_face.Tris:
                     if np.all(np.isin(cells_to_ablate, c_tri.SharedByCells)):
                         vertices.append(c_cell.Y[c_tri.Edge[0]])

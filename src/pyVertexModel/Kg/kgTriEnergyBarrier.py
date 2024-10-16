@@ -4,6 +4,7 @@ import numpy as np
 
 from src.pyVertexModel.Kg import kg_functions
 from src.pyVertexModel.Kg.kg import Kg, add_noise_to_parameter
+from src.pyVertexModel.geometry.face import get_interface
 
 
 class KgTriEnergyBarrier(Kg):
@@ -19,8 +20,8 @@ class KgTriEnergyBarrier(Kg):
             lambdaB = Set.lambdaB * Cell.lambdaB_perc
 
             for f in range(len(Cell.Faces)):
-                if Cell.Faces[f].InterfaceType != 'CellCell' and Cell.Faces[f].InterfaceType != 1:
-                    if Cell.Faces[f].InterfaceType == 'Top' or Cell.Faces[f].InterfaceType == 0:
+                if get_interface(Cell.Faces[f].InterfaceType) != get_interface('CellCell'):
+                    if get_interface(Cell.Faces[f].InterfaceType) == get_interface('Top'):
                         barrier_tri0 = Cell.barrier_tri0_top
                     else:
                         barrier_tri0 = Cell.barrier_tri0_bottom

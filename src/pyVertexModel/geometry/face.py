@@ -10,7 +10,8 @@ def get_key(dictionary, target_value):
             return key
     return None
 
-def standard_interface_type(interface_type):
+
+def get_interface(interface_type):
     """
     Standardize the InterfaceType attribute.
     :return:
@@ -23,10 +24,11 @@ def standard_interface_type(interface_type):
     interface_type_str = None
     if interface_type is not None:
         interface_type_str = next(key for key, value in interface_type_all_values.items()
-                                 if
-                                 value == interface_type or key == interface_type)
+                                  if
+                                  value == interface_type or key == interface_type)
 
     return interface_type_str
+
 
 class Face:
     """
@@ -53,16 +55,14 @@ class Face:
                 self.globalIds = None
             else:
                 self.globalIds = mat_file[3][0][0] - 1
-            self.InterfaceType = standard_interface_type(mat_file[4][0][0] - 1)
+            self.InterfaceType = get_interface(mat_file[4][0][0] - 1)
             self.Area = mat_file[5][0][0]
             self.Area0 = mat_file[6][0][0]
-
-
 
         valueset = [0, 1, 2]
         catnames = ['Top', 'CellCell', 'Bottom']
         self.InterfaceType_allValues = dict(zip(valueset, catnames))
-        standard_interface_type(self.InterfaceType)
+        get_interface(self.InterfaceType)
 
     def build_face(self, ci, cj, face_ids, nCells, Cell, XgID, Set, XgTop, XgBottom, oldFace=None):
         self.InterfaceType = None
@@ -104,7 +104,7 @@ class Face:
         else:
             ftype = self.InterfaceType_allValues[1]  # Border face
 
-        self.InterfaceType = standard_interface_type(ftype)
+        self.InterfaceType = get_interface(ftype)
         return self.InterfaceType
 
     def build_face_centre(self, ij, ncells, X, Ys, H, extrapolate_face_centre):

@@ -4,6 +4,7 @@ import vtk
 from sklearn.decomposition import PCA
 
 from src.pyVertexModel.geometry import face
+from src.pyVertexModel.geometry.face import get_interface
 from src.pyVertexModel.util.utils import copy_non_mutable_attributes
 
 
@@ -140,8 +141,7 @@ class Cell:
         total_area = 0.0
         for f in range(len(self.Faces)):
             if location_filter is not None:
-                if (self.Faces[f].InterfaceType == self.Faces[f].InterfaceType_allValues[location_filter] or
-                        self.Faces[f].InterfaceType == location_filter):
+                if get_interface(self.Faces[f].InterfaceType) == get_interface(location_filter):
                     total_area = total_area + self.Faces[f].Area
             else:
                 total_area = total_area + self.Faces[f].Area
@@ -388,8 +388,7 @@ class Cell:
         neighbours = []
         for f in range(len(self.Faces)):
             if location_filter is not None:
-                if (self.Faces[f].InterfaceType == self.Faces[f].InterfaceType_allValues[location_filter] or
-                        self.Faces[f].InterfaceType == location_filter):
+                if get_interface(self.Faces[f].InterfaceType) == get_interface(location_filter):
                     for t in range(len(self.Faces[f].Tris)):
                         neighbours.append(self.Faces[f].Tris[t].SharedByCells)
             else:
@@ -428,8 +427,7 @@ class Cell:
         perimeter = 0.0
         for f in range(len(self.Faces)):
             if filter_location is not None:
-                if (self.Faces[f].InterfaceType == self.Faces[f].InterfaceType_allValues[filter_location] or
-                        self.Faces[f].InterfaceType == filter_location):
+                if get_interface(self.Faces[f].InterfaceType) == get_interface(filter_location):
                     perimeter = perimeter + self.Faces[f].compute_perimeter()
             else:
                 perimeter = perimeter + self.Faces[f].compute_perimeter()
