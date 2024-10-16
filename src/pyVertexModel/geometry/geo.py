@@ -506,13 +506,11 @@ class Geo:
             for f in range(len(self.Cells[c].Faces)):
                 self.Cells[c].Faces[f].Area, triAreas = self.Cells[c].Faces[f].compute_face_area(self.Cells[c].Y)
 
-                for tri, triArea in zip(self.Cells[c].Faces[f].Tris, triAreas):
-                    tri.Area = triArea
-
                 # Compute the edge lengths of the triangles
-                for tri in self.Cells[c].Faces[f].Tris:
+                for tri_id, tri in enumerate(self.Cells[c].Faces[f].Tris):
                     tri.EdgeLength, tri.LengthsToCentre, tri.AspectRatio = (
                         tri.compute_tri_length_measurements(self.Cells[c].Y, self.Cells[c].Faces[f].Centre))
+                    tri.Area = triAreas[tri_id]
 
                 for tri in self.Cells[c].Faces[f].Tris:
                     tri.ContractileG = 0
