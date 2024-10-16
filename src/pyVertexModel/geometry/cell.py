@@ -146,7 +146,6 @@ class Cell:
             else:
                 total_area = total_area + self.Faces[f].Area
 
-        self.Area = total_area
         return total_area
 
     def compute_volume(self):

@@ -304,8 +304,8 @@ class Geo:
                                        c_set, self.XgTop, self.XgBottom)
                     self.Cells[c].Faces.append(newFace)
 
-                self.Cells[c].compute_area()
-                self.Cells[c].compute_volume()
+                self.Cells[c].Area = self.Cells[c].compute_area()
+                self.Cells[c].Vol = self.Cells[c].compute_volume()
 
         # Initialize reference values
         self.init_reference_cell_values(c_set)
@@ -517,8 +517,8 @@ class Geo:
                 for tri in self.Cells[c].Faces[f].Tris:
                     tri.ContractileG = 0
 
-            self.Cells[c].compute_area()
-            self.Cells[c].compute_volume()
+            self.Cells[c].Area = self.Cells[c].compute_area()
+            self.Cells[c].Vol = self.Cells[c].compute_volume()
 
     def build_x_from_y(self, geo_n):
         """
@@ -760,7 +760,7 @@ class Geo:
                 self.Cells[cell_id].Y[~ismember_rows(self.Cells[cell_id].T, new_tets)[0] &
                                       [np.any(np.isin(tet, self.XgID)) for tet in self.Cells[cell_id].T]] = old_geo_ys
 
-            if cell_id not in new_tets or new_tets is None:
+            if new_tets is None or cell_id not in new_tets:
                 for c_face in old_geo.Cells[cell_id].Faces:
                     id_with_new = np.array(
                         [np.all(np.isin(face_new.ij, c_face.ij)) for face_new in self.Cells[cell_id].Faces])
@@ -1395,6 +1395,10 @@ class Geo:
 
         #
         list_of_opposite_cells = []
+
+        # Remove opposite_cell attribute from all cells
+        for cell in self.Cells:
+            cell.opposite_cell = None
 
         for border_cell in border_and_ghost_nodes:
             cell = self.Cells[border_cell]
