@@ -8,7 +8,7 @@ import plotly
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
-from src.pyVertexModel.analysis.analyse_simulation import analyse_edge_recoil
+from src.pyVertexModel.analysis.analyse_simulation import analyse_edge_recoil, analyse_simulation
 from src.pyVertexModel.parameters.set import Set
 from src.pyVertexModel.util.utils import load_state, load_variables, save_variables
 
@@ -56,7 +56,7 @@ def objective(trial):
         vModel.initialize()
         gr = vModel.single_iteration(post_operations=False)
         return gr
-    else:
+    elif error_type == '_K_InitialRecoil_' or error_type == '_wound_area_':
         # Initialize the model with the parameters
         vModel = VertexModelVoronoiFromTimeImage(set_test=new_set)
 
@@ -64,24 +64,31 @@ def objective(trial):
         vModel.initialize()
         vModel.iterate_over_time()
 
-        # Analyse the edge recoil
-        try:
-            file_name = os.path.join(vModel.set.OutputFolder, 'before_ablation.pkl')
-            n_ablations = 2
-            t_end = 0.5
-            recoiling_info = analyse_edge_recoil(file_name, n_ablations=n_ablations, location_filter=0, t_end=t_end)
+        if error_type == '_K_InitialRecoil_':
+            # Analyse the edge recoil
+            try:
+                file_name = os.path.join(vModel.set.OutputFolder, 'before_ablation.pkl')
+                n_ablations = 2
+                t_end = 0.5
+                recoiling_info = analyse_edge_recoil(file_name, n_ablations=n_ablations, location_filter=0, t_end=t_end)
 
-            # Return a metric to minimize
-            K = np.mean(recoiling_info['K'])
-            initial_recoil = np.mean(recoiling_info['initial_recoil_in_s'])
-        except Exception as e:
-            K = [1]
-            initial_recoil = [1]
+                # Return a metric to minimize
+                K = np.mean(recoiling_info['K'])
+                initial_recoil = np.mean(recoiling_info['initial_recoil_in_s'])
+            except Exception as e:
+                K = [1]
+                initial_recoil = [1]
 
-        error = vModel.calculate_error(K=K, initial_recoil=initial_recoil, error_type=error_type)
+            error = vModel.calculate_error(K=K, initial_recoil=initial_recoil, error_type=error_type)
+            return error
+        elif error_type == '_wound_area_':
+            features_per_time_df, post_wound_features, important_features, features_per_time_all_cells_df = (
+                analyse_simulation(vModel.set.OutputFolder))
 
-        return error
-
+            # Calculate the error
+            in_vivo_values_height = [1, 1, 0.996780555555556, 0.993708333333333, 0.990630555555556, 0.985522222222222, 0.979061111111111, 0.975108333333333, 0.969102777777778, 0.963541666666667, 0.955194444444444, 0.9527, 0.944208333333333, 0.937577777777778, 0.934252777777778, 0.929713888888889, 0.928391666666667, 0.921808333333333, 0.919905555555556, 0.919325, 0.915511111111111]
+            in_vivo_values_area = [100, 127.0745963875, 163.064532625, 140.8611214625, 110.64850923, 90.71989015375, 76.552777425, 66.6571166, 60.58248543125, 56.13210463125, 52.58253061, 48.28709519875, 45.77288565625, 43.9984109928571, 41.3621803975, 38.25390398625, 34.22344637, 30.1462372305, 26.54061412075, 21.993655758, 20.500077081875]
+            in_vivo_time = np.arange(0, 60, 3)
 
 def load_simulations(study, error_type=None):
     """
