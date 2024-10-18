@@ -248,6 +248,11 @@ class Remodelling:
             # Get the first segment feature
             segmentFeatures = segmentFeatures_all.iloc[0]
 
+            if self.Geo.Cells[segmentFeatures['cell_to_split_from']].AliveStatus == 1:
+                segmentFeatures_all = segmentFeatures_all.drop(segmentFeatures.name)
+                continue
+
+            # Intercalate cells
             allTnew, cellToSplitFrom, ghostNode, ghost_nodes_tried, has_converged, old_tets = (
                 self.intercalate_cells(segmentFeatures))
 
@@ -298,7 +303,7 @@ class Remodelling:
                     logger.info(f'=>> Full-Flip accepted')
                     self.Geo_n = self.Geo.copy(update_measurements=False)
                     backup_vars = save_backup_vars(self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs)
-                    # break
+                    break
             else:
                 # Go back to initial state
                 self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs = load_backup_vars(backup_vars)
