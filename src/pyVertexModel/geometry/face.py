@@ -84,8 +84,12 @@ class Face:
         self.Centre = np.mean(np.concatenate(Cell.Y[[tri.Edge for tri in self.Tris], :]), axis=0)
         # self.Centre = np.mean(c_cell.Y[self.Tris.Edge], :], axis=0)
 
-        self.Area, _ = self.compute_face_area(Cell.Y)
-        self.Area0 = self.Area
+        if oldFace is not None:
+            self.Area = oldFace.Area
+            self.Area0 = oldFace.Area0
+        else:
+            self.Area, _ = self.compute_face_area(Cell.Y)
+            self.Area0 = self.Area * Set.ref_A0
 
     def build_interface_type(self, ij, XgID, XgTop, XgBottom):
         """
