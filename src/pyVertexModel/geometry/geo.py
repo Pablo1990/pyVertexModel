@@ -702,30 +702,6 @@ class Geo:
                 self.Cells[cc].Faces[j].build_face(cc, cj, face_ids, self.nCells, self.Cells[cc], self.XgID, Set,
                                                    self.XgTop, self.XgBottom, old_face)
 
-                wound_edge_tris = []
-                for tris_sharedCells in [tri.SharedByCells for tri in self.Cells[cc].Faces[j].Tris]:
-                    wound_edge_tris.append(any([self.Cells[c_cell].AliveStatus == 0 for c_cell in tris_sharedCells]))
-
-                if any(wound_edge_tris) and not old_face_exists:
-                    for woundTriID in [i for i, x in enumerate(wound_edge_tris) if x]:
-                        wound_tri = self.Cells[cc].Faces[j].Tris[woundTriID]
-                        all_tris = [tri for c_face in old_geo.Cells[cc].Faces for tri in c_face.Tris]
-                        matching_tris = [tri for tri in all_tris if
-                                         set(tri.SharedByCells).intersection(set(wound_tri.SharedByCells))]
-
-                        mean_distance_to_tris = []
-                        for c_Edge in [tri.Edge for tri in matching_tris]:
-                            mean_distance_to_tris.append(np.mean(
-                                np.linalg.norm(self.Cells[cc].Y[wound_tri.Edge, :] - old_geo.Cells[cc].Y[c_Edge, :],
-                                               axis=1)))
-
-                        if mean_distance_to_tris:
-                            matching_id = np.argmin(mean_distance_to_tris)
-                            self.Cells[cc].Faces[j].Tris[woundTriID].EdgeLength_time = matching_tris[
-                                matching_id].EdgeLength_time
-                        else:
-                            self.Cells[cc].Faces[j].Tris[woundTriID].EdgeLength_time = None
-
             self.Cells[cc].Faces = self.Cells[cc].Faces[:len(neigh_nodes)]
 
     def calculate_interface_type(self, new_tets):
