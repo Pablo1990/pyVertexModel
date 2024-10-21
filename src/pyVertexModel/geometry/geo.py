@@ -673,6 +673,7 @@ class Geo:
         else:
             cells_to_rebuild = [c for c in cells_to_rebuild if c in alive_cells or c in debris_cells]
 
+        # Rebuild the cells
         for cc in cells_to_rebuild:
             c_cell = self.Cells[cc]
             neigh_nodes = np.unique(c_cell.T)
@@ -786,10 +787,9 @@ class Geo:
                 oldYs.extend(removed_y)
         return oldYs
 
-    def add_tetrahedra(self, old_geo, new_tets, old_ys=None, y_new=None, c_set=None):
+    def add_tetrahedra(self, old_geo, new_tets, y_new=None, c_set=None):
         """
         Add the tetrahedra to the cells
-        :param old_ys:
         :param old_geo:
         :param new_tets:
         :param y_new:
