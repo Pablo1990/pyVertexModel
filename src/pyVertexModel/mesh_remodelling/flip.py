@@ -245,6 +245,7 @@ def get_4_fold_tets(Geo):
     allTets = np.vstack([cell.T for cell in Geo.Cells if cell.AliveStatus is not None])
 
     ghostNodesWithoutDebris = np.setdiff1d(Geo.XgID, Geo.RemovedDebrisCells)
+    ghostNodesWithoutDebris = np.setdiff1d(ghostNodesWithoutDebris, Geo.BorderGhostNodes)
 
     tets = allTets[np.all(~np.isin(allTets, ghostNodesWithoutDebris), axis=1)]
     tets = np.unique(tets, axis=0)
