@@ -28,8 +28,6 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, Set, old_geo):
     Geo.add_and_rebuild_cells(old_geo, oldTets, Tnew, Ynew, Set, True)
     has_converged = True
 
-    Geo.apply_periodic_boundary_conditions(Set)
-
     return Geo_0, Geo_n, Geo, Dofs, has_converged
 
 
