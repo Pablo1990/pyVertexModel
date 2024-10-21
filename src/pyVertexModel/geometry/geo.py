@@ -875,6 +875,7 @@ class Geo:
                     tetsToUse = tetsToUse & np.any(np.isin(allTs, self.XgBottom), axis=1)
 
                 tetsToUse = tetsToUse & (nGhostNodes_allTs == nGhostNodes_cTet)
+                YnewlyComputed[2] = np.mean(allYs[tetsToUse, 2], axis=0)
 
                 if any(tetsToUse):
                     Ynew.append(contributionOldYs * np.mean(allYs[tetsToUse, :], axis=0) + (
@@ -888,6 +889,7 @@ class Geo:
                         tetsToUse = tetsToUse & np.any(np.isin(allTs, self.XgBottom), axis=1)
 
                     tetsToUse = tetsToUse & (nGhostNodes_allTs == nGhostNodes_cTet)
+                    YnewlyComputed[2] = np.mean(allYs[tetsToUse, 2], axis=0)
 
                     if any(tetsToUse):
                         Ynew.append(contributionOldYs * np.mean(allYs[tetsToUse, :], axis=0) + (
