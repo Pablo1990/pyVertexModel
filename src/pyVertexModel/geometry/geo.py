@@ -766,14 +766,14 @@ class Geo:
         if update_measurements:
             self.update_measures()
 
-    def remove_tetrahedra(self, removingTets):
+    def remove_tetrahedra(self, removing_tets):
         """
         Remove the tetrahedra from the cells
-        :param removingTets:
+        :param removing_tets:
         :return:
         """
         oldYs = []
-        for removingTet in removingTets:
+        for removingTet in removing_tets:
             removed_y = None
             for numNode in removingTet:
                 idToRemove = np.all(np.isin(np.sort(self.Cells[numNode].T, axis=1), np.sort(removingTet)), axis=1)
@@ -799,23 +799,23 @@ class Geo:
         if y_new is None:
             y_new = []
 
-        for newTet in new_tets:
-            if np.any(~np.isin(newTet, self.XgID)):
-                for numNode in newTet:
-                    if (not np.any(np.isin(newTet, self.XgID)) and
-                            np.any(ismember_rows(self.Cells[numNode].T, newTet)[0])):
-                        self.Cells[numNode].Y = self.Cells[numNode].Y[
-                            ~ismember_rows(self.Cells[numNode].T, newTet)[0]]
-                        self.Cells[numNode].T = self.Cells[numNode].T[
-                            ~ismember_rows(self.Cells[numNode].T, newTet)[0]]
+        for new_tet in new_tets:
+            if np.any(~np.isin(new_tet, self.XgID)):
+                for num_node in new_tet:
+                    if (not np.any(np.isin(new_tet, self.XgID)) and
+                            np.any(ismember_rows(self.Cells[num_node].T, new_tet)[0])):
+                        self.Cells[num_node].Y = self.Cells[num_node].Y[
+                            ~ismember_rows(self.Cells[num_node].T, new_tet)[0]]
+                        self.Cells[num_node].T = self.Cells[num_node].T[
+                            ~ismember_rows(self.Cells[num_node].T, new_tet)[0]]
                     else:
-                        if len(self.Cells[numNode].T) == 0 or not np.any(
-                                np.isin(self.Cells[numNode].T, newTet).all(axis=1)):
-                            self.Cells[numNode].T = np.append(self.Cells[numNode].T, [newTet], axis=0)
-                            if self.Cells[numNode].AliveStatus is not None and c_set is not None:
+                        if len(self.Cells[num_node].T) == 0 or not np.any(
+                                np.isin(self.Cells[num_node].T, new_tet).all(axis=1)):
+                            self.Cells[num_node].T = np.append(self.Cells[num_node].T, [new_tet], axis=0)
+                            if self.Cells[num_node].AliveStatus is not None and c_set is not None:
                                 if y_new:
                                     # Find indices where all elements in new_tets match newTet
-                                    matching_indices = np.where(np.all(np.isin(new_tets, newTet), axis=1))[0]
+                                    matching_indices = np.where(np.all(np.isin(new_tets, new_tet), axis=1))[0]
 
                                     # Check if there are any matching indices
                                     if len(matching_indices) > 0:
@@ -824,14 +824,14 @@ class Geo:
                                         first_matching_index = matching_indices[0]
                                         selected_y_new = y_new[first_matching_index]
                                         # Now you can use selected_y_new as needed
-                                        self.Cells[numNode].Y = np.append(self.Cells[numNode].Y,
+                                        self.Cells[num_node].Y = np.append(self.Cells[num_node].Y,
                                                                           selected_y_new.reshape(1, -1),
                                                                           axis=0)
                                 else:
-                                    self.Cells[numNode].Y = np.append(self.Cells[numNode].Y,
+                                    self.Cells[num_node].Y = np.append(self.Cells[num_node].Y,
                                                                       old_geo.recalculate_ys_from_previous(
-                                                                          np.array([newTet]),
-                                                                          numNode,
+                                                                          np.array([new_tet]),
+                                                                          num_node,
                                                                           c_set), axis=0)
                                 self.numY += 1
 

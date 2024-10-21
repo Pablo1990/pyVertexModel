@@ -20,6 +20,85 @@ from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_back
 logger = logging.getLogger("pyVertexModel")
 
 
+def screenshot(v_model, temp_dir, selected_cells=None):
+    """
+    Create a screenshot of the current state of the model.
+    :param v_model: VertexModel object.
+    :param selected_cells: List of selected cells to be displayed.
+    :param temp_dir: Temporary directory to save the images.
+    :return:
+    """
+    # if exists variable export_images in set
+    if hasattr(v_model.set, 'export_images'):
+        if v_model.set.export_images is False:
+            return
+
+    total_real_cells = len([cell.ID for cell in v_model.geo.Cells if cell.AliveStatus is not None])
+
+    # Create a colormap_lim
+    if v_model.colormap_lim is None:
+        v_model.colormap_lim = [0, total_real_cells]
+
+    # Create a plotter
+    if selected_cells is None:
+        selected_cells = []
+
+    plotter = pv.Plotter(off_screen=True)
+    for _, cell in enumerate(v_model.geo.Cells):
+        if cell.AliveStatus == 1 and (cell.ID in selected_cells or selected_cells is not []):
+            # Load the VTK file as a pyvista mesh
+            mesh = cell.create_pyvista_mesh()
+
+            # Add the mesh to the plotter
+            plotter.add_mesh(mesh, scalars='ID', lighting=True, cmap="prism", clim=v_model.colormap_lim,
+                             show_edges=True, edge_opacity=0.5, edge_color='grey')
+    # Set a fixed camera zoom level
+    fixed_zoom_level = 1
+    plotter.camera.zoom(fixed_zoom_level)
+
+    # Add text to the plotter
+    if v_model.set.ablation:
+        timeAfterAblation = float(v_model.t) - float(v_model.set.TInitAblation)
+        text_content = f"Ablation time: {timeAfterAblation:.2f}"
+        plotter.add_text(text_content, position='upper_right', font_size=12, color='black')
+    else:
+        text_content = f"Time: {v_model.t:.2f}"
+        plotter.add_text(text_content, position='upper_right', font_size=12, color='black')
+
+    # Render the scene and capture a screenshot
+    img = plotter.screenshot()
+    # Save the image to a temporary file
+    temp_file = os.path.join(temp_dir, f'vModel_perspective_{v_model.numStep}.png')
+    imageio.imwrite(temp_file, img)
+
+    # True 2D
+    plotter.enable_parallel_projection()
+    plotter.enable_image_style()
+
+    # Set the camera to the top view
+    plotter.view_xy()
+
+    img = plotter.screenshot()
+    temp_file = os.path.join(temp_dir, f'vModel_top_{v_model.numStep}.png')
+    imageio.imwrite(temp_file, img)
+
+    # Set the camera to the front view
+    plotter.view_xz()
+
+    img = plotter.screenshot()
+    temp_file = os.path.join(temp_dir, f'vModel_front_{v_model.numStep}.png')
+    imageio.imwrite(temp_file, img)
+
+    # Set the camera to the bottom view
+    plotter.view_xy(negative=True)
+
+    img = plotter.screenshot()
+    temp_file = os.path.join(temp_dir, f'vModel_bottom_{v_model.numStep}.png')
+    imageio.imwrite(temp_file, img)
+
+    # Close the plotter
+    plotter.close()
+
 def generate_tetrahedra_from_information(X, cell_edges, cell_height, cell_centroids, main_cells,
                                          neighbours_network, selected_planes, triangles_connectivity,
                                          vertices_of_cell_pos, geo):
@@ -366,9 +445,6 @@ class VertexModel:
                         self.Dofs.get_dofs(self.geo, self.set)
                         gr = np.linalg.norm(g[self.Dofs.Free])
 
-            # Append Energies
-            # energies_per_time_step.append(energies)
-
             # Build X From Y
             self.geo.build_x_from_y(self.geo_n)
 
@@ -417,7 +493,7 @@ class VertexModel:
         self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
         self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
         temp_dir = os.path.join(self.set.OutputFolder, 'images')
-        self.screenshot(temp_dir)
+        screenshot(self, temp_dir)
         # Save Data of the current step
         if file_name is None:
             save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
@@ -553,84 +629,6 @@ class VertexModel:
         }
 
         return wound_features
-
-    def screenshot(self, temp_dir, selected_cells=None):
-        """
-        Create a screenshot of the current state of the model.
-        :param selected_cells:
-        :param temp_dir:
-        :return:
-        """
-        # if exists variable export_images in set
-        if hasattr(self.set, 'export_images'):
-            if self.set.export_images is False:
-                return
-
-        total_real_cells = len([cell.ID for cell in self.geo.Cells if cell.AliveStatus is not None])
-
-        # Create a colormap_lim
-        if self.colormap_lim is None:
-            self.colormap_lim = [0, total_real_cells]
-
-        # Create a plotter
-        if selected_cells is None:
-            selected_cells = []
-
-        plotter = pv.Plotter(off_screen=True)
-        for _, cell in enumerate(self.geo.Cells):
-            if cell.AliveStatus == 1 and (cell.ID in selected_cells or selected_cells is not []):
-                # Load the VTK file as a pyvista mesh
-                mesh = cell.create_pyvista_mesh()
-
-                # Add the mesh to the plotter
-                plotter.add_mesh(mesh, scalars='ID', lighting=True, cmap="prism", clim=self.colormap_lim,
-                                 show_edges=True, edge_opacity=0.5, edge_color='grey')
-        # Set a fixed camera zoom level
-        fixed_zoom_level = 1
-        plotter.camera.zoom(fixed_zoom_level)
-
-        # Add text to the plotter
-        if self.set.ablation:
-            timeAfterAblation = float(self.t) - float(self.set.TInitAblation)
-            text_content = f"Ablation time: {timeAfterAblation:.2f}"
-            plotter.add_text(text_content, position='upper_right', font_size=12, color='black')
-        else:
-            text_content = f"Time: {self.t:.2f}"
-            plotter.add_text(text_content, position='upper_right', font_size=12, color='black')
-
-        # Render the scene and capture a screenshot
-        img = plotter.screenshot()
-        # Save the image to a temporary file
-        temp_file = os.path.join(temp_dir, f'vModel_perspective_{self.numStep}.png')
-        imageio.imwrite(temp_file, img)
-
-        # True 2D
-        plotter.enable_parallel_projection()
-        plotter.enable_image_style()
-
-        # Set the camera to the top view
-        plotter.view_xy()
-
-        img = plotter.screenshot()
-        temp_file = os.path.join(temp_dir, f'vModel_top_{self.numStep}.png')
-        imageio.imwrite(temp_file, img)
-
-        # Set the camera to the front view
-        plotter.view_xz()
-
-        img = plotter.screenshot()
-        temp_file = os.path.join(temp_dir, f'vModel_front_{self.numStep}.png')
-        imageio.imwrite(temp_file, img)
-
-        # Set the camera to the bottom view
-        plotter.view_xy(negative=True)
-
-        img = plotter.screenshot()
-        temp_file = os.path.join(temp_dir, f'vModel_bottom_{self.numStep}.png')
-        imageio.imwrite(temp_file, img)
-
-        # Close the plotter
-        plotter.close()
 
     def copy(self):
         """
