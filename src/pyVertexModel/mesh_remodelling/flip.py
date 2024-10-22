@@ -266,11 +266,13 @@ def y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo,
     """
     Xs_gToDisconnect = xs_to_disconnect[np.isin(xs_to_disconnect, Geo.XgID)]
 
+    Geo_without_scutoids = Geo.copy()
+
     # Temporary remove 4-cell tetrahedra
-    tets4_cells = get_4_fold_tets(Geo)
-    ys_4_cells = Geo.remove_tetrahedra(tets4_cells)
+    tets4_cells = get_4_fold_tets(Geo_without_scutoids)
+    ys_4_cells = Geo_without_scutoids.remove_tetrahedra(tets4_cells)
     # tets4_cells = np.unique(np.sort(tets4_cells, axis=1), axis=0)
-    ghost_nodes_without_debris = np.setdiff1d(Geo.XgID, Geo.RemovedDebrisCells)
+    ghost_nodes_without_debris = np.setdiff1d(Geo_without_scutoids.XgID, Geo_without_scutoids.RemovedDebrisCells)
 
     Xs = np.unique(old_tets)
     Xs_c = Xs[~np.isin(Xs, ghost_nodes_without_debris)]
@@ -299,7 +301,7 @@ def y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo,
     parentNode = 0
     arrayPos = 2
     endNode = 1
-    _, Tnew, TRemoved, treeOfPossibilities, _ = y_flip_nm_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys, Geo,
+    _, Tnew, TRemoved, treeOfPossibilities, _ = y_flip_nm_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys, Geo_without_scutoids,
                                                                     possibleEdges,
                                                                     xs_to_disconnect, treeOfPossibilities, parentNode,
                                                                     arrayPos)
@@ -381,15 +383,14 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
                 if ~ismember_rows(Xs_c, np.vstack([new_tets, tets4_cells]))[0][0]:
                     new_tets = np.append(new_tets, [Xs_c], axis=0)
 
-            current_valence_segment, _, _ = (
+            current_valence_segment, shared_tets, _ = (
                 edge_valence_t(new_tets, [xs_to_disconnect_cells, cell_to_split_from]))
             if current_valence_segment < valence_segment:
                 try:
                     Geo_new = Geo.copy()
-                    Geo_new.add_tetrahedra(Geo, tets4_cells, ys_4_cells, Set)
                     Geo_new.remove_tetrahedra(old_tets)
                     Geo_new.add_tetrahedra(Geo, new_tets, None, Set)
-                    Geo_new.rebuild(Geo, Set)
+                    Geo_new.rebuild(Geo, Set, cells_to_rebuild=np.unique(new_tets))
                     Geo_new.build_global_ids()
 
                     new_tets_tree = new_tets
