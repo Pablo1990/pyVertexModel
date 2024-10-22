@@ -389,7 +389,7 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
                     Geo_new.add_tetrahedra(Geo, tets4_cells, ys_4_cells, Set)
                     Geo_new.remove_tetrahedra(old_tets)
                     Geo_new.add_tetrahedra(Geo, new_tets, None, Set)
-                    Geo_new.rebuild(Geo, Set, cells_to_rebuild=np.unique(new_tets))
+                    Geo_new.rebuild(Geo_new, Set)
                     Geo_new.build_global_ids()
 
                     new_tets_tree = new_tets

@@ -3,6 +3,7 @@ import logging
 import numpy as np
 import pandas as pd
 
+from src.pyVertexModel.algorithm.newtonRaphson import gGlobal
 from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours_vertices
 from src.pyVertexModel.geometry.face import get_interface
 from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
@@ -118,63 +119,55 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
             return Geo
 
     vertices_to_change = np.sort(Tnew, axis=1)
-
+    vertices_to_change = vertices_to_change[np.sum(np.isin(vertices_to_change, cell_nodes_shared), axis=1) > 1]
     if possible_ref_tets.shape[0] <= 1:
         logger.warning('Vertices not moved closer to ref point')
         return Geo
 
     # Get the max distance from the reference point to the vertices in the cells to get closer
     max_distance = 0
-    for num_cell, c_cell in enumerate(Geo.Cells):
-        for vertex_to_change in c_cell.vertices_and_faces_to_remodel:
-            if np.isin(vertex_to_change, c_cell.globalIds):
-                new_point = c_cell.Y[np.isin(c_cell.globalIds, vertex_to_change)][0]
-                distance = compute_distance_3d(ref_point_closer[0], new_point)
-                if distance > max_distance:
-                    max_distance = distance
+    for tet_to_check in vertices_to_change:
+        for node_in_tet in tet_to_check:
+            if node_in_tet not in Geo.XgID:
+                new_point = Geo.Cells[node_in_tet].Y[
+                    ismember_rows(Geo.Cells[node_in_tet].T, tet_to_check)[0]]
+                if new_point.shape[0] > 0:
+                    distance = compute_distance_3d(ref_point_closer[0], new_point[0])
+                    if distance > max_distance:
+                        max_distance = distance
 
     # Move the vertices closer to the reference point
-    for num_cell, c_cell in enumerate(Geo.Cells):
-        for vertex_to_change in c_cell.vertices_and_faces_to_remodel:
-            if np.isin(vertex_to_change, c_cell.globalIds):
-                vertex_to_change_id = np.isin(c_cell.globalIds, vertex_to_change)
-                new_point = c_cell.Y[vertex_to_change_id][0]
-                # Create a gradient to move the vertices closer to the reference point, so that vertices far from
-                # the reference point are moved more.
-                distance = compute_distance_3d(ref_point_closer[0], new_point)
-                # Vertices on the edge or tricellular junction would move more
-                if np.sum(~np.isin(c_cell.T[vertex_to_change_id], Geo.XgID)) >= 2:
-                    weight = close_to_new_point * (distance / max_distance) ** strong_gradient
-                else:
-                    weight = close_to_new_point * (distance / max_distance) ** (strong_gradient * 0.1)
+    for tet_to_check in vertices_to_change:
+        for node_in_tet in tet_to_check:
+            if node_in_tet not in Geo.XgID:
+                new_point = Geo.Cells[node_in_tet].Y[
+                    ismember_rows(Geo.Cells[node_in_tet].T, tet_to_check)[0]]
+                if new_point.shape[0] > 0:
+                    # Create a gradient to move the vertices closer to the reference point, so that vertices far from
+                    # the reference point are moved more.
+                    weight = close_to_new_point
+                    avg_point = ref_point_closer * (1 - weight) + new_point * weight
+                    Geo.Cells[node_in_tet].Y[
+                        ismember_rows(Geo.Cells[node_in_tet].T, tet_to_check)[0]] = avg_point
 
-                avg_point = ref_point_closer * (1 - weight) + new_point * weight
-                Geo.Cells[num_cell].Y[vertex_to_change_id] = avg_point
-
-        # Move the faces that share the ghost node closer to the reference point
-        for face_id, face_r in enumerate(c_cell.Faces):
-            if np.isin(face_r.globalIds, c_cell.vertices_and_faces_to_remodel):
-                if get_interface(face_r.InterfaceType) == get_interface(interface_type):
-                    face_centre = face_r.Centre
-                    distance = compute_distance_3d(ref_point_closer[0], face_centre)
-                    weight = close_to_new_point * (distance / max_distance) ** (strong_gradient * 0.1)
-                    Geo.Cells[num_cell].Faces[face_id].Centre = (
-                            ref_point_closer[0] * (1 - weight) + face_centre * weight)
+    # Move the faces that share the ghost node closer to the reference point
+    for current_cell in cell_nodes_shared:
+        for face_id, face in enumerate(Geo.Cells[current_cell].Faces):
+            if get_interface(face.InterfaceType) == get_interface(interface_type) and np.all(np.isin(face.ij, Tnew)):
+                face_centre = face.Centre
+                weight = close_to_new_point
+                Geo.Cells[current_cell].Faces[face_id].Centre = (
+                        ref_point_closer[0] * (1 - weight) + face_centre * weight)
 
     # Move the middle vertex of the tetrahedra that share the ghost node closer to the reference point
     for current_cell in cell_nodes_shared:
         middle_vertex_tet = np.all(np.isin(Geo.Cells[current_cell].T, cell_nodes_shared), axis=1)
         if middle_vertex_tet.sum() == 0:
             continue
+
         weight = close_to_new_point
         Geo.Cells[current_cell].Y[middle_vertex_tet] = ref_point_closer * (1 - weight) + \
                                                        Geo.Cells[current_cell].Y[middle_vertex_tet] * weight
-
-    old_geo = Geo.copy()
-    Geo.build_x_from_y(Geo)
-    Geo.rebuild(old_geo, Set)
-    Geo.build_global_ids()
-    Geo.check_ys_and_faces_have_not_changed(vertices_to_change, vertices_to_change, old_geo)
 
     return Geo
 
@@ -248,6 +241,7 @@ class Remodelling:
             # Get the first segment feature
             segmentFeatures = segmentFeatures_all.iloc[0]
 
+            #if segmentFeatures['num_cell'] in self.Geo.BorderCells or np.any(np.isin(self.Geo.BorderCells, segmentFeatures['shared_neighbours'])):
             if self.Geo.Cells[segmentFeatures['cell_to_split_from']].AliveStatus == 1:
                 segmentFeatures_all = segmentFeatures_all.drop(segmentFeatures.name)
                 continue
@@ -266,7 +260,7 @@ class Remodelling:
                 gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
                 cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
 
-                if len(np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])) > 3 and np.all(~np.isin(cellNodesShared, self.Geo.BorderCells)):
+                if len(np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])) > 3:
                     how_close_to_vertex = 0.2
                     strong_gradient = 0
                     self.Geo = (
@@ -278,9 +272,8 @@ class Remodelling:
 
                     cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
                                                     and cell.AliveStatus == 1]
-                    self.Geo = smoothing_cell_surfaces_mesh(self.Geo, cells_involved_intercalation)
-
-                    self.Geo_n = self.Geo.copy(update_measurements=False)
+                    #self.Geo = smoothing_cell_surfaces_mesh(self.Geo, cells_involved_intercalation)
+                    #self.Geo_n = self.Geo.copy(update_measurements=False)
 
                     # # Solve the remodelling step
                     # self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
@@ -292,6 +285,7 @@ class Remodelling:
                     #     print(gr)
                     #     if gr >= self.Set.tol0:
                     #         has_converged = False
+                    pass
                 else:
                     has_converged = False
 
@@ -372,6 +366,16 @@ class Remodelling:
                 # TODO: SELECT THE BEST GHOST NODE
             else:
                 break
+
+        # Check if the remodelling has improved the gr and the energy
+
+        # Compute the new energy
+        g, energies = gGlobal(self.Geo, self.Geo, self.Geo, self.Set, self.Set.implicit_method)
+        gr = np.linalg.norm(g[self.Dofs.Free])
+        logger.info(f'|gr| after remodelling: {gr}')
+
+        if gr / 10 >= self.Set.tol:
+            has_converged = False
 
         return all_tnew, cell_to_split_from, ghost_node, ghost_nodes_tried, has_converged, old_tets
 
