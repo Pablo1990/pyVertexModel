@@ -270,8 +270,8 @@ class Remodelling:
                                                           cellToSplitFrom,
                                                           ghostNode, allTnew, self.Set, strong_gradient))
 
-                    cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
-                                                    and cell.AliveStatus == 1]
+                    #cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
+                    #                                and cell.AliveStatus == 1]
                     #self.Geo = smoothing_cell_surfaces_mesh(self.Geo, cells_involved_intercalation)
                     #self.Geo_n = self.Geo.copy(update_measurements=False)
 
