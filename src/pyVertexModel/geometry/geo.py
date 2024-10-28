@@ -528,11 +528,11 @@ class Geo:
         alive_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]
 
         # Obtain cells that are not border cells or border ghost nodes
-        all_cells_to_update = [c.ID for c in self.Cells if c.ID not in self.BorderCells or
-                               c.ID not in self.BorderGhostNodes]
+        all_cells_to_update = [c.ID for c in self.Cells]
 
+        # Update the centre X of the cells
         for c in all_cells_to_update:
-            if self.Cells[c].T is not None and self.Cells[c].AliveStatus is not None:
+            if self.Cells[c].T is not None:
                 if c in self.XgID:
                     dY = np.zeros((self.Cells[c].T.shape[0], 3))
                     for tet in range(self.Cells[c].T.shape[0]):
@@ -547,6 +547,7 @@ class Geo:
                     dY = self.Cells[c].Y - geo_n.Cells[c].Y
 
                 self.Cells[c].X = self.Cells[c].X + np.mean(dY, axis=0)
+
 
     def build_y_substrate(self, Cell, Cells, XgID, Set, XgSub):
         """
