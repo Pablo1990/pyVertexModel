@@ -242,7 +242,8 @@ class Remodelling:
             segmentFeatures = segmentFeatures_all.iloc[0]
 
             #if segmentFeatures['num_cell'] in self.Geo.BorderCells or np.any(np.isin(self.Geo.BorderCells, segmentFeatures['shared_neighbours'])):
-            if self.Geo.Cells[segmentFeatures['cell_to_split_from']].AliveStatus == 1:
+            if self.Geo.Cells[segmentFeatures['cell_to_split_from']].AliveStatus == 1 or \
+                    segmentFeatures['node_pair_g'] not in self.Geo.XgTop:
                 segmentFeatures_all = segmentFeatures_all.drop(segmentFeatures.name)
                 continue
 
@@ -271,20 +272,8 @@ class Remodelling:
                                                           ghostNode, allTnew, self.Set, strong_gradient))
 
                     #cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
-                    #                                and cell.AliveStatus == 1]
+                    #                               and cell.AliveStatus == 1]
                     #self.Geo = smoothing_cell_surfaces_mesh(self.Geo, cells_involved_intercalation)
-                    #self.Geo_n = self.Geo.copy(update_measurements=False)
-
-                    # # Solve the remodelling step
-                    # self.Geo, Set, has_converged = solve_remodeling_step(self.Geo_0, self.Geo_n, self.Geo, self.Dofs,
-                    #                                                      self.Set)
-                    # if self.Set.implicit_method is False:
-                    #     g, energies = newtonRaphson.gGlobal(self.Geo_0, self.Geo_n, self.Geo, self.Set,
-                    #                                         self.Set.implicit_method)
-                    #     gr = np.linalg.norm(g[self.Dofs.Free])
-                    #     print(gr)
-                    #     if gr >= self.Set.tol0:
-                    #         has_converged = False
                     pass
                 else:
                     has_converged = False
