@@ -802,6 +802,7 @@ class Geo:
 
         for new_tet in new_tets:
             if np.any(~np.isin(new_tet, self.XgID)):
+                scutoid_vertex = []
                 for num_node in new_tet:
                     if (not np.any(np.isin(new_tet, self.XgID)) and
                             np.any(ismember_rows(self.Cells[num_node].T, new_tet)[0])):
@@ -834,7 +835,23 @@ class Geo:
                                                                           np.array([new_tet]),
                                                                           num_node,
                                                                           c_set), axis=0)
+                                    if not np.any(np.isin(new_tet, self.XgID)):
+                                        if np.any(np.isin(new_tets, self.XgTop)):
+                                            # Get the z of the top vertices as mean
+                                            top_vertices_of_cell = self.Cells[num_node].Y[np.isin(self.Cells[num_node].T,
+                                                                                                  self.XgTop).any(axis=1)]
+                                            scutoid_vertex.append(np.min(top_vertices_of_cell[:, 2]))
+                                        elif np.any(np.isin(new_tets, self.XgBottom)):
+                                            # Get the z of the bottom vertices as mean
+                                            bottom_vertices_of_cell = self.Cells[num_node].Y[np.isin(self.Cells[num_node].T,
+                                                                                                     self.XgBottom).any(axis=1)]
+                                            scutoid_vertex.append(np.min(bottom_vertices_of_cell[:, 2]))
+
                                 self.numY += 1
+
+                if len(scutoid_vertex) > 0:
+                    for num_node in new_tet:
+                        self.Cells[num_node].Y[-1, 2] = np.min(scutoid_vertex) * 0.99
 
     def recalculate_ys_from_previous(self, Tnew, mainNodesToConnect, Set):
         """
