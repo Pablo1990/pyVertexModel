@@ -430,12 +430,17 @@ class VertexModel:
             # STEP has converged
             logger.info(f"STEP {str(self.set.i_incr)} has converged ...")
 
+            # Build X From Y
+            self.geo.build_x_from_y(self.geo_n)
+
             # Remodelling
             if abs(self.t - self.tr) >= self.set.RemodelingFrequency:
                 if self.set.Remodelling:
                     save_state(self,
                                os.path.join(self.set.OutputFolder,
                                             'data_step_before_remodelling_' + str(self.numStep) + '.pkl'))
+
+                    # Remodelling
                     remodel_obj = Remodelling(self.geo, self.geo_n, self.geo_0, self.set, self.Dofs)
                     self.geo, self.geo_n = remodel_obj.remodel_mesh(self.numStep)
                     # Update tolerance if remodelling was performed to the current one
@@ -444,9 +449,6 @@ class VertexModel:
                                                             self.set.implicit_method)
                         self.Dofs.get_dofs(self.geo, self.set)
                         gr = np.linalg.norm(g[self.Dofs.Free])
-
-            # Build X From Y
-            self.geo.build_x_from_y(self.geo_n)
 
             # Update last time converged
             self.set.last_t_converged = self.t
