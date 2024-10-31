@@ -80,6 +80,7 @@ if start_new == True:
         vModel = VertexModelVoronoiFromTimeImage()
         vModel.initialize()
         vModel.iterate_over_time()
+        analyse_simulation(vModel.set.OutputFolder)
 else:
     vModel = VertexModelVoronoiFromTimeImage()
     output_folder = vModel.set.OutputFolder
@@ -90,6 +91,9 @@ else:
     vModel.set.wing_disc()
     vModel.set.wound_default()
     vModel.set.OutputFolder = output_folder
+        vModel.set.dt0 = None
+        vModel.set.dt = None
     vModel.set.update_derived_parameters()
     vModel.iterate_over_time()
+        analyse_simulation(vModel.set.OutputFolder)
 
