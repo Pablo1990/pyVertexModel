@@ -18,9 +18,9 @@ def get_lambda(c_cell, face, Set):
     if get_interface(face.InterfaceType) == get_interface('Top'):
         Lambda = c_cell.lambda_s1_perc * Set.lambdaS1
     elif get_interface(face.InterfaceType) == get_interface('CellCell'):
-        Lambda = c_cell.lambda_s1_perc * Set.lambdaS1
+        Lambda = c_cell.lambda_s2_perc * Set.lambdaS2
     elif get_interface(face.InterfaceType) == get_interface('Bottom'):
-        Lambda = c_cell.lambda_s1_perc * Set.lambdaS1
+        Lambda = c_cell.lambda_s3_perc * Set.lambdaS3
     else:
         raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
     return Lambda
