@@ -282,7 +282,6 @@ class Set:
 
         # Substrate
         self.kSubstrate = 0.1
-        #self.kCeiling = 0
 
         # Contractility
         self.cLineTension = 0

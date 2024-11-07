@@ -55,7 +55,7 @@ class TestCell(Tests):
         original_cell.Vol0 = 10.0
         original_cell.AliveStatus = 11
         original_cell.substrate_g = 12
-        original_cell.lambdaB_perc = 13
+        original_cell.lambda_b_perc = 13
         original_cell.ID = 14
         original_cell.X = np.array([15, 16, 17])
         original_cell.T = np.array([18, 19, 20])
@@ -74,7 +74,7 @@ class TestCell(Tests):
         self.assertEqual(original_cell.Vol0, copied_cell.Vol0)
         self.assertEqual(original_cell.AliveStatus, copied_cell.AliveStatus)
         self.assertEqual(original_cell.substrate_g, copied_cell.substrate_g)
-        self.assertEqual(original_cell.lambdaB_perc, copied_cell.lambdaB_perc)
+        self.assertEqual(original_cell.lambda_b_perc, copied_cell.lambda_b_perc)
         self.assertEqual(original_cell.ID, copied_cell.ID)
         self.assertTrue(np.array_equal(original_cell.X, copied_cell.X))
         self.assertTrue(np.array_equal(original_cell.T, copied_cell.T))

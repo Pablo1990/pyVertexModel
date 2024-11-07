@@ -73,34 +73,43 @@ class Cell:
         :param mat_file:
         """
         self.opposite_cell = None
-        # Individual mechanical parameters
-        # Surface area
-        self.lambda_s1 = None
-        self.lambda_s2 = None
-        self.lambda_s3 = None
-        # Volume
-        self.lambda_v = None
-        self.lambda_r = None
-        self.barrier_tri0_top = None
-        self.barrier_tri0_bottom = None
-        self.contractility_noise = None
-        self.SubstrateLambda = None
-        self.InternalLambda = None
-        self.ExternalLambda = None
         self.axes_lengths = None
         self.Y = None
         self.globalIds = np.array([], dtype='int')
         self.Faces = []
         self.Area = None
-        self.Area0 = None
         self.Vol = None
-        self.Vol0 = None
         self.AliveStatus = None
         self.vertices_and_faces_to_remodel = np.array([], dtype='int')
-        # TODO: Save contractile forces (g) to output
-        self.substrate_g = None
-        self.lambdaB_perc = 1
 
+        ## Individual mechanical parameters
+        # Surface area
+        self.lambda_s1_perc = 1
+        self.lambda_s2_perc = 1
+        self.lambda_s3_perc = 1
+        # Volume
+        self.lambda_v_perc = 1
+        # Aspect ratio/elongation
+        self.lambda_r_perc = 1
+        # Contractility
+        self.c_line_tension_perc = 1
+        # Substrate k
+        self.k_substrate_perc = 1
+        # Area Energy Barrier
+        self.lambda_b_perc = 1
+
+        ## Reference values
+        # Aspect ratio
+        self.barrier_tri0_top = None
+        self.barrier_tri0_bottom = None
+        # Area
+        self.Area0 = None
+        # Volume
+        self.Vol0 = None
+
+
+
+        # In case the geometry is not provided, the cell is empty
         if mat_file is None:
             self.ID = None
             self.X = None

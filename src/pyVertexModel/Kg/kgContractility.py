@@ -1,9 +1,8 @@
-import random
 import time
 
 import numpy as np
 
-from src.pyVertexModel.Kg.kg import Kg, add_noise_to_parameter
+from src.pyVertexModel.Kg.kg import Kg
 from src.pyVertexModel.geometry.face import get_interface
 
 
@@ -156,7 +155,7 @@ def get_contractility_based_on_location(current_face, current_tri, geo, c_set, c
             else:
                 contractilityValue = c_set.cLineTension
 
-        contractilityValue = add_noise_to_parameter(contractilityValue, c_set.noise_random, random_number=cell_noise)
+        contractilityValue = contractilityValue * cell_noise
 
         for cellToCheck in current_tri.SharedByCells:
             facesToCheck = geo.Cells[cellToCheck].Faces
@@ -196,15 +195,13 @@ class KgContractility(Kg):
             c = cell.ID
             ge = np.zeros(self.g.shape, dtype=self.precision_type)
             Energy_c = 0
-            if cell.contractility_noise is None:
-                cell.contractility_noise = random.random()
 
             for face_id, currentFace in enumerate(cell.Faces):
                 l_i0 = geo.EdgeLengthAvg_0[get_interface(currentFace.InterfaceType)]
                 for tri_id, currentTri in enumerate(currentFace.Tris):
                     if len(currentTri.SharedByCells) > 1 and not np.all(np.isin(cell.globalIds[currentTri.Edge], geo.y_ablated)):
                         C, geo = get_contractility_based_on_location(currentFace, currentTri, geo, c_set,
-                                                                     cell_noise=cell.contractility_noise)
+                                                                     cell_noise=cell.c_line_tension_perc)
 
                         y_1 = cell.Y[currentTri.Edge[0]]
                         y_2 = cell.Y[currentTri.Edge[1]]

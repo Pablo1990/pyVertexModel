@@ -7,6 +7,7 @@ from numpy.ma.extras import setxor1d
 from scipy.spatial import ConvexHull
 from torch.fx.experimental.unification.unification_tools import get_in
 
+from src.pyVertexModel.Kg.kg import add_noise_to_parameter
 from src.pyVertexModel.geometry import face, cell
 from src.pyVertexModel.geometry.face import get_interface
 from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes, calculate_polygon_area
@@ -377,6 +378,22 @@ class Geo:
             if c_cell.AliveStatus is not None:
                 self.Cells[c].Vol0 = self.Cells[c].Vol / c_set.ref_V0
                 self.Cells[c].Area0 = avg_area
+
+                # Compute the mechanical parameter with noise
+                # Surface area
+                self.Cells[c].lambda_s1_perc = add_noise_to_parameter(1, c_set.noise_random)
+                self.Cells[c].lambda_s2_perc = add_noise_to_parameter(1, c_set.noise_random)
+                self.Cells[c].lambda_s3_perc = add_noise_to_parameter(1, c_set.noise_random)
+                # Volume
+                self.Cells[c].lambda_v_perc = add_noise_to_parameter(1, c_set.noise_random)
+                # Aspect ratio/elongation
+                self.Cells[c].lambda_r_perc = add_noise_to_parameter(1, c_set.noise_random)
+                # Contractility
+                self.Cells[c].c_line_tension_perc = add_noise_to_parameter(1, c_set.noise_random)
+                # Substrate k
+                self.Cells[c].k_substrate_perc = add_noise_to_parameter(1, c_set.noise_random)
+                # Area Energy Barrier
+                self.Cells[c].lambda_b_perc = add_noise_to_parameter(1, c_set.noise_random)
 
                 # Compute number of faces per domain
                 num_faces_bottom, num_faces_lateral, num_faces_top = self.get_num_faces(c)
