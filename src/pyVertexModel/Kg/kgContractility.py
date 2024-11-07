@@ -111,7 +111,7 @@ def compute_energy_contractility(l_i0, l_i, c_contractility):
     return energyContractility
 
 
-def get_contractility_based_on_location(current_face, current_tri, geo, c_set, cell_noise):
+def get_contractility_based_on_location(current_face, current_tri, geo, c_set):
     """
     Get the contractility based on the location
     :param current_face:
@@ -200,9 +200,12 @@ class KgContractility(Kg):
                 l_i0 = geo.EdgeLengthAvg_0[get_interface(currentFace.InterfaceType)]
                 for tri_id, currentTri in enumerate(currentFace.Tris):
                     if len(currentTri.SharedByCells) > 1 and not np.all(np.isin(cell.globalIds[currentTri.Edge], geo.y_ablated)):
-                        C, geo = get_contractility_based_on_location(currentFace, currentTri, geo, c_set,
-                                                                     cell_noise=cell.c_line_tension_perc)
+                        C, geo = get_contractility_based_on_location(currentFace, currentTri, geo, c_set)
 
+                        # Adding a bit of noise between cells
+                        C = C * cell.c_line_tension_perc
+
+                        # Get the vertices of the edge
                         y_1 = cell.Y[currentTri.Edge[0]]
                         y_2 = cell.Y[currentTri.Edge[1]]
 
