@@ -155,8 +155,6 @@ def get_contractility_based_on_location(current_face, current_tri, geo, c_set):
             else:
                 contractilityValue = c_set.cLineTension
 
-        contractilityValue = contractilityValue * cell_noise
-
         for cellToCheck in current_tri.SharedByCells:
             facesToCheck = geo.Cells[cellToCheck].Faces
             faceToCheckID_bool = [np.array_equal(sorted(face.ij), sorted(current_face.ij)) for face in facesToCheck]
