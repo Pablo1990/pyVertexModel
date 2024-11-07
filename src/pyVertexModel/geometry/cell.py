@@ -73,10 +73,14 @@ class Cell:
         :param mat_file:
         """
         self.opposite_cell = None
-        self.lambda_s1_noise = None
-        self.lambda_s2_noise = None
-        self.lambda_s3_noise = None
-        self.lambda_v_noise = None
+        # Individual mechanical parameters
+        # Surface area
+        self.lambda_s1 = None
+        self.lambda_s2 = None
+        self.lambda_s3 = None
+        # Volume
+        self.lambda_v = None
+        self.lambda_r = None
         self.barrier_tri0_top = None
         self.barrier_tri0_bottom = None
         self.contractility_noise = None
