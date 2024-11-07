@@ -722,21 +722,22 @@ class Geo:
                 continue
 
             # Update the area0 of all the faces
-            num_faces_bottom, num_faces_lateral, num_faces_top = self.get_num_faces(cc)
-            old_faces_bottom, old_faces_lateral, old_faces_top = old_geo.get_num_faces(cc)
-
-            old_area0_top = np.mean([c_face.Area0 for c_face in old_geo.Cells[cc].Faces if get_interface(c_face.InterfaceType) == get_interface('Top')])
-            old_area0_bottom = np.mean([c_face.Area0 for c_face in old_geo.Cells[cc].Faces if get_interface(c_face.InterfaceType) == get_interface('Bottom')])
-            old_area0_lateral = np.mean([c_face.Area0 for c_face in old_geo.Cells[cc].Faces if get_interface(c_face.InterfaceType) == get_interface('CellCell')])
+            # num_faces_bottom, num_faces_lateral, num_faces_top = self.get_num_faces(cc)
+            # old_faces_bottom, old_faces_lateral, old_faces_top = old_geo.get_num_faces(cc)
+            #
+            # old_area0_top = np.mean([c_face.Area0 for c_face in old_geo.Cells[cc].Faces if get_interface(c_face.InterfaceType) == get_interface('Top')])
+            # old_area0_bottom = np.mean([c_face.Area0 for c_face in old_geo.Cells[cc].Faces if get_interface(c_face.InterfaceType) == get_interface('Bottom')])
+            # old_area0_lateral = np.mean([c_face.Area0 for c_face in old_geo.Cells[cc].Faces if get_interface(c_face.InterfaceType) == get_interface('CellCell')])
 
             # Iterate over all faces in the current cell
             for f in range(len(self.Cells[cc].Faces)):
-                if get_interface(self.Cells[cc].Faces[f].InterfaceType) == get_interface('Top'):
-                    self.Cells[cc].Faces[f].Area0 = old_area0_top * old_faces_top / num_faces_top
-                elif get_interface(self.Cells[cc].Faces[f].InterfaceType) == get_interface('Bottom'):
-                    self.Cells[cc].Faces[f].Area0 = old_area0_bottom * old_faces_bottom / num_faces_bottom
-                else:
-                    self.Cells[cc].Faces[f].Area0 = old_area0_lateral * old_faces_lateral / num_faces_lateral
+                # if get_interface(self.Cells[cc].Faces[f].InterfaceType) == get_interface('Top'):
+                #     self.Cells[cc].Faces[f].Area0 = old_area0_top * old_faces_top / num_faces_top
+                # elif get_interface(self.Cells[cc].Faces[f].InterfaceType) == get_interface('Bottom'):
+                #     self.Cells[cc].Faces[f].Area0 = old_area0_bottom * old_faces_bottom / num_faces_bottom
+                # else:
+                #     self.Cells[cc].Faces[f].Area0 = old_area0_lateral * old_faces_lateral / num_faces_lateral
+                self.Cells[cc].Faces[f].Area0 = self.Cells[cc].Faces[f].Area * Set.ref_A0
 
     def get_num_faces(self, num_cell):
         """
