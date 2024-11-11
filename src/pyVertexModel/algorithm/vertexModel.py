@@ -10,6 +10,7 @@ import pyvista as pv
 from scipy.stats import zscore
 from skimage.measure import regionprops
 
+from src.pyVertexModel.Kg.kg import add_noise_to_parameter
 from src.pyVertexModel.algorithm import newtonRaphson
 from src.pyVertexModel.geometry import degreesOfFreedom
 from src.pyVertexModel.geometry.geo import Geo
@@ -291,12 +292,12 @@ class VertexModel:
         """
 
         # Concatenate and sort all tetrahedron vertices
-        all_tets = np.sort(np.vstack([cell.T for cell in self.geo.Cells]), axis=1)
+        all_tets = np.sort(np.vstack([cell.T for cell in self.geo.Cells if cell.AliveStatus is not None]), axis=1)
         all_tets_unique = np.unique(all_tets, axis=0)
 
         # Generate random displacements with a normal distribution for each dimension
-        displacements = scale * (self.geo.Cells[0].X - self.geo.Cells[1].X) * np.random.randn(all_tets_unique.shape[0],
-                                                                                              3)
+        displacements = (scale * (np.linalg.norm(self.geo.Cells[14].X - self.geo.Cells[15].X)) *
+                         np.random.randn(all_tets_unique.shape[0], 3))
 
         # Update vertex positions based on 3D Brownian motion displacements
         for cell in [c for c in self.geo.Cells if c.AliveStatus is not None and c.ID not in self.geo.BorderCells]:
@@ -325,8 +326,6 @@ class VertexModel:
         if self.geo_n is None:
             self.geo_n = self.geo.copy(update_measurements=False)
 
-        # Count the number of faces in average has a cell per domain
-        self.geo.update_barrier_tri0_based_on_number_of_faces()
         self.backupVars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
 
         print("File: ", self.set.OutputFolder)
@@ -462,6 +461,8 @@ class VertexModel:
 
                 # Reset noise to be comparable between simulations
                 self.reset_noisy_parameters()
+                # Count the number of faces in average has a cell per domain
+                self.geo.update_barrier_tri0_based_on_number_of_faces()
                 self.tr = self.t
 
                 # Brownian Motion
@@ -507,23 +508,15 @@ class VertexModel:
         Reset noisy parameters.
         :return:
         """
-        for num_cell in range(len(self.geo.Cells)):
-            c_cell = self.geo.Cells[num_cell]
-            self.geo.Cells[num_cell].contractlity_noise = None
-            self.geo.Cells[num_cell].lambda_s1_noise = None
-            self.geo.Cells[num_cell].lambda_s2_noise = None
-            self.geo.Cells[num_cell].lambda_s3_noise = None
-            self.geo.Cells[num_cell].lambda_v_noise = None
-            for n_face in range(len(c_cell.Faces)):
-                face = c_cell.Faces[n_face]
-                for n_tri in range(len(face.Tris)):
-                    tri = face.Tris[n_tri]
-                    tri.ContractilityValue = None
-                    tri.lambda_r_noise = None
-                    tri.lambda_b_noise = None
-                    tri.k_substrate_noise = None
-                    # tri.edge_length_time.append([self.t, tri.edge_length])
-                    self.geo.Cells[num_cell].Faces[n_face].Tris[n_tri] = tri
+        for cell in self.geo.Cells:
+            cell.lambda_s1_perc = add_noise_to_parameter(1, self.set.noise_random)
+            cell.lambda_s2_perc = add_noise_to_parameter(1, self.set.noise_random)
+            cell.lambda_s3_perc = add_noise_to_parameter(1, self.set.noise_random)
+            cell.lambda_v_perc = add_noise_to_parameter(1, self.set.noise_random)
+            cell.lambda_r_perc = add_noise_to_parameter(1, self.set.noise_random)
+            cell.c_line_tension_perc = add_noise_to_parameter(1, self.set.noise_random)
+            cell.k_substrate_perc = add_noise_to_parameter(1, self.set.noise_random)
+            cell.lambda_b_perc = add_noise_to_parameter(1, self.set.noise_random)
 
     def check_integrity(self):
         """

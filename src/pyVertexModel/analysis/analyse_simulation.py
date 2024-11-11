@@ -30,6 +30,11 @@ def analyse_simulation(folder):
 
         # Sort files by date
         all_files = sorted(all_files, key=lambda x: os.path.getmtime(os.path.join(folder, x)))
+
+        # if all_files has less than 20 files, return None
+        if len(all_files) < 20:
+            return None, None, None, None
+
         for file_id, file in enumerate(all_files):
             if file.endswith('.pkl') and not file.__contains__('data_step_before_remodelling') and not file.__contains__('recoil'):
                 # Load the state of the model
@@ -150,8 +155,11 @@ def plot_feature(folder, post_wound_features, name='wound_area_top'):
     plt.xlabel('Time (h)')
     plt.ylabel(name)
     # Change axis limits
-    plt.xlim([0, 60])
-    plt.ylim([0, 200])
+    if np.max(post_wound_features['time']) > 60:
+        plt.xlim([0, np.max(post_wound_features['time'])])
+    else:
+        plt.xlim([0, 60])
+    plt.ylim([0, 250])
     plt.savefig(os.path.join(folder, name + '.png'))
     plt.close()
 

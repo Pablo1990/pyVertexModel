@@ -218,7 +218,7 @@ class Set:
 
         current_datetime = datetime.now()
         new_outputFolder = ''.join([PROJECT_DIRECTORY, '/Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")),
-                                    'noise_', '{:0.2e}'.format(self.noise_random),
+                                    'noise_', '{:0.2e}'.format(self.noise_random), '_bNoise_', '{:0.2e}'.format(self.brownian_motion_scale),
                                     '_lVol_', '{:0.2e}'.format(self.lambdaV), '_refV0_', '{:0.2e}'.format(self.ref_V0),
                                     '_kSubs_', '{:0.2e}'.format(self.kSubstrate),
                                     '_lt_', '{:0.2e}'.format(self.cLineTension),
@@ -264,17 +264,23 @@ class Set:
         # Tend is the final time of the simulation
         self.tend = 60+20
         # Nincr is the number of increments
-        self.Nincr = self.tend * 30
+        self.Nincr = self.tend * 100
 
         # Viscosity
         self.nu = 0.07
         # Energy Barrier Area
         self.EnergyBarrierA = False
-        self.lambdaB = 20
+        if self.EnergyBarrierA:
+            self.lambdaB = 20
+        else:
+            self.lambdaB = 0
 
         # Energy Barrier Aspect Ratio
         self.EnergyBarrierAR = True
-        self.lambdaR = 9.5e-9
+        if self.EnergyBarrierAR:
+            self.lambdaR = 4e-7
+        else:
+            self.lambdaR = 0
 
         # Volume
         self.lambdaV = 1
@@ -295,11 +301,11 @@ class Set:
         self.TypeOfPurseString = 2
 
         # Remodelling
-        self.Remodelling = False
+        self.Remodelling = True
         # How big or small the edge to remodel
         # 0.15 is 15% of average the edge. This is a threshold to remodel the edge
         if self.Remodelling:
-            self.RemodelStiffness = 0.95
+            self.RemodelStiffness = 0.8
         else:
             self.RemodelStiffness = 2
 
@@ -336,8 +342,8 @@ class Set:
         # 0: Intensity-based purse string
         # 1: Strain-based purse string (delayed)
         # 2: Fixed with linear increase purse string
-        self.purseStringStrength = 3.5e-5
-        self.lateralCablesStrength = self.purseStringStrength * 1
+        self.purseStringStrength = 7e-5
+        self.lateralCablesStrength = 0#3.5e-5 * 1.5
         self.delay_lateral_cables = 5.8
         self.delay_purse_string = self.delay_lateral_cables
 

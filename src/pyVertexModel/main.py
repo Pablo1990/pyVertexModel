@@ -1,30 +1,29 @@
 import logging
 import os
-from re import search
+from re import search, error
 
 import numpy as np
 import optuna
 import plotly
 
 from src import PROJECT_DIRECTORY
+from src.pyVertexModel.Kg.kg import add_noise_to_parameter
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation, analyse_edge_recoil
 from src.pyVertexModel.util.space_exploration import objective, load_simulations, plot_optuna_all
 from src.pyVertexModel.util.utils import load_state
 
-start_new = True
+start_new = False
 if start_new == True:
-    optuna_model = False
+    optuna_model = True
     if optuna_model:
         # Create a study object and optimize the objective function
         # Add stream handler of stdout to show the messages
         # CHANGE IT IN SPACE EXPLORATION TOO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-        #error_type = '_gr_all_parameters_'
-        #error_type = '_K_InitialRecoil_fixed_LT_var_A0_S1_'
-        #error_type = '_K_InitialRecoil_NoLT_var_A0_S1_'
-        #error_type = '_K_InitialRecoil_NoLT_var_A0_S1_S2_S3_'
-        error_type = '_K_InitialRecoil_allParams_smallRange_Final_'
+        #error_type = '_gr_all_parameters_NO_LambdaR'
+        #error_type = '_K_InitialRecoil_allParams_'
+        error_type = '_wound_area_AreaVsLT_'
         # error_type = '_K_refined3_'
         if error_type is not None:
             study_name = "VertexModel" + error_type  # Unique identifier of the study.
@@ -82,18 +81,32 @@ if start_new == True:
         vModel.iterate_over_time()
         analyse_simulation(vModel.set.OutputFolder)
 else:
+    debugging = True
     vModel = VertexModelVoronoiFromTimeImage()
     output_folder = vModel.set.OutputFolder
-    load_state(vModel,
-               '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/'
-               '10-10_234543_Cells_150_visc_7.00e-02_lVol_9.61e-01_refV0_9.95e-01_kSubs_1.09e-01_lt_0.00e+00_refA0_9.24e-01_eARBarrier_9.51e-09_RemStiff_0.95_lS1_1.58e+00_lS2_1.39e-02_lS3_1.58e-01_ps_9.12e-07_psType_2/'
-               'before_ablation.pkl')
-    vModel.set.wing_disc()
-    vModel.set.wound_default()
-    vModel.set.OutputFolder = output_folder
+    if debugging:
+        load_state(vModel,
+                   '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/'
+                   '11-06_091519_noise_0.00e+00_lVol_1.00e+00_refV0_1.00e+00_kSubs_1.00e-01_lt_0.00e+00_refA0_9.20e-01_eARBarrier_4.00e-07_RemStiff_2_lS1_1.50e+00_lS2_1.50e-02_lS3_1.50e-01_ps_3.50e-05_lc_5.25e-05/'
+                   'data_step_6824.pkl')
+        vModel.set.wing_disc()
+        vModel.set.wound_default()
+        vModel.set.OutputFolder = output_folder
+        vModel.set.update_derived_parameters()
+        os.makedirs(vModel.set.OutputFolder + '/images', exist_ok=True)
+        vModel.iteration_converged()
+        vModel.iterate_over_time()
+    else:
+        load_state(vModel,
+                   '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/'
+                   'new_reference/'
+                   'before_ablation.pkl')
+        vModel.set.wing_disc()
+        vModel.set.wound_default()
+        vModel.set.OutputFolder = output_folder
         vModel.set.dt0 = None
         vModel.set.dt = None
-    vModel.set.update_derived_parameters()
-    vModel.iterate_over_time()
+        vModel.set.update_derived_parameters()
+        vModel.iterate_over_time()
         analyse_simulation(vModel.set.OutputFolder)
 
