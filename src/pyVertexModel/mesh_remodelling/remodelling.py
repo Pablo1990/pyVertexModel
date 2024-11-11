@@ -263,13 +263,12 @@ class Remodelling:
 
                 if len(np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])) > 3:
                     how_close_to_vertex = 0.2
-                    strong_gradient = 0
                     self.Geo = (
                         move_vertices_closer_to_ref_point(self.Geo, how_close_to_vertex,
                                                           np.concatenate(
                                                               [[segmentFeatures['num_cell']], cellNodesShared]),
                                                           cellToSplitFrom,
-                                                          ghostNode, allTnew, self.Set, strong_gradient))
+                                                          ghostNode, allTnew, self.Set, 0))
 
                     #cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
                     #                               and cell.AliveStatus == 1]

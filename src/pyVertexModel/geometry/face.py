@@ -89,6 +89,7 @@ class Face:
             self.Area0 = oldFace.Area0
         else:
             self.Area, _ = self.compute_face_area(Cell.Y)
+            self.Area0 = self.Area * Set.ref_A0
 
 
     def build_interface_type(self, ij, XgID, XgTop, XgBottom):
