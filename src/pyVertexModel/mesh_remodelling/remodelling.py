@@ -262,13 +262,21 @@ class Remodelling:
                 cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
 
                 if len(np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])) > 3:
-                    how_close_to_vertex = 0.2
-                    self.Geo = (
-                        move_vertices_closer_to_ref_point(self.Geo, how_close_to_vertex,
-                                                          np.concatenate(
-                                                              [[segmentFeatures['num_cell']], cellNodesShared]),
-                                                          cellToSplitFrom,
-                                                          ghostNode, allTnew, self.Set, 0))
+                    g, _ = gGlobal(self.Geo, self.Geo, self.Geo, self.Set, self.Set.implicit_method)
+                    best_gr = np.linalg.norm(g[self.Dofs.Free])
+                    for how_close_to_vertex in np.linspace(0.1, 0.9, 9):
+                        geo_copy = (
+                            move_vertices_closer_to_ref_point(self.Geo.copy(), how_close_to_vertex,
+                                                              np.concatenate([[segmentFeatures['num_cell']],
+                                                                              cellNodesShared]),
+                                                              cellToSplitFrom, ghostNode, allTnew, self.Set, 0))
+                        g, _ = gGlobal(geo_copy, geo_copy, geo_copy, self.Set, self.Set.implicit_method)
+                        gr = np.linalg.norm(g[self.Dofs.Free])
+                        if gr / 10 < self.Set.tol:
+                            if gr < best_gr:
+                                best_gr = gr
+                                self.Geo = geo_copy
+
 
                     #cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
                     #                               and cell.AliveStatus == 1]
@@ -362,7 +370,7 @@ class Remodelling:
         gr = np.linalg.norm(g[self.Dofs.Free])
         logger.info(f'|gr| after remodelling: {gr}')
 
-        if gr / 10 >= self.Set.tol:
+        if gr / 10 > self.Set.tol:
             has_converged = False
 
         return all_tnew, cell_to_split_from, ghost_node, ghost_nodes_tried, has_converged, old_tets
