@@ -1,5 +1,6 @@
 import os
 import pickle
+import cv2
 
 import numpy as np
 import pandas as pd
@@ -476,3 +477,29 @@ def compute_edge_length_v_model(cells_to_ablate, edge_length_final, edge_length_
     time_steps.append((v_model.t - initial_time) * 60)
     # Calculate the recoil
     recoil_speed.append(edge_length_final_normalized[-1] / time_steps[-1])
+
+def create_video(folder, name_containing_images='top_'):
+    """
+    Create a video of the images in the folder
+    :param folder:
+    :return:
+    """
+
+    # Get the images
+    images = [img for img in os.listdir(folder) if img.endswith(".png") and name_containing_images in img]
+    images.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
+
+    # Determine the width and height from the first image
+    image_path = os.path.join(folder, images[0])
+    frame = cv2.imread(image_path)
+    height, width, layers = frame.shape
+
+    # Define the codec and create VideoWriter object
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Use 'mp4v' for MP4
+    video = cv2.VideoWriter(os.path.join(folder, name_containing_images + 'video.mp4'), fourcc, 7, (width, height))
+
+    for image in images:
+        video.write(cv2.imread(os.path.join(folder, image)))
+
+    cv2.destroyAllWindows()
+    video.release()
