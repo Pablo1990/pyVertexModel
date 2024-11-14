@@ -246,6 +246,15 @@ class Cell:
 
         return mesh
 
+    def create_pyvista_edges(self):
+        """
+        Create a PyVista mesh
+        :return:
+        """
+        mesh = pv.PolyData(self.create_vtk_edges())
+
+        return mesh
+
     def compute_features(self, centre_wound=None):
         """
         Compute the features of the cell and create a dictionary with them
@@ -304,9 +313,10 @@ class Cell:
         for f in range(len(self.Faces)):
             c_face = self.Faces[f]
             for t in range(len(c_face.Tris)):
-                cell.InsertNextCell(2)
-                cell.InsertCellPoint(c_face.Tris[t].Edge[0])
-                cell.InsertCellPoint(c_face.Tris[t].Edge[1])
+                if len(c_face.Tris[t].SharedByCells) > 1:
+                    cell.InsertNextCell(2)
+                    cell.InsertCellPoint(c_face.Tris[t].Edge[0])
+                    cell.InsertCellPoint(c_face.Tris[t].Edge[1])
 
             total_edges += len(c_face.Tris)
 
@@ -334,9 +344,9 @@ class Cell:
             # Add the property array to the cell data
             vpoly.GetCellData().AddArray(property_array)
 
-            if key == 'ContractilityValue':
-                # Default parameter
-                vpoly.GetCellData().SetScalars(property_array)
+            #if key == 'ContractilityValue':
+            #    # Default parameter
+            #    vpoly.GetCellData().SetScalars(property_array)
 
         return vpoly
 

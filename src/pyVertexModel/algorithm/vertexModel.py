@@ -51,15 +51,13 @@ def screenshot(v_model, temp_dir, selected_cells=None):
             mesh = cell.create_pyvista_mesh()
 
             # Add the mesh to the plotter
-            plotter.add_mesh(mesh, scalars='ID', lighting=True, cmap="tab20b", clim=v_model.colormap_lim,
+            plotter.add_mesh(mesh, name=f'cell_{cell.ID}', scalars='ID', lighting=True, cmap="tab20b", clim=v_model.colormap_lim,
                              show_edges=False, edge_opacity=0.5, edge_color='grey')
-
 
     for _, cell in enumerate(v_model.geo.Cells):
         if cell.AliveStatus == 1 and (cell.ID in selected_cells or selected_cells is not []):
             edge_mesh = cell.create_pyvista_edges()
-            plotter.add_mesh(edge_mesh, color='black', line_width=1)
-
+            plotter.add_mesh(edge_mesh, name=f'edge_{cell.ID}', color='black', line_width=1)
 
     # Set a fixed camera zoom level
     fixed_zoom_level = 1
@@ -73,6 +71,8 @@ def screenshot(v_model, temp_dir, selected_cells=None):
     else:
         text_content = f"Time: {v_model.t:.2f}"
         plotter.add_text(text_content, position='upper_right', font_size=12, color='black')
+
+
 
     # Render the scene and capture a screenshot
     img = plotter.screenshot(transparent_background=True, scale=3)
@@ -91,18 +91,26 @@ def screenshot(v_model, temp_dir, selected_cells=None):
     temp_file = os.path.join(temp_dir, f'vModel_top_{v_model.numStep}.png')
     imageio.imwrite(temp_file, img)
 
-    # Set the camera to the front view
-    plotter.view_xz()
-
-    img = plotter.screenshot(transparent_background=True, scale=3)
-    temp_file = os.path.join(temp_dir, f'vModel_front_{v_model.numStep}.png')
-    imageio.imwrite(temp_file, img)
-
     # Set the camera to the bottom view
     plotter.view_xy(negative=True)
 
     img = plotter.screenshot(transparent_background=True, scale=3)
     temp_file = os.path.join(temp_dir, f'vModel_bottom_{v_model.numStep}.png')
+    imageio.imwrite(temp_file, img)
+
+    # Set the camera to the front view and adjust the position to be inside the tissue
+    plotter.view_xz()
+    #center_x, center_y, center_z = v_model.geo.Cells[0].X
+    plotter.camera.position = (-0.6836302475532527, 0.49746550619602203, -0.0024260058999061584)
+    plotter.focal_point = (0.5723095089197159, 0.49746550619602203, -0.0024260058999061584)
+    # Do not show the following cells =
+    cells_to_hide = np.array([11, 12, 16, 19, 21, 22, 23, 31, 32, 35, 36, 37, 38, 39, 41, 44, 54, 55, 56, 58, 59, 60, 61, 65, 67, 68, 75, 76, 81, 82, 83, 86, 88, 89, 90, 91, 94, 96, 97, 102, 104, 106, 108, 112, 114, 116, 119, 120, 123, 124, 128, 129, 133, 135, 140, 141, 142, 143, 144, 145, 149])
+    for cell in cells_to_hide:
+        plotter.remove_actor(f'cell_{cell}')
+        plotter.remove_actor(f'edge_{cell}')
+
+    img = plotter.screenshot(transparent_background=True, scale=3)
+    temp_file = os.path.join(temp_dir, f'vModel_front_{v_model.numStep}.png')
     imageio.imwrite(temp_file, img)
 
     # Close the plotter
