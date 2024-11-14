@@ -195,8 +195,8 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
                     all_bottom_nodes.append(face.globalIds)
 
     all_bottom_nodes_pos = all_bottom_nodes * 3
-    all_bottom_nodes_pos.extend(3 * [i + 1 for i in all_bottom_nodes_pos])
-    all_bottom_nodes_pos.extend(3 * [i + 2 for i in all_bottom_nodes_pos])
+    all_bottom_nodes_pos.extend(3 * [i + 1 for i in all_bottom_nodes])
+    all_bottom_nodes_pos.extend(3 * [i + 2 for i in all_bottom_nodes])
     dof_bottom = np.unique(all_bottom_nodes_pos)
 
     # Update the bottom nodes with the same displacement as the corresponding real nodes
