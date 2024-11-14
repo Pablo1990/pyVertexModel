@@ -51,8 +51,16 @@ def screenshot(v_model, temp_dir, selected_cells=None):
             mesh = cell.create_pyvista_mesh()
 
             # Add the mesh to the plotter
-            plotter.add_mesh(mesh, scalars='ID', lighting=True, cmap="prism", clim=v_model.colormap_lim,
-                             show_edges=True, edge_opacity=0.5, edge_color='grey')
+            plotter.add_mesh(mesh, scalars='ID', lighting=True, cmap="tab20b", clim=v_model.colormap_lim,
+                             show_edges=False, edge_opacity=0.5, edge_color='grey')
+
+
+    for _, cell in enumerate(v_model.geo.Cells):
+        if cell.AliveStatus == 1 and (cell.ID in selected_cells or selected_cells is not []):
+            edge_mesh = cell.create_pyvista_edges()
+            plotter.add_mesh(edge_mesh, color='black', line_width=1)
+
+
     # Set a fixed camera zoom level
     fixed_zoom_level = 1
     plotter.camera.zoom(fixed_zoom_level)
@@ -67,7 +75,7 @@ def screenshot(v_model, temp_dir, selected_cells=None):
         plotter.add_text(text_content, position='upper_right', font_size=12, color='black')
 
     # Render the scene and capture a screenshot
-    img = plotter.screenshot()
+    img = plotter.screenshot(transparent_background=True, scale=3)
     # Save the image to a temporary file
     temp_file = os.path.join(temp_dir, f'vModel_perspective_{v_model.numStep}.png')
     imageio.imwrite(temp_file, img)
@@ -79,21 +87,21 @@ def screenshot(v_model, temp_dir, selected_cells=None):
     # Set the camera to the top view
     plotter.view_xy()
 
-    img = plotter.screenshot()
+    img = plotter.screenshot(transparent_background=True, scale=3)
     temp_file = os.path.join(temp_dir, f'vModel_top_{v_model.numStep}.png')
     imageio.imwrite(temp_file, img)
 
     # Set the camera to the front view
     plotter.view_xz()
 
-    img = plotter.screenshot()
+    img = plotter.screenshot(transparent_background=True, scale=3)
     temp_file = os.path.join(temp_dir, f'vModel_front_{v_model.numStep}.png')
     imageio.imwrite(temp_file, img)
 
     # Set the camera to the bottom view
     plotter.view_xy(negative=True)
 
-    img = plotter.screenshot()
+    img = plotter.screenshot(transparent_background=True, scale=3)
     temp_file = os.path.join(temp_dir, f'vModel_bottom_{v_model.numStep}.png')
     imageio.imwrite(temp_file, img)
 
