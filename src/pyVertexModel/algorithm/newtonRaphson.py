@@ -11,6 +11,7 @@ from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
 from src.pyVertexModel.Kg.kgTriEnergyBarrier import KgTriEnergyBarrier
 from src.pyVertexModel.Kg.kgViscosity import KgViscosity
 from src.pyVertexModel.Kg.kgVolume import KgVolume
+from src.pyVertexModel.geometry.face import get_interface
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -184,7 +185,23 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
     :param Set:
     :return:
     """
+    # Bottom nodes
+    all_bottom_nodes = []
+    for cell in Geo.Cells:
+        if cell.AliveStatus is not None:
+            all_bottom_nodes.extend(cell.globalIds[np.any(np.isin(cell.T, Geo.XgBottom), axis=1)])
+            for face in cell.Faces:
+                if get_interface(face.InterfaceType) == get_interface('Bottom'):
+                    all_bottom_nodes.append(face.globalIds)
+
+    all_bottom_nodes_pos = all_bottom_nodes * 3
+    all_bottom_nodes_pos.extend(3 * [i + 1 for i in all_bottom_nodes_pos])
+    all_bottom_nodes_pos.extend(3 * [i + 2 for i in all_bottom_nodes_pos])
+    dof_bottom = np.unique(all_bottom_nodes_pos)
+
+    # Update the bottom nodes with the same displacement as the corresponding real nodes
     dy[dof, 0] = -Set.dt / Set.nu * g[dof]
+    dy[dof_bottom, 0] = -Set.dt / Set.nu_bottom * g[dof_bottom]
 
     # Update border ghost nodes with the same displacement as the corresponding real nodes
     dy = map_vertices_periodic_boundaries(Geo, dy)
