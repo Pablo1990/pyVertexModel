@@ -17,13 +17,19 @@ def get_intensity_based_contractility(c_set, current_face, intensity_images=True
 
     if intensity_images:
         contractility_time_variability = (np.arange(0, 60 + 3, 3)) / 60 * (c_set.TEndAblation - c_set.TInitAblation)
-        contractility_variability_purse_string = np.power(np.array(
+        contractility_variability_purse_string = np.array(
             [1.0, 0.96, 1.007, 1.74, 2.37, 2.61, 2.487, 2.536, 2.46, 2.52, 2.606, 2.456, 2.387, 2.52, 2.31, 2.328,
-             2.134, 2.07, 2.055, 1.9, 1.9]), c_set.purseStringStrength) * c_set.cLineTension
+             2.134, 2.07, 2.055, 1.9, 1.9]) - 1
+        contractility_variability_purse_string = (contractility_variability_purse_string /
+                                                  np.max(contractility_variability_purse_string) *
+                                                  c_set.purseStringStrength)
 
-        contractility_variability_lateral_cables = np.power(np.array(
+        contractility_variability_lateral_cables = np.array(
             [0.45, 0.53, 0.76, 1.15, 1.28, 1.22, 1.38, 1.33, 1.28, 1.4, 1.25, 1.298, 1.45, 1.31, 1.29, 1.42, 1.31,
-             1.41, 1.42, 1.37, 1.28]), c_set.lateralCablesStrength) * c_set.cLineTension / 10
+             1.41, 1.42, 1.37, 1.28]) - 0.5
+        contractility_variability_lateral_cables = (contractility_variability_lateral_cables /
+                                                    np.max(contractility_variability_lateral_cables) *
+                                                    c_set.lateralCablesStrength)
     else:
         contractility_time_variability = np.linspace(0, (c_set.TEndAblation - c_set.TInitAblation), int((c_set.TEndAblation - c_set.TInitAblation) * 20))
 
