@@ -37,27 +37,33 @@ def screenshot(v_model, temp_dir, selected_cells=None):
     total_real_cells = len([cell.ID for cell in v_model.geo.Cells if cell.AliveStatus is not None])
 
     # Create a colormap_lim
-    if v_model.colormap_lim is None:
-        v_model.colormap_lim = [0, total_real_cells]
+    #if v_model.colormap_lim is None:
+    #    v_model.colormap_lim = [0, total_real_cells]
 
     # Create a plotter
     if selected_cells is None:
         selected_cells = []
 
     plotter = pv.Plotter(off_screen=True)
+
     for _, cell in enumerate(v_model.geo.Cells):
         if cell.AliveStatus == 1 and (cell.ID in selected_cells or selected_cells is not []):
             # Load the VTK file as a pyvista mesh
             mesh = cell.create_pyvista_mesh()
 
             # Add the mesh to the plotter
-            plotter.add_mesh(mesh, name=f'cell_{cell.ID}', scalars='ID', lighting=True, cmap="tab20b", clim=v_model.colormap_lim,
-                             show_edges=False, edge_opacity=0.5, edge_color='grey')
+            # Cmaps that I like: 'tab20b', 'BuPu', 'Blues'
+            # Cmaps that I don't like: 'prism', 'bone'
+            plotter.add_mesh(mesh, name=f'cell_{cell.ID}', scalars='Volume', lighting=True, cmap="pink",
+                             clim=[0.0001, 0.0006], show_edges=True, edge_color='white', edge_opacity=0.3)
+
 
     for _, cell in enumerate(v_model.geo.Cells):
         if cell.AliveStatus == 1 and (cell.ID in selected_cells or selected_cells is not []):
             edge_mesh = cell.create_pyvista_edges()
-            plotter.add_mesh(edge_mesh, name=f'edge_{cell.ID}', color='black', line_width=1)
+            plotter.add_mesh(edge_mesh, name=f'edge_{cell.ID}', color='black', line_width=3, render_lines_as_tubes=True)
+
+
 
     # Set a fixed camera zoom level
     fixed_zoom_level = 1
