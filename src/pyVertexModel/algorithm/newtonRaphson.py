@@ -186,22 +186,21 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
     :return:
     """
     # Bottom nodes
-    all_bottom_nodes = []
+    dim=3
+    g_constrained = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3, dtype=bool)
     for cell in Geo.Cells:
         if cell.AliveStatus is not None:
-            all_bottom_nodes.extend(cell.globalIds[np.any(np.isin(cell.T, Geo.XgBottom), axis=1)])
+            c_global_ids = cell.globalIds[np.any(np.isin(cell.T, Geo.XgBottom), axis=1)]
+            for i in c_global_ids:
+                g_constrained[(dim * i): ((dim * i) + 2)] = 1
+
             for face in cell.Faces:
                 if get_interface(face.InterfaceType) == get_interface('Bottom'):
-                    all_bottom_nodes.append(face.globalIds)
-
-    all_bottom_nodes_pos = all_bottom_nodes * 3
-    all_bottom_nodes_pos.extend(3 * [i + 1 for i in all_bottom_nodes])
-    all_bottom_nodes_pos.extend(3 * [i + 2 for i in all_bottom_nodes])
-    dof_bottom = np.unique(all_bottom_nodes_pos)
+                    g_constrained[(dim * face.globalIds): ((dim * face.globalIds) + 2)] = 1
 
     # Update the bottom nodes with the same displacement as the corresponding real nodes
     dy[dof, 0] = -Set.dt / Set.nu * g[dof]
-    dy[dof_bottom, 0] = -Set.dt / Set.nu_bottom * g[dof_bottom]
+    dy[g_constrained, 0] = -Set.dt / Set.nu_bottom * g[g_constrained]
 
     # Update border ghost nodes with the same displacement as the corresponding real nodes
     dy = map_vertices_periodic_boundaries(Geo, dy)
@@ -211,6 +210,7 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
     Geo.update_measures()
 
     g, energies = gGlobal(Geo, Geo, Geo, Set, Set.implicit_method)
+    g[g_constrained] = 0
     gr = np.linalg.norm(g[dof])
     Set.iter = Set.MaxIter
 
