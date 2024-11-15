@@ -3,12 +3,18 @@ import os
 import numpy as np
 import pandas as pd
 
-from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation, analyse_edge_recoil
+from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation, analyse_edge_recoil, create_video
 from src.pyVertexModel.util.utils import save_variables, load_variables
 
 folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/'
 all_files_features = []
-lst = os.listdir(folder)
+# Recursive search of all the files in the folder
+lst = []
+for root, dirs, files in os.walk(folder):
+    if len(dirs) > 0:
+        for c_dir in dirs:
+            lst.append(os.path.join(root, c_dir))
+
 lst.sort(reverse=True)
 for _, file in enumerate(lst):
     print(file)
@@ -18,6 +24,11 @@ for _, file in enumerate(lst):
         files_within_folder = os.listdir(os.path.join(folder, file))
         # Analyse the edge recoil
         if os.path.exists(os.path.join(folder, file, 'before_ablation.pkl')):
+            create_video(os.path.join(folder, file, 'images'), 'top_')
+            create_video(os.path.join(folder, file, 'images'), 'perspective_')
+            create_video(os.path.join(folder, file, 'images'), 'bottom_')
+            create_video(os.path.join(folder, file, 'images'), 'front_')
+
             # if the analysis file exists, load it
             # if os.path.exists(os.path.join(folder, file, 'recoil_info_apical.pkl')):
             #     # recoiling_info_df_basal = load_variables(

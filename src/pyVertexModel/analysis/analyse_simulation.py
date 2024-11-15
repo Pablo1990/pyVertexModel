@@ -137,8 +137,9 @@ def analyse_simulation(folder):
 
     # Plot wound area top evolution over time and save it to a file
     plot_feature(folder, post_wound_features, name='wound_area_top')
-    plot_feature(folder, post_wound_features, name='wound_height')
     plot_feature(folder, post_wound_features, name='num_cells_wound_edge_top')
+    plot_feature(folder, post_wound_features, name='wound_indentation_top')
+    plot_feature(folder, post_wound_features, name='wound_indentation_bottom')
 
     return features_per_time_df, post_wound_features, important_features, features_per_time_all_cells_df
 

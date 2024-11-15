@@ -642,7 +642,9 @@ class VertexModel:
             'wound_aspect_ratio_top': self.geo.compute_wound_aspect_ratio(location_filter="Top"),
             'wound_aspect_ratio_bottom': self.geo.compute_wound_aspect_ratio(location_filter="Bottom"),
             'wound_perimeter_top': self.geo.compute_wound_perimeter(location_filter="Top"),
-            'wound_perimeter_bottom': self.geo.compute_wound_perimeter(location_filter="Bottom")
+            'wound_perimeter_bottom': self.geo.compute_wound_perimeter(location_filter="Bottom"),
+            'wound_indentation_top': self.geo.compute_wound_indentation(location_filter="Top"),
+            'wound_indentation_bottom': self.geo.compute_wound_indentation(location_filter="Bottom"),
         }
 
         return wound_features

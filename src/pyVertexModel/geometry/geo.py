@@ -1319,6 +1319,50 @@ class Geo:
 
         return np.mean(wound_height)
 
+    def compute_wound_indentation(self, location_filter='Top'):
+        """
+        Compute the indentation of the wound
+        :return:
+        """
+        # Get the cells at the wound edge
+        wound_edge_cells = self.compute_cells_wound_edge(location_filter)
+
+        # Get the debris cells
+        debris_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
+        if not debris_cells:
+            debris_cells = self.cellsToAblate
+
+        # Get the reference Z from the border cells
+        ref_z_values = []
+        for c_cell in self.Cells:
+            if c_cell.AliveStatus == 1 and c_cell.ID not in self.BorderCells:
+                if location_filter == 'Top':
+                    ref_z_values.append(np.mean(c_cell.Y[np.isin(c_cell.T, self.XgTop), 2]))
+                elif location_filter == 'Bottom':
+                    ref_z_values.append(np.mean(c_cell.Y[np.isin(c_cell.T, self.XgBottom), 2]))
+        ref_z = np.mean(ref_z_values)
+
+        # Compute the indentation of cells against a reference Z
+        wound_indentation = []
+        for c_cell in wound_edge_cells:
+            for c_face in c_cell.Faces:
+                if get_interface(c_face.InterfaceType) == get_interface("CellCell"):
+                    for tri in c_face.Tris:
+                        if np.any(np.isin(tri.SharedByCells, debris_cells)) and len(tri.SharedByCells) > 2:
+                            # Get the different nodes
+                            different_nodes = np.setxor1d(c_cell.T[tri.Edge[0], :], c_cell.T[tri.Edge[1], :])
+                            if np.any(np.isin(different_nodes, self.XgTop)) and np.any(
+                                    np.isin(different_nodes, self.XgBottom)):
+                                # Get the vertices of the triangles
+                                vertices = c_cell.Y[tri.Edge, :]
+                                # Compute the distance between the vertices
+                                if location_filter == 'Top':
+                                    wound_indentation.append(np.linalg.norm(vertices[np.isin(different_nodes, self.XgTop), 2] - ref_z))
+                                elif location_filter == 'Bottom':
+                                    wound_indentation.append(np.linalg.norm(vertices[np.isin(different_nodes, self.XgBottom), 2] - ref_z))
+
+        return np.mean(wound_indentation)
+
     def combine_two_nodes(self, nodes_to_combine, c_set, recalculate_ys=True):
         """
         Combine two nodes into one node
