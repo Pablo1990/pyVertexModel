@@ -1337,9 +1337,9 @@ class Geo:
         for c_cell in self.Cells:
             if c_cell.AliveStatus == 1 and c_cell.ID not in self.BorderCells:
                 if location_filter == 'Top':
-                    ref_z_values.append(np.mean(c_cell.Y[np.isin(c_cell.T, self.XgTop), 2]))
+                    ref_z_values.append(np.mean(c_cell.Y[np.any(np.isin(c_cell.T, self.XgTop), axis=1), 2]))
                 elif location_filter == 'Bottom':
-                    ref_z_values.append(np.mean(c_cell.Y[np.isin(c_cell.T, self.XgBottom), 2]))
+                    ref_z_values.append(np.mean(c_cell.Y[np.any(np.isin(c_cell.T, self.XgBottom), axis=1), 2]))
         ref_z = np.mean(ref_z_values)
 
         # Compute the indentation of cells against a reference Z
