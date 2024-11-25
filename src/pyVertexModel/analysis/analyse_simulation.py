@@ -77,13 +77,33 @@ def analyse_simulation(folder):
         features_per_time_df.sort_values(by='time', inplace=True)
         features_per_time_df.to_excel(os.path.join(folder, 'features_per_time.xlsx'))
 
+        # Save dataframes to a single pkl
+        with open(os.path.join(folder, 'features_per_time.pkl'), 'wb') as f:
+            pickle.dump(features_per_time_df, f)
+            pickle.dump(None, f)
+            pickle.dump(None, f)
+            pickle.dump(features_per_time_all_cells_df, f)
+    else:
+        # Load dataframes from pkl
+        with open(os.path.join(folder, 'features_per_time.pkl'), 'rb') as f:
+            features_per_time_df = pickle.load(f)
+            important_features = pickle.load(f)
+            post_wound_features = pickle.load(f)
+            features_per_time_all_cells_df = pickle.load(f)
+
+        # load 'before_ablation.pkl' file
+        vModel = VertexModel(create_output_folder=False)
+        load_state(vModel, os.path.join(folder, 'before_ablation.pkl'))
+
         # Obtain pre-wound features
         try:
             pre_wound_features = features_per_time_df['time'][features_per_time_df['time'] < vModel.set.TInitAblation]
             pre_wound_features = features_per_time_df[features_per_time_df['time'] ==
                                                       pre_wound_features.iloc[-1]]
         except Exception as e:
-            pre_wound_features = features_per_time_df.iloc[0]
+            pre_wound_features = features_per_time_df['time'][features_per_time_df['time'] > features_per_time_df['time'][0]]
+            pre_wound_features = features_per_time_df[features_per_time_df['time'] ==
+                                                      pre_wound_features.iloc[0]]
 
         # Obtain post-wound features
         post_wound_features = features_per_time_df[features_per_time_df['time'] >= vModel.set.TInitAblation]
@@ -95,6 +115,11 @@ def analyse_simulation(folder):
             # Compare post-wound features with pre-wound features in percentage
             for feature in post_wound_features.columns:
                 if np.any(np.isnan(pre_wound_features[feature])) or np.any(np.isnan(post_wound_features[feature])):
+                    continue
+
+                if 'indentation' in feature:
+                    post_wound_features.loc[:, feature] = (post_wound_features[feature] - np.array(
+                        pre_wound_features[feature]))
                     continue
 
                 if feature == 'time':
@@ -118,28 +143,17 @@ def analyse_simulation(folder):
         df = pd.DataFrame([important_features])
         df.to_excel(os.path.join(folder, 'important_features.xlsx'))
 
-        # Save dataframes to a single pkl
-        with open(os.path.join(folder, 'features_per_time.pkl'), 'wb') as f:
-            pickle.dump(features_per_time_df, f)
-            pickle.dump(important_features, f)
-            pickle.dump(post_wound_features, f)
-            pickle.dump(features_per_time_all_cells_df, f)
-
-    else:
-        # Load dataframes from pkl
-        with open(os.path.join(folder, 'features_per_time.pkl'), 'rb') as f:
-            features_per_time_df = pickle.load(f)
-            important_features = pickle.load(f)
-            post_wound_features = pickle.load(f)
-            features_per_time_all_cells_df = pickle.load(f)
-
-        important_features = calculate_important_features(post_wound_features)
 
     # Plot wound area top evolution over time and save it to a file
     plot_feature(folder, post_wound_features, name='wound_area_top')
     plot_feature(folder, post_wound_features, name='num_cells_wound_edge_top')
-    plot_feature(folder, post_wound_features, name='wound_indentation_top')
-    plot_feature(folder, post_wound_features, name='wound_indentation_bottom')
+    plot_feature(folder, post_wound_features, name='wound_height')
+    try:
+        plot_feature(folder, post_wound_features, name='wound_indentation_top')
+        plot_feature(folder, post_wound_features, name='wound_indentation_bottom')
+    except Exception as e:
+        pass
+    plot_feature(folder, post_wound_features, name='wound_area_bottom')
 
     return features_per_time_df, post_wound_features, important_features, features_per_time_all_cells_df
 
@@ -158,10 +172,13 @@ def plot_feature(folder, post_wound_features, name='wound_area_top'):
     plt.ylabel(name)
     # Change axis limits
     if np.max(post_wound_features['time']) > 60:
-        plt.xlim([0, np.max(post_wound_features['time'])])
+        #plt.xlim([0, np.max(post_wound_features['time'])])
+        plt.xlim([0, 60])
     else:
         plt.xlim([0, 60])
-    plt.ylim([0, 250])
+
+    if not name.startswith('wound_indentation_'):
+        plt.ylim([0, 250])
     plt.savefig(os.path.join(folder, name + '.png'))
     plt.close()
 
