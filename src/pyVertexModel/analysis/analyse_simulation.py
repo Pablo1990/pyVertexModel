@@ -46,24 +46,6 @@ def analyse_simulation(folder):
                 features_per_time_all_cells.append(all_cells)
                 features_per_time.append(avg_cells)
 
-                # # Create a temporary directory to store the images
-                # temp_dir = os.path.join(folder, 'images')
-                # if not os.path.exists(temp_dir):
-                #     os.mkdir(temp_dir)
-                # vModel.screenshot(temp_dir)
-
-                # temp_dir = os.path.join(folder, 'images_wound_edge')
-                # if not os.path.exists(temp_dir):
-                #     os.mkdir(temp_dir)
-                # _, debris_cells = vModel.geo.compute_wound_centre()
-                # list_of_cell_distances_top = vModel.geo.compute_cell_distance_to_wound(debris_cells, location_filter=0)
-                # alive_cells = [cell.ID for cell in vModel.geo.Cells if cell.AliveStatus == 1]
-                # wound_edge_cells = []
-                # for cell_num, cell_id in enumerate(alive_cells):
-                #     if list_of_cell_distances_top[cell_num] == 1:
-                #         wound_edge_cells.append(cell_id)
-                # vModel.screenshot(temp_dir, wound_edge_cells)
-
         if not features_per_time:
             return None, None, None, None
 
@@ -95,49 +77,85 @@ def analyse_simulation(folder):
         vModel = VertexModel(create_output_folder=False)
         load_state(vModel, os.path.join(folder, 'before_ablation.pkl'))
 
-        # Obtain pre-wound features
-        try:
-            pre_wound_features = features_per_time_df['time'][features_per_time_df['time'] < vModel.set.TInitAblation]
-            pre_wound_features = features_per_time_df[features_per_time_df['time'] ==
-                                                      pre_wound_features.iloc[-1]]
-        except Exception as e:
-            pre_wound_features = features_per_time_df['time'][features_per_time_df['time'] > features_per_time_df['time'][0]]
-            pre_wound_features = features_per_time_df[features_per_time_df['time'] ==
-                                                      pre_wound_features.iloc[0]]
+    # Obtain pre-wound features
+    try:
+        pre_wound_features = features_per_time_df['time'][features_per_time_df['time'] < vModel.set.TInitAblation]
+        pre_wound_features = features_per_time_df[features_per_time_df['time'] ==
+                                                  pre_wound_features.iloc[-1]]
+    except Exception as e:
+        pre_wound_features = features_per_time_df['time'][features_per_time_df['time'] > features_per_time_df['time'][0]]
+        pre_wound_features = features_per_time_df[features_per_time_df['time'] ==
+                                                  pre_wound_features.iloc[0]]
 
-        # Obtain post-wound features
-        post_wound_features = features_per_time_df[features_per_time_df['time'] >= vModel.set.TInitAblation]
+    # Obtain wound edge cells features
+    wound_edge_cells_top = vModel.geo.compute_cells_wound_edge('Top')
+    wound_edge_cells_top_ids = [cell.ID for cell in wound_edge_cells_top]
+    wound_edge_cells_features = features_per_time_all_cells_df[np.isin(features_per_time_all_cells_df['ID'],
+                                                                     wound_edge_cells_top_ids)].copy()
+    # Average wound edge cells features by time
+    wound_edge_cells_features_avg = wound_edge_cells_features.groupby('time').mean().reset_index()
 
-        if not post_wound_features.empty:
-            # Reset time to ablation time.
-            post_wound_features.loc[:, 'time'] = post_wound_features['time'] - vModel.set.TInitAblation
+    # Obtain post-wound features
+    post_wound_features = features_per_time_df[features_per_time_df['time'] >= vModel.set.TInitAblation]
 
-            # Compare post-wound features with pre-wound features in percentage
-            for feature in post_wound_features.columns:
-                if np.any(np.isnan(pre_wound_features[feature])) or np.any(np.isnan(post_wound_features[feature])):
-                    continue
+    # Correlate wound edge cells features with wound area top
+    try:
+        wound_edge_cells_features_avg['wound_area_top'] = post_wound_features['wound_area_top'][1:].values
+        correlation_matrix = wound_edge_cells_features_avg.corr()
 
-                if 'indentation' in feature:
-                    post_wound_features.loc[:, feature] = (post_wound_features[feature] - np.array(
-                        pre_wound_features[feature]))
-                    continue
+        # Extract the correlation of 'wound_area_top' with other features
+        wound_area_top_correlation = correlation_matrix['wound_area_top']
 
-                if feature == 'time':
-                    continue
-                post_wound_features.loc[:, feature] = (post_wound_features[feature] / np.array(
+        # Sort the correlations in descending order to see which features correlate the most
+        sorted_correlations = wound_area_top_correlation.sort_values(ascending=False)
+
+        # Plot sorted correlations with a figure big enough on the x-axis to see the feature names
+        plt.figure(figsize=(10, 5))
+        plt.bar(sorted_correlations.index, sorted_correlations)
+        plt.xticks(rotation=90)
+        plt.ylabel('Correlation with wound area top')
+        plt.tight_layout()
+        plt.savefig(os.path.join(folder, 'correlation_wound_area_top.png'))
+
+        # Export to xlsx
+        wound_edge_cells_features_avg.to_excel(os.path.join(folder, 'features_per_time_only_wound_edge.xlsx'))
+    except Exception as e:
+        print('Error in correlating wound edge cells features with wound area top: ', e)
+
+
+    if not post_wound_features.empty:
+        # Reset time to ablation time.
+        post_wound_features.loc[:, 'time'] = post_wound_features['time'] - vModel.set.TInitAblation
+
+        # Compare post-wound features with pre-wound features in percentage
+        for feature in post_wound_features.columns:
+            if np.any(np.isnan(pre_wound_features[feature])) or np.any(np.isnan(post_wound_features[feature])):
+                continue
+
+            if 'indentation' in feature:
+                post_wound_features.loc[:, feature] = (post_wound_features[feature] - np.array(
                     pre_wound_features[feature])) * 100
+                continue
 
-            # Export to xlsx
-            post_wound_features.to_excel(os.path.join(folder, 'post_wound_features.xlsx'))
+            if 'wound_height' in feature:
+                post_wound_features.loc[:, feature + '_'] = post_wound_features[feature] * 100
 
-            important_features = calculate_important_features(post_wound_features)
-        else:
-            important_features = {
-                'max_recoiling_top': np.nan,
-                'max_recoiling_time_top': np.nan,
-                'min_height_change': np.nan,
-                'min_height_change_time': np.nan,
-            }
+            if feature == 'time':
+                continue
+            post_wound_features.loc[:, feature] = (post_wound_features[feature] / np.array(
+                pre_wound_features[feature])) * 100
+
+        # Export to xlsx
+        post_wound_features.to_excel(os.path.join(folder, 'post_wound_features.xlsx'))
+
+        important_features = calculate_important_features(post_wound_features)
+    else:
+        important_features = {
+            'max_recoiling_top': np.nan,
+            'max_recoiling_time_top': np.nan,
+            'min_height_change': np.nan,
+            'min_height_change_time': np.nan,
+        }
 
         # Export to xlsx
         df = pd.DataFrame([important_features])
@@ -147,7 +165,7 @@ def analyse_simulation(folder):
     # Plot wound area top evolution over time and save it to a file
     plot_feature(folder, post_wound_features, name='wound_area_top')
     plot_feature(folder, post_wound_features, name='num_cells_wound_edge_top')
-    plot_feature(folder, post_wound_features, name='wound_height')
+    plot_feature(folder, post_wound_features, name='wound_height_')
     try:
         plot_feature(folder, post_wound_features, name='wound_indentation_top')
         plot_feature(folder, post_wound_features, name='wound_indentation_bottom')
@@ -167,7 +185,7 @@ def plot_feature(folder, post_wound_features, name='wound_area_top'):
     :return:
     """
     plt.figure()
-    plt.plot(post_wound_features['time'], post_wound_features[name])
+    plt.plot(post_wound_features['time'], post_wound_features[name], 'k')
     plt.xlabel('Time (h)')
     plt.ylabel(name)
     # Change axis limits
@@ -177,7 +195,11 @@ def plot_feature(folder, post_wound_features, name='wound_area_top'):
     else:
         plt.xlim([0, 60])
 
-    if not name.startswith('wound_indentation_'):
+    if name == 'wound_height_':
+        plt.ylim([0, 50])
+
+
+    if not name.startswith('wound_indentation_') and name != 'wound_height_':
         plt.ylim([0, 250])
     plt.savefig(os.path.join(folder, name + '.png'))
     plt.close()
