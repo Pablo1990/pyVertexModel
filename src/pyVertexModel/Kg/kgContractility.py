@@ -53,13 +53,21 @@ def get_intensity_based_contractility(c_set, current_face, intensity_images=True
         closest_time_points_distance = 1 - distance_to_time_variables[indices_of_closest_time_points]
 
         if get_interface(current_face.InterfaceType) == get_interface('Top'):
-            contractility_value = contractility_variability_purse_string[indices_of_closest_time_points[0]] * \
-                                  closest_time_points_distance[0] + contractility_variability_purse_string[
-                                      indices_of_closest_time_points[1]] * closest_time_points_distance[1]
+            # In case we reach a point where the two closest time points are beyond the scope of the time points
+            if closest_time_points_distance[0] + closest_time_points_distance[1] == 1:
+                contractility_value = contractility_variability_purse_string[indices_of_closest_time_points[0]] * \
+                                      closest_time_points_distance[0] + contractility_variability_purse_string[
+                                          indices_of_closest_time_points[1]] * closest_time_points_distance[1]
+            else:
+                contractility_value = contractility_variability_purse_string[indices_of_closest_time_points[0]]
+
         elif get_interface(current_face.InterfaceType) == get_interface('CellCell'):
-            contractility_value = contractility_variability_lateral_cables[indices_of_closest_time_points[0]] * \
-                                  closest_time_points_distance[0] + contractility_variability_lateral_cables[
-                                      indices_of_closest_time_points[1]] * closest_time_points_distance[1]
+            if closest_time_points_distance[0] + closest_time_points_distance[1] == 1:
+                contractility_value = contractility_variability_lateral_cables[indices_of_closest_time_points[0]] * \
+                                      closest_time_points_distance[0] + contractility_variability_lateral_cables[
+                                          indices_of_closest_time_points[1]] * closest_time_points_distance[1]
+            else:
+                contractility_value = contractility_variability_lateral_cables[indices_of_closest_time_points[0]]
 
     return contractility_value
 
