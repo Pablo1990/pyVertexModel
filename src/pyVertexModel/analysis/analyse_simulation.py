@@ -157,37 +157,51 @@ def analyse_simulation(folder):
             'min_height_change_time': np.nan,
         }
 
-        # Export to xlsx
-        df = pd.DataFrame([important_features])
-        df.to_excel(os.path.join(folder, 'important_features.xlsx'))
+    # Export to xlsx
+    df = pd.DataFrame([important_features])
+    df.to_excel(os.path.join(folder, 'important_features.xlsx'))
 
 
     # Plot wound area top evolution over time and save it to a file
-    plot_feature(folder, post_wound_features, name='wound_area_top')
-    plot_feature(folder, post_wound_features, name='num_cells_wound_edge_top')
-    plot_feature(folder, post_wound_features, name='wound_height_')
+    plot_feature(folder, post_wound_features, name_columns=['wound_area_top', 'wound_area_bottom'])
+    plot_feature(folder, post_wound_features, name_columns='num_cells_wound_edge_top')
+    plot_feature(folder, post_wound_features, name_columns='wound_height_')
     try:
-        plot_feature(folder, post_wound_features, name='wound_indentation_top')
-        plot_feature(folder, post_wound_features, name='wound_indentation_bottom')
+        plot_feature(folder, post_wound_features, name_columns=['wound_indentation_top', 'wound_indentation_bottom'])
     except Exception as e:
         pass
-    plot_feature(folder, post_wound_features, name='wound_area_bottom')
+    plot_feature(folder, post_wound_features, name_columns='wound_area_bottom')
 
     return features_per_time_df, post_wound_features, important_features, features_per_time_all_cells_df
 
 
-def plot_feature(folder, post_wound_features, name='wound_area_top'):
+def plot_feature(folder, post_wound_features, name_columns):
     """
     Plot a feature and save it to a file
     :param folder:
     :param post_wound_features:
-    :param name:
+    :param name_columns:
     :return:
     """
     plt.figure()
-    plt.plot(post_wound_features['time'], post_wound_features[name], 'k')
+    # Check if name_columns is an array to go through it
+    if isinstance(name_columns, list):
+        for name in name_columns:
+            plt.plot(post_wound_features['time'], post_wound_features[name], label=name.replace('_', ' '))
+        plt.legend()
+
+        if not name_columns[0].startswith('wound_indentation_'):
+            plt.ylim([0, 250])
+    else:
+        plt.plot(post_wound_features['time'], post_wound_features[name_columns], 'k')
+        plt.ylabel(name_columns)
+        if name_columns == 'wound_height_':
+            plt.ylim([0, 50])
+        if not name_columns.startswith('wound_indentation_') and name_columns != 'wound_height_':
+            plt.ylim([0, 250])
+
     plt.xlabel('Time (h)')
-    plt.ylabel(name)
+
     # Change axis limits
     if np.max(post_wound_features['time']) > 60:
         #plt.xlim([0, np.max(post_wound_features['time'])])
@@ -195,13 +209,10 @@ def plot_feature(folder, post_wound_features, name='wound_area_top'):
     else:
         plt.xlim([0, 60])
 
-    if name == 'wound_height_':
-        plt.ylim([0, 50])
-
-
-    if not name.startswith('wound_indentation_') and name != 'wound_height_':
-        plt.ylim([0, 250])
-    plt.savefig(os.path.join(folder, name + '.png'))
+    if isinstance(name_columns, list):
+        plt.savefig(os.path.join(folder, '_'.join(name_columns) + '.png'))
+    else:
+        plt.savefig(os.path.join(folder, name_columns + '.png'))
     plt.close()
 
 
@@ -217,19 +228,13 @@ def calculate_important_features(post_wound_features):
             'max_recoiling_top': np.max(post_wound_features['wound_area_top']),
             'max_recoiling_time_top': np.array(post_wound_features['time'])[
                 np.argmax(post_wound_features['wound_area_top'])],
-            'min_recoiling_top': np.min(post_wound_features['wound_area_top']),
-            'min_recoiling_time_top': np.array(post_wound_features['time'])[
-                np.argmin(post_wound_features['wound_area_top'])],
-            'min_height_change': np.min(post_wound_features['wound_height']),
-            'min_height_change_time': np.array(post_wound_features['time'])[
-                np.argmin(post_wound_features['wound_height'])],
             'last_area_top': post_wound_features['wound_area_top'].iloc[-1],
             'last_area_time_top': post_wound_features['time'].iloc[-1],
         }
 
         # Extrapolate features to a given time
-        times_to_extrapolate = {3.0, 6.0, 9.0, 12.0, 15.0, 21.0, 30.0, 36.0, 45.0, 51.0, 60.0}
-        columns_to_extrapolate = {'wound_area_top', 'wound_height'}  # post_wound_features.columns
+        times_to_extrapolate = {15.0, 30.0, 60.0}
+        columns_to_extrapolate = {'wound_area_top', 'wound_area_bottom', 'wound_indentation_top', 'wound_indentation_bottom'}  # post_wound_features.columns
         for feature in columns_to_extrapolate:
             for time in times_to_extrapolate:
                 # Extrapolate results to a given time
@@ -248,8 +253,6 @@ def calculate_important_features(post_wound_features):
         important_features = {
             'max_recoiling_top': np.nan,
             'max_recoiling_time_top': np.nan,
-            'min_height_change': np.nan,
-            'min_height_change_time': np.nan,
         }
 
     return important_features
@@ -312,7 +315,7 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_edge_info_ap
                 time_steps = time_steps[1:]
         except Exception as e:
             logger.info('Performing the analysis...' + str(e))
-            # Change name of folder and create it
+            # Change name_columns of folder and create it
             if type_of_ablation == 'recoil_info_apical':
                 v_model.set.OutputFolder = v_model.set.OutputFolder + '_ablation_' + str(num_ablation)
             else:
