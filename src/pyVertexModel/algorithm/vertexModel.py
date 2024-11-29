@@ -618,11 +618,11 @@ class VertexModel:
         avg_cell_features = all_cell_features.mean()
 
         # Compute wound features
-        try:
-            wound_features = self.compute_wound_features()
-            avg_cell_features = pd.concat([avg_cell_features, pd.Series(wound_features)])
-        except Exception as e:
-            pass
+        #try:
+        wound_features = self.compute_wound_features()
+        avg_cell_features = pd.concat([avg_cell_features, pd.Series(wound_features)])
+        # except Exception as e:
+        #     logger.error(f"Error while computing wound features: {e}")
 
         return all_cell_features, avg_cell_features
 
