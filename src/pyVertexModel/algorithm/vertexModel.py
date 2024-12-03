@@ -3,11 +3,8 @@ import os
 from abc import abstractmethod
 from itertools import combinations
 
-import imageio
 import numpy as np
 import pandas as pd
-import pyvista as pv
-from scipy.stats import zscore
 from skimage.measure import regionprops
 
 from src.pyVertexModel.Kg.kg import add_noise_to_parameter
@@ -16,111 +13,10 @@ from src.pyVertexModel.geometry import degreesOfFreedom
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
 from src.pyVertexModel.parameters.set import Set
-from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars, copy_non_mutable_attributes
+from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars, copy_non_mutable_attributes, \
+    screenshot
 
 logger = logging.getLogger("pyVertexModel")
-
-
-def screenshot(v_model, temp_dir, selected_cells=None):
-    """
-    Create a screenshot of the current state of the model.
-    :param v_model: VertexModel object.
-    :param selected_cells: List of selected cells to be displayed.
-    :param temp_dir: Temporary directory to save the images.
-    :return:
-    """
-    # if exists variable export_images in set
-    if hasattr(v_model.set, 'export_images'):
-        if v_model.set.export_images is False:
-            return
-
-    total_real_cells = len([cell.ID for cell in v_model.geo.Cells if cell.AliveStatus is not None])
-
-    # Create a colormap_lim
-    #if v_model.colormap_lim is None:
-    #    v_model.colormap_lim = [0, total_real_cells]
-
-    # Create a plotter
-    if selected_cells is None:
-        selected_cells = []
-
-    plotter = pv.Plotter(off_screen=True)
-
-    for _, cell in enumerate(v_model.geo.Cells):
-        if cell.AliveStatus == 1 and (cell.ID in selected_cells or selected_cells is not []):
-            # Load the VTK file as a pyvista mesh
-            mesh = cell.create_pyvista_mesh()
-
-            # Add the mesh to the plotter
-            # Cmaps that I like: 'tab20b', 'BuPu', 'Blues'
-            # Cmaps that I don't like: 'prism', 'bone'
-            plotter.add_mesh(mesh, name=f'cell_{cell.ID}', scalars='Volume', lighting=True, cmap="pink",
-                             clim=[0.0001, 0.0006], show_edges=True, edge_color='white', edge_opacity=0.3)
-
-
-    for _, cell in enumerate(v_model.geo.Cells):
-        if cell.AliveStatus == 1 and (cell.ID in selected_cells or selected_cells is not []):
-            edge_mesh = cell.create_pyvista_edges()
-            plotter.add_mesh(edge_mesh, name=f'edge_{cell.ID}', color='black', line_width=3, render_lines_as_tubes=True)
-
-
-
-    # Set a fixed camera zoom level
-    fixed_zoom_level = 1
-    plotter.camera.zoom(fixed_zoom_level)
-
-    # Add text to the plotter
-    if v_model.set.ablation:
-        timeAfterAblation = float(v_model.t) - float(v_model.set.TInitAblation)
-        text_content = f"Ablation time: {timeAfterAblation:.2f}"
-        plotter.add_text(text_content, position='upper_right', font_size=12, color='black')
-    else:
-        text_content = f"Time: {v_model.t:.2f}"
-        plotter.add_text(text_content, position='upper_right', font_size=12, color='black')
-
-
-
-    # Render the scene and capture a screenshot
-    img = plotter.screenshot(transparent_background=True, scale=3)
-    # Save the image to a temporary file
-    temp_file = os.path.join(temp_dir, f'vModel_perspective_{v_model.numStep}.png')
-    imageio.imwrite(temp_file, img)
-
-    # True 2D
-    plotter.enable_parallel_projection()
-    plotter.enable_image_style()
-
-    # Set the camera to the top view
-    plotter.view_xy()
-
-    img = plotter.screenshot(transparent_background=True, scale=3)
-    temp_file = os.path.join(temp_dir, f'vModel_top_{v_model.numStep}.png')
-    imageio.imwrite(temp_file, img)
-
-    # Set the camera to the bottom view
-    plotter.view_xy(negative=True)
-
-    img = plotter.screenshot(transparent_background=True, scale=3)
-    temp_file = os.path.join(temp_dir, f'vModel_bottom_{v_model.numStep}.png')
-    imageio.imwrite(temp_file, img)
-
-    # Set the camera to the front view and adjust the position to be inside the tissue
-    plotter.view_xz()
-    #center_x, center_y, center_z = v_model.geo.Cells[0].X
-    plotter.camera.position = (-0.6836302475532527, 0.49746550619602203, -0.0024260058999061584)
-    plotter.focal_point = (0.5723095089197159, 0.49746550619602203, -0.0024260058999061584)
-    # Do not show the following cells =
-    cells_to_hide = np.array([11, 12, 16, 19, 21, 22, 23, 31, 32, 35, 36, 37, 38, 39, 41, 44, 54, 55, 56, 58, 59, 60, 61, 65, 67, 68, 75, 76, 81, 82, 83, 86, 88, 89, 90, 91, 94, 96, 97, 102, 104, 106, 108, 112, 114, 116, 119, 120, 123, 124, 128, 129, 133, 135, 140, 141, 142, 143, 144, 145, 149])
-    for cell in cells_to_hide:
-        plotter.remove_actor(f'cell_{cell}')
-        plotter.remove_actor(f'edge_{cell}')
-
-    img = plotter.screenshot(transparent_background=True, scale=3)
-    temp_file = os.path.join(temp_dir, f'vModel_front_{v_model.numStep}.png')
-    imageio.imwrite(temp_file, img)
-
-    # Close the plotter
-    plotter.close()
 
 def generate_tetrahedra_from_information(X, cell_edges, cell_height, cell_centroids, main_cells,
                                          neighbours_network, selected_planes, triangles_connectivity,

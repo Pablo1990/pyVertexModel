@@ -1,4 +1,5 @@
 import logging
+import os
 
 import numpy as np
 import pandas as pd
@@ -9,7 +10,7 @@ from src.pyVertexModel.geometry.face import get_interface
 from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
 from src.pyVertexModel.util.utils import ismember_rows, save_backup_vars, load_backup_vars, compute_distance_3d, \
-    laplacian_smoothing
+    laplacian_smoothing, screenshot_
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -277,11 +278,13 @@ class Remodelling:
                                 best_gr = gr
                                 self.Geo = geo_copy
 
+                    if best_gr / 10 > self.Set.tol:
+                        logger.info(f'|gr| after remodelling: {best_gr}')
+                        has_converged = False
 
                     #cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
                     #                               and cell.AliveStatus == 1]
                     #self.Geo = smoothing_cell_surfaces_mesh(self.Geo, cells_involved_intercalation)
-                    pass
                 else:
                     has_converged = False
 
@@ -369,9 +372,10 @@ class Remodelling:
         g, energies = gGlobal(self.Geo, self.Geo, self.Geo, self.Set, self.Set.implicit_method)
         gr = np.linalg.norm(g[self.Dofs.Free])
         logger.info(f'|gr| after remodelling: {gr}')
-
-        if gr / 10 > self.Set.tol:
+        if gr / 100 > self.Set.tol:
             has_converged = False
+
+        screenshot_(self.Geo, self.Set, -1, 'AfterRemodelling', os.path.join(self.Set.OutputFolder, 'images'))
 
         return all_tnew, cell_to_split_from, ghost_node, ghost_nodes_tried, has_converged, old_tets
 
