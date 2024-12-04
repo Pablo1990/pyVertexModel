@@ -40,7 +40,7 @@ def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None):
     plotter = pv.Plotter(off_screen=True)
 
     for _, cell in enumerate(geo.Cells):
-        if cell.AliveStatus == 1 and (cell.ID in selected_cells or selected_cells is []):
+        if cell.AliveStatus == 1 and (cell.ID in selected_cells or len(selected_cells) == 0):
             # Load the VTK file as a pyvista mesh
             mesh = cell.create_pyvista_mesh()
 
@@ -52,7 +52,7 @@ def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None):
 
 
     for _, cell in enumerate(geo.Cells):
-        if cell.AliveStatus == 1 and (cell.ID in selected_cells or selected_cells is []):
+        if cell.AliveStatus == 1 and (cell.ID in selected_cells or len(selected_cells) == 0):
             edge_mesh = cell.create_pyvista_edges()
             plotter.add_mesh(edge_mesh, name=f'edge_{cell.ID}', color='black', line_width=3, render_lines_as_tubes=True)
 

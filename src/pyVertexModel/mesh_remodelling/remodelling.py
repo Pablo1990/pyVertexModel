@@ -3,6 +3,7 @@ import os
 
 import numpy as np
 import pandas as pd
+from numpy.ma.extras import setdiff1d
 
 from src.pyVertexModel.algorithm.newtonRaphson import gGlobal
 from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours_vertices
@@ -83,7 +84,7 @@ def add_edge_to_intercalate(geo, num_cell, segment_features, edge_lengths_top, e
 
 
 def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared, cell_to_split_from, ghost_node, Tnew,
-                                      Set, strong_gradient):
+                                      Set):
     """
     Move the vertices closer to the reference point.
     :param Geo:
@@ -173,7 +174,7 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
     return Geo
 
 
-def smoothing_cell_surfaces_mesh(Geo, cells_intercalated):
+def smoothing_cell_surfaces_mesh(Geo, cells_intercalated, location='Top'):
     """
     Smoothing the cell surfaces mesh.
     :param Geo:
@@ -182,24 +183,56 @@ def smoothing_cell_surfaces_mesh(Geo, cells_intercalated):
     """
     for cell_intercalated in cells_intercalated:
         if Geo.Cells[cell_intercalated].AliveStatus == 1:
-            ys = Geo.Cells[cell_intercalated].Y[:, 0:2]
-            # face_centres = [faces.Centre[0:2] for faces in self.Geo.Cells[cell_intercalated].Faces]
-            x_2d = ys
+            # Get the 2D coordinates of the vertices of the cell
+            x_2d = Geo.Cells[cell_intercalated].Y[:, 0:2]
+
+            # Get the neighbouring cells depending on location
+            if location == 'Top':
+                node_neighbours = get_node_neighbours_per_domain(Geo, cell_intercalated, Geo.XgTop[0])
+            elif location == 'Bottom':
+                node_neighbours = get_node_neighbours_per_domain(Geo, cell_intercalated, Geo.XgBottom[0])
+
+            # Get the vertices of the neighbouring cells that are alive
+            vertices_neighbours = np.unique(np.concatenate([Geo.Cells[cell_neighbour].Y for cell_neighbour in
+                                                            node_neighbours if Geo.Cells[cell_neighbour].AliveStatus == 1]))
+
+            # # Create a boundary around the neighbouring cells to avoid moving the vertices outside the cell
+            # outside_boundary = []
+            # for cell_neighbour in node_neighbours:
+            #     if Geo.Cells[cell_neighbour].AliveStatus == 1:
+            #         if location == 'Top':
+            #             outside_boundary.append(Geo.Cells[cell_neighbour].Y[np.any(np.isin(Geo.Cells[cell_neighbour].T, cell_intercalated), axis=1) & np.any(np.isin(Geo.Cells[cell_neighbour].T, Geo.XgTop), axis=1)])
+            #         elif location == 'Bottom':
+            #             outside_boundary.append(Geo.Cells[cell_neighbour].Y[np.any(np.isin(Geo.Cells[cell_neighbour].T, cell_intercalated), axis=1) & np.any(np.isin(Geo.Cells[cell_neighbour].T, Geo.XgBottom), axis=1)])
+            # outside_boundary = np.concatenate(outside_boundary)
 
             triangles = []
             for num_face, face in enumerate(Geo.Cells[cell_intercalated].Faces):
-                for tri in face.Tris:
-                    triangles.append([tri.Edge[0], tri.Edge[1]])
+                if ((get_interface(face.InterfaceType) == get_interface('Top') and location == 'Top') or
+                        (get_interface(face.InterfaceType) == get_interface('Bottom') and location == 'Bottom')):
+                    for tri in face.Tris:
+                        triangles.append([tri.Edge[0], tri.Edge[1]])
 
             boundary_ids = np.where(np.sum(np.isin(Geo.Cells[cell_intercalated].T, Geo.XgID),
-                                           axis=1) < 3)[0]
+                                               axis=1) < 3)[0]
 
-            X2D = laplacian_smoothing(x_2d, np.array(triangles), boundary_ids, iteration_count=50)
+            # Move the x_2d vertices that fall within the neighbouring cells to inside the cell
+            centroid = np.mean(x_2d, axis=0)
+            for vertex_id, vertex  in enumerate(x_2d):
+                if vertex_id not in boundary_ids:
+                    x_2d[vertex_id, 0] = centroid[0]
+                    x_2d[vertex_id, 1] = centroid[1]
+                else:
+                    pass
+                    # Boundary vertices should be correspond to a vertex of the outside boundary based on tetrahedra
+                    # shared by the cell and the neighbouring cells
 
-            Geo.Cells[cell_intercalated].Y[:, 0:2] = X2D[0:len(ys)]
+            X2D = laplacian_smoothing(x_2d[:, 0:2], np.array(triangles), boundary_ids, iteration_count=50)
+
+            Geo.Cells[cell_intercalated].Y[:, 0:2] = X2D[0:len(x_2d)]
 
             # Update as the average of the new vertices
-            face_centres_to_middle_of_neighbours_vertices(Geo, cell_intercalated)
+            face_centres_to_middle_of_neighbours_vertices(Geo, cell_intercalated, filter_location=location)
 
     return Geo
 
@@ -238,6 +271,12 @@ class Remodelling:
         backup_vars = save_backup_vars(self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs)
         # self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step)
 
+        g, energies = gGlobal(self.Geo, self.Geo, self.Geo, self.Set, self.Set.implicit_method)
+        gr = np.linalg.norm(g[self.Dofs.Free])
+        logger.info(f'|gr| before remodelling: {gr}')
+        for key, energy in energies.items():
+            logger.info(f"{key}: {energy}")
+
         while segmentFeatures_all.empty is False:
             # Get the first segment feature
             segmentFeatures = segmentFeatures_all.iloc[0]
@@ -265,20 +304,33 @@ class Remodelling:
                 if len(np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])) > 3:
                     g, _ = gGlobal(self.Geo, self.Geo, self.Geo, self.Set, self.Set.implicit_method)
                     best_gr = np.linalg.norm(g[self.Dofs.Free])
-                    for how_close_to_vertex in np.linspace(0.1, 0.9, 9):
-                        geo_copy = (
-                            move_vertices_closer_to_ref_point(self.Geo.copy(), how_close_to_vertex,
-                                                              np.concatenate([[segmentFeatures['num_cell']],
-                                                                              cellNodesShared]),
-                                                              cellToSplitFrom, ghostNode, allTnew, self.Set, 0))
-                        g, _ = gGlobal(geo_copy, geo_copy, geo_copy, self.Set, self.Set.implicit_method)
-                        gr = np.linalg.norm(g[self.Dofs.Free])
-                        if gr / 10 < self.Set.tol:
-                            if gr < best_gr:
-                                best_gr = gr
-                                self.Geo = geo_copy
+                    #for how_close_to_vertex in np.linspace(0.1, 0.9, 9):
+                    how_close_to_vertex = 0.01
+                    geo_copy = (
+                        move_vertices_closer_to_ref_point(self.Geo.copy(), how_close_to_vertex,
+                                                          np.concatenate([[segmentFeatures['num_cell']],
+                                                                          cellNodesShared]),
+                                                          cellToSplitFrom, ghostNode, allTnew, self.Set))
+                    cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
+                                                  and cell.AliveStatus == 1]
+                    geo_copy = smoothing_cell_surfaces_mesh(geo_copy, setdiff1d(cells_involved_intercalation,
+                                                                                segmentFeatures['num_cell']))
+                    geo_copy = smoothing_cell_surfaces_mesh(geo_copy, [segmentFeatures['num_cell']])
 
-                    if best_gr / 10 > self.Set.tol:
+                    geo_copy.update_measures()
+
+                    g, energies = gGlobal(geo_copy, geo_copy, geo_copy, self.Set, self.Set.implicit_method)
+                    gr = np.linalg.norm(g[self.Dofs.Free])
+                    if gr < best_gr:
+                        best_gr = gr
+                        self.Geo = geo_copy
+                        screenshot_(self.Geo, self.Set, -1, 'AfterRemodelling_',
+                                    os.path.join(self.Set.OutputFolder, 'images'))
+                        logger.info(f'Best gr: {best_gr}')
+                        for key, energy in energies.items():
+                            logger.info(f"{key}: {energy}")
+
+                    if best_gr / 100 > self.Set.tol:
                         logger.info(f'|gr| after remodelling: {best_gr}')
                         has_converged = False
 
@@ -371,9 +423,11 @@ class Remodelling:
         # Compute the new energy
         g, energies = gGlobal(self.Geo, self.Geo, self.Geo, self.Set, self.Set.implicit_method)
         gr = np.linalg.norm(g[self.Dofs.Free])
-        logger.info(f'|gr| after remodelling: {gr}')
-        if gr / 100 > self.Set.tol:
-            has_converged = False
+        logger.info(f'|gr| after remodelling without changes: {gr}')
+        for key, energy in energies.items():
+            logger.info(f"{key}: {energy}")
+        # if gr / 100 > self.Set.tol:
+        #     has_converged = False
 
         screenshot_(self.Geo, self.Set, -1, 'AfterRemodelling', os.path.join(self.Set.OutputFolder, 'images'))
 

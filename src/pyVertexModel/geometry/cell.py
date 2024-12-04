@@ -8,7 +8,7 @@ from src.pyVertexModel.geometry.face import get_interface
 from src.pyVertexModel.util.utils import copy_non_mutable_attributes
 
 
-def face_centres_to_middle_of_neighbours_vertices(Geo, c_cell):
+def face_centres_to_middle_of_neighbours_vertices(Geo, c_cell, filter_location=None):
     """
     Move the face centres to the middle of the neighbours vertices.
     :param Geo:
@@ -16,13 +16,14 @@ def face_centres_to_middle_of_neighbours_vertices(Geo, c_cell):
     :return:
     """
     for num_face, _ in enumerate(Geo.Cells[c_cell].Faces):
-        all_edges = []
-        for tri in Geo.Cells[c_cell].Faces[num_face].Tris:
-            all_edges.append(tri.Edge)
+        if get_interface(Geo.Cells[c_cell].Faces[num_face].InterfaceType) == get_interface(filter_location):
+            all_edges = []
+            for tri in Geo.Cells[c_cell].Faces[num_face].Tris:
+                all_edges.append(tri.Edge)
 
-        all_edges = np.unique(np.concatenate(all_edges))
-        Geo.Cells[c_cell].Faces[num_face].Centre = np.mean(
-            Geo.Cells[c_cell].Y[all_edges, :], axis=0)
+            all_edges = np.unique(np.concatenate(all_edges))
+            Geo.Cells[c_cell].Faces[num_face].Centre = np.mean(
+                Geo.Cells[c_cell].Y[all_edges, :], axis=0)
 
 
 def compute_2d_circularity(area, perimeter):
