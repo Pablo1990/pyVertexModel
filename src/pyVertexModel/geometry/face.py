@@ -80,10 +80,6 @@ class Face:
         self.build_edges(Cell.T, face_ids, self.Centre, self.InterfaceType, Cell.X, Cell.Y,
                          list(range(nCells)))
 
-        # Move centre to the mean of the edge centres
-        self.Centre = np.mean(np.concatenate(Cell.Y[[tri.Edge for tri in self.Tris], :]), axis=0)
-        # self.Centre = np.mean(c_cell.Y[self.Tris.Edge], :], axis=0)
-
         if oldFace is not None:
             self.Area = oldFace.Area
             self.Area0 = oldFace.Area0
