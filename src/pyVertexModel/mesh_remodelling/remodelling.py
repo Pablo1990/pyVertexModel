@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from numpy.ma.extras import setdiff1d
 
-from src.pyVertexModel.algorithm.newtonRaphson import gGlobal
+from src.pyVertexModel.algorithm.newtonRaphson import gGlobal, newton_raphson_iteration_explicit
 from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours_vertices
 from src.pyVertexModel.geometry.face import get_interface
 from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
@@ -217,22 +217,22 @@ def smoothing_cell_surfaces_mesh(Geo, cells_intercalated, location='Top'):
                                                axis=1) < 3)[0]
 
             # Move the x_2d vertices that fall within the neighbouring cells to inside the cell
-            centroid = np.mean(x_2d, axis=0)
-            for vertex_id, vertex  in enumerate(x_2d):
-                if vertex_id not in boundary_ids:
-                    x_2d[vertex_id, 0] = centroid[0]
-                    x_2d[vertex_id, 1] = centroid[1]
-                else:
-                    pass
-                    # Boundary vertices should be correspond to a vertex of the outside boundary based on tetrahedra
-                    # shared by the cell and the neighbouring cells
+            # centroid = np.mean(x_2d, axis=0)
+            # for vertex_id, vertex  in enumerate(x_2d):
+            #     if vertex_id not in boundary_ids:
+            #         # Move the vertex closer to the centroid of the cell
+            #         x_2d[vertex_id] = x_2d[vertex_id] + 0.5 * (centroid - x_2d[vertex_id])
+            #     else:
+            #         pass
+            #         # Boundary vertices should be correspond to a vertex of the outside boundary based on tetrahedra
+            #         # shared by the cell and the neighbouring cells
 
-            X2D = laplacian_smoothing(x_2d[:, 0:2], np.array(triangles), boundary_ids, iteration_count=50)
+            x_2d = laplacian_smoothing(x_2d[:, 0:2], np.array(triangles), boundary_ids, iteration_count=1)
 
-            Geo.Cells[cell_intercalated].Y[:, 0:2] = X2D[0:len(x_2d)]
+            Geo.Cells[cell_intercalated].Y[:, 0:2] = x_2d[0:len(x_2d)]
 
             # Update as the average of the new vertices
-            face_centres_to_middle_of_neighbours_vertices(Geo, cell_intercalated, filter_location=location)
+            #face_centres_to_middle_of_neighbours_vertices(Geo, cell_intercalated, filter_location=location)
 
     return Geo
 
@@ -314,10 +314,14 @@ class Remodelling:
                     cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
                                                   and cell.AliveStatus == 1]
                     geo_copy = smoothing_cell_surfaces_mesh(geo_copy, setdiff1d(cells_involved_intercalation,
-                                                                                segmentFeatures['num_cell']))
-                    geo_copy = smoothing_cell_surfaces_mesh(geo_copy, [segmentFeatures['num_cell']])
+                                                                               segmentFeatures['num_cell']))
+                    #geo_copy = smoothing_cell_surfaces_mesh(geo_copy, [segmentFeatures['num_cell']])
 
-                    geo_copy.update_measures()
+                    #dy = np.zeros(((geo_copy.numY + geo_copy.numF + geo_copy.nCells) * 3, 1), dtype=np.float64)
+                    #geo_copy, _, _ = newton_raphson_iteration_explicit(geo_copy, self.Set, self.Dofs.Free, dy, g, cells_involved_intercalation)
+
+                    screenshot_(geo_copy, self.Set, -1, 'AfterRemodelling_',
+                                os.path.join(self.Set.OutputFolder, 'images'))
 
                     g, energies = gGlobal(geo_copy, geo_copy, geo_copy, self.Set, self.Set.implicit_method)
                     gr = np.linalg.norm(g[self.Dofs.Free])
@@ -330,7 +334,7 @@ class Remodelling:
                         for key, energy in energies.items():
                             logger.info(f"{key}: {energy}")
 
-                    if best_gr / 100 > self.Set.tol:
+                    if best_gr / 2 > self.Set.tol:
                         logger.info(f'|gr| after remodelling: {best_gr}')
                         has_converged = False
 

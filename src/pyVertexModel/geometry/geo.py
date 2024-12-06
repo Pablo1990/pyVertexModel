@@ -489,19 +489,19 @@ class Geo:
                                             (min_faces / number_of_faces_per_cell_only_top_and_bottom[num_faces]) ** 2)
                 num_faces += 1
 
-    def update_vertices(self, dy_reshaped):
+    def update_vertices(self, dy_reshaped, selected_cells=None):
         """
         Update the vertices of the geometry
+        :param selected_cells: The selected cells
         :param dy_reshaped: The displacement of the vertices
         :return:
         """
         for c in [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]:
-            dY = dy_reshaped[self.Cells[c].globalIds, :]
-            self.Cells[c].Y += dY
-            # dYc = dy_reshaped[self.Cells[c].cglobalids, :]
-            # self.Cells[c].X += dYc
-            for f in range(len(self.Cells[c].Faces)):
-                self.Cells[c].Faces[f].Centre += dy_reshaped[self.Cells[c].Faces[f].globalIds, :]
+            if selected_cells is None or c in selected_cells:
+                dY = dy_reshaped[self.Cells[c].globalIds, :]
+                self.Cells[c].Y += dY
+                for f in range(len(self.Cells[c].Faces)):
+                    self.Cells[c].Faces[f].Centre += dy_reshaped[self.Cells[c].Faces[f].globalIds, :]
 
     def update_measures(self):
         """

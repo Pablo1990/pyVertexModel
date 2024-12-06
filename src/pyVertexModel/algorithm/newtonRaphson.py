@@ -175,9 +175,10 @@ def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g
     return energy_total, K, dyr, g, gr, ig, aux_gr, dy
 
 
-def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
+def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g, selected_cells=None):
     """
     Explicit update method
+    :param selected_cells:
     :param Geo_0:
     :param Geo_n:
     :param Geo:
@@ -206,7 +207,7 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
     dy = map_vertices_periodic_boundaries(Geo, dy)
 
     dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
-    Geo.update_vertices(dy_reshaped)
+    Geo.update_vertices(dy_reshaped, selected_cells)
     Geo.update_measures()
 
     g, energies = gGlobal(Geo, Geo, Geo, Set, Set.implicit_method)
