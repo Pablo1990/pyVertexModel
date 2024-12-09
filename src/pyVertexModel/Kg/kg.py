@@ -4,10 +4,9 @@ from abc import abstractmethod
 import numpy as np
 
 
-def add_noise_to_parameter(avg_parameter, noise, random_number=random.random()):
+def add_noise_to_parameter(avg_parameter, noise):
     """
     Add noise to a parameter.
-    :param random_number:
     :param avg_parameter:
     :param noise:
     :return:
@@ -21,6 +20,7 @@ def add_noise_to_parameter(avg_parameter, noise, random_number=random.random()):
     if min_value < 0:
         min_value = 2.2204e-16  # equivalent to MATLAB eps
 
+    random_number = random.random()
     final_value = min_value + (max_value - min_value) * random_number
 
     return final_value

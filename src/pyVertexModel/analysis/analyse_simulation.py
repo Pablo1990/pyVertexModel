@@ -1,5 +1,6 @@
 import os
 import pickle
+import cv2
 
 import numpy as np
 import pandas as pd
@@ -30,6 +31,11 @@ def analyse_simulation(folder):
 
         # Sort files by date
         all_files = sorted(all_files, key=lambda x: os.path.getmtime(os.path.join(folder, x)))
+
+        # if all_files has less than 20 files, return None
+        if len(all_files) < 20:
+            return None, None, None, None
+
         for file_id, file in enumerate(all_files):
             if file.endswith('.pkl') and not file.__contains__('data_step_before_remodelling') and not file.__contains__('recoil'):
                 # Load the state of the model
@@ -39,24 +45,6 @@ def analyse_simulation(folder):
                 all_cells, avg_cells = vModel.analyse_vertex_model()
                 features_per_time_all_cells.append(all_cells)
                 features_per_time.append(avg_cells)
-
-                # # Create a temporary directory to store the images
-                # temp_dir = os.path.join(folder, 'images')
-                # if not os.path.exists(temp_dir):
-                #     os.mkdir(temp_dir)
-                # vModel.screenshot(temp_dir)
-
-                # temp_dir = os.path.join(folder, 'images_wound_edge')
-                # if not os.path.exists(temp_dir):
-                #     os.mkdir(temp_dir)
-                # _, debris_cells = vModel.geo.compute_wound_centre()
-                # list_of_cell_distances_top = vModel.geo.compute_cell_distance_to_wound(debris_cells, location_filter=0)
-                # alive_cells = [cell.ID for cell in vModel.geo.Cells if cell.AliveStatus == 1]
-                # wound_edge_cells = []
-                # for cell_num, cell_id in enumerate(alive_cells):
-                #     if list_of_cell_distances_top[cell_num] == 1:
-                #         wound_edge_cells.append(cell_id)
-                # vModel.screenshot(temp_dir, wound_edge_cells)
 
         if not features_per_time:
             return None, None, None, None
@@ -71,54 +59,12 @@ def analyse_simulation(folder):
         features_per_time_df.sort_values(by='time', inplace=True)
         features_per_time_df.to_excel(os.path.join(folder, 'features_per_time.xlsx'))
 
-        # Obtain pre-wound features
-        try:
-            pre_wound_features = features_per_time_df['time'][features_per_time_df['time'] < vModel.set.TInitAblation]
-            pre_wound_features = features_per_time_df[features_per_time_df['time'] ==
-                                                      pre_wound_features.iloc[-1]]
-        except Exception as e:
-            pre_wound_features = features_per_time_df.iloc[0]
-
-        # Obtain post-wound features
-        post_wound_features = features_per_time_df[features_per_time_df['time'] >= vModel.set.TInitAblation]
-
-        if not post_wound_features.empty:
-            # Reset time to ablation time.
-            post_wound_features.loc[:, 'time'] = post_wound_features['time'] - vModel.set.TInitAblation
-
-            # Compare post-wound features with pre-wound features in percentage
-            for feature in post_wound_features.columns:
-                if np.any(np.isnan(pre_wound_features[feature])) or np.any(np.isnan(post_wound_features[feature])):
-                    continue
-
-                if feature == 'time':
-                    continue
-                post_wound_features.loc[:, feature] = (post_wound_features[feature] / np.array(
-                    pre_wound_features[feature])) * 100
-
-            # Export to xlsx
-            post_wound_features.to_excel(os.path.join(folder, 'post_wound_features.xlsx'))
-
-            important_features = calculate_important_features(post_wound_features)
-        else:
-            important_features = {
-                'max_recoiling_top': np.nan,
-                'max_recoiling_time_top': np.nan,
-                'min_height_change': np.nan,
-                'min_height_change_time': np.nan,
-            }
-
-        # Export to xlsx
-        df = pd.DataFrame([important_features])
-        df.to_excel(os.path.join(folder, 'important_features.xlsx'))
-
         # Save dataframes to a single pkl
         with open(os.path.join(folder, 'features_per_time.pkl'), 'wb') as f:
             pickle.dump(features_per_time_df, f)
-            pickle.dump(important_features, f)
-            pickle.dump(post_wound_features, f)
+            pickle.dump(None, f)
+            pickle.dump(None, f)
             pickle.dump(features_per_time_all_cells_df, f)
-
     else:
         # Load dataframes from pkl
         with open(os.path.join(folder, 'features_per_time.pkl'), 'rb') as f:
@@ -127,32 +73,159 @@ def analyse_simulation(folder):
             post_wound_features = pickle.load(f)
             features_per_time_all_cells_df = pickle.load(f)
 
-        important_features = calculate_important_features(post_wound_features)
+        # load 'before_ablation.pkl' file
+        vModel = VertexModel(create_output_folder=False)
+        load_state(vModel, os.path.join(folder, 'before_ablation.pkl'))
+
+    # Obtain wound edge cells features
+    wound_edge_cells_top = vModel.geo.compute_cells_wound_edge('Top')
+    wound_edge_cells_top_ids = [cell.ID for cell in wound_edge_cells_top]
+    wound_edge_cells_features = features_per_time_all_cells_df[np.isin(features_per_time_all_cells_df['ID'],
+                                                                     wound_edge_cells_top_ids)].copy()
+    # Average wound edge cells features by time
+    wound_edge_cells_features_avg = wound_edge_cells_features.groupby('time').mean().reset_index()
+
+    # Add wound_edge_cells_features_avg columns to post_wound_features
+    for col in wound_edge_cells_features_avg.columns:
+        if col == 'time':
+            continue
+        features_per_time_df[col + '_wound_edge'] = wound_edge_cells_features_avg[col]
+
+    # Obtain post-wound features
+    post_wound_features = features_per_time_df[features_per_time_df['time'] >= vModel.set.TInitAblation]
+
+    # Obtain pre-wound features
+    try:
+        pre_wound_features = features_per_time_df['time'][features_per_time_df['time'] < vModel.set.TInitAblation]
+        pre_wound_features = features_per_time_df[features_per_time_df['time'] ==
+                                                  pre_wound_features.iloc[-1]]
+    except Exception as e:
+        pre_wound_features = features_per_time_df['time'][features_per_time_df['time'] > features_per_time_df['time'][0]]
+        pre_wound_features = features_per_time_df[features_per_time_df['time'] ==
+                                                  pre_wound_features.iloc[0]]
+
+    # Correlate wound edge cells features with wound area top
+    try:
+        wound_edge_cells_features_avg['wound_area_top'] = post_wound_features['wound_area_top'][1:].values
+        correlation_matrix = wound_edge_cells_features_avg.corr()
+
+        # Extract the correlation of 'wound_area_top' with other features
+        wound_area_top_correlation = correlation_matrix['wound_area_top']
+
+        # Sort the correlations in descending order to see which features correlate the most
+        sorted_correlations = wound_area_top_correlation.sort_values(ascending=False)
+
+        # Plot sorted correlations with a figure big enough on the x-axis to see the feature names
+        plt.figure(figsize=(10, 5))
+        plt.bar(sorted_correlations.index, sorted_correlations)
+        plt.xticks(rotation=90)
+        plt.ylabel('Correlation with wound area top')
+        plt.tight_layout()
+        plt.savefig(os.path.join(folder, 'correlation_wound_area_top.png'))
+
+        # Export to xlsx
+        wound_edge_cells_features_avg.to_excel(os.path.join(folder, 'features_per_time_only_wound_edge.xlsx'))
+    except Exception as e:
+        print('Error in correlating wound edge cells features with wound area top: ', e)
+
+
+    if not post_wound_features.empty:
+        # Reset time to ablation time.
+        post_wound_features.loc[:, 'time'] = post_wound_features['time'] - vModel.set.TInitAblation
+
+        post_wound_features = post_wound_features.dropna(axis=0)
+
+        # Compare post-wound features with pre-wound features in percentage
+        for feature in post_wound_features.columns:
+            if np.any(np.isnan(pre_wound_features[feature])) or np.any(np.isnan(post_wound_features[feature])):
+                continue
+
+            if 'indentation' in feature:
+                post_wound_features.loc[:, feature] = (post_wound_features[feature] - np.array(
+                    pre_wound_features[feature])) * 100
+                continue
+
+            if 'wound_height' in feature:
+                post_wound_features.loc[:, feature + '_'] = post_wound_features[feature] * 100
+
+            if feature == 'time':
+                continue
+
+            post_wound_features.loc[:, feature] = (post_wound_features[feature] / np.array(
+                pre_wound_features[feature])) * 100
+
+        # Export to xlsx
+        post_wound_features.to_excel(os.path.join(folder, 'post_wound_features.xlsx'))
+
+        important_features, important_features_by_time = calculate_important_features(post_wound_features)
+    else:
+        important_features = {
+            'max_recoiling_top': np.nan,
+            'max_recoiling_time_top': np.nan,
+            'min_height_change': np.nan,
+            'min_height_change_time': np.nan,
+        }
+        important_features_by_time = {}
+
+    # Export to xlsx
+    df = pd.DataFrame([important_features])
+    df.to_excel(os.path.join(folder, 'important_features.xlsx'))
+
+    df = pd.DataFrame(important_features_by_time)
+    df.to_excel(os.path.join(folder, 'important_features_by_time.xlsx'))
 
     # Plot wound area top evolution over time and save it to a file
-    plot_feature(folder, post_wound_features, name='wound_area_top')
-    plot_feature(folder, post_wound_features, name='wound_height')
-    plot_feature(folder, post_wound_features, name='num_cells_wound_edge_top')
+    plot_feature(folder, post_wound_features, name_columns=['wound_area_top', 'wound_area_bottom'])
+    plot_feature(folder, post_wound_features, name_columns='num_cells_wound_edge_top')
+    plot_feature(folder, post_wound_features, name_columns='wound_height_')
+    plot_feature(folder, post_wound_features, name_columns=['Volume', 'Volume_wound_edge'])
+    try:
+        plot_feature(folder, post_wound_features, name_columns=['wound_indentation_top', 'wound_indentation_bottom'])
+    except Exception as e:
+        pass
+    plot_feature(folder, post_wound_features, name_columns='wound_area_bottom')
 
     return features_per_time_df, post_wound_features, important_features, features_per_time_all_cells_df
 
 
-def plot_feature(folder, post_wound_features, name='wound_area_top'):
+def plot_feature(folder, post_wound_features, name_columns):
     """
     Plot a feature and save it to a file
     :param folder:
     :param post_wound_features:
-    :param name:
+    :param name_columns:
     :return:
     """
     plt.figure()
-    plt.plot(post_wound_features['time'], post_wound_features[name])
+    # Check if name_columns is an array to go through it
+    if isinstance(name_columns, list):
+        for name in name_columns:
+            plt.plot(post_wound_features['time'], post_wound_features[name], label=name.replace('_', ' '))
+        plt.legend()
+
+        if not name_columns[0].startswith('wound_indentation_') and not name_columns[0].startswith('Volume'):
+            plt.ylim([0, 250])
+    else:
+        plt.plot(post_wound_features['time'], post_wound_features[name_columns], 'k')
+        plt.ylabel(name_columns)
+        if name_columns == 'wound_height_':
+            plt.ylim([0, 50])
+        if not name_columns.startswith('wound_indentation_') and name_columns != 'wound_height_':
+            plt.ylim([0, 250])
+
     plt.xlabel('Time (h)')
-    plt.ylabel(name)
+
     # Change axis limits
-    plt.xlim([0, 60])
-    plt.ylim([0, 200])
-    plt.savefig(os.path.join(folder, name + '.png'))
+    if np.max(post_wound_features['time']) > 60:
+        #plt.xlim([0, np.max(post_wound_features['time'])])
+        plt.xlim([0, 60])
+    else:
+        plt.xlim([0, 60])
+
+    if isinstance(name_columns, list):
+        plt.savefig(os.path.join(folder, '_'.join(name_columns) + '.png'))
+    else:
+        plt.savefig(os.path.join(folder, name_columns + '.png'))
     plt.close()
 
 
@@ -168,19 +241,15 @@ def calculate_important_features(post_wound_features):
             'max_recoiling_top': np.max(post_wound_features['wound_area_top']),
             'max_recoiling_time_top': np.array(post_wound_features['time'])[
                 np.argmax(post_wound_features['wound_area_top'])],
-            'min_recoiling_top': np.min(post_wound_features['wound_area_top']),
-            'min_recoiling_time_top': np.array(post_wound_features['time'])[
-                np.argmin(post_wound_features['wound_area_top'])],
-            'min_height_change': np.min(post_wound_features['wound_height']),
-            'min_height_change_time': np.array(post_wound_features['time'])[
-                np.argmin(post_wound_features['wound_height'])],
             'last_area_top': post_wound_features['wound_area_top'].iloc[-1],
             'last_area_time_top': post_wound_features['time'].iloc[-1],
         }
 
         # Extrapolate features to a given time
-        times_to_extrapolate = {3.0, 6.0, 9.0, 12.0, 15.0, 21.0, 30.0, 36.0, 45.0, 51.0, 60.0}
-        columns_to_extrapolate = {'wound_area_top', 'wound_height'}  # post_wound_features.columns
+        times_to_extrapolate = np.arange(0, 61)
+        columns_to_extrapolate = {'wound_area_top', 'wound_area_bottom', 'wound_indentation_top', 'wound_indentation_bottom', 'Volume', 'Volume_wound_edge' , 'num_cells_wound_edge_top'}  # post_wound_features.columns
+
+        important_features_by_time = {}
         for feature in columns_to_extrapolate:
             for time in times_to_extrapolate:
                 # Extrapolate results to a given time
@@ -188,22 +257,15 @@ def calculate_important_features(post_wound_features):
                                                                                        post_wound_features['time'],
                                                                                        post_wound_features[feature])
 
-        # # Get ratio from area the first time to the other times
-        # for time in times_to_extrapolate:
-        #     if time != 6.0:
-        #         important_features['ratio_area_top_' + str(time)] = (
-        #                 important_features['wound_area_top_extrapolated_' + str(time)] /
-        #                 important_features['wound_area_top_extrapolated_6.0'])
+            important_features_by_time[feature] = [important_features[feature + '_extrapolated_' + str(time)] for time in times_to_extrapolate]
 
     else:
         important_features = {
             'max_recoiling_top': np.nan,
             'max_recoiling_time_top': np.nan,
-            'min_height_change': np.nan,
-            'min_height_change_time': np.nan,
         }
 
-    return important_features
+    return important_features, important_features_by_time
 
 
 def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_edge_info_apical', n_ablations=2, location_filter=0, t_end=0.5):
@@ -263,7 +325,7 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_edge_info_ap
                 time_steps = time_steps[1:]
         except Exception as e:
             logger.info('Performing the analysis...' + str(e))
-            # Change name of folder and create it
+            # Change name_columns of folder and create it
             if type_of_ablation == 'recoil_info_apical':
                 v_model.set.OutputFolder = v_model.set.OutputFolder + '_ablation_' + str(num_ablation)
             else:
@@ -468,3 +530,29 @@ def compute_edge_length_v_model(cells_to_ablate, edge_length_final, edge_length_
     time_steps.append((v_model.t - initial_time) * 60)
     # Calculate the recoil
     recoil_speed.append(edge_length_final_normalized[-1] / time_steps[-1])
+
+def create_video(folder, name_containing_images='top_'):
+    """
+    Create a video of the images in the folder
+    :param folder:
+    :return:
+    """
+
+    # Get the images
+    images = [img for img in os.listdir(folder) if img.endswith(".png") and name_containing_images in img]
+    images.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
+
+    # Determine the width and height from the first image
+    image_path = os.path.join(folder, images[0])
+    frame = cv2.imread(image_path)
+    height, width, layers = frame.shape
+
+    # Define the codec and create VideoWriter object
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Use 'mp4v' for MP4
+    video = cv2.VideoWriter(os.path.join(folder, name_containing_images + 'video.mp4'), fourcc, 7, (width, height))
+
+    for image in images:
+        video.write(cv2.imread(os.path.join(folder, image)))
+
+    cv2.destroyAllWindows()
+    video.release()

@@ -2,7 +2,8 @@ import time
 
 import numpy as np
 
-from src.pyVertexModel.Kg.kg import Kg, add_noise_to_parameter
+from src.pyVertexModel.Kg.kg import Kg
+from src.pyVertexModel.geometry.face import get_interface
 
 
 class KgTriAREnergyBarrier(Kg):
@@ -16,21 +17,14 @@ class KgTriAREnergyBarrier(Kg):
             Cell = Geo.Cells[c]
             Ys = Cell.Y
 
-            if Cell.Faces[0].Tris[0].lambda_r_noise is None:
-                lambda_r_noise = add_noise_to_parameter(Set.lambdaR, 0)
-                Cell.Faces[0].Tris[0].lambda_r_noise = lambda_r_noise
-
             for f in range(len(Cell.Faces)):
-                Face = Cell.Faces[f]
+                face = Cell.Faces[f]
 
-                if Face.InterfaceType != 'CellCell' and Face.InterfaceType != 1:
+                if get_interface(face.InterfaceType) != get_interface('CellCell'):
                     Tris = Cell.Faces[f].Tris
 
                     for t in range(len(Tris)):
-                        if Tris[t].lambda_r_noise is None:
-                            Tris[t].lambda_r_noise = lambda_r_noise
-
-                        fact = Tris[t].lambda_r_noise / Geo.lmin0 ** 4
+                        fact = (Cell.lambda_r_perc * Set.lambdaR) / Geo.lmin0 ** 4
                         n3 = Cell.Faces[f].globalIds
                         nY_original = np.array([Cell.globalIds[edge] for edge in Tris[t].Edge] + [n3], dtype=int)
 

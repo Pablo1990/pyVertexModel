@@ -3,6 +3,7 @@ import time
 import numpy as np
 
 from src.pyVertexModel.Kg.kg import Kg
+from src.pyVertexModel.geometry.face import get_interface
 
 
 class KgSubstrate(Kg):
@@ -31,26 +32,21 @@ class KgSubstrate(Kg):
             Energy_c = 0
 
             for numFace in range(len(currentCell.Faces)):
-                currentFace = Geo.Cells[c].Faces[numFace]
+                current_face = Geo.Cells[c].Faces[numFace]
 
-                if currentFace.InterfaceType == 'Bottom' or currentFace.InterfaceType == 2:
-                    # or currentFace.InterfaceType == 0 or currentFace.InterfaceType == 'Top')
-                    c_tris = np.concatenate([tris.Edge for tris in currentFace.Tris])
-                    c_tris = np.append(c_tris, currentFace.globalIds.astype(int))
+                if get_interface(current_face.InterfaceType) == get_interface('Bottom'):
+                    c_tris = np.concatenate([tris.Edge for tris in current_face.Tris])
+                    c_tris = np.append(c_tris, current_face.globalIds.astype(int))
                     c_tris = np.unique(c_tris)
                     for currentVertex in c_tris:
-                        # if currentFace.InterfaceType == 'Bottom' or currentFace.InterfaceType == 2
                         z0 = Geo.SubstrateZ
-                        kSubstrate = Set.kSubstrate
-                        # elif currentFace.InterfaceType == 'Top' or currentFace.InterfaceType == 0
-                        #     z0 = Geo.CeilingZ
-                        #     kSubstrate = -Set.kCeiling
+                        kSubstrate = Set.kSubstrate * currentCell.k_substrate_perc
 
                         if currentVertex <= len(Geo.Cells[c].globalIds):
                             currentVertexYs = currentCell.Y[currentVertex, :]
                             currentGlobalID = np.array([Geo.Cells[c].globalIds[currentVertex]], dtype=int)
                         else:
-                            currentVertexYs = currentFace.Centre
+                            currentVertexYs = current_face.Centre
                             currentGlobalID = np.array([currentVertex], dtype=int)
 
                         if Geo.remodelling and not np.any(np.isin(Geo.Cells[c].vertices_and_faces_to_remodel,
@@ -61,9 +57,6 @@ class KgSubstrate(Kg):
                         g_current = self.compute_g_substrate(kSubstrate, currentVertexYs[2], z0)
                         ge = self.assemble_g(ge, g_current, currentGlobalID)
 
-                        # TODO: Save contractile forces (g) to output
-                        # Geo.Cells[c].substrate_g[currentVertex] = g_current[2]
-
                         if calculate_K:
                             # Calculate Jacobian
                             K_current = self.compute_k_substrate(kSubstrate)
@@ -71,6 +64,7 @@ class KgSubstrate(Kg):
 
                         # Calculate energy
                         Energy_c = Energy_c + self.compute_energy_substrate(kSubstrate, currentVertexYs[2], z0)
+
             self.g = self.g + ge
             energy_per_cell.append(Energy_c)
             self.energy += Energy_c

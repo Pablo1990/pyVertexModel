@@ -5,9 +5,11 @@ import numpy as np
 import vtk
 from numpy.ma.extras import setxor1d
 from scipy.spatial import ConvexHull
+from torch.fx.experimental.unification.unification_tools import get_in
 
+from src.pyVertexModel.Kg.kg import add_noise_to_parameter
 from src.pyVertexModel.geometry import face, cell
-from src.pyVertexModel.geometry.face import standard_interface_type
+from src.pyVertexModel.geometry.face import get_interface
 from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes, calculate_polygon_area
 
 logger = logging.getLogger("pyVertexModel")
@@ -303,8 +305,8 @@ class Geo:
                                        c_set, self.XgTop, self.XgBottom)
                     self.Cells[c].Faces.append(newFace)
 
-                self.Cells[c].compute_area()
-                self.Cells[c].compute_volume()
+                self.Cells[c].Area = self.Cells[c].compute_area()
+                self.Cells[c].Vol = self.Cells[c].compute_volume()
 
         # Initialize reference values
         self.init_reference_cell_values(c_set)
@@ -377,19 +379,30 @@ class Geo:
                 self.Cells[c].Vol0 = self.Cells[c].Vol / c_set.ref_V0
                 self.Cells[c].Area0 = avg_area
 
+                # Compute the mechanical parameter with noise
+                # Surface area
+                self.Cells[c].lambda_s1_perc = add_noise_to_parameter(1, c_set.noise_random)
+                self.Cells[c].lambda_s2_perc = add_noise_to_parameter(1, c_set.noise_random)
+                self.Cells[c].lambda_s3_perc = add_noise_to_parameter(1, c_set.noise_random)
+                # Volume
+                self.Cells[c].lambda_v_perc = add_noise_to_parameter(1, c_set.noise_random)
+                # Aspect ratio/elongation
+                self.Cells[c].lambda_r_perc = add_noise_to_parameter(1, c_set.noise_random)
+                # Contractility
+                self.Cells[c].c_line_tension_perc = add_noise_to_parameter(1, c_set.noise_random)
+                # Substrate k
+                self.Cells[c].k_substrate_perc = add_noise_to_parameter(1, c_set.noise_random)
+                # Area Energy Barrier
+                self.Cells[c].lambda_b_perc = add_noise_to_parameter(1, c_set.noise_random)
+
                 # Compute number of faces per domain
-                num_faces_top = sum([c_face.InterfaceType == 'Top' or c_face.InterfaceType == 0
-                                     for c_face in self.Cells[c].Faces])
-                num_faces_bottom = sum([c_face.InterfaceType == 'Bottom' or c_face.InterfaceType == 2
-                                        for c_face in self.Cells[c].Faces])
-                num_faces_lateral = sum([c_face.InterfaceType == 'Lateral' or c_face.InterfaceType == 1
-                                         for c_face in self.Cells[c].Faces])
+                num_faces_bottom, num_faces_lateral, num_faces_top = self.get_num_faces(c)
 
                 # Iterate over all faces in the current cell
                 for f in range(len(self.Cells[c].Faces)):
-                    if self.Cells[c].Faces[f].InterfaceType == 'Top' or self.Cells[c].Faces[f].InterfaceType == 0:
+                    if get_interface(self.Cells[c].Faces[f].InterfaceType) == get_interface('Top'):
                         self.Cells[c].Faces[f].Area0 = avg_area_top * c_set.ref_A0 / num_faces_top
-                    elif self.Cells[c].Faces[f].InterfaceType == 'Bottom' or self.Cells[c].Faces[f].InterfaceType == 2:
+                    elif get_interface(self.Cells[c].Faces[f].InterfaceType) == get_interface('Bottom'):
                         self.Cells[c].Faces[f].Area0 = avg_area_bottom * c_set.ref_A0 / num_faces_bottom
                     else:
                         self.Cells[c].Faces[f].Area0 = avg_area_lateral * c_set.ref_A0 / num_faces_lateral
@@ -456,9 +469,9 @@ class Geo:
                 number_of_faces_only_top = 0
                 number_of_faces_only_bottom = 0
                 for face in cell.Faces:
-                    if face.InterfaceType == 'Top' or face.InterfaceType == 0:
+                    if get_interface(face.InterfaceType) == get_interface('Top'):
                         number_of_faces_only_top += 1
-                    if face.InterfaceType == 2 or face.InterfaceType == 'Bottom':
+                    if get_interface(face.InterfaceType) == get_interface('Bottom'):
                         number_of_faces_only_bottom += 1
 
                 number_of_faces_per_cell_only_top_and_bottom.append(number_of_faces_only_top)
@@ -476,19 +489,19 @@ class Geo:
                                             (min_faces / number_of_faces_per_cell_only_top_and_bottom[num_faces]) ** 2)
                 num_faces += 1
 
-    def update_vertices(self, dy_reshaped):
+    def update_vertices(self, dy_reshaped, selected_cells=None):
         """
         Update the vertices of the geometry
+        :param selected_cells: The selected cells
         :param dy_reshaped: The displacement of the vertices
         :return:
         """
         for c in [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]:
-            dY = dy_reshaped[self.Cells[c].globalIds, :]
-            self.Cells[c].Y += dY
-            # dYc = dy_reshaped[self.Cells[c].cglobalids, :]
-            # self.Cells[c].X += dYc
-            for f in range(len(self.Cells[c].Faces)):
-                self.Cells[c].Faces[f].Centre += dy_reshaped[self.Cells[c].Faces[f].globalIds, :]
+            if selected_cells is None or c in selected_cells:
+                dY = dy_reshaped[self.Cells[c].globalIds, :]
+                self.Cells[c].Y += dY
+                for f in range(len(self.Cells[c].Faces)):
+                    self.Cells[c].Faces[f].Centre += dy_reshaped[self.Cells[c].Faces[f].globalIds, :]
 
     def update_measures(self):
         """
@@ -505,19 +518,17 @@ class Geo:
             for f in range(len(self.Cells[c].Faces)):
                 self.Cells[c].Faces[f].Area, triAreas = self.Cells[c].Faces[f].compute_face_area(self.Cells[c].Y)
 
-                for tri, triArea in zip(self.Cells[c].Faces[f].Tris, triAreas):
-                    tri.Area = triArea
-
                 # Compute the edge lengths of the triangles
-                for tri in self.Cells[c].Faces[f].Tris:
+                for tri_id, tri in enumerate(self.Cells[c].Faces[f].Tris):
                     tri.EdgeLength, tri.LengthsToCentre, tri.AspectRatio = (
                         tri.compute_tri_length_measurements(self.Cells[c].Y, self.Cells[c].Faces[f].Centre))
+                    tri.Area = triAreas[tri_id]
 
                 for tri in self.Cells[c].Faces[f].Tris:
                     tri.ContractileG = 0
 
-            self.Cells[c].compute_area()
-            self.Cells[c].compute_volume()
+            self.Cells[c].Area = self.Cells[c].compute_area()
+            self.Cells[c].Vol = self.Cells[c].compute_volume()
 
     def build_x_from_y(self, geo_n):
         """
@@ -529,11 +540,11 @@ class Geo:
         alive_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]
 
         # Obtain cells that are not border cells or border ghost nodes
-        all_cells_to_update = [c.ID for c in self.Cells if c.ID not in self.BorderCells or
-                               c.ID not in self.BorderGhostNodes]
+        all_cells_to_update = [c.ID for c in self.Cells]
 
+        # Update the centre X of the cells
         for c in all_cells_to_update:
-            if self.Cells[c].T is not None and self.Cells[c].AliveStatus is not None:
+            if self.Cells[c].T is not None:
                 if c in self.XgID:
                     dY = np.zeros((self.Cells[c].T.shape[0], 3))
                     for tet in range(self.Cells[c].T.shape[0]):
@@ -548,6 +559,7 @@ class Geo:
                     dY = self.Cells[c].Y - geo_n.Cells[c].Y
 
                 self.Cells[c].X = self.Cells[c].X + np.mean(dY, axis=0)
+
 
     def build_y_substrate(self, Cell, Cells, XgID, Set, XgSub):
         """
@@ -674,6 +686,7 @@ class Geo:
         else:
             cells_to_rebuild = [c for c in cells_to_rebuild if c in alive_cells or c in debris_cells]
 
+        # Rebuild the cells
         for cc in cells_to_rebuild:
             c_cell = self.Cells[cc]
             neigh_nodes = np.unique(c_cell.T)
@@ -703,31 +716,42 @@ class Geo:
                 self.Cells[cc].Faces[j].build_face(cc, cj, face_ids, self.nCells, self.Cells[cc], self.XgID, Set,
                                                    self.XgTop, self.XgBottom, old_face)
 
-                wound_edge_tris = []
-                for tris_sharedCells in [tri.SharedByCells for tri in self.Cells[cc].Faces[j].Tris]:
-                    wound_edge_tris.append(any([self.Cells[c_cell].AliveStatus == 0 for c_cell in tris_sharedCells]))
-
-                if any(wound_edge_tris) and not old_face_exists:
-                    for woundTriID in [i for i, x in enumerate(wound_edge_tris) if x]:
-                        wound_tri = self.Cells[cc].Faces[j].Tris[woundTriID]
-                        all_tris = [tri for c_face in old_geo.Cells[cc].Faces for tri in c_face.Tris]
-                        matching_tris = [tri for tri in all_tris if
-                                         set(tri.SharedByCells).intersection(set(wound_tri.SharedByCells))]
-
-                        mean_distance_to_tris = []
-                        for c_Edge in [tri.Edge for tri in matching_tris]:
-                            mean_distance_to_tris.append(np.mean(
-                                np.linalg.norm(self.Cells[cc].Y[wound_tri.Edge, :] - old_geo.Cells[cc].Y[c_Edge, :],
-                                               axis=1)))
-
-                        if mean_distance_to_tris:
-                            matching_id = np.argmin(mean_distance_to_tris)
-                            self.Cells[cc].Faces[j].Tris[woundTriID].EdgeLength_time = matching_tris[
-                                matching_id].EdgeLength_time
-                        else:
-                            self.Cells[cc].Faces[j].Tris[woundTriID].EdgeLength_time = None
-
             self.Cells[cc].Faces = self.Cells[cc].Faces[:len(neigh_nodes)]
+
+            if c_cell.AliveStatus is None:
+                continue
+
+            # Update the area0 of all the faces
+            # num_faces_bottom, num_faces_lateral, num_faces_top = self.get_num_faces(cc)
+            # old_faces_bottom, old_faces_lateral, old_faces_top = old_geo.get_num_faces(cc)
+            #
+            # old_area0_top = np.mean([c_face.Area0 for c_face in old_geo.Cells[cc].Faces if get_interface(c_face.InterfaceType) == get_interface('Top')])
+            # old_area0_bottom = np.mean([c_face.Area0 for c_face in old_geo.Cells[cc].Faces if get_interface(c_face.InterfaceType) == get_interface('Bottom')])
+            # old_area0_lateral = np.mean([c_face.Area0 for c_face in old_geo.Cells[cc].Faces if get_interface(c_face.InterfaceType) == get_interface('CellCell')])
+
+            # Iterate over all faces in the current cell
+            for f in range(len(self.Cells[cc].Faces)):
+                # if get_interface(self.Cells[cc].Faces[f].InterfaceType) == get_interface('Top'):
+                #     self.Cells[cc].Faces[f].Area0 = old_area0_top * old_faces_top / num_faces_top
+                # elif get_interface(self.Cells[cc].Faces[f].InterfaceType) == get_interface('Bottom'):
+                #     self.Cells[cc].Faces[f].Area0 = old_area0_bottom * old_faces_bottom / num_faces_bottom
+                # else:
+                #     self.Cells[cc].Faces[f].Area0 = old_area0_lateral * old_faces_lateral / num_faces_lateral
+                self.Cells[cc].Faces[f].Area0 = self.Cells[cc].Faces[f].Area * Set.ref_A0
+
+    def get_num_faces(self, num_cell):
+        """
+        Get the number of faces of the cell
+        :param num_cell:
+        :return:
+        """
+        num_faces_top = sum([get_interface(c_face.InterfaceType) == get_interface('Top')
+                             for c_face in self.Cells[num_cell].Faces])
+        num_faces_bottom = sum([get_interface(c_face.InterfaceType) == get_interface('Bottom')
+                                for c_face in self.Cells[num_cell].Faces])
+        num_faces_lateral = sum([get_interface(c_face.InterfaceType) == get_interface('CellCell')
+                                 for c_face in self.Cells[num_cell].Faces])
+        return num_faces_bottom, num_faces_lateral, num_faces_top
 
     def calculate_interface_type(self, new_tets):
         """
@@ -751,14 +775,15 @@ class Geo:
         debris_cells = get_cells_by_status(old_geo.Cells, 0)
 
         for cell_id in alive_cells + debris_cells:
-            old_geo_ys = old_geo.Cells[cell_id].Y[~ismember_rows(old_geo.Cells[cell_id].T, old_tets)[0] &
-                                                  [np.any(np.isin(tet, old_geo.XgID)) for tet in
-                                                   old_geo.Cells[cell_id].T]]
+            if old_tets is not None:
+                old_geo_ys = old_geo.Cells[cell_id].Y[~ismember_rows(old_geo.Cells[cell_id].T, old_tets)[0] &
+                                                      [np.any(np.isin(tet, old_geo.XgID)) for tet in
+                                                       old_geo.Cells[cell_id].T]]
 
-            self.Cells[cell_id].Y[~ismember_rows(self.Cells[cell_id].T, new_tets)[0] &
-                                  [np.any(np.isin(tet, self.XgID)) for tet in self.Cells[cell_id].T]] = old_geo_ys
+                self.Cells[cell_id].Y[~ismember_rows(self.Cells[cell_id].T, new_tets)[0] &
+                                      [np.any(np.isin(tet, self.XgID)) for tet in self.Cells[cell_id].T]] = old_geo_ys
 
-            if cell_id not in new_tets:
+            if new_tets is None or cell_id not in new_tets:
                 for c_face in old_geo.Cells[cell_id].Faces:
                     id_with_new = np.array(
                         [np.all(np.isin(face_new.ij, c_face.ij)) for face_new in self.Cells[cell_id].Faces])
@@ -789,14 +814,14 @@ class Geo:
         if update_measurements:
             self.update_measures()
 
-    def remove_tetrahedra(self, removingTets):
+    def remove_tetrahedra(self, removing_tets):
         """
         Remove the tetrahedra from the cells
-        :param removingTets:
+        :param removing_tets:
         :return:
         """
         oldYs = []
-        for removingTet in removingTets:
+        for removingTet in removing_tets:
             removed_y = None
             for numNode in removingTet:
                 idToRemove = np.all(np.isin(np.sort(self.Cells[numNode].T, axis=1), np.sort(removingTet)), axis=1)
@@ -810,10 +835,9 @@ class Geo:
                 oldYs.extend(removed_y)
         return oldYs
 
-    def add_tetrahedra(self, old_geo, new_tets, old_ys=None, y_new=None, c_set=None):
+    def add_tetrahedra(self, old_geo, new_tets, y_new=None, c_set=None):
         """
         Add the tetrahedra to the cells
-        :param old_ys:
         :param old_geo:
         :param new_tets:
         :param y_new:
@@ -823,23 +847,23 @@ class Geo:
         if y_new is None:
             y_new = []
 
-        for newTet in new_tets:
-            if np.any(~np.isin(newTet, self.XgID)):
-                for numNode in newTet:
-                    if (not np.any(np.isin(newTet, self.XgID)) and
-                            np.any(ismember_rows(self.Cells[numNode].T, newTet)[0])):
-                        self.Cells[numNode].Y = self.Cells[numNode].Y[
-                            ~ismember_rows(self.Cells[numNode].T, newTet)[0]]
-                        self.Cells[numNode].T = self.Cells[numNode].T[
-                            ~ismember_rows(self.Cells[numNode].T, newTet)[0]]
+        for new_tet in new_tets:
+            if np.any(~np.isin(new_tet, self.XgID)):
+                for num_node in new_tet:
+                    if (not np.any(np.isin(new_tet, self.XgID)) and
+                            np.any(ismember_rows(self.Cells[num_node].T, new_tet)[0])):
+                        self.Cells[num_node].Y = self.Cells[num_node].Y[
+                            ~ismember_rows(self.Cells[num_node].T, new_tet)[0]]
+                        self.Cells[num_node].T = self.Cells[num_node].T[
+                            ~ismember_rows(self.Cells[num_node].T, new_tet)[0]]
                     else:
-                        if len(self.Cells[numNode].T) == 0 or not np.any(
-                                np.isin(self.Cells[numNode].T, newTet).all(axis=1)):
-                            self.Cells[numNode].T = np.append(self.Cells[numNode].T, [newTet], axis=0)
-                            if self.Cells[numNode].AliveStatus is not None and c_set is not None:
+                        if len(self.Cells[num_node].T) == 0 or not np.any(
+                                np.isin(self.Cells[num_node].T, new_tet).all(axis=1)):
+                            self.Cells[num_node].T = np.append(self.Cells[num_node].T, [new_tet], axis=0)
+                            if self.Cells[num_node].AliveStatus is not None and c_set is not None:
                                 if y_new:
                                     # Find indices where all elements in new_tets match newTet
-                                    matching_indices = np.where(np.all(np.isin(new_tets, newTet), axis=1))[0]
+                                    matching_indices = np.where(np.all(np.isin(new_tets, new_tet), axis=1))[0]
 
                                     # Check if there are any matching indices
                                     if len(matching_indices) > 0:
@@ -848,14 +872,14 @@ class Geo:
                                         first_matching_index = matching_indices[0]
                                         selected_y_new = y_new[first_matching_index]
                                         # Now you can use selected_y_new as needed
-                                        self.Cells[numNode].Y = np.append(self.Cells[numNode].Y,
+                                        self.Cells[num_node].Y = np.append(self.Cells[num_node].Y,
                                                                           selected_y_new.reshape(1, -1),
                                                                           axis=0)
                                 else:
-                                    self.Cells[numNode].Y = np.append(self.Cells[numNode].Y,
+                                    self.Cells[num_node].Y = np.append(self.Cells[num_node].Y,
                                                                       old_geo.recalculate_ys_from_previous(
-                                                                          np.array([newTet]),
-                                                                          numNode,
+                                                                          np.array([new_tet]),
+                                                                          num_node,
                                                                           c_set), axis=0)
                                 self.numY += 1
 
@@ -899,6 +923,7 @@ class Geo:
                     tetsToUse = tetsToUse & np.any(np.isin(allTs, self.XgBottom), axis=1)
 
                 tetsToUse = tetsToUse & (nGhostNodes_allTs == nGhostNodes_cTet)
+                YnewlyComputed[2] = np.mean(allYs[tetsToUse, 2], axis=0)
 
                 if any(tetsToUse):
                     Ynew.append(contributionOldYs * np.mean(allYs[tetsToUse, :], axis=0) + (
@@ -912,6 +937,7 @@ class Geo:
                         tetsToUse = tetsToUse & np.any(np.isin(allTs, self.XgBottom), axis=1)
 
                     tetsToUse = tetsToUse & (nGhostNodes_allTs == nGhostNodes_cTet)
+                    YnewlyComputed[2] = np.mean(allYs[tetsToUse, 2], axis=0)
 
                     if any(tetsToUse):
                         Ynew.append(contributionOldYs * np.mean(allYs[tetsToUse, :], axis=0) + (
@@ -1213,7 +1239,7 @@ class Geo:
         perimeter = 0
         for c_cell in wound_edge_cells:
             for c_face in c_cell.Faces:
-                if c_face.InterfaceType == location_filter or location_filter is None:
+                if get_interface(c_face.InterfaceType) == get_interface(location_filter) or location_filter is None:
                     for tri in c_face.Tris:
                         if np.any(np.isin(tri.SharedByCells, debris_cells)):
                             perimeter += np.sum(tri.EdgeLength)
@@ -1279,7 +1305,7 @@ class Geo:
         wound_height = []
         for c_cell in wound_edge_cells:
             for c_face in c_cell.Faces:
-                if c_face.InterfaceType == 1 or c_face.InterfaceType == 'CellCell':
+                if get_interface(c_face.InterfaceType) == get_interface("CellCell"):
                     for tri in c_face.Tris:
                         if np.any(np.isin(tri.SharedByCells, debris_cells)) and len(tri.SharedByCells) > 2:
                             # Get the different nodes
@@ -1292,6 +1318,55 @@ class Geo:
                                 wound_height.append(np.linalg.norm(vertices[0] - vertices[1]))
 
         return np.mean(wound_height)
+
+    def compute_wound_indentation(self, location_filter='Top'):
+        """
+        Compute the indentation of the wound
+        :return:
+        """
+        # Get the cells at the wound edge
+        wound_edge_cells = self.compute_cells_wound_edge(location_filter)
+
+        # Get the debris cells
+        debris_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
+        if not debris_cells:
+            debris_cells = self.cellsToAblate
+
+        # Get the reference Z from the border cells
+        #ref_z_values = []
+        # for c_cell in self.Cells:
+        #     if c_cell.AliveStatus == 1 and c_cell.ID not in self.BorderCells:
+        #         if location_filter == 'Top':
+        #             ref_z_values.append(np.mean(c_cell.Y[np.any(np.isin(c_cell.T, self.XgTop), axis=1), 2]))
+        #         elif location_filter == 'Bottom':
+        #             ref_z_values.append(np.mean(c_cell.Y[np.any(np.isin(c_cell.T, self.XgBottom), axis=1), 2]))
+        # ref_z = np.mean(ref_z_values)
+
+        # Compute the indentation of cells against a reference Z
+        wound_indentation = []
+        for c_cell in wound_edge_cells:
+            for c_face in c_cell.Faces:
+                if get_interface(c_face.InterfaceType) == get_interface("CellCell"):
+                    for tri in c_face.Tris:
+                        if np.any(np.isin(tri.SharedByCells, debris_cells)) and len(tri.SharedByCells) > 2:
+                            # Get the different nodes keeping
+                            different_nodes = np.setxor1d(c_cell.T[tri.Edge[0], :], c_cell.T[tri.Edge[1], :])
+                            if np.any(np.isin(different_nodes, self.XgTop)) and np.any(
+                                    np.isin(different_nodes, self.XgBottom)):
+                                # Get the vertices of the triangles
+                                vertices = c_cell.Y[tri.Edge, :]
+
+                                # Compute the distance between the vertices
+                                if location_filter == 'Top':
+                                    for num_vertex in range(2):
+                                        if np.any(np.isin(c_cell.T[tri.Edge[num_vertex], :], self.XgTop)):
+                                            wound_indentation.append(np.linalg.norm(vertices[num_vertex, 2] + self.SubstrateZ))
+                                elif location_filter == 'Bottom':
+                                    for num_vertex in range(2):
+                                        if np.any(np.isin(c_cell.T[tri.Edge[num_vertex], :], self.XgBottom)):
+                                            wound_indentation.append(np.linalg.norm(vertices[num_vertex, 2] - self.SubstrateZ))
+
+        return np.mean(wound_indentation)
 
     def combine_two_nodes(self, nodes_to_combine, c_set, recalculate_ys=True):
         """
@@ -1370,7 +1445,7 @@ class Geo:
         vertices_globald_ids = []
         c_cell = [c_cell for c_cell in self.Cells if c_cell.ID == cells_to_ablate[0]][0]
         for c_face in c_cell.Faces:
-            if standard_interface_type(c_face.InterfaceType) == standard_interface_type(location_filter):
+            if get_interface(c_face.InterfaceType) == get_interface(location_filter):
                 for c_tri in c_face.Tris:
                     if np.all(np.isin(cells_to_ablate, c_tri.SharedByCells)):
                         vertices.append(c_cell.Y[c_tri.Edge[0]])
@@ -1393,6 +1468,10 @@ class Geo:
 
         #
         list_of_opposite_cells = []
+
+        # Remove opposite_cell attribute from all cells
+        for cell in self.Cells:
+            cell.opposite_cell = None
 
         for border_cell in border_and_ghost_nodes:
             cell = self.Cells[border_cell]

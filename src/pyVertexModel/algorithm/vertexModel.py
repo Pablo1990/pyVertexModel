@@ -3,22 +3,20 @@ import os
 from abc import abstractmethod
 from itertools import combinations
 
-import imageio
 import numpy as np
 import pandas as pd
-import pyvista as pv
-from scipy.stats import zscore
 from skimage.measure import regionprops
 
+from src.pyVertexModel.Kg.kg import add_noise_to_parameter
 from src.pyVertexModel.algorithm import newtonRaphson
 from src.pyVertexModel.geometry import degreesOfFreedom
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
 from src.pyVertexModel.parameters.set import Set
-from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars, copy_non_mutable_attributes
+from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars, copy_non_mutable_attributes, \
+    screenshot
 
 logger = logging.getLogger("pyVertexModel")
-
 
 def generate_tetrahedra_from_information(X, cell_edges, cell_height, cell_centroids, main_cells,
                                          neighbours_network, selected_planes, triangles_connectivity,
@@ -212,12 +210,12 @@ class VertexModel:
         """
 
         # Concatenate and sort all tetrahedron vertices
-        all_tets = np.sort(np.vstack([cell.T for cell in self.geo.Cells]), axis=1)
+        all_tets = np.sort(np.vstack([cell.T for cell in self.geo.Cells if cell.AliveStatus is not None]), axis=1)
         all_tets_unique = np.unique(all_tets, axis=0)
 
         # Generate random displacements with a normal distribution for each dimension
-        displacements = scale * (self.geo.Cells[0].X - self.geo.Cells[1].X) * np.random.randn(all_tets_unique.shape[0],
-                                                                                              3)
+        displacements = (scale * (np.linalg.norm(self.geo.Cells[14].X - self.geo.Cells[15].X)) *
+                         np.random.randn(all_tets_unique.shape[0], 3))
 
         # Update vertex positions based on 3D Brownian motion displacements
         for cell in [c for c in self.geo.Cells if c.AliveStatus is not None and c.ID not in self.geo.BorderCells]:
@@ -246,8 +244,6 @@ class VertexModel:
         if self.geo_n is None:
             self.geo_n = self.geo.copy(update_measurements=False)
 
-        # Count the number of faces in average has a cell per domain
-        self.geo.update_barrier_tri0_based_on_number_of_faces()
         self.backupVars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
 
         print("File: ", self.set.OutputFolder)
@@ -351,12 +347,17 @@ class VertexModel:
             # STEP has converged
             logger.info(f"STEP {str(self.set.i_incr)} has converged ...")
 
+            # Build X From Y
+            self.geo.build_x_from_y(self.geo_n)
+
             # Remodelling
             if abs(self.t - self.tr) >= self.set.RemodelingFrequency:
                 if self.set.Remodelling:
                     save_state(self,
                                os.path.join(self.set.OutputFolder,
                                             'data_step_before_remodelling_' + str(self.numStep) + '.pkl'))
+
+                    # Remodelling
                     remodel_obj = Remodelling(self.geo, self.geo_n, self.geo_0, self.set, self.Dofs)
                     self.geo, self.geo_n = remodel_obj.remodel_mesh(self.numStep)
                     # Update tolerance if remodelling was performed to the current one
@@ -365,12 +366,6 @@ class VertexModel:
                                                             self.set.implicit_method)
                         self.Dofs.get_dofs(self.geo, self.set)
                         gr = np.linalg.norm(g[self.Dofs.Free])
-
-            # Append Energies
-            # energies_per_time_step.append(energies)
-
-            # Build X From Y
-            self.geo.build_x_from_y(self.geo_n)
 
             # Update last time converged
             self.set.last_t_converged = self.t
@@ -384,6 +379,8 @@ class VertexModel:
 
                 # Reset noise to be comparable between simulations
                 self.reset_noisy_parameters()
+                # Count the number of faces in average has a cell per domain
+                self.geo.update_barrier_tri0_based_on_number_of_faces()
                 self.tr = self.t
 
                 # Brownian Motion
@@ -417,7 +414,7 @@ class VertexModel:
         self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
         self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
         temp_dir = os.path.join(self.set.OutputFolder, 'images')
-        self.screenshot(temp_dir)
+        screenshot(self, temp_dir)
         # Save Data of the current step
         if file_name is None:
             save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
@@ -429,23 +426,15 @@ class VertexModel:
         Reset noisy parameters.
         :return:
         """
-        for num_cell in range(len(self.geo.Cells)):
-            c_cell = self.geo.Cells[num_cell]
-            self.geo.Cells[num_cell].contractlity_noise = None
-            self.geo.Cells[num_cell].lambda_s1_noise = None
-            self.geo.Cells[num_cell].lambda_s2_noise = None
-            self.geo.Cells[num_cell].lambda_s3_noise = None
-            self.geo.Cells[num_cell].lambda_v_noise = None
-            for n_face in range(len(c_cell.Faces)):
-                face = c_cell.Faces[n_face]
-                for n_tri in range(len(face.Tris)):
-                    tri = face.Tris[n_tri]
-                    tri.ContractilityValue = None
-                    tri.lambda_r_noise = None
-                    tri.lambda_b_noise = None
-                    tri.k_substrate_noise = None
-                    # tri.edge_length_time.append([self.t, tri.edge_length])
-                    self.geo.Cells[num_cell].Faces[n_face].Tris[n_tri] = tri
+        for cell in self.geo.Cells:
+            cell.lambda_s1_perc = add_noise_to_parameter(1, self.set.noise_random)
+            cell.lambda_s2_perc = add_noise_to_parameter(1, self.set.noise_random)
+            cell.lambda_s3_perc = add_noise_to_parameter(1, self.set.noise_random)
+            cell.lambda_v_perc = add_noise_to_parameter(1, self.set.noise_random)
+            cell.lambda_r_perc = add_noise_to_parameter(1, self.set.noise_random)
+            cell.c_line_tension_perc = add_noise_to_parameter(1, self.set.noise_random)
+            cell.k_substrate_perc = add_noise_to_parameter(1, self.set.noise_random)
+            cell.lambda_b_perc = add_noise_to_parameter(1, self.set.noise_random)
 
     def check_integrity(self):
         """
@@ -525,11 +514,11 @@ class VertexModel:
         avg_cell_features = all_cell_features.mean()
 
         # Compute wound features
-        try:
-            wound_features = self.compute_wound_features()
-            avg_cell_features = pd.concat([avg_cell_features, pd.Series(wound_features)])
-        except Exception as e:
-            pass
+        #try:
+        wound_features = self.compute_wound_features()
+        avg_cell_features = pd.concat([avg_cell_features, pd.Series(wound_features)])
+        # except Exception as e:
+        #     logger.error(f"Error while computing wound features: {e}")
 
         return all_cell_features, avg_cell_features
 
@@ -549,88 +538,12 @@ class VertexModel:
             'wound_aspect_ratio_top': self.geo.compute_wound_aspect_ratio(location_filter="Top"),
             'wound_aspect_ratio_bottom': self.geo.compute_wound_aspect_ratio(location_filter="Bottom"),
             'wound_perimeter_top': self.geo.compute_wound_perimeter(location_filter="Top"),
-            'wound_perimeter_bottom': self.geo.compute_wound_perimeter(location_filter="Bottom")
+            'wound_perimeter_bottom': self.geo.compute_wound_perimeter(location_filter="Bottom"),
+            'wound_indentation_top': self.geo.compute_wound_indentation(location_filter="Top"),
+            'wound_indentation_bottom': self.geo.compute_wound_indentation(location_filter="Bottom"),
         }
 
         return wound_features
-
-    def screenshot(self, temp_dir, selected_cells=None):
-        """
-        Create a screenshot of the current state of the model.
-        :param selected_cells:
-        :param temp_dir:
-        :return:
-        """
-        # if exists variable export_images in set
-        if hasattr(self.set, 'export_images'):
-            if self.set.export_images is False:
-                return
-
-        total_real_cells = len([cell.ID for cell in self.geo.Cells if cell.AliveStatus is not None])
-
-        # Create a colormap_lim
-        if self.colormap_lim is None:
-            self.colormap_lim = [0, total_real_cells]
-
-        # Create a plotter
-        if selected_cells is None:
-            selected_cells = []
-
-        plotter = pv.Plotter(off_screen=True)
-        for _, cell in enumerate(self.geo.Cells):
-            if cell.AliveStatus == 1 and (cell.ID in selected_cells or selected_cells is not []):
-                # Load the VTK file as a pyvista mesh
-                mesh = cell.create_pyvista_mesh()
-
-                # Add the mesh to the plotter
-                plotter.add_mesh(mesh, scalars='ID', lighting=True, cmap="prism", clim=self.colormap_lim,
-                                 show_edges=True, edge_opacity=0.5, edge_color='grey')
-        # Set a fixed camera zoom level
-        fixed_zoom_level = 1
-        plotter.camera.zoom(fixed_zoom_level)
-
-        # Add text to the plotter
-        if self.set.ablation:
-            timeAfterAblation = float(self.t) - float(self.set.TInitAblation)
-            text_content = f"Ablation time: {timeAfterAblation:.2f}"
-            plotter.add_text(text_content, position='upper_right', font_size=12, color='black')
-        else:
-            text_content = f"Time: {self.t:.2f}"
-            plotter.add_text(text_content, position='upper_right', font_size=12, color='black')
-
-        # Render the scene and capture a screenshot
-        img = plotter.screenshot()
-        # Save the image to a temporary file
-        temp_file = os.path.join(temp_dir, f'vModel_perspective_{self.numStep}.png')
-        imageio.imwrite(temp_file, img)
-
-        # True 2D
-        plotter.enable_parallel_projection()
-        plotter.enable_image_style()
-
-        # Set the camera to the top view
-        plotter.view_xy()
-
-        img = plotter.screenshot()
-        temp_file = os.path.join(temp_dir, f'vModel_top_{self.numStep}.png')
-        imageio.imwrite(temp_file, img)
-
-        # Set the camera to the front view
-        plotter.view_xz()
-
-        img = plotter.screenshot()
-        temp_file = os.path.join(temp_dir, f'vModel_front_{self.numStep}.png')
-        imageio.imwrite(temp_file, img)
-
-        # Set the camera to the bottom view
-        plotter.view_xy(negative=True)
-
-        img = plotter.screenshot()
-        temp_file = os.path.join(temp_dir, f'vModel_bottom_{self.numStep}.png')
-        imageio.imwrite(temp_file, img)
-
-        # Close the plotter
-        plotter.close()
 
     def copy(self):
         """

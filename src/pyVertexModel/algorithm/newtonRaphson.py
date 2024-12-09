@@ -11,6 +11,7 @@ from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
 from src.pyVertexModel.Kg.kgTriEnergyBarrier import KgTriEnergyBarrier
 from src.pyVertexModel.Kg.kgViscosity import KgViscosity
 from src.pyVertexModel.Kg.kgVolume import KgVolume
+from src.pyVertexModel.geometry.face import get_interface
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -174,9 +175,10 @@ def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g
     return energy_total, K, dyr, g, gr, ig, aux_gr, dy
 
 
-def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
+def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g, selected_cells=None):
     """
     Explicit update method
+    :param selected_cells:
     :param Geo_0:
     :param Geo_n:
     :param Geo:
@@ -184,16 +186,32 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g):
     :param Set:
     :return:
     """
+    # Bottom nodes
+    dim=3
+    g_constrained = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3, dtype=bool)
+    for cell in Geo.Cells:
+        if cell.AliveStatus is not None:
+            c_global_ids = cell.globalIds[np.any(np.isin(cell.T, Geo.XgBottom), axis=1)]
+            for i in c_global_ids:
+                g_constrained[(dim * i): ((dim * i) + 2)] = 1
+
+            for face in cell.Faces:
+                if get_interface(face.InterfaceType) == get_interface('Bottom'):
+                    g_constrained[(dim * face.globalIds): ((dim * face.globalIds) + 2)] = 1
+
+    # Update the bottom nodes with the same displacement as the corresponding real nodes
     dy[dof, 0] = -Set.dt / Set.nu * g[dof]
+    dy[g_constrained, 0] = -Set.dt / Set.nu_bottom * g[g_constrained]
 
     # Update border ghost nodes with the same displacement as the corresponding real nodes
     dy = map_vertices_periodic_boundaries(Geo, dy)
 
     dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
-    Geo.update_vertices(dy_reshaped)
+    Geo.update_vertices(dy_reshaped, selected_cells)
     Geo.update_measures()
 
     g, energies = gGlobal(Geo, Geo, Geo, Set, Set.implicit_method)
+    g[g_constrained] = 0
     gr = np.linalg.norm(g[dof])
     Set.iter = Set.MaxIter
 

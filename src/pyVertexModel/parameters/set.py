@@ -49,6 +49,7 @@ class Set:
         self.ellipsoid_axis1 = None
         self.ellipsoid_axis2 = None
         self.ellipsoid_axis3 = None
+        self.nu_bottom = None
         if mat_file is None:
             # =============================  Topology ============================
             self.SeedingMethod = 1
@@ -215,6 +216,7 @@ class Set:
         self.define_if_not_defined("dt0", self.tend / self.Nincr)
         self.define_if_not_defined("MaxIter0", self.MaxIter)
         self.define_if_not_defined("contributionOldFaceCentre", self.contributionOldYs)
+        self.define_if_not_defined("nu_bottom", self.nu * 600)
 
         current_datetime = datetime.now()
         new_outputFolder = ''.join([PROJECT_DIRECTORY, '/Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")),
@@ -262,19 +264,25 @@ class Set:
         # per 1 micrometer of diameter on the top side of the cell
         self.CellHeight = 15
         # Tend is the final time of the simulation
-        self.tend = 50
+        self.tend = 60+20
         # Nincr is the number of increments
-        self.Nincr = self.tend * 30
+        self.Nincr = self.tend * 100
 
         # Viscosity
         self.nu = 0.07
         # Energy Barrier Area
         self.EnergyBarrierA = False
-        self.lambdaB = 20
+        if self.EnergyBarrierA:
+            self.lambdaB = 20
+        else:
+            self.lambdaB = 0
 
         # Energy Barrier Aspect Ratio
         self.EnergyBarrierAR = True
-        self.lambdaR = 9.5e-9
+        if self.EnergyBarrierAR:
+            self.lambdaR = 8e-7
+        else:
+            self.lambdaR = 0
 
         # Volume
         self.lambdaV = 1
@@ -282,7 +290,6 @@ class Set:
 
         # Substrate
         self.kSubstrate = 0.1
-        #self.kCeiling = 0
 
         # Contractility
         self.cLineTension = 0
@@ -290,24 +297,21 @@ class Set:
         # Brownian motion
         self.brownian_motion = False
         self.brownian_motion_scale = 0
-        self.noise_random = 0
-
-        # Purse String
-        self.TypeOfPurseString = 2
+        self.noise_random = 0.2
 
         # Remodelling
         self.Remodelling = True
         # How big or small the edge to remodel
         # 0.15 is 15% of average the edge. This is a threshold to remodel the edge
         if self.Remodelling:
-            self.RemodelStiffness = 0.9
+            self.RemodelStiffness = 0.8
         else:
             self.RemodelStiffness = 2
 
         # Surface Area
         self.ref_A0 = 0.92
         # Top
-        self.lambdaS1 = 1.5
+        self.lambdaS1 = 1.4
         # c_cell-c_cell
         self.lambdaS2 = self.lambdaS1 / 100
         # Bottom
@@ -337,10 +341,10 @@ class Set:
         # 0: Intensity-based purse string
         # 1: Strain-based purse string (delayed)
         # 2: Fixed with linear increase purse string
-        self.purseStringStrength = 3.5e-5
-        self.lateralCablesStrength = self.purseStringStrength / 5
-        self.delay_purse_string = 5.8
-        self.delay_lateral_cables = 0.2
+        self.purseStringStrength = 5e-5
+        self.lateralCablesStrength = 4.5e-5
+        self.delay_lateral_cables = 5.8
+        self.delay_purse_string = self.delay_lateral_cables
 
     def menu_input(self, inputMode=None, batchMode=None):
         if inputMode == 7:

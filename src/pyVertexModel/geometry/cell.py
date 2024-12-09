@@ -4,10 +4,11 @@ import vtk
 from sklearn.decomposition import PCA
 
 from src.pyVertexModel.geometry import face
+from src.pyVertexModel.geometry.face import get_interface
 from src.pyVertexModel.util.utils import copy_non_mutable_attributes
 
 
-def face_centres_to_middle_of_neighbours_vertices(Geo, c_cell):
+def face_centres_to_middle_of_neighbours_vertices(Geo, c_cell, filter_location=None):
     """
     Move the face centres to the middle of the neighbours vertices.
     :param Geo:
@@ -15,13 +16,14 @@ def face_centres_to_middle_of_neighbours_vertices(Geo, c_cell):
     :return:
     """
     for num_face, _ in enumerate(Geo.Cells[c_cell].Faces):
-        all_edges = []
-        for tri in Geo.Cells[c_cell].Faces[num_face].Tris:
-            all_edges.append(tri.Edge)
+        if get_interface(Geo.Cells[c_cell].Faces[num_face].InterfaceType) == get_interface(filter_location):
+            all_edges = []
+            for tri in Geo.Cells[c_cell].Faces[num_face].Tris:
+                all_edges.append(tri.Edge)
 
-        all_edges = np.unique(np.concatenate(all_edges))
-        Geo.Cells[c_cell].Faces[num_face].Centre = np.mean(
-            Geo.Cells[c_cell].Y[all_edges, :], axis=0)
+            all_edges = np.unique(np.concatenate(all_edges))
+            Geo.Cells[c_cell].Faces[num_face].Centre = Geo.Cells[c_cell].Faces[num_face].Centre * 0.5 + 0.5 * np.mean(
+                Geo.Cells[c_cell].Y[all_edges, :], axis=0)
 
 
 def compute_2d_circularity(area, perimeter):
@@ -72,30 +74,43 @@ class Cell:
         :param mat_file:
         """
         self.opposite_cell = None
-        self.lambda_s1_noise = None
-        self.lambda_s2_noise = None
-        self.lambda_s3_noise = None
-        self.lambda_v_noise = None
-        self.barrier_tri0_top = None
-        self.barrier_tri0_bottom = None
-        self.contractility_noise = None
-        self.SubstrateLambda = None
-        self.InternalLambda = None
-        self.ExternalLambda = None
         self.axes_lengths = None
         self.Y = None
         self.globalIds = np.array([], dtype='int')
         self.Faces = []
         self.Area = None
-        self.Area0 = None
         self.Vol = None
-        self.Vol0 = None
         self.AliveStatus = None
         self.vertices_and_faces_to_remodel = np.array([], dtype='int')
-        # TODO: Save contractile forces (g) to output
-        self.substrate_g = None
-        self.lambdaB_perc = 1
 
+        ## Individual mechanical parameters
+        # Surface area
+        self.lambda_s1_perc = 1
+        self.lambda_s2_perc = 1
+        self.lambda_s3_perc = 1
+        # Volume
+        self.lambda_v_perc = 1
+        # Aspect ratio/elongation
+        self.lambda_r_perc = 1
+        # Contractility
+        self.c_line_tension_perc = 1
+        # Substrate k
+        self.k_substrate_perc = 1
+        # Area Energy Barrier
+        self.lambda_b_perc = 1
+
+        ## Reference values
+        # Aspect ratio
+        self.barrier_tri0_top = None
+        self.barrier_tri0_bottom = None
+        # Area
+        self.Area0 = None
+        # Volume
+        self.Vol0 = None
+
+
+
+        # In case the geometry is not provided, the cell is empty
         if mat_file is None:
             self.ID = None
             self.X = None
@@ -140,13 +155,11 @@ class Cell:
         total_area = 0.0
         for f in range(len(self.Faces)):
             if location_filter is not None:
-                if (self.Faces[f].InterfaceType == self.Faces[f].InterfaceType_allValues[location_filter] or
-                        self.Faces[f].InterfaceType == location_filter):
+                if get_interface(self.Faces[f].InterfaceType) == get_interface(location_filter):
                     total_area = total_area + self.Faces[f].Area
             else:
                 total_area = total_area + self.Faces[f].Area
 
-        self.Area = total_area
         return total_area
 
     def compute_volume(self):
@@ -234,6 +247,15 @@ class Cell:
 
         return mesh
 
+    def create_pyvista_edges(self):
+        """
+        Create a PyVista mesh
+        :return:
+        """
+        mesh = pv.PolyData(self.create_vtk_edges())
+
+        return mesh
+
     def compute_features(self, centre_wound=None):
         """
         Compute the features of the cell and create a dictionary with them
@@ -292,9 +314,10 @@ class Cell:
         for f in range(len(self.Faces)):
             c_face = self.Faces[f]
             for t in range(len(c_face.Tris)):
-                cell.InsertNextCell(2)
-                cell.InsertCellPoint(c_face.Tris[t].Edge[0])
-                cell.InsertCellPoint(c_face.Tris[t].Edge[1])
+                if len(c_face.Tris[t].SharedByCells) > 1:
+                    cell.InsertNextCell(2)
+                    cell.InsertCellPoint(c_face.Tris[t].Edge[0])
+                    cell.InsertCellPoint(c_face.Tris[t].Edge[1])
 
             total_edges += len(c_face.Tris)
 
@@ -322,9 +345,9 @@ class Cell:
             # Add the property array to the cell data
             vpoly.GetCellData().AddArray(property_array)
 
-            if key == 'ContractilityValue':
-                # Default parameter
-                vpoly.GetCellData().SetScalars(property_array)
+            #if key == 'ContractilityValue':
+            #    # Default parameter
+            #    vpoly.GetCellData().SetScalars(property_array)
 
         return vpoly
 
@@ -388,8 +411,7 @@ class Cell:
         neighbours = []
         for f in range(len(self.Faces)):
             if location_filter is not None:
-                if (self.Faces[f].InterfaceType == self.Faces[f].InterfaceType_allValues[location_filter] or
-                        self.Faces[f].InterfaceType == location_filter):
+                if get_interface(self.Faces[f].InterfaceType) == get_interface(location_filter):
                     for t in range(len(self.Faces[f].Tris)):
                         neighbours.append(self.Faces[f].Tris[t].SharedByCells)
             else:
@@ -428,8 +450,7 @@ class Cell:
         perimeter = 0.0
         for f in range(len(self.Faces)):
             if filter_location is not None:
-                if (self.Faces[f].InterfaceType == self.Faces[f].InterfaceType_allValues[filter_location] or
-                        self.Faces[f].InterfaceType == filter_location):
+                if get_interface(self.Faces[f].InterfaceType) == get_interface(filter_location):
                     perimeter = perimeter + self.Faces[f].compute_perimeter()
             else:
                 perimeter = perimeter + self.Faces[f].compute_perimeter()
@@ -498,16 +519,8 @@ class Cell:
         self.Faces = []
         self.T = None
         self.X = None
-        self.lambda_s1_noise = None
-        self.lambda_s2_noise = None
-        self.lambda_s3_noise = None
-        self.lambda_v_noise = None
         self.barrier_tri0_top = None
         self.barrier_tri0_bottom = None
-        self.contractility_noise = None
-        self.SubstrateLambda = None
-        self.InternalLambda = None
-        self.ExternalLambda = None
         self.axes_lengths = None
 
     def compute_distance_to_centre(self, centre_of_tissue):

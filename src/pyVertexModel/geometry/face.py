@@ -10,7 +10,8 @@ def get_key(dictionary, target_value):
             return key
     return None
 
-def standard_interface_type(interface_type):
+
+def get_interface(interface_type):
     """
     Standardize the InterfaceType attribute.
     :return:
@@ -23,10 +24,11 @@ def standard_interface_type(interface_type):
     interface_type_str = None
     if interface_type is not None:
         interface_type_str = next(key for key, value in interface_type_all_values.items()
-                                 if
-                                 value == interface_type or key == interface_type)
+                                  if
+                                  value == interface_type or key == interface_type)
 
     return interface_type_str
+
 
 class Face:
     """
@@ -53,16 +55,14 @@ class Face:
                 self.globalIds = None
             else:
                 self.globalIds = mat_file[3][0][0] - 1
-            self.InterfaceType = standard_interface_type(mat_file[4][0][0] - 1)
+            self.InterfaceType = get_interface(mat_file[4][0][0] - 1)
             self.Area = mat_file[5][0][0]
             self.Area0 = mat_file[6][0][0]
-
-
 
         valueset = [0, 1, 2]
         catnames = ['Top', 'CellCell', 'Bottom']
         self.InterfaceType_allValues = dict(zip(valueset, catnames))
-        standard_interface_type(self.InterfaceType)
+        get_interface(self.InterfaceType)
 
     def build_face(self, ci, cj, face_ids, nCells, Cell, XgID, Set, XgTop, XgBottom, oldFace=None):
         self.InterfaceType = None
@@ -80,12 +80,13 @@ class Face:
         self.build_edges(Cell.T, face_ids, self.Centre, self.InterfaceType, Cell.X, Cell.Y,
                          list(range(nCells)))
 
-        # Move centre to the mean of the edge centres
-        self.Centre = np.mean(np.concatenate(Cell.Y[[tri.Edge for tri in self.Tris], :]), axis=0)
-        # self.Centre = np.mean(c_cell.Y[self.Tris.Edge], :], axis=0)
+        if oldFace is not None:
+            self.Area = oldFace.Area
+            self.Area0 = oldFace.Area0
+        else:
+            self.Area, _ = self.compute_face_area(Cell.Y)
+            self.Area0 = self.Area * Set.ref_A0
 
-        self.Area, _ = self.compute_face_area(Cell.Y)
-        self.Area0 = self.Area
 
     def build_interface_type(self, ij, XgID, XgTop, XgBottom):
         """
@@ -104,7 +105,7 @@ class Face:
         else:
             ftype = self.InterfaceType_allValues[1]  # Border face
 
-        self.InterfaceType = standard_interface_type(ftype)
+        self.InterfaceType = get_interface(ftype)
         return self.InterfaceType
 
     def build_face_centre(self, ij, ncells, X, Ys, H, extrapolate_face_centre):
@@ -214,18 +215,25 @@ class Face:
         for tri in self.Tris:
             tri.Location = face_interface_type
 
-    def compute_face_area(self, Y):
-        area = 0.0
-        trisArea = np.zeros(len(self.Tris))
-        for t in range(len(self.Tris)):
-            Tri = self.Tris[t]
-            Tri = Tri.Edge
-            Y3 = self.Centre
-            YTri = np.vstack([Y[Tri, :], Y3])
-            tri_area = (1 / 2) * np.linalg.norm(np.cross(YTri[1, :] - YTri[0, :], YTri[0, :] - YTri[2, :]))
-            trisArea[t] = tri_area
-            area = area + tri_area
-        return area, trisArea
+    def compute_face_area(self, y):
+        """
+        Compute the area of the face.
+        :param y:
+        :return:
+        """
+        tris_area = np.zeros(len(self.Tris))
+
+        for t, tri in enumerate(self.Tris):
+            y3 = self.Centre
+            y_tri = np.vstack([y[tri.Edge, :], y3])
+
+            # Calculate the area of the triangle
+            tri_area = 0.5 * np.linalg.norm(np.cross(y_tri[1, :] - y_tri[0, :], y_tri[0, :] - y_tri[2, :]))
+            tris_area[t] = tri_area
+
+        area = np.sum(tris_area)
+
+        return area, tris_area
 
     def compute_perimeter(self):
         """

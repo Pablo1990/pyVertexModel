@@ -3,12 +3,18 @@ import os
 import numpy as np
 import pandas as pd
 
-from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation, analyse_edge_recoil
+from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation, analyse_edge_recoil, create_video
 from src.pyVertexModel.util.utils import save_variables, load_variables
 
-folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/'
+folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/final_results'
 all_files_features = []
-lst = os.listdir(folder)
+# Recursive search of all the files in the folder
+lst = []
+for root, dirs, files in os.walk(folder):
+    if len(dirs) > 0:
+        for c_dir in dirs:
+            lst.append(os.path.join(root, c_dir))
+
 lst.sort(reverse=True)
 for _, file in enumerate(lst):
     print(file)
@@ -18,6 +24,13 @@ for _, file in enumerate(lst):
         files_within_folder = os.listdir(os.path.join(folder, file))
         # Analyse the edge recoil
         if os.path.exists(os.path.join(folder, file, 'before_ablation.pkl')):
+            # if the videos do not exist, create them
+            if not os.path.exists(os.path.join(folder, file, 'images', 'front_video.mp4')):
+                create_video(os.path.join(folder, file, 'images'), 'top_')
+                create_video(os.path.join(folder, file, 'images'), 'perspective_')
+                create_video(os.path.join(folder, file, 'images'), 'bottom_')
+                create_video(os.path.join(folder, file, 'images'), 'front_')
+
             # if the analysis file exists, load it
             # if os.path.exists(os.path.join(folder, file, 'recoil_info_apical.pkl')):
             #     # recoiling_info_df_basal = load_variables(
@@ -27,13 +40,13 @@ for _, file in enumerate(lst):
             # else:
             file_name = os.path.join(folder, file, 'before_ablation.pkl')
 
-            t_end = 0.5
-            n_ablations = 2
-            recoiling_edge_info_df_apical = analyse_edge_recoil(os.path.join(folder, file, 'before_ablation.pkl'),
-                                                           type_of_ablation='recoil_edge_info_apical',
-                                                           n_ablations=n_ablations, location_filter=0, t_end=t_end)
-            if recoiling_edge_info_df_apical is None:
-                continue
+            # t_end = 0.5
+            # n_ablations = 2
+            # recoiling_edge_info_df_apical = analyse_edge_recoil(os.path.join(folder, file, 'before_ablation.pkl'),
+            #                                                type_of_ablation='recoil_edge_info_apical',
+            #                                                n_ablations=n_ablations, location_filter=0, t_end=t_end)
+            # if recoiling_edge_info_df_apical is None:
+            #     continue
 
             # recoiling_info = analyse_edge_recoil(os.path.join(folder, file, 'data_step_300.pkl'),
             #                                      n_ablations=n_ablations, location_filter=2, t_end=t_end)
@@ -50,10 +63,10 @@ for _, file in enumerate(lst):
                 #important_features['recoiling_speed_apical'] = recoiling_info_df_apical[0]['initial_recoil_in_s']
                 #important_features['K'] = recoiling_info_df_apical[0]['K']
 
-                important_features['K_edge'] = np.mean([recoiling_edge_info_df_apical[i]['K'] for i in range(n_ablations) if
-                                                        1 > recoiling_edge_info_df_apical[i]['K'] > 1e-5])
-                important_features['recoiling_speed_edge_apical'] = np.mean([recoiling_edge_info_df_apical[i]['initial_recoil_in_s'] for i in range(n_ablations) if
-                                                                             1 > recoiling_edge_info_df_apical[i]['initial_recoil_in_s'] > 1e-5])
+                # important_features['K_edge'] = np.mean([recoiling_edge_info_df_apical[i]['K'] for i in range(n_ablations) if
+                #                                         1 > recoiling_edge_info_df_apical[i]['K'] > 1e-5])
+                # important_features['recoiling_speed_edge_apical'] = np.mean([recoiling_edge_info_df_apical[i]['initial_recoil_in_s'] for i in range(n_ablations) if
+                #                                                              1 > recoiling_edge_info_df_apical[i]['initial_recoil_in_s'] > 1e-5])
 
                 # important_features['recoiling_speed_basal'] = np.mean(recoiling_info_df_basal['initial_recoil_in_s'])
                 # important_features['recoiling_speed_basal_std'] = np.std(recoiling_info_df_basal['initial_recoil_in_s'])
@@ -77,8 +90,8 @@ for _, file in enumerate(lst):
 
                 # Extract the variables from folder name
                 file_splitted = file.split('_')
-                variables_to_show = {'Cells', 'visc', 'lVol', 'refV0', 'kSubs', 'lt', 'ltExt', 'refA0', 'eTriAreaBarrier',
-                                     'eARBarrier', 'RemStiff', 'lS1', 'lS2', 'lS3', 'pString'}
+                variables_to_show = {'Cells', 'visc', 'lVol', 'refV0', 'kSubs', 'lt', 'refA0', 'eTriAreaBarrier',
+                                     'eARBarrier', 'RemStiff', 'lS1', 'lS2', 'lS3', 'ps', 'lc'}
                 for i in range(3, len(file_splitted), 1):
                     if file_splitted[i] in variables_to_show:
                         important_features[file_splitted[i]] = file_splitted[i + 1]

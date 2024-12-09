@@ -4,6 +4,7 @@ import time
 import numpy as np
 
 from src.pyVertexModel.Kg.kgContractility import KgContractility, compute_energy_contractility
+from src.pyVertexModel.geometry.face import get_interface
 
 
 class KgContractilityExternal(KgContractility):
@@ -30,20 +31,20 @@ class KgContractilityExternal(KgContractility):
             if cell.contractility_noise is None:
                 cell.contractility_noise = random.random()
 
-            for face_id, currentFace in enumerate(cell.Faces):
+            for face_id, current_face in enumerate(cell.Faces):
                 l_i0 = np.mean(geo.EdgeLengthAvg_0)
                 # if currentFace.InterfaceType == 1 or currentFace.InterfaceType == 'Lateral':
                 #     continue
 
                 # Same as contractility for edges
-                if currentFace.InterfaceType == 1 or currentFace.InterfaceType == 'Lateral':
+                if get_interface(current_face.InterfaceType) == get_interface('CellCell'):
                     C = c_set.cLineTension_external / 10
-                elif currentFace.InterfaceType == 0 or currentFace.InterfaceType == 'Top':
+                elif get_interface(current_face.InterfaceType) == get_interface('Top'):
                     C = c_set.cLineTension_external
-                elif currentFace.InterfaceType == 2 or currentFace.InterfaceType == 'Bottom':
+                elif get_interface(current_face.InterfaceType) == get_interface('Bottom'):
                     C = c_set.cLineTension_external / 10
 
-                for tri_id, currentTri in enumerate(currentFace.Tris):
+                for tri_id, currentTri in enumerate(current_face.Tris):
                     for edge_id in currentTri.Edge:
                         c_tets = cell.T[edge_id]
 
@@ -52,10 +53,10 @@ class KgContractilityExternal(KgContractility):
                             borderNode = geo.BorderGhostNodes[np.isin(geo.BorderGhostNodes, c_tets)][0]
                             y_2 = [cell.X for cell in geo.Cells if cell.ID == borderNode][0]
 
-                            if currentFace.InterfaceType == 0 or currentFace.InterfaceType == 'Top':
+                            if get_interface(current_face.InterfaceType) == get_interface('Top'):
                                 z_position = [cell.X for cell in geo.Cells if cell.ID == geo.XgTop[0]][0][2]
                                 y_2[2] = z_position / 2
-                            elif currentFace.InterfaceType == 2 or currentFace.InterfaceType == 'Bottom':
+                            elif get_interface(current_face.InterfaceType) == get_interface('Bottom'):
                                 z_position = [cell.X for cell in geo.Cells if cell.ID == geo.XgBottom[0]][0][2]
                                 y_2[2] = z_position / 2
                             else:

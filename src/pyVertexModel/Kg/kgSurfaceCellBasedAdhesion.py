@@ -3,7 +3,27 @@ import time
 import numpy as np
 
 from src.pyVertexModel.Kg import kg_functions
-from src.pyVertexModel.Kg.kg import Kg, add_noise_to_parameter
+from src.pyVertexModel.Kg.kg import Kg
+from src.pyVertexModel.geometry.face import get_interface
+
+
+def get_lambda(c_cell, face, Set):
+    """
+    Helper function to get the lambda for the SurfaceCellBasedAdhesion energy.
+    :param Set:
+    :param c_cell:
+    :param face:
+    :return:
+    """
+    if get_interface(face.InterfaceType) == get_interface('Top'):
+        Lambda = c_cell.lambda_s1_perc * Set.lambdaS1
+    elif get_interface(face.InterfaceType) == get_interface('CellCell'):
+        Lambda = c_cell.lambda_s2_perc * Set.lambdaS2
+    elif get_interface(face.InterfaceType) == get_interface('Bottom'):
+        Lambda = c_cell.lambda_s3_perc * Set.lambdaS3
+    else:
+        raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
+    return Lambda
 
 
 class KgSurfaceCellBasedAdhesion(Kg):
@@ -34,34 +54,16 @@ class KgSurfaceCellBasedAdhesion(Kg):
         ge = np.zeros(self.g.shape, dtype=self.precision_type)
         fact0 = 0
 
-        Cell.lambda_s1_noise = add_noise_to_parameter(Set.lambdaS1, 0)
-        Cell.lambda_s2_noise = add_noise_to_parameter(Set.lambdaS2, 0)
-        Cell.lambda_s3_noise = add_noise_to_parameter(Set.lambdaS3, 0)
-
         # Calculate the fact0 for each type of interface
         for face in Cell.Faces:
-            if face.InterfaceType == 'Top' or face.InterfaceType == 0:
-                Lambda = Cell.lambda_s1_noise
-            elif face.InterfaceType == 'CellCell' or face.InterfaceType == 1:
-                Lambda = Cell.lambda_s2_noise
-            elif face.InterfaceType == 'Bottom' or face.InterfaceType == 2:
-                Lambda = Cell.lambda_s3_noise
-            else:
-                raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
+            Lambda = get_lambda(Cell, face, Set)
 
             fact0 += (Lambda * (face.Area - face.Area0))
 
         fact = fact0 / Cell.Area0 ** 2
 
         for face in Cell.Faces:
-            if face.InterfaceType == 'Top' or face.InterfaceType == 0:
-                Lambda = Cell.lambda_s1_noise
-            elif face.InterfaceType == 'CellCell' or face.InterfaceType == 1:
-                Lambda = Cell.lambda_s2_noise
-            elif face.InterfaceType == 'Bottom' or face.InterfaceType == 2:
-                Lambda = Cell.lambda_s3_noise
-            else:
-                raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
+            Lambda = get_lambda(Cell, face, Set)
 
             for t in face.Tris:
                 if not np.all(np.isin(Cell.globalIds[t.Edge], Geo.y_ablated)):

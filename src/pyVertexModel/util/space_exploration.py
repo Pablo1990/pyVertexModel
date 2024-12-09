@@ -8,7 +8,7 @@ import plotly
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
-from src.pyVertexModel.analysis.analyse_simulation import analyse_edge_recoil
+from src.pyVertexModel.analysis.analyse_simulation import analyse_edge_recoil, analyse_simulation
 from src.pyVertexModel.parameters.set import Set
 from src.pyVertexModel.util.utils import load_state, load_variables, save_variables
 
@@ -19,7 +19,7 @@ def objective(trial):
     :return:
     """
     # Define the error type
-    error_type = '_K_InitialRecoil_'
+    error_type = '_wound_area_'
 
     # Supress the output to the logger
     if error_type == '_gr_':
@@ -32,18 +32,21 @@ def objective(trial):
     new_set.wound_default()
 
     # Set and define the parameters space
-    percentage_deviation = 0.01
-    new_set.lambdaV = trial.suggest_float('lambdaV', new_set.lambdaV - (new_set.lambdaV * percentage_deviation), new_set.lambdaV + (new_set.lambdaV * percentage_deviation))
-    new_set.ref_V0 = trial.suggest_float('ref_V0', new_set.ref_V0 - (new_set.ref_V0 * percentage_deviation), new_set.ref_V0 + (new_set.ref_V0 * percentage_deviation))
-    new_set.kSubstrate = trial.suggest_float('kSubstrate', new_set.kSubstrate - (new_set.kSubstrate * percentage_deviation), new_set.kSubstrate + (new_set.kSubstrate * percentage_deviation))
-    new_set.cLineTension = trial.suggest_float('cLineTension', new_set.cLineTension - (new_set.cLineTension * percentage_deviation), new_set.cLineTension + (new_set.cLineTension * percentage_deviation))
-    new_set.ref_A0 = trial.suggest_float('ref_A0', new_set.ref_A0 - (new_set.ref_A0 * percentage_deviation), new_set.ref_A0 + (new_set.ref_A0 * percentage_deviation))
-    new_set.lambdaS1 = trial.suggest_float('lambdaS1', new_set.lambdaS1 - (new_set.lambdaS1 * percentage_deviation), new_set.lambdaS1 + (new_set.lambdaS1 * percentage_deviation))
-    new_set.lambdaS2 = trial.suggest_float('lambdaS2', new_set.lambdaS2 - (new_set.lambdaS2 * percentage_deviation), new_set.lambdaS2 + (new_set.lambdaS2 * percentage_deviation))
-    new_set.lambdaS3 = trial.suggest_float('lambdaS3', new_set.lambdaS3 - (new_set.lambdaS3 * percentage_deviation), new_set.lambdaS3 + (new_set.lambdaS3 * percentage_deviation))
-    new_set.lambdaR = trial.suggest_float('lambdaR', new_set.lambdaR - (new_set.lambdaR * percentage_deviation), new_set.lambdaR + (new_set.lambdaR * percentage_deviation))
-    new_set.purseStringStrength = trial.suggest_float('purseStringStrength', new_set.purseStringStrength - (new_set.purseStringStrength * percentage_deviation), new_set.purseStringStrength + (new_set.purseStringStrength * percentage_deviation))
-    new_set.lateralCablesStrength = trial.suggest_float('lateralCablesStrength', new_set.lateralCablesStrength - (new_set.lateralCablesStrength * percentage_deviation), new_set.lateralCablesStrength + (new_set.lateralCablesStrength * percentage_deviation))
+    percentage_deviation = 0.1
+    # new_set.lambdaV = trial.suggest_float('lambdaV', new_set.lambdaV - (new_set.lambdaV * percentage_deviation), new_set.lambdaV + (new_set.lambdaV * percentage_deviation))
+    # new_set.ref_V0 = trial.suggest_float('ref_V0', new_set.ref_V0 - (new_set.ref_V0 * percentage_deviation), new_set.ref_V0 + (new_set.ref_V0 * percentage_deviation))
+    # new_set.kSubstrate = trial.suggest_float('kSubstrate', new_set.kSubstrate - (new_set.kSubstrate * percentage_deviation), new_set.kSubstrate + (new_set.kSubstrate * percentage_deviation))
+    # new_set.lambdaS2 = trial.suggest_float('lambdaS2', new_set.lambdaS2 - (new_set.lambdaS2 * percentage_deviation), new_set.lambdaS2 + (new_set.lambdaS2 * percentage_deviation))
+
+    new_set.ref_A0 = trial.suggest_float('ref_A0', 0.92, 1.1)
+    new_set.cLineTension = trial.suggest_float('cLineTension', 0, 1e-7)
+    new_set.lambdaS1 = trial.suggest_float('lambdaS1', 1e-2, 1.5)
+    new_set.lambdaS3 = new_set.lambdaS1 / 10
+    #new_set.lambdaR = trial.suggest_float('lambdaR', 0, 1)
+
+    #percentage_deviation = 0.9
+    #new_set.purseStringStrength = trial.suggest_float('purseStringStrength', new_set.purseStringStrength - (new_set.purseStringStrength * percentage_deviation), new_set.purseStringStrength + (new_set.purseStringStrength * percentage_deviation))
+    #new_set.lateralCablesStrength = trial.suggest_float('lateralCablesStrength', new_set.lateralCablesStrength - (new_set.lateralCablesStrength * percentage_deviation), new_set.lateralCablesStrength + (new_set.lateralCablesStrength * percentage_deviation))
     new_set.update_derived_parameters()
 
     if error_type == '_gr_':
@@ -56,7 +59,7 @@ def objective(trial):
         vModel.initialize()
         gr = vModel.single_iteration(post_operations=False)
         return gr
-    else:
+    elif error_type == '_K_InitialRecoil_' or error_type == '_wound_area_':
         # Initialize the model with the parameters
         vModel = VertexModelVoronoiFromTimeImage(set_test=new_set)
 
@@ -64,24 +67,44 @@ def objective(trial):
         vModel.initialize()
         vModel.iterate_over_time()
 
-        # Analyse the edge recoil
-        try:
-            file_name = os.path.join(vModel.set.OutputFolder, 'before_ablation.pkl')
-            n_ablations = 2
-            t_end = 0.5
-            recoiling_info = analyse_edge_recoil(file_name, n_ablations=n_ablations, location_filter=0, t_end=t_end)
+        if error_type == '_K_InitialRecoil_':
+            # Analyse the edge recoil
+            try:
+                file_name = os.path.join(vModel.set.OutputFolder, 'before_ablation.pkl')
+                n_ablations = 2
+                t_end = 0.5
+                recoiling_info = analyse_edge_recoil(file_name, n_ablations=n_ablations, location_filter=0, t_end=t_end)
 
-            # Return a metric to minimize
-            K = np.mean(recoiling_info['K'])
-            initial_recoil = np.mean(recoiling_info['initial_recoil_in_s'])
-        except Exception as e:
-            K = [1]
-            initial_recoil = [1]
+                # Return a metric to minimize
+                K = np.mean(recoiling_info['K'])
+                initial_recoil = np.mean(recoiling_info['initial_recoil_in_s'])
+            except Exception as e:
+                K = [1]
+                initial_recoil = [1]
 
-        error = vModel.calculate_error(K=K, initial_recoil=initial_recoil, error_type=error_type)
+            error = vModel.calculate_error(K=K, initial_recoil=initial_recoil, error_type=error_type)
+            return error
+        elif error_type == '_wound_area_':
+            features_per_time_df, post_wound_features, important_features, features_per_time_all_cells_df = (
+                analyse_simulation(vModel.set.OutputFolder))
 
-        return error
+            # Calculate the error
+            in_vivo_values_height = [1, 0.996780555555556, 0.993708333333333, 0.990630555555556, 0.985522222222222, 0.979061111111111, 0.975108333333333, 0.969102777777778, 0.963541666666667, 0.955194444444444, 0.9527, 0.944208333333333, 0.937577777777778, 0.934252777777778, 0.929713888888889, 0.928391666666667, 0.921808333333333, 0.919905555555556, 0.919325, 0.915511111111111]
+            in_vivo_values_area = [127.0745963875, 163.064532625, 140.8611214625, 110.64850923, 90.71989015375, 76.552777425, 66.6571166, 60.58248543125, 56.13210463125, 52.58253061, 48.28709519875, 45.77288565625, 43.9984109928571, 41.3621803975, 38.25390398625, 34.22344637, 30.1462372305, 26.54061412075, 21.993655758, 20.500077081875]
+            in_vivo_time = np.arange(3, 60, 3)
 
+            # Calculate the error
+            error = 0
+
+            # Check if the simulation reached the end
+            if vModel.t < vModel.set.tend:
+                error += (vModel.t - vModel.set.tend) ** 4
+
+            if important_features is not None:
+                for time in in_vivo_time:
+                    error += np.abs(important_features['wound_area_top_extrapolated_' + str(time)] - in_vivo_values_area[int(time/3)]) / in_vivo_values_area[int(time/3)]
+
+            return error
 
 def load_simulations(study, error_type=None):
     """

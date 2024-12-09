@@ -9,6 +9,7 @@ if start_new == True:
     vModel.initialize()
     vModel.iterate_over_time()
 else:
+    debugging = False
     vModel = VertexModelVoronoiFromTimeImage()
     output_folder = vModel.set.OutputFolder
     load_state(vModel,
