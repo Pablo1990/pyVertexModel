@@ -540,6 +540,8 @@ def create_video(folder, name_containing_images='top_'):
 
     # Get the images
     images = [img for img in os.listdir(folder) if img.endswith(".png") and name_containing_images in img]
+    # Filter if the image is not a number
+    images = [img for img in images if img.split('_')[-1].split('.')[0].isdigit()]
     images.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
 
     # Determine the width and height from the first image
