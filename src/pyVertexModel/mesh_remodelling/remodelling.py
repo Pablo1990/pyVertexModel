@@ -227,11 +227,38 @@ def smoothing_cell_surfaces_mesh(Geo, cells_intercalated, location='Top'):
             #         # Boundary vertices should be correspond to a vertex of the outside boundary based on tetrahedra
             #         # shared by the cell and the neighbouring cells
 
-            x_2d = laplacian_smoothing(x_2d[:, 0:2], np.array(triangles), boundary_ids, iteration_count=1)
+            x_2d = laplacian_smoothing(x_2d[:, 0:2], np.array(triangles), boundary_ids, iteration_count=10)
 
+            # Correct the z-coordinate of the vertices based on their surrounding vertices
+            for vertex_id, vertex in enumerate(x_2d):
+                # Get the tetrahedron of the vertex
+                tet_vertex = Geo.Cells[cell_intercalated].T[vertex_id]
+
+                # Get which faces are connected to the vertex
+                faces_connected = []
+
+                # Check if the vertex is in the right location
+                if (((not np.any(np.isin(tet_vertex, Geo.XgTop)) and location == 'Top') or
+                        (not np.any(np.isin(tet_vertex, Geo.XgBottom)) and location == 'Bottom')) or
+                        vertex_id in boundary_ids):
+                    continue
+
+                for face in Geo.Cells[cell_intercalated].Faces:
+                    # Check if the face is in the right location
+                    if ((get_interface(face.InterfaceType) == get_interface('Top') and location == 'Top') or
+                            (get_interface(face.InterfaceType) == get_interface('Bottom') and location == 'Bottom')):
+                        # Check if the tet_vertex is in any of the tris of the face
+                        for tri in face.Tris:
+                            if vertex_id in tri.Edge:
+                                faces_connected.append(face)
+                                break
+
+                if len(faces_connected) > 1:
+                    Geo.Cells[cell_intercalated].Y[vertex_id, 2] = np.mean([face.Centre[2] for face in faces_connected])
+
+            # Update the 3D coordinates of the vertices of the cell
             Geo.Cells[cell_intercalated].Y[:, 0:2] = x_2d[0:len(x_2d)]
 
-            # Update as the average of the new vertices
             #face_centres_to_middle_of_neighbours_vertices(Geo, cell_intercalated, filter_location=location)
 
     return Geo
@@ -315,10 +342,6 @@ class Remodelling:
                                                   and cell.AliveStatus == 1]
                     geo_copy = smoothing_cell_surfaces_mesh(geo_copy, setdiff1d(cells_involved_intercalation,
                                                                                segmentFeatures['num_cell']))
-                    #geo_copy = smoothing_cell_surfaces_mesh(geo_copy, [segmentFeatures['num_cell']])
-
-                    #dy = np.zeros(((geo_copy.numY + geo_copy.numF + geo_copy.nCells) * 3, 1), dtype=np.float64)
-                    #geo_copy, _, _ = newton_raphson_iteration_explicit(geo_copy, self.Set, self.Dofs.Free, dy, g, cells_involved_intercalation)
 
                     screenshot_(geo_copy, self.Set, -1, 'AfterRemodelling_',
                                 os.path.join(self.Set.OutputFolder, 'images'))
@@ -334,7 +357,7 @@ class Remodelling:
                         for key, energy in energies.items():
                             logger.info(f"{key}: {energy}")
 
-                    if best_gr / 2 > self.Set.tol:
+                    if best_gr / 10 > self.Set.tol:
                         logger.info(f'|gr| after remodelling: {best_gr}')
                         has_converged = False
 
