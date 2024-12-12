@@ -18,8 +18,14 @@ def get_intensity_based_contractility(c_set, current_face, intensity_images=True
     if intensity_images:
         contractility_time_variability = (np.arange(0, 60 + 3, 3)) / 60 * (c_set.TEndAblation - c_set.TInitAblation)
         contractility_variability_purse_string = np.array(
-            [1.0, 0.96, 1.007, 1.74, 2.37, 2.61, 2.487, 2.536, 2.46, 2.52, 2.606, 2.456, 2.387, 2.52, 2.31, 2.328,
-             2.134, 2.07, 2.055, 1.9, 1.9]) - 1
+           [1.0, 0.96, 1.007, 1.74, 2.37, 2.61, 2.487, 2.536, 2.46, 2.52, 2.606, 2.456, 2.387, 2.52, 2.31, 2.328,
+            2.134, 2.07, 2.055, 1.9, 1.9]) - 1
+        # contractility_variability_purse_string = np.array([
+        #     1.0, 1.46373910157143, 2.30243099542857, 2.79692212, 3.12940258914286, 3.04459581085714, 2.998815793,
+        #     2.90619755728571, 2.77096108042857, 2.51480115671429, 2.46758129314286, 2.33176997185714, 2.27374524928571,
+        #     2.13615341814286, 2.01718187257143, 1.99932454028571, 1.841774922, 1.62580278242857, 1.77222404071429,
+        #     1.75785892933333, 1.72055212466667, 1.65643291766667, 1.67255338533333, 1.5807521715, 1.48133442983333
+        #     ]) - 1
         contractility_variability_purse_string = (contractility_variability_purse_string /
                                                   np.max(contractility_variability_purse_string) *
                                                   c_set.purseStringStrength)
