@@ -376,8 +376,8 @@ class Geo:
         # Iterate over all cells in the Geo structure
         for c, c_cell in enumerate(self.Cells):
             if c_cell.AliveStatus is not None:
-                # Compute the reference mechanical values
-                self.Cells[c].Vol0 = avg_vol / c_set.ref_V0
+                # Adjust the Vol0
+                self.Cells[c].Vol0 = self.Cells[c].Vol / c_set.ref_V0
                 self.Cells[c].Area0 = avg_area
 
                 # Compute the mechanical parameter with noise
