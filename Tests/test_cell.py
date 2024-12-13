@@ -78,3 +78,17 @@ class TestCell(Tests):
         self.assertEqual(original_cell.ID, copied_cell.ID)
         self.assertTrue(np.array_equal(original_cell.X, copied_cell.X))
         self.assertTrue(np.array_equal(original_cell.T, copied_cell.T))
+
+
+def test_compute_cell_area_edge_cases(self):
+    geo_test, _, _ = load_data('Geo_var_3x3_stretch.mat')
+
+    # Test with zero-area cells
+    geo_test.Cells[0].X = np.array([[0, 0], [0, 0], [0, 0]])  # Degenerate cell
+    geo_test.Cells[0].compute_area()
+    self.assertEqual(geo_test.Cells[0].Area, 0)
+
+    # Test with very large area
+    geo_test.Cells[1].X = np.array([[1e6, 1e6], [1e7, 1e7], [1e8, 1e8]])  # Extreme values
+    geo_test.Cells[1].compute_area()
+    self.assertTrue(geo_test.Cells[1].Area > 0)  # Ensure a non-zero area
