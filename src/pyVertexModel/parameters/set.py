@@ -264,7 +264,7 @@ class Set:
         # per 1 micrometer of diameter on the top side of the cell
         self.CellHeight = 15
         # Tend is the final time of the simulation
-        self.tend = 60+20
+        self.tend = 120+20
         # Nincr is the number of increments
         self.Nincr = self.tend * 100
 
