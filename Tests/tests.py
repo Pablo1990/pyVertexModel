@@ -5,7 +5,7 @@ from os.path import exists, abspath
 
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.parameters.set import Set
-
+from src.pyVertexModel.Kg import kg_functions
 
 def load_data(file_name, return_geo=True):
     test_dir = abspath('Tests/data/%s' % file_name)
@@ -35,6 +35,12 @@ def load_data(file_name, return_geo=True):
 
 def assert_matrix(k_expected, k):
     np.testing.assert_allclose(k_expected, k, rtol=1e-3, atol=1e-1)
+
+
+def assert_array1D(array1, array2):
+    assert len(array1) == len(array2), "Arrays must be of the same length"
+    for a, b in zip(array1, array2):
+        assert a == b, f"Array values do not match: {a} != {b}"
 
 
 class Tests(unittest.TestCase):

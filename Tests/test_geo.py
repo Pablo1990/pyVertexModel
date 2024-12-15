@@ -5,6 +5,7 @@ from src.pyVertexModel.algorithm.vertexModelBubbles import extrapolate_ys_faces_
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain
 from src.pyVertexModel.util.utils import load_state, ismember_rows
+from Tests.tests import Tests, load_data, assert_matrix
 
 
 def check_if_cells_are_the_same(geo_expected, geo_test):
