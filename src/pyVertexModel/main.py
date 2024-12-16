@@ -1,3 +1,6 @@
+import os
+
+from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
 from src.pyVertexModel.util.utils import load_state
@@ -14,9 +17,9 @@ else:
     output_folder = vModel.set.OutputFolder
     if debugging:
         load_state(vModel,
-                   '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/'
+                   os.path.join(PROJECT_DIRECTORY, 'Result/'
                    '12-05_090050_noise_3.00e-01_bNoise_0.00e+00_lVol_1.00e+00_refV0_1.00e+00_kSubs_1.00e-01_lt_0.00e+00_refA0_9.20e-01_eARBarrier_8.00e-07_RemStiff_0.8_lS1_1.40e+00_lS2_1.40e-02_lS3_1.40e-01_ps_5.00e-05_lc_4.50e-05/'
-                   'data_step_before_remodelling_3157.pkl')
+                   'data_step_before_remodelling_3157.pkl'))
         vModel.set.wing_disc()
         vModel.set.wound_default()
         #vModel.set.OutputFolder = output_folder
@@ -29,9 +32,9 @@ else:
         vModel.iterate_over_time()
     else:
         load_state(vModel,
-                   '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/'
+                   os.path.join(PROJECT_DIRECTORY, 'Result/'
                    'new_reference/'
-                   'before_ablation.pkl')
+                   'before_ablation.pkl'))
         vModel.set.wing_disc()
         vModel.set.wound_default()
         vModel.set.OutputFolder = output_folder
