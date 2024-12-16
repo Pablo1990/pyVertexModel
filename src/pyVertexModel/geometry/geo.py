@@ -3,9 +3,7 @@ import os
 
 import numpy as np
 import vtk
-from numpy.ma.extras import setxor1d
 from scipy.spatial import ConvexHull
-from torch.fx.experimental.unification.unification_tools import get_in
 
 from src.pyVertexModel.Kg.kg import add_noise_to_parameter
 from src.pyVertexModel.geometry import face, cell

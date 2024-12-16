@@ -5,8 +5,7 @@ import numpy as np
 import pandas as pd
 from numpy.ma.extras import setdiff1d
 
-from src.pyVertexModel.algorithm.newtonRaphson import gGlobal, newton_raphson_iteration_explicit
-from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours_vertices
+from src.pyVertexModel.algorithm.newtonRaphson import gGlobal
 from src.pyVertexModel.geometry.face import get_interface
 from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip

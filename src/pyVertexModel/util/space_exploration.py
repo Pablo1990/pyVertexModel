@@ -12,6 +12,7 @@ from src.pyVertexModel.analysis.analyse_simulation import analyse_edge_recoil, a
 from src.pyVertexModel.parameters.set import Set
 from src.pyVertexModel.util.utils import load_state, load_variables, save_variables
 
+
 def objective(trial):
     """
     Objective function to minimize
