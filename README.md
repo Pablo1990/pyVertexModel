@@ -24,6 +24,11 @@ To run the code, you can use the following command:
 python main.py
 ```
 
+To run the tests, we use 'tox':
+```bash
+tox
+```
+
 ## Changing the parameters
 You can change the parameters of the model in the `parameters/set.py` file. At the moment, you should change it under 
 the 'wing_disc()' function.
