@@ -395,8 +395,16 @@ class Remodelling:
     def check_if_will_converge(self, best_geo):
         dy = np.zeros(((best_geo.numY + best_geo.numF + best_geo.nCells) * 3, 1), dtype=np.float64)
         g, energies = gGlobal(best_geo, best_geo, best_geo, self.Set, self.Set.implicit_method)
+        previous_gr = np.linalg.norm(g[self.Dofs.Free])
+        if (previous_gr < self.Set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
+                np.all(~np.isnan(dy[self.Dofs.Free]))):
+            pass
+        else:
+            return False
+
         Geo, dy, gr = newton_raphson_iteration_explicit(best_geo, self.Set, self.Dofs.Free, dy, g)
-        if (gr < self.Set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
+        print(f'Previous gr: {previous_gr}, gr: {gr}')
+        if (gr < self.Set.tol and gr < previous_gr and np.all(~np.isnan(g[self.Dofs.Free])) and
                 np.all(~np.isnan(dy[self.Dofs.Free]))):
             return True
         else:
