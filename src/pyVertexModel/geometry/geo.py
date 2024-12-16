@@ -752,12 +752,6 @@ class Geo:
                                  for c_face in self.Cells[num_cell].Faces])
         return num_faces_bottom, num_faces_lateral, num_faces_top
 
-        if c_cell.AliveStatus == 0:
-            # Apply a small shift for debris cells
-            c_cell.Y += 0.1 * (self.XgTop - self.XgBottom)  # Adjust the factor as needed
-
-        self.Cells[cc].Faces = self.Cells[cc].Faces[:len(neigh_nodes)]
-
     def calculate_interface_type(self, new_tets):
         """
         Calculate the interface type

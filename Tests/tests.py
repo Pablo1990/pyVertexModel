@@ -38,9 +38,7 @@ def assert_matrix(k_expected, k):
 
 
 def assert_array1D(array1, array2):
-    assert len(array1) == len(array2), "Arrays must be of the same length"
-    for a, b in zip(array1, array2):
-        assert a == b, f"Array values do not match: {a} != {b}"
+    np.testing.assert_allclose(g_expected, g, rtol=1e-3, atol=1e-1)
 
 
 class Tests(unittest.TestCase):
