@@ -24,7 +24,7 @@ To run the code, you can use the following command:
 python main.py
 ```
 
-To run tests, we use 'tox':
+To run the tests, we use 'tox':
 ```bash
 tox
 ```
