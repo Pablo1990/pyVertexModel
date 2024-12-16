@@ -8,10 +8,11 @@ from Tests.test_geo import check_if_cells_are_the_same
 from Tests.tests import Tests, assert_matrix, load_data, assert_array1D
 from src.pyVertexModel.algorithm import newtonRaphson
 from src.pyVertexModel.algorithm.newtonRaphson import newton_raphson
+from src.pyVertexModel.algorithm.vertexModel import create_tetrahedra
 from src.pyVertexModel.algorithm.vertexModelBubbles import build_topo, SeedWithBoundingBox, generate_first_ghost_nodes, \
     delaunay_compute_entities, VertexModelBubbles
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import build_triplets_of_neighs, calculate_neighbours, \
-    VertexModelVoronoiFromTimeImage, create_tetrahedra, add_tetrahedral_intercalations, build_2d_voronoi_from_image, \
+    VertexModelVoronoiFromTimeImage, add_tetrahedral_intercalations, build_2d_voronoi_from_image, \
     populate_vertices_info, calculate_vertices, get_four_fold_vertices, divide_quartets_neighbours, process_image
 from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 from src.pyVertexModel.util.utils import save_backup_vars
@@ -296,7 +297,7 @@ class TestVertexModel(Tests):
 
         # Test if initialize geometry function does not change anything
         Twg_test = create_tetrahedra(traingles_connectivity, neighbours_network, edges_of_vertices, x_internal,
-                                     x_face_ids, x_vertices_ids, x)
+                                     x_face_ids, x_vertices_ids)
 
         # Check if the test and expected are the same
         assert_matrix(Twg_test, mat_info['Twg'])

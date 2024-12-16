@@ -220,15 +220,15 @@ class Set:
 
         current_datetime = datetime.now()
         new_outputFolder = ''.join([PROJECT_DIRECTORY, '/Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")),
-                                    'noise_', '{:0.2e}'.format(self.noise_random), '_bNoise_', '{:0.2e}'.format(self.brownian_motion_scale),
-                                    '_lVol_', '{:0.2e}'.format(self.lambdaV), '_refV0_', '{:0.2e}'.format(self.ref_V0),
-                                    '_kSubs_', '{:0.2e}'.format(self.kSubstrate),
-                                    '_lt_', '{:0.2e}'.format(self.cLineTension),
-                                    '_refA0_', '{:0.2e}'.format(self.ref_A0),
-                                    '_eARBarrier_', '{:0.2e}'.format(self.lambdaR),
-                                    '_RemStiff_', str(self.RemodelStiffness), '_lS1_', '{:0.2e}'.format(self.lambdaS1),
-                                    '_lS2_', '{:0.2e}'.format(self.lambdaS2), '_lS3_', '{:0.2e}'.format(self.lambdaS3),
-                                    '_ps_', '{:0.2e}'.format(self.purseStringStrength), '_lc_', '{:0.2e}'.format(self.lateralCablesStrength)])
+                            'noise_', '{:0.2e}'.format(self.noise_random), '_bNoise_', '{:0.2e}'.format(self.brownian_motion_scale),
+                            '_lVol_', '{:0.2e}'.format(self.lambdaV), '_refV0_', '{:0.2e}'.format(self.ref_V0),
+                            '_kSubs_', '{:0.2e}'.format(self.kSubstrate),
+                            '_lt_', '{:0.2e}'.format(self.cLineTension),
+                            '_refA0_', '{:0.2e}'.format(self.ref_A0),
+                            '_eARBarrier_', '{:0.2e}'.format(self.lambdaR),
+                            '_RemStiff_', str(self.RemodelStiffness), '_lS1_', '{:0.2e}'.format(self.lambdaS1),
+                            '_lS2_', '{:0.2e}'.format(self.lambdaS2), '_lS3_', '{:0.2e}'.format(self.lambdaS3),
+                            '_ps_', '{:0.2e}'.format(self.purseStringStrength), '_lc_', '{:0.2e}'.format(self.lateralCablesStrength)])
         self.define_if_not_defined("OutputFolder", new_outputFolder)
 
     def stretch(self):
@@ -320,7 +320,7 @@ class Set:
         self.lambdaS4 = self.lambdaS2
 
         # VTK
-        self.VTK = False
+        self.VTK = True
 
         # Implicit vs Explicit
         self.implicit_method = False
@@ -337,7 +337,7 @@ class Set:
         self.debris_contribution = np.finfo(float).eps
         # =========================== Contractility ==========================
         self.Contractility = True
-        self.TypeOfPurseString = 0
+        self.TypeOfPurseString = 2
         # 0: Intensity-based purse string
         # 1: Strain-based purse string (delayed)
         # 2: Fixed with linear increase purse string

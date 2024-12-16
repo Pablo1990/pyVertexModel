@@ -1,8 +1,6 @@
-import numpy as np
+import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
-from scipy.interpolate import griddata
 
 # Read excel into a pandas dataframe
 results_excel = pd.read_excel('data/simulations_results/all_files_features.xlsx')

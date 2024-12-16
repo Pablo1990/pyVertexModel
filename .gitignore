@@ -8,7 +8,7 @@ __pycache__/
 
 # Distribution / packaging
 .Python
-build/
+src/pyVertexModel/Kg/build/
 develop-eggs/
 dist/
 downloads/
@@ -186,3 +186,5 @@ data/
 .idea/misc.xml
 
 *.db
+
+*.o

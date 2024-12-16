@@ -3,8 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 
-from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation, analyse_edge_recoil, create_video
-from src.pyVertexModel.util.utils import save_variables, load_variables
+from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation, create_video
 
 folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/final_results'
 all_files_features = []

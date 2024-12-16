@@ -15,14 +15,17 @@ dynamic = [
 ]
 dependencies = [
     "cython",
-    "numpy",
+    "numpy==1.26.4",
     "scipy",
     "pillow",
     "scikit-image",
     "cython",
     "vtk",
     "pandas",
-    "networkx"
+    "networkx",
+    "pyvista",
+    "scikit-learn",
+    "matplotlib",
 ]
 
 [tool.coverage]

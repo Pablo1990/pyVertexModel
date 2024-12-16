@@ -1,15 +1,14 @@
 import unittest
-from os.path import exists
-
+import scipy.io
 import numpy as np
-import scipy
+from os.path import exists, abspath
 
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.parameters.set import Set
-
+from src.pyVertexModel.Kg import kg_functions
 
 def load_data(file_name, return_geo=True):
-    test_dir = 'Tests/data/%s' % file_name
+    test_dir = abspath('Tests/data/%s' % file_name)
     if exists(test_dir):
         mat_info = scipy.io.loadmat(test_dir)
     else:
@@ -23,10 +22,8 @@ def load_data(file_name, return_geo=True):
 
         if 'Set' in mat_info.keys():
             set_test = Set(mat_info['Set'])
-            # Set the output folder to the test directory if it is not set
             if set_test.OutputFolder.__eq__(b'') or set_test.OutputFolder is None:
                 set_test.OutputFolder = '../Result/Test'
-
         else:
             set_test = None
     else:
@@ -40,9 +37,27 @@ def assert_matrix(k_expected, k):
     np.testing.assert_allclose(k_expected, k, rtol=1e-3, atol=1e-1)
 
 
-def assert_array1D(g_expected, g):
+def assert_array1D(array1, array2):
     np.testing.assert_allclose(g_expected, g, rtol=1e-3, atol=1e-1)
 
 
 class Tests(unittest.TestCase):
-    pass
+
+    def test_load_data_geo(self):
+        geo_test, set_test, mat_info = load_data('Geo_3x3_dofs_expected.mat')
+        self.assertIsNotNone(geo_test)
+        self.assertTrue('Geo' in mat_info)
+
+    def test_load_data_set(self):
+        geo_test, set_test, mat_info = load_data('Geo_var_3x3_stretch.mat')
+        self.assertIsNotNone(set_test)
+        self.assertTrue('Set' in mat_info)
+
+    def test_assert_matrix(self):
+        k_expected = np.array([[1, 2], [3, 4]])
+        k = np.array([[1, 2], [3, 4]])
+        assert_matrix(k_expected, k)
+
+    def test_load_data_invalid_file(self):
+        with self.assertRaises(FileNotFoundError):
+            load_data('invalid_file.mat')

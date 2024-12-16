@@ -4,6 +4,8 @@ import cython
 import numpy as np
 cimport numpy as np
 
+np.import_array()
+
 # RUN IT LIKE: python setup.py build_ext --inplace
 
 @cython.wraparound(False)

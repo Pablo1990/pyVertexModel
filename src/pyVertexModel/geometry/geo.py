@@ -3,9 +3,7 @@ import os
 
 import numpy as np
 import vtk
-from numpy.ma.extras import setxor1d
 from scipy.spatial import ConvexHull
-from torch.fx.experimental.unification.unification_tools import get_in
 
 from src.pyVertexModel.Kg.kg import add_noise_to_parameter
 from src.pyVertexModel.geometry import face, cell
@@ -796,6 +794,8 @@ class Geo:
                         self.Cells[cell_id].Faces[id_with_new_index].Centre = c_face.Centre
 
                     assert np.all(self.Cells[cell_id].Faces[id_with_new_index].Centre == c_face.Centre)
+
+
 
     def add_and_rebuild_cells(self, old_geo, old_tets, new_tets, y_new, c_set, update_measurements):
         """
