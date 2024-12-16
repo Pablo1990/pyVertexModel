@@ -22,7 +22,10 @@ dependencies = [
     "cython",
     "vtk",
     "pandas",
-    "networkx"
+    "networkx",
+    "pyvista",
+    "scikit-learn",
+    "matplotlib",
 ]
 
 [tool.coverage]
