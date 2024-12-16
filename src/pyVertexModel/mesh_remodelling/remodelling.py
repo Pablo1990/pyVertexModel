@@ -356,13 +356,7 @@ class Remodelling:
                         for key, energy in energies.items():
                             logger.info(f"{key}: {energy}")
 
-                    if best_gr / 10 > self.Set.tol:
-                        logger.info(f'|gr| after remodelling: {best_gr}')
-                        has_converged = False
-
-                    #cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
-                    #                               and cell.AliveStatus == 1]
-                    #self.Geo = smoothing_cell_surfaces_mesh(self.Geo, cells_involved_intercalation)
+                    has_converged = self.check_if_will_converge(self.Geo.copy())
                 else:
                     has_converged = False
 
@@ -397,6 +391,16 @@ class Remodelling:
             segmentFeatures_all = segmentFeatures_all.drop(rowsToRemove)
 
         return self.Geo, self.Geo_n
+
+    def check_if_will_converge(self, best_geo):
+        dy = np.zeros(((best_geo.numY + best_geo.numF + best_geo.nCells) * 3, 1), dtype=np.float64)
+        g, energies = gGlobal(best_geo, best_geo, best_geo, self.Set, self.Set.implicit_method)
+        Geo, dy, gr = newton_raphson_iteration_explicit(best_geo, self.Set, self.Dofs.Free, dy, g)
+        if (gr < self.Set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
+                np.all(~np.isnan(dy[self.Dofs.Free]))):
+            return True
+        else:
+            return False
 
     def intercalate_cells(self, segmentFeatures):
         """
