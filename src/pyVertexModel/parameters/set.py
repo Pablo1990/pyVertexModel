@@ -264,7 +264,7 @@ class Set:
         # per 1 micrometer of diameter on the top side of the cell
         self.CellHeight = 15
         # Tend is the final time of the simulation
-        self.tend = 120+20
+        self.tend = 60+20
         # Nincr is the number of increments
         self.Nincr = self.tend * 100
 
@@ -280,7 +280,7 @@ class Set:
         # Energy Barrier Aspect Ratio
         self.EnergyBarrierAR = True
         if self.EnergyBarrierAR:
-            self.lambdaR = 8e-7
+            self.lambdaR = 4e-6
         else:
             self.lambdaR = 0
 
@@ -320,7 +320,7 @@ class Set:
         self.lambdaS4 = self.lambdaS2
 
         # VTK
-        self.VTK = True
+        self.VTK = False
 
         # Implicit vs Explicit
         self.implicit_method = False
@@ -337,12 +337,12 @@ class Set:
         self.debris_contribution = np.finfo(float).eps
         # =========================== Contractility ==========================
         self.Contractility = True
-        self.TypeOfPurseString = 2
+        self.TypeOfPurseString = 0
         # 0: Intensity-based purse string
         # 1: Strain-based purse string (delayed)
         # 2: Fixed with linear increase purse string
         self.purseStringStrength = 5e-5
-        self.lateralCablesStrength = 4.5e-5
+        self.lateralCablesStrength = 5e-5
         self.delay_lateral_cables = 5.8
         self.delay_purse_string = self.delay_lateral_cables
 
