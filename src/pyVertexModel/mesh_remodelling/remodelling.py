@@ -402,13 +402,16 @@ class Remodelling:
         else:
             return False
 
-        Geo, dy, gr = newton_raphson_iteration_explicit(best_geo, self.Set, self.Dofs.Free, dy, g)
-        print(f'Previous gr: {previous_gr}, gr: {gr}')
-        if (gr < self.Set.tol and gr < previous_gr and np.all(~np.isnan(g[self.Dofs.Free])) and
-                np.all(~np.isnan(dy[self.Dofs.Free]))):
-            return True
-        else:
-            return False
+        for _ in range(10):
+            best_geo, dy, gr, g = newton_raphson_iteration_explicit(best_geo, self.Set, self.Dofs.Free, dy, g)
+            print(f'Previous gr: {previous_gr}, gr: {gr}')
+            if (gr < self.Set.tol and gr < previous_gr and np.all(~np.isnan(g[self.Dofs.Free])) and
+                    np.all(~np.isnan(dy[self.Dofs.Free]))):
+                pass
+            else:
+                return False
+
+        return True
 
     def intercalate_cells(self, segmentFeatures):
         """
