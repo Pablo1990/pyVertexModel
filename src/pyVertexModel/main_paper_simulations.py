@@ -1,5 +1,6 @@
 import itertools
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
@@ -13,9 +14,7 @@ combinations_of_variables = []
 for i in range(1, len(variables_to_change) + 1):
     combinations_of_variables.extend(itertools.combinations(variables_to_change, i))
 
-# Start simulations in parallel
-
-for combination in combinations_of_variables:
+def run_simulation(combination):
     vModel = VertexModelVoronoiFromTimeImage()
     vModel.initialize()
 
@@ -38,3 +37,9 @@ for combination in combinations_of_variables:
     vModel.set.update_derived_parameters()
     vModel.iterate_over_time()
     analyse_simulation(vModel.set.OutputFolder)
+
+run_simulation(combinations_of_variables[1])
+
+# Run simulations in parallel
+with ThreadPoolExecutor(max_workers=2) as executor:
+    executor.map(run_simulation, combinations_of_variables)
