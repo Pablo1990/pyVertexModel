@@ -16,15 +16,12 @@ def run_simulation(combination):
 
     vModel.set.wing_disc()
     vModel.set.wound_default()
-    # Based on Tissue Fluidity paper from Rob Tetley et al. 2019
     if combination == 'Mbs':
-        #“In Mbs RNAi wing discs, vertex recoil rates are increased by 40% in the tissue and decreased by 21% in the purse string compared to WT”
         vModel.set.lambdaS1 = vModel.set.lambdaS1 + (vModel.set.lambdaS1 * 0.40)
         vModel.set.purseStringStrength = vModel.set.purseStringStrength - (vModel.set.purseStringStrength * 0.21)
         vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength - (vModel.set.lateralCablesStrength * 0.21)
         vModel.set.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/final_results_2/60_mins_Mbs')
     elif combination == 'Rok':
-        #“In Rok RNAi wing discs, vertex recoil rates are reduced by 51% in the tissue and 35% in the purse string compared to WT”
         vModel.set.lambdaS1 = vModel.set.lambdaS1 - (vModel.set.lambdaS1 * 0.51)
         vModel.set.purseStringStrength = vModel.set.purseStringStrength - (vModel.set.purseStringStrength * 0.35)
         vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength - (vModel.set.lateralCablesStrength * 0.35)
@@ -46,7 +43,6 @@ def run_simulation(combination):
 
 variables_to_change = ['kSubstrate', 'Remodelling', 'purseStringStrength', 'lateralCablesStrength']
 
-# Create all possible combinations of variables
 combinations_of_variables = []
 for i in range(1, len(variables_to_change) + 1):
     combinations_of_variables.extend(itertools.combinations(variables_to_change, i))
@@ -54,8 +50,8 @@ for i in range(1, len(variables_to_change) + 1):
 combinations_of_variables.extend(['Mbs'])
 combinations_of_variables.extend(['Rok'])
 
-run_simulation(combinations_of_variables[-1])
-
-# Run simulations in parallel
-with ThreadPoolExecutor(max_workers=4) as executor:
-    executor.map(run_simulation, combinations_of_variables)
+if __name__ == '__main__':
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        futures = [executor.submit(run_simulation, combination) for combination in combinations_of_variables]
+        for future in futures:
+            future.result()
