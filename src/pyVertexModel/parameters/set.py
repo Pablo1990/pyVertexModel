@@ -297,7 +297,7 @@ class Set:
         # Brownian motion
         self.brownian_motion = False
         self.brownian_motion_scale = 0
-        self.noise_random = 0.2
+        self.noise_random = 0
 
         # Remodelling
         self.Remodelling = True
