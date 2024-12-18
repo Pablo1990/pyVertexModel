@@ -1,6 +1,6 @@
 import itertools
 import os
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
 
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
@@ -51,7 +51,7 @@ combinations_of_variables.extend(['Mbs'])
 combinations_of_variables.extend(['Rok'])
 
 if __name__ == '__main__':
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    with ProcessPoolExecutor(max_workers=4) as executor:
         futures = [executor.submit(run_simulation, combination) for combination in combinations_of_variables]
         for future in futures:
             future.result()
