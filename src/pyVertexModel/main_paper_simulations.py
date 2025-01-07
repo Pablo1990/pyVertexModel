@@ -16,6 +16,7 @@ def run_simulation(combination):
 
     vModel.set.wing_disc()
     vModel.set.wound_default()
+    vModel.set.nu_bottom = vModel.set.nu * 600
     if combination == 'Mbs':
         vModel.set.lambdaS1 = vModel.set.lambdaS1 + (vModel.set.lambdaS1 * 0.40)
         vModel.set.purseStringStrength = vModel.set.purseStringStrength - (vModel.set.purseStringStrength * 0.21)
@@ -47,8 +48,8 @@ combinations_of_variables = []
 for i in range(1, len(variables_to_change) + 1):
     combinations_of_variables.extend(itertools.combinations(variables_to_change, i))
 
-combinations_of_variables.extend(['Mbs'])
-combinations_of_variables.extend(['Rok'])
+combinations_of_variables.insert(0, ['Mbs'])
+combinations_of_variables.insert(0, ['Rok'])
 
 if __name__ == '__main__':
     with ProcessPoolExecutor(max_workers=4) as executor:
