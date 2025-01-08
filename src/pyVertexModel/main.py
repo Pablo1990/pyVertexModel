@@ -41,8 +41,11 @@ else:
         vModel.set.OutputFolder = output_folder
         vModel.set.dt0 = None
         vModel.set.dt = None
+        vModel.set.OutputFolder = None
         vModel.set.update_derived_parameters()
         vModel.reset_noisy_parameters()
+        vModel.set.redirect_output()
         vModel.iterate_over_time()
+
         analyse_simulation(vModel.set.OutputFolder)
 
