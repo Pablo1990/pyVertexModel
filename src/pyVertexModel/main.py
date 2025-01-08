@@ -21,6 +21,7 @@ else:
         sorted([f for f in os.listdir(output_folder) if f.endswith('.pkl') and not 'before_remodelling' in f])[-1]
         load_state(vModel, os.path.join(output_folder, name_last_pkl_file))
         #vModel.set.wing_disc()
+        #vModel.set.wound_default()
         #vModel.set.OutputFolder = output_folder
         #vModel.set.update_derived_parameters()
         #os.makedirs(vModel.set.OutputFolder + '/images', exist_ok=True)
