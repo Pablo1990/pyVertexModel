@@ -267,6 +267,7 @@ class Set:
         self.tend = 60+20
         # Nincr is the number of increments
         self.Nincr = self.tend * 100
+        self.nu_bottom = self.nu * 600
 
         # Viscosity
         self.nu = 0.07
