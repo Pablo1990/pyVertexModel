@@ -1,6 +1,6 @@
 import itertools
 import os
-from concurrent.futures import ProcessPoolExecutor
+import sys
 
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
@@ -17,7 +17,9 @@ def run_simulation(combination):
     vModel.set.wing_disc()
     vModel.set.wound_default()
     vModel.set.nu_bottom = vModel.set.nu * 600
-    if combination == 'Mbs':
+    if combination == 'WT':
+        pass
+    elif combination == 'Mbs':
         vModel.set.lambdaS1 = vModel.set.lambdaS1 + (vModel.set.lambdaS1 * 0.40)
         vModel.set.purseStringStrength = vModel.set.purseStringStrength - (vModel.set.purseStringStrength * 0.21)
         vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength - (vModel.set.lateralCablesStrength * 0.21)
@@ -26,9 +28,9 @@ def run_simulation(combination):
         vModel.set.lambdaS1 = vModel.set.lambdaS1 - (vModel.set.lambdaS1 * 0.51)
         vModel.set.purseStringStrength = vModel.set.purseStringStrength - (vModel.set.purseStringStrength * 0.35)
         vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength - (vModel.set.lateralCablesStrength * 0.35)
-        vModel.set.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/final_results_2/60_mins_Rok')
+        vModel.set.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/final_results_/60_mins_Rok')
     else:
-        vModel.set.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/final_results_2/60_mins_no_{}'.format('_no_'.join(combination)))
+        vModel.set.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/final_results_/60_mins_no_{}'.format('_no_'.join(combination)))
         for variable in combination:
             if variable == 'Remodelling':
                 vModel.set.Remodelling = False
@@ -48,11 +50,14 @@ combinations_of_variables = []
 for i in range(1, len(variables_to_change) + 1):
     combinations_of_variables.extend(itertools.combinations(variables_to_change, i))
 
+combinations_of_variables.insert(0, ['WT'])
 combinations_of_variables.insert(0, ['Mbs'])
 combinations_of_variables.insert(0, ['Rok'])
 
 if __name__ == '__main__':
-    with ProcessPoolExecutor(max_workers=4) as executor:
-        futures = [executor.submit(run_simulation, combination) for combination in combinations_of_variables]
-        for future in futures:
-            future.result()
+    if len(sys.argv) != 2:
+        print("Usage: python main_paper_simulations.py <index>")
+        sys.exit(1)
+
+    index = int(sys.argv[1])
+    run_simulation(index)
