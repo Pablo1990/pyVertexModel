@@ -60,4 +60,4 @@ if __name__ == '__main__':
         sys.exit(1)
 
     index = int(sys.argv[1])
-    run_simulation(index)
+    run_simulation(combinations_of_variables[index])

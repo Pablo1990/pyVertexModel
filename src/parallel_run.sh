@@ -3,8 +3,12 @@
 # Define the Python script to run
 PYTHON_SCRIPT="pyVertexModel/main_paper_simulations.py"
 
-# Define the range of num_parameters to use
-num_parameters=$(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18)
+# Define the project directory and add it to PYTHONPATH
+PROJECT_DIR=$(dirname "$(dirname "$(realpath $0)")")
+export PYTHONPATH=$PROJECT_DIR:$PYTHONPATH
+
+# Define an array of parameters to run the simulation with
+num_parameters=(0 1 5 7 8 9 10 12 13 14 15 16 17)
 
 # Function to run a simulation
 run_simulation() {
@@ -16,7 +20,7 @@ run_simulation() {
 
 # Run the simulations in parallel with a limit of 5 at a time
 max_jobs=5
-for num_parameter in $num_parameters; do
+for num_parameter in "${num_parameters[@]}"; do
     ((i=i%max_jobs)); ((i++==0)) && wait
     run_simulation "$num_parameter" &
 done
