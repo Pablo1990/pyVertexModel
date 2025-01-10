@@ -255,6 +255,8 @@ class VertexModel:
             if np.isnan(gr):
                 break
 
+        self.save_v_model_state()
+
         return self.didNotConverge
 
     def single_iteration(self, post_operations=True):
