@@ -13,7 +13,7 @@ def run_simulation(combination):
     :param combination:
     :return:
     """
-    output_results_dir = 'Result/final_results_'  # output directory
+    output_results_dir = 'Result/final_results'  # output directory
 
     vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
     if combination == 'WT' or combination == 'Mbs' or combination == 'Rok':
@@ -56,11 +56,15 @@ def run_simulation(combination):
     else:
         print("Output folder already exists: {}".format(output_folder))
         # Load last modified pkl file
-        name_last_pkl_file = sorted([f for f in os.listdir(output_folder) if f.endswith('.pkl') and not 'before_remodelling' in f])[-1]
+        name_last_pkl_file = sorted([f for f in os.listdir(output_folder) if f.endswith('.pkl') and f.startswith('data_step') and not 'before_remodelling' in f])[-1]
         load_state(vModel, os.path.join(output_folder, name_last_pkl_file))
+        vModel.set.OutputFolder = output_folder
+        vModel.set.redirect_output()
+        if vModel.t > vModel.set.tend:
+            return
 
     vModel.iterate_over_time()
-    analyse_simulation(vModel.set.OutputFolder)
+    #analyse_simulation(vModel.set.OutputFolder)
 
 variables_to_change = ['kSubstrate', 'Remodelling', 'purseStringStrength', 'lateralCablesStrength']
 
@@ -68,9 +72,9 @@ combinations_of_variables = []
 for i in range(1, len(variables_to_change) + 1):
     combinations_of_variables.extend(itertools.combinations(variables_to_change, i))
 
-combinations_of_variables.insert(0, 'WT')
 combinations_of_variables.insert(0, 'Mbs')
 combinations_of_variables.insert(0, 'Rok')
+#combinations_of_variables.insert(0, 'WT')
 
 if __name__ == '__main__':
     index = int(sys.argv[1])
