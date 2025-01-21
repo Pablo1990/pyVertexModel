@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from numpy.ma.extras import setdiff1d
 
-from src.pyVertexModel.algorithm.newtonRaphson import gGlobal
+from src.pyVertexModel.algorithm.newtonRaphson import gGlobal, newton_raphson_iteration_explicit
 from src.pyVertexModel.geometry.face import get_interface
 from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
@@ -310,7 +310,9 @@ class Remodelling:
             #if segmentFeatures['num_cell'] in self.Geo.BorderCells or np.any(np.isin(self.Geo.BorderCells, segmentFeatures['shared_neighbours'])):
             if self.Geo.Cells[segmentFeatures['cell_to_split_from']].AliveStatus == 1 or \
                     segmentFeatures['node_pair_g'] not in self.Geo.XgTop:
-                segmentFeatures_all = segmentFeatures_all.drop(segmentFeatures.name)
+
+                # Drop the first element of the segment features
+                segmentFeatures_all = segmentFeatures_all.drop(segmentFeatures_all.index[0])
                 continue
 
             # Intercalate cells
@@ -396,15 +398,21 @@ class Remodelling:
         dy = np.zeros(((best_geo.numY + best_geo.numF + best_geo.nCells) * 3, 1), dtype=np.float64)
         g, energies = gGlobal(best_geo, best_geo, best_geo, self.Set, self.Set.implicit_method)
         previous_gr = np.linalg.norm(g[self.Dofs.Free])
-        if (previous_gr < self.Set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
-                np.all(~np.isnan(dy[self.Dofs.Free]))):
-            pass
-        else:
-            return False
+        # if (previous_gr < self.Set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
+        #         np.all(~np.isnan(dy[self.Dofs.Free]))):
+        #     pass
+        # else:
+        #     return False
 
-        Geo, dy, gr = newton_raphson_iteration_explicit(best_geo, self.Set, self.Dofs.Free, dy, g)
-        print(f'Previous gr: {previous_gr}, gr: {gr}')
-        if (gr < self.Set.tol and gr < previous_gr and np.all(~np.isnan(g[self.Dofs.Free])) and
+        for _ in range(10):
+            best_geo, dy, gr, g = newton_raphson_iteration_explicit(best_geo, self.Set, self.Dofs.Free, dy, g)
+            print(f'Previous gr: {previous_gr}, gr: {gr}')
+            if np.all(~np.isnan(g[self.Dofs.Free])) and np.all(~np.isnan(dy[self.Dofs.Free])):
+                pass
+            else:
+                return False
+
+        if (gr < self.Set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
                 np.all(~np.isnan(dy[self.Dofs.Free]))):
             return True
         else:

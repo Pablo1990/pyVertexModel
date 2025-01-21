@@ -185,7 +185,7 @@ class VertexModel:
                 self.set.update_derived_parameters()
 
         # Redirect output
-        if self.set.OutputFolder is not None and create_output_folder:
+        if create_output_folder and self.set.OutputFolder is not None:
             self.set.redirect_output()
 
         # Degrees of freedom definition
@@ -254,6 +254,8 @@ class VertexModel:
 
             if np.isnan(gr):
                 break
+
+        self.save_v_model_state()
 
         return self.didNotConverge
 

@@ -109,8 +109,10 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t, implicit_meth
             Energy, K, dyr, g, gr, ig, auxgr, dy = newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof,
                                                                             dy, g, gr0, ig, numStep, t)
     else:
-        Geo, dy, gr = newton_raphson_iteration_explicit(Geo, Set, dof, dy, g)
+        Geo, dy, gr, _ = newton_raphson_iteration_explicit(Geo, Set, dof, dy, g)
         dyr = 0
+
+    logger.info(f"New gradient norm: {gr:.3e}")
 
     return Geo, g, K, Energy, Set, gr, dyr, dy
 
@@ -215,7 +217,7 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g, selected_cells=None)
     gr = np.linalg.norm(g[dof])
     Set.iter = Set.MaxIter
 
-    return Geo, dy, gr
+    return Geo, dy, gr, g
 
 
 def map_vertices_periodic_boundaries(Geo, dy):

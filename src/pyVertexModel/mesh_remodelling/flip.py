@@ -301,6 +301,10 @@ def y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo,
     parentNode = 0
     arrayPos = 2
     endNode = 1
+
+    # Re-order old_tets randomly to avoid bias
+    np.random.shuffle(old_tets)
+
     _, Tnew, TRemoved, treeOfPossibilities, _ = y_flip_nm_recursive(old_tets, TRemoved, Tnew, Ynew, old_ys, Geo_without_scutoids,
                                                                     possibleEdges,
                                                                     xs_to_disconnect, treeOfPossibilities, parentNode,
