@@ -342,8 +342,8 @@ class Set:
         # 0: Intensity-based purse string
         # 1: Strain-based purse string (delayed)
         # 2: Fixed with linear increase purse string
-        self.purseStringStrength = 5e-5
-        self.lateralCablesStrength = 5e-5
+        self.purseStringStrength = 4e-5
+        self.lateralCablesStrength = 7e-5
         self.delay_lateral_cables = 5.8
         self.delay_purse_string = self.delay_lateral_cables
 
