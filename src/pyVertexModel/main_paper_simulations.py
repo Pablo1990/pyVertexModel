@@ -56,15 +56,20 @@ def run_simulation(combination):
     else:
         print("Output folder already exists: {}".format(output_folder))
         # Load last modified pkl file
-        name_last_pkl_file = sorted([f for f in os.listdir(output_folder) if f.endswith('.pkl') and f.startswith('data_step') and not 'before_remodelling' in f])[-1]
+        name_last_pkl_file = sorted(
+            [f for f in os.listdir(output_folder) if f.endswith('.pkl') and not 'before_remodelling' in f
+             and f.startswith('data_step')],
+            key=lambda x: os.path.getmtime(os.path.join(output_folder, x))
+        )[-1]
         load_state(vModel, os.path.join(output_folder, name_last_pkl_file))
         vModel.set.OutputFolder = output_folder
         vModel.set.redirect_output()
         if vModel.t > vModel.set.tend:
+            analyse_simulation(vModel.set.OutputFolder)
             return
 
     vModel.iterate_over_time()
-    #analyse_simulation(vModel.set.OutputFolder)
+    analyse_simulation(vModel.set.OutputFolder)
 
 variables_to_change = ['kSubstrate', 'Remodelling', 'purseStringStrength', 'lateralCablesStrength']
 
@@ -74,7 +79,7 @@ for i in range(1, len(variables_to_change) + 1):
 
 combinations_of_variables.insert(0, 'Mbs')
 combinations_of_variables.insert(0, 'Rok')
-#combinations_of_variables.insert(0, 'WT')
+combinations_of_variables.insert(0, 'WT')
 
 if __name__ == '__main__':
     index = int(sys.argv[1])

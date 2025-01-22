@@ -19,7 +19,7 @@ else:
                                                         '01-13_093710_noise_0.00e+00_bNoise_0.00e+00_lVol_1.00e+00_refV0_1.00e+00_kSubs_1.00e-01_lt_0.00e+00_refA0_9.20e-01_eARBarrier_8.00e-07_RemStiff_0.7_lS1_1.60e+00_lS2_1.60e-02_lS3_1.60e-01_ps_7.00e-05_lc_7.00e-05/')
         # Sorted by date file
         name_last_pkl_file = sorted(
-            [f for f in os.listdir(output_folder) if f.endswith('.pkl') and not 'before_remodelling' in f],
+            [f for f in os.listdir(output_folder) if f.endswith('.pkl') and not 'before_remodelling' in f and f.startswith('data_step_')],
             key=lambda x: os.path.getmtime(os.path.join(output_folder, x))
         )[-1]
         load_state(vModel, os.path.join(output_folder, name_last_pkl_file))
