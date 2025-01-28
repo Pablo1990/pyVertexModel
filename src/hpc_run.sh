@@ -41,7 +41,7 @@ mkdir outputs
 
 export PYTHONPATH=$PROJECT_DIR:$PYTHONPATH
 
-PYTHON_SCRIPT="src/main.py"
+PYTHON_SCRIPT="src/pyVertexModel/main.py"
 
 # Run analysis script using Python in activated virtual environment passing in path to
 # directory containing input data and path to directory to write outputs to
