@@ -1,16 +1,24 @@
 import os
+import sys
 
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
 from src.pyVertexModel.util.utils import load_state
 
-start_new = False
+start_new = True
 if start_new == True:
+    hpc = True
+    if hpc:
+        vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
+        vModel.set.OutputFolder = sys.argv[2] + vModel.set.OutputFolder.split('/')[-1]
+        vModel.set.redirect_output()
+    else:
     vModel = VertexModelVoronoiFromTimeImage()
+
     vModel.initialize()
     vModel.iterate_over_time()
-    analyse_simulation(vModel.set.OutputFolder)
+    #analyse_simulation(vModel.set.OutputFolder)
 else:
     debugging = False
     vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
