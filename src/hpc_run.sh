@@ -49,7 +49,7 @@ echo "Running analysis script..."
 max_jobs=3
 for num_parameter in $(seq 1 $max_jobs); do
     echo "Running simulation number $num_parameter"
-    python $PROJECT_DIR/$PYTHON_SCRIPT "$num_parameter" outputs &
+    python $PROJECT_DIR/$PYTHON_SCRIPT "$num_parameter" outputs/ &
     sleep 10s
 done
 echo "...done."
