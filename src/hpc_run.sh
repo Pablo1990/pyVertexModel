@@ -41,12 +41,16 @@ mkdir outputs
 
 export PYTHONPATH=$PROJECT_DIR:$PYTHONPATH
 
-PYTHON_SCRIPT="pyVertexModel/main_paper_simulations.py"
+PYTHON_SCRIPT="pyVertexModel/main.py"
 
 # Run analysis script using Python in activated virtual environment passing in path to
 # directory containing input data and path to directory to write outputs to
 echo "Running analysis script..."
-python $PROJECT_DIR/$PYTHON_SCRIPT 1 outputs
+max_jobs=3
+for num_parameter in $(seq 1 $max_jobs); do
+    python $PROJECT_DIR/$PYTHON_SCRIPT "$num_parameter" outputs &
+    sleep 10s
+done
 echo "...done."
 
 # Copy script outputs back to scratch space under a job ID specific subdirectory
