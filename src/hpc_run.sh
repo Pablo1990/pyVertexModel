@@ -3,15 +3,15 @@
 # Example batch script to run a Python script in a virtual environment.
 # Adapted from https://github.com/UCL-ARC/myriad-python-analysis-example/blob/main/run_analysis.sh
 
-# Request 1 minutes of wallclock time (format hours:minutes:seconds).
-#$ -l h_rt=0:1:0
+# Request 24 hours of wallclock time (format hours:minutes:seconds).
+#$ -l h_rt=24:0:0
 
 # Request 1 gigabyte of RAM for each core/thread
 # (must be an integer followed by M, G, or T)
-#$ -l mem=1G
+#$ -l mem=5G
 
 # Request 1 gigabyte of TMPDIR space (default is 10 GB)
-#$ -l tmpfs=1G
+#$ -l tmpfs=30G
 
 # Set the name of the job.
 #$ -N pyVertexModel
