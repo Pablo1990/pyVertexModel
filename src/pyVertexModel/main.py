@@ -7,7 +7,7 @@ from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
 from src.pyVertexModel.util.utils import load_state
 
 start_new = True
-if start_new == True:
+if start_new:
     hpc = True
     if hpc:
         vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
@@ -18,7 +18,7 @@ if start_new == True:
 
     vModel.initialize()
     vModel.iterate_over_time()
-    #analyse_simulation(vModel.set.OutputFolder)
+    # analyse_simulation(vModel.set.OutputFolder)
 else:
     debugging = False
     vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
