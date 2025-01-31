@@ -2,8 +2,7 @@ import logging
 import os
 import warnings
 
-#PROJECT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PROJECT_DIRECTORY = os.getenv('PROJECT_DIR', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PROJECT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # get the logger instance
 logger = logging.getLogger("pyVertexModel")

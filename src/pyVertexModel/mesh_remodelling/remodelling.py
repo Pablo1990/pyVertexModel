@@ -404,7 +404,7 @@ class Remodelling:
         # else:
         #     return False
 
-        for _ in range(60):
+        for _ in range(20):
             best_geo, dy, gr, g = newton_raphson_iteration_explicit(best_geo, self.Set, self.Dofs.Free, dy, g)
             print(f'Previous gr: {previous_gr}, gr: {gr}')
             if np.all(~np.isnan(g[self.Dofs.Free])) and np.all(~np.isnan(dy[self.Dofs.Free])):
