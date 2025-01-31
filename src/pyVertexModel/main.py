@@ -6,24 +6,19 @@ from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexMo
 from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
 from src.pyVertexModel.util.utils import load_state
 
-start_new = True
+start_new = False
 if start_new == True:
-    hpc = True
-    if hpc == True:
-        vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
-        vModel.set.OutputFolder = sys.argv[2] + vModel.set.OutputFolder.split('/')[-1]
-        vModel.set.redirect_output()
-    else:
-        vModel = VertexModelVoronoiFromTimeImage()
-        vModel.initialize()
-        vModel.iterate_over_time()
-        analyse_simulation(vModel.set.OutputFolder)
+    vModel = VertexModelVoronoiFromTimeImage()
+    vModel.initialize()
+    vModel.iterate_over_time()
+    analyse_simulation(vModel.set.OutputFolder)
 else:
     debugging = True
     vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
     if debugging:
-        output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/'
-                                                        '60_mins_Rok/')
+        output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/fix_remodelling/')
+        # output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/'
+        #                                                 '60_mins_Rok/')
         # Sorted by date file
         name_last_pkl_file = sorted(
             [f for f in os.listdir(output_folder) if f.endswith('.pkl') and not 'before_remodelling' in f and f.startswith('data_step_')],
