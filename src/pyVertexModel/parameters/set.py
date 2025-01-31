@@ -281,7 +281,7 @@ class Set:
         # Energy Barrier Aspect Ratio
         self.EnergyBarrierAR = True
         if self.EnergyBarrierAR:
-            self.lambdaR = 4e-6
+            self.lambdaR = 8e-7
         else:
             self.lambdaR = 0
 
@@ -298,14 +298,14 @@ class Set:
         # Brownian motion
         self.brownian_motion = False
         self.brownian_motion_scale = 0
-        self.noise_random = 0
+        self.noise_random = 0.15
 
         # Remodelling
         self.Remodelling = True
         # How big or small the edge to remodel
         # 0.15 is 15% of average the edge. This is a threshold to remodel the edge
         if self.Remodelling:
-            self.RemodelStiffness = 0.8
+            self.RemodelStiffness = 0.67
         else:
             self.RemodelStiffness = 2
 
@@ -342,8 +342,8 @@ class Set:
         # 0: Intensity-based purse string
         # 1: Strain-based purse string (delayed)
         # 2: Fixed with linear increase purse string
-        self.purseStringStrength = 5e-5
-        self.lateralCablesStrength = 5e-5
+        self.purseStringStrength = 4e-5
+        self.lateralCablesStrength = 7e-5
         self.delay_lateral_cables = 5.8
         self.delay_purse_string = self.delay_lateral_cables
 

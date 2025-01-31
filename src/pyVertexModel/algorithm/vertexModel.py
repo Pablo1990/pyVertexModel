@@ -355,9 +355,9 @@ class VertexModel:
             # Remodelling
             if abs(self.t - self.tr) >= self.set.RemodelingFrequency:
                 if self.set.Remodelling:
-                    save_state(self,
-                               os.path.join(self.set.OutputFolder,
-                                            'data_step_before_remodelling_' + str(self.numStep) + '.pkl'))
+                    # save_state(self,
+                    #            os.path.join(self.set.OutputFolder,
+                    #                         'data_step_before_remodelling_' + str(self.numStep) + '.pkl'))
 
                     # Remodelling
                     remodel_obj = Remodelling(self.geo, self.geo_n, self.geo_0, self.set, self.Dofs)

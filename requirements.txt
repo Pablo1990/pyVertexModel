@@ -13,3 +13,4 @@ pyvista
 setuptools
 optuna
 plotly
+opencv-python
