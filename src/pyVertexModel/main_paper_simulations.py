@@ -7,13 +7,14 @@ from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexMo
 from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
 from src.pyVertexModel.util.utils import load_state
 
-def run_simulation(combination):
+def run_simulation(combination, project_dir='Result/'):
     """
     Run simulation with the given combination of variables.
+    :param project_dir:
     :param combination:
     :return:
     """
-    output_results_dir = 'Result/final_results'  # output directory
+    output_results_dir = project_dir + '/final_results/'  # output directory
 
     vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
     if combination == 'WT' or combination == 'Mbs' or combination == 'Rok':
@@ -24,8 +25,7 @@ def run_simulation(combination):
     # Check if output_folder exists
     if not os.path.exists(output_folder):
         load_state(vModel,
-                   os.path.join(PROJECT_DIRECTORY, 'Result/'
-                                                   'new_reference/'
+                   os.path.join(PROJECT_DIRECTORY, output_results_dir,
                                                    'before_ablation.pkl'))
 
         vModel.set.wing_disc()
@@ -42,6 +42,16 @@ def run_simulation(combination):
             vModel.set.lambdaS1 = vModel.set.lambdaS1 - (vModel.set.lambdaS1 * 0.51)
             vModel.set.purseStringStrength = vModel.set.purseStringStrength - (vModel.set.purseStringStrength * 0.35)
             vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength - (vModel.set.lateralCablesStrength * 0.35)
+        elif combination == 'Talin':
+            # Control: 0.66*33=21.78, 0.857*47=40.279; Talin: 0.88*16=14.08, 0.782*22=17.204;
+            vModel.set.kSubstrate = vModel.set.kSubstrate * 0
+            # 14.08/21.78 = 0.64516129
+            vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength * 0.64516129
+        elif combination == 'IntegrinDN':
+            # Control: 0.66*33=21.78, 0.857*47=40.279; IntegrinDN: 0.56*15=8.4, 0.63*22=13.86;
+            vModel.set.kSubstrate = vModel.set.kSubstrate * 0
+            # 8.4/21.78 = 0.385674931
+            vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength * 0.385674931
         else:
             for variable in combination:
                 if variable == 'Remodelling':
@@ -79,8 +89,14 @@ for i in range(1, len(variables_to_change) + 1):
 
 combinations_of_variables.insert(0, 'Mbs')
 combinations_of_variables.insert(0, 'Rok')
+combinations_of_variables.insert(0, 'Talin')
+combinations_of_variables.insert(0, 'IntegrinDN')
 combinations_of_variables.insert(0, 'WT')
 
 if __name__ == '__main__':
     index = int(sys.argv[1])
-    run_simulation(combinations_of_variables[index])
+    # Check if there are two arguments
+    if len(sys.argv) == 2:
+        run_simulation(combinations_of_variables[index])
+    else:
+        run_simulation(combinations_of_variables[index], sys.argv[2])
