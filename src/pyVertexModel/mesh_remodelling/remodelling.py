@@ -475,7 +475,7 @@ class Remodelling:
         # if gr / 100 > self.Set.tol:
         #     has_converged = False
 
-        screenshot_(self.Geo, self.Set, -1, 'AfterRemodelling', os.path.join(self.Set.OutputFolder, 'images'))
+        #screenshot_(self.Geo, self.Set, -1, 'AfterRemodelling', os.path.join(self.Set.OutputFolder, 'images'))
 
         return all_tnew, cell_to_split_from, ghost_node, ghost_nodes_tried, has_converged, old_tets
 
