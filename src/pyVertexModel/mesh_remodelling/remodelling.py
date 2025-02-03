@@ -344,16 +344,11 @@ class Remodelling:
                     geo_copy = smoothing_cell_surfaces_mesh(geo_copy, setdiff1d(cells_involved_intercalation,
                                                                                segmentFeatures['num_cell']))
 
-                    screenshot_(geo_copy, self.Set, -1, 'AfterRemodelling_',
-                                os.path.join(self.Set.OutputFolder, 'images'))
-
                     g, energies = gGlobal(geo_copy, geo_copy, geo_copy, self.Set, self.Set.implicit_method)
                     gr = np.linalg.norm(g[self.Dofs.Free])
                     if gr < best_gr:
                         best_gr = gr
                         self.Geo = geo_copy
-                        screenshot_(self.Geo, self.Set, -1, 'AfterRemodelling_',
-                                    os.path.join(self.Set.OutputFolder, 'images'))
                         logger.info(f'Best gr: {best_gr}')
                         for key, energy in energies.items():
                             logger.info(f"{key}: {energy}")
@@ -474,8 +469,6 @@ class Remodelling:
             logger.info(f"{key}: {energy}")
         # if gr / 100 > self.Set.tol:
         #     has_converged = False
-
-        #screenshot_(self.Geo, self.Set, -1, 'AfterRemodelling', os.path.join(self.Set.OutputFolder, 'images'))
 
         return all_tnew, cell_to_split_from, ghost_node, ghost_nodes_tried, has_converged, old_tets
 
