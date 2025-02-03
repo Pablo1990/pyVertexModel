@@ -13,6 +13,9 @@ if start_new == True:
         vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
         vModel.set.OutputFolder = sys.argv[2] + vModel.set.OutputFolder.split('/')[-1]
         vModel.set.redirect_output()
+        vModel.initialize()
+        vModel.iterate_over_time()
+        analyse_simulation(vModel.set.OutputFolder)
     else:
         vModel = VertexModelVoronoiFromTimeImage()
         vModel.initialize()
@@ -57,5 +60,5 @@ else:
         vModel.set.redirect_output()
         vModel.iterate_over_time()
 
-    analyse_simulation(vModel.set.OutputFolder)
+    #analyse_simulation(vModel.set.OutputFolder)
 
