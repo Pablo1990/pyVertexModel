@@ -322,6 +322,7 @@ class Set:
 
         # VTK
         self.VTK = False
+        self.export_images = False
 
         # Implicit vs Explicit
         self.implicit_method = False
