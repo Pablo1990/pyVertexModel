@@ -4,7 +4,7 @@
 # Adapted from https://github.com/UCL-ARC/myriad-python-analysis-example/blob/main/run_analysis.sh
 
 # Request 24 hours of wallclock time (format hours:minutes:seconds).
-#$ -l h_rt=24:0:0
+#$ -l h_rt=72:0:0
 
 # Request 1 gigabyte of RAM for each core/thread
 # (must be an integer followed by M, G, or T)
