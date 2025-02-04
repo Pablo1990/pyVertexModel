@@ -42,13 +42,11 @@ def run_simulation(combination, output_results_dir='Result/'):
             vModel.set.purseStringStrength = vModel.set.purseStringStrength - (vModel.set.purseStringStrength * 0.35)
             vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength - (vModel.set.lateralCablesStrength * 0.35)
         elif combination == 'Talin':
-            # Control: 0.66; Talin: 0.81
             vModel.set.kSubstrate = vModel.set.kSubstrate * 0
-            vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength * 0.81/0.66
+            vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength * 4.3/3.1
         elif combination == 'IntegrinDN':
-            # Control: 0.66 ; IntegrinDN: 0.56
             vModel.set.kSubstrate = vModel.set.kSubstrate * 0
-            vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength * 0.56/0.66
+            vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength * 2.1/3.1
         else:
             for variable in combination:
                 if variable == 'Remodelling':
