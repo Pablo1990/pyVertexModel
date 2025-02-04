@@ -1,8 +1,3 @@
-import pyvista
-
-# Start a virtual frame buffer
-pyvista.start_xvfb()
-
 import logging
 import os
 import warnings
