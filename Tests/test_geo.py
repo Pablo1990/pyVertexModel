@@ -26,6 +26,13 @@ def check_if_cells_are_the_same(geo_expected, geo_test):
     # Check if the Ys are the same
     assert_matrix(y_test, y_expected)
 
+    # Put together all the tetrahedra
+    tets_test = np.concatenate([geo_test.Cells[i].Tets for i in range(geo_test.nCells)])
+    tets_expected = np.concatenate([geo_expected.Cells[i].Tets for i in range(geo_expected.nCells)])
+
+    # Check if the tets are the same
+    assert_matrix(tets_test, tets_expected)
+
     # Put together all the volumes and areas
     vol_test = [geo_test.Cells[i].Vol for i in range(geo_test.nCells)]
     vol_expected = [geo_expected.Cells[i].Vol for i in range(geo_expected.nCells)]
