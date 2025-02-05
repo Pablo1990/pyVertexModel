@@ -11,8 +11,8 @@ PROJECT_DIR=$(dirname "$(dirname "$(realpath $0)")")
 export PYTHONPATH=$PROJECT_DIR:$PYTHONPATH
 
 # Define an array of parameters to run the simulation with
-#num_parameters=(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19)
-num_parameters=(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19)
+#num_parameters=(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18)
+num_parameters=(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18)
 
 # Function to run a simulation
 run_simulation() {
