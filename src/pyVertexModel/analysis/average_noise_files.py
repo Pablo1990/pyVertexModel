@@ -30,7 +30,14 @@ for c_folder in list_of_folders:
         list_of_df.append(df)
 
     # Average the dataframes
+    if not list_of_df:
+        continue
     df = pd.concat(list_of_df).groupby(level=0).mean()
+    df_std = pd.concat(list_of_df).groupby(level=0).std()
+
+    # Create the directory
+    os.makedirs(os.path.join(PROJECT_DIRECTORY, 'Result', folder_to_average + 'average' + noise_type), exist_ok=True)
 
     # Save the averaged dataframe
     df.to_excel(os.path.join(PROJECT_DIRECTORY, 'Result', folder_to_average + 'average' + noise_type, c_folder + '_' + file_to_average))
+    df_std.to_excel(os.path.join(PROJECT_DIRECTORY, 'Result', folder_to_average + 'average' + noise_type, c_folder + '_std_' + file_to_average))
