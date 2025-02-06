@@ -16,7 +16,7 @@ run_simulation() {
 }
 
 # Run the simulations in parallel with a limit of 5 at a time
-max_jobs=2
+max_jobs=1
 for num_parameter in $(seq 1 $max_jobs); do
     run_simulation "$num_parameter" &
     sleep 10s
