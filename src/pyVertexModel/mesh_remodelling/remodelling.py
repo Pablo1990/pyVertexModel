@@ -344,7 +344,26 @@ class Remodelling:
                     self.Geo = smoothing_cell_surfaces_mesh(geo_copy, setdiff1d(cells_involved_intercalation,
                                                                                segmentFeatures['num_cell']))
 
-                    #
+                    # Move Zs to any of the Zs that were before.
+
+                    # Get the apical side of the cells that intercalated
+                    intercalating_cells = np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])
+
+                    backup_geo = backup_vars['Geo_b']
+
+                    for num_cell in intercalating_cells:
+                        apical_Ys = backup_geo.Cells[num_cell].Y[np.any(np.isin(backup_geo.Cells[num_cell].T, allTnew), axis=1)]
+
+                        # Move the Z position of the apical intercalated cells to the closest Z position of the
+                        # apical cells before the intercalation
+                        for vertex_id, vertex in enumerate(self.Geo.Cells[num_cell].Y):
+                            if vertex_id in allTnew.flatten():
+                                # Closest vertex in terms of X,Y
+                                closest_vertex = apical_Ys[np.argmin(np.linalg.norm(apical_Ys[,0:2] - vertex[0:2], axis=1))]
+                                self.Geo.Cells[num_cell].Y[vertex_id, 2] = closest_vertex[2]
+
+
+
 
                     # g, energies = gGlobal(geo_copy, geo_copy, geo_copy, self.Set, self.Set.implicit_method)
                     # gr = np.linalg.norm(g[self.Dofs.Free])
