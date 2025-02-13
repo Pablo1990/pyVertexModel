@@ -341,17 +341,21 @@ class Remodelling:
                                                           cellToSplitFrom, ghostNode, allTnew, self.Set))
                     cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
                                                   and cell.AliveStatus == 1]
-                    geo_copy = smoothing_cell_surfaces_mesh(geo_copy, setdiff1d(cells_involved_intercalation,
+                    self.Geo = smoothing_cell_surfaces_mesh(geo_copy, setdiff1d(cells_involved_intercalation,
                                                                                segmentFeatures['num_cell']))
 
-                    g, energies = gGlobal(geo_copy, geo_copy, geo_copy, self.Set, self.Set.implicit_method)
-                    gr = np.linalg.norm(g[self.Dofs.Free])
-                    if gr < best_gr:
-                        best_gr = gr
-                        self.Geo = geo_copy
-                        logger.info(f'Best gr: {best_gr}')
-                        for key, energy in energies.items():
-                            logger.info(f"{key}: {energy}")
+                    #
+
+                    # g, energies = gGlobal(geo_copy, geo_copy, geo_copy, self.Set, self.Set.implicit_method)
+                    # gr = np.linalg.norm(g[self.Dofs.Free])
+                    # if gr < best_gr:
+                    #     best_gr = gr
+                    #     self.Geo = geo_copy
+                    #     logger.info(f'Best gr: {best_gr}')
+                    #     for key, energy in energies.items():
+                    #         logger.info(f"{key}: {energy}")
+
+                    screenshot_(self.Geo, self.Set, 0, 'after_remodelling', self.Set.OutputFolder + '/images')
 
                     has_converged = self.check_if_will_converge(self.Geo.copy())
                 else:
