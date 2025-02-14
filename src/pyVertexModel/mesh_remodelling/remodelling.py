@@ -374,7 +374,9 @@ class Remodelling:
                     #     for key, energy in energies.items():
                     #         logger.info(f"{key}: {energy}")
 
-                    screenshot_(self.Geo, self.Set, 0, 'after_remodelling', self.Set.OutputFolder + '/images')
+                    self.Geo.update_measures()
+                    for cell in cells_involved_intercalation:
+                        self.Geo.Cells[cell].Vol0 = self.Geo.Cells[cell].Vol
 
                     has_converged = self.check_if_will_converge(self.Geo.copy())
                 else:
