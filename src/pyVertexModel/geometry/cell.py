@@ -22,7 +22,7 @@ def face_centres_to_middle_of_neighbours_vertices(Geo, c_cell, filter_location=N
                 all_edges.append(tri.Edge)
 
             all_edges = np.unique(np.concatenate(all_edges))
-            Geo.Cells[c_cell].Faces[num_face].Centre = Geo.Cells[c_cell].Faces[num_face].Centre * 0.5 + 0.5 * np.mean(
+            Geo.Cells[c_cell].Faces[num_face].Centre = np.mean(
                 Geo.Cells[c_cell].Y[all_edges, :], axis=0)
 
 
