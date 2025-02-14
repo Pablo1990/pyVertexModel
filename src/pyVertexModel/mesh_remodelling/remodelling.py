@@ -174,7 +174,7 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
     return Geo
 
 
-def smoothing_cell_surfaces_mesh(Geo, cells_intercalated, location='Top'):
+def smoothing_cell_surfaces_mesh(Geo, cells_intercalated, backup_vars, location='Top'):
     """
     Smoothing the cell surfaces mesh.
     :param Geo:
@@ -184,51 +184,89 @@ def smoothing_cell_surfaces_mesh(Geo, cells_intercalated, location='Top'):
     for cell_intercalated in cells_intercalated:
         if Geo.Cells[cell_intercalated].AliveStatus == 1:
             # Get the 2D coordinates of the vertices of the cell
-            x_2d = Geo.Cells[cell_intercalated].Y[:, 0:2]
+            x_2d = Geo.Cells[cell_intercalated].Y
 
             triangles = []
+            id_face = len(x_2d)
+            starting_length = len(x_2d)
             for num_face, face in enumerate(Geo.Cells[cell_intercalated].Faces):
                 if ((get_interface(face.InterfaceType) == get_interface('Top') and location == 'Top') or
                         (get_interface(face.InterfaceType) == get_interface('Bottom') and location == 'Bottom')):
+                    x_2d = np.vstack((x_2d, face.Centre))
                     for tri in face.Tris:
                         triangles.append([tri.Edge[0], tri.Edge[1]])
+                        triangles.append([tri.Edge[0], id_face])
+                        triangles.append([tri.Edge[1], id_face])
+                    id_face += 1
+
 
             boundary_ids = np.where(np.sum(np.isin(Geo.Cells[cell_intercalated].T, Geo.XgID),
                                                axis=1) < 3)[0]
 
             x_2d = laplacian_smoothing(x_2d, np.array(triangles), boundary_ids, iteration_count=1000)
-
-            # Correct the z-coordinate of the vertices based on their surrounding vertices
-            for vertex_id, vertex in enumerate(x_2d):
-                # Get the tetrahedron of the vertex
-                tet_vertex = Geo.Cells[cell_intercalated].T[vertex_id]
-
-                # Get which faces are connected to the vertex
-                faces_connected = []
-
-                # Check if the vertex is in the right location
-                if (((not np.any(np.isin(tet_vertex, Geo.XgTop)) and location == 'Top') or
-                        (not np.any(np.isin(tet_vertex, Geo.XgBottom)) and location == 'Bottom')) or
-                        vertex_id in boundary_ids):
-                    continue
-
-                for face in Geo.Cells[cell_intercalated].Faces:
-                    # Check if the face is in the right location
-                    if ((get_interface(face.InterfaceType) == get_interface('Top') and location == 'Top') or
-                            (get_interface(face.InterfaceType) == get_interface('Bottom') and location == 'Bottom')):
-                        # Check if the tet_vertex is in any of the tris of the face
-                        for tri in face.Tris:
-                            if vertex_id in tri.Edge:
-                                faces_connected.append(face)
-                                break
-
-                if len(faces_connected) > 1:
-                    Geo.Cells[cell_intercalated].Y[vertex_id, 2] = np.mean([face.Centre[2] for face in faces_connected])
-
             # Update the 3D coordinates of the vertices of the cell
-            Geo.Cells[cell_intercalated].Y[:, 0:2] = x_2d[0:len(x_2d)]
+            Geo.Cells[cell_intercalated].Y = x_2d[0:starting_length]
+            id_face = starting_length
+            for num_face, face in enumerate(Geo.Cells[cell_intercalated].Faces):
+                if ((get_interface(face.InterfaceType) == get_interface('Top') and location == 'Top') or
+                        (get_interface(face.InterfaceType) == get_interface('Bottom') and location == 'Bottom')):
+                    face.Centre = x_2d[id_face]
+                    id_face += 1
 
-            face_centres_to_middle_of_neighbours_vertices(Geo, cell_intercalated, filter_location=location)
+            # # Get the apical side of the cells that intercalated
+            # backup_geo = backup_vars['Geo_b']
+            # for num_cell in cells_intercalated:
+            #     # Top intercalation
+            #     if location == 'Top':
+            #         surface_Ys = backup_geo.Cells[num_cell].Y[
+            #             np.any(np.isin(backup_geo.Cells[num_cell].T, Geo.XgTop), axis=1)]
+            #         # Add surface Ys of the face centres
+            #         for face in backup_geo.Cells[num_cell].Faces:
+            #             if get_interface(face.InterfaceType) == get_interface('Top'):
+            #                 surface_Ys = np.vstack((surface_Ys, face.Centre))
+            #                 for tri in face.Tris:
+            #                     location_1 = backup_geo.Cells[num_cell].Y[tri.Edge[0]]
+            #                     location_2 = backup_geo.Cells[num_cell].Y[tri.Edge[1]]
+            #                     location_3 = face.Centre
+            #
+            #                     # Create a weight array with several combination of weights all adding up to 1
+            #                     num_weights = 10
+            #                     weights = np.array([np.linspace(0, 1, num_weights), np.linspace(0, 1, num_weights),
+            #                                         np.linspace(0, 1, num_weights)])
+            #                     # Create a meshgrid of the weights
+            #                     weights_meshgrid = np.meshgrid(weights[0], weights[1], weights[2])
+            #                     # Reshape the meshgrid to a 3xN array
+            #                     weights_combinations = np.vstack(
+            #                         [weights_meshgrid[0].ravel(), weights_meshgrid[1].ravel(),
+            #                          weights_meshgrid[2].ravel()]).T
+            #                     # Remove the combinations that do not add up to 1
+            #                     weights_combinations = weights_combinations[np.sum(weights_combinations, axis=1) == 1]
+            #                     # Get the new surface Ys
+            #                     new_surface_Ys = np.dot(weights_combinations, [location_1, location_2, location_3])
+            #
+            #                     surface_Ys = np.vstack((surface_Ys, new_surface_Ys))
+            #     # Bottom intercalation
+            #     else:
+            #         surface_Ys = backup_geo.Cells[num_cell].Y[
+            #             np.any(np.isin(backup_geo.Cells[num_cell].T, Geo.XgBottom), axis=1)]
+            #         # Add surface Ys of the face centres
+            #         for face in backup_geo.Cells[num_cell].Faces:
+            #             if get_interface(face.InterfaceType) == get_interface('Bottom'):
+            #                 surface_Ys = np.vstack((surface_Ys, face.Centre))
+            #                 for tri in face.Tris:
+            #                     surface_Ys = np.vstack((surface_Ys, np.mean([backup_geo.Cells[num_cell].Y[tri.Edge[0]],
+            #                                                                  backup_geo.Cells[num_cell].Y[tri.Edge[1]],
+            #                                                                  face.Centre], axis=0)))
+            #
+            #     # Move the Z position of the apical intercalated cells to the closest Z position of the
+            #     # apical cells before the intercalation
+            #     for vertex_id, vertex in enumerate(Geo.Cells[num_cell].Y):
+            #         if np.any(np.isin(Geo.Cells[num_cell].T[vertex_id], Geo.XgTop)):
+            #             # Closest vertex in terms of X,Y
+            #             closest_vertex = surface_Ys[np.argmin(np.linalg.norm(surface_Ys[:, 0:2] - vertex[0:2], axis=1))]
+            #             Geo.Cells[num_cell].Y[vertex_id, 2] = closest_vertex[2]
+
+            #face_centres_to_middle_of_neighbours_vertices(Geo, cell_intercalated, filter_location=location)
 
     return Geo
 
@@ -307,8 +345,8 @@ class Remodelling:
                                                           cellToSplitFrom, ghostNode, allTnew, self.Set))
                     cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
                                                   and cell.AliveStatus == 1]
-                    self.Geo = smoothing_cell_surfaces_mesh(geo_copy, cells_involved_intercalation)
-                    screenshot_(self.Geo, os.path.join(self.Set.output_dir, 'remodeling'), num_step)
+                    self.Geo = smoothing_cell_surfaces_mesh(geo_copy, cells_involved_intercalation, backup_vars)
+                    screenshot_(self.Geo, self.Set, 0, 'after_remodelling_', self.Set.OutputFolder + '/images')
 
                     self.Geo.update_measures()
                     for cell in cells_involved_intercalation:
