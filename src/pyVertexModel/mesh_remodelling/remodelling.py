@@ -6,6 +6,7 @@ import pandas as pd
 from numpy.ma.extras import setdiff1d
 
 from src.pyVertexModel.algorithm.newtonRaphson import gGlobal, newton_raphson_iteration_explicit
+from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours_vertices
 from src.pyVertexModel.geometry.face import get_interface
 from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
@@ -185,26 +186,6 @@ def smoothing_cell_surfaces_mesh(Geo, cells_intercalated, location='Top'):
             # Get the 2D coordinates of the vertices of the cell
             x_2d = Geo.Cells[cell_intercalated].Y[:, 0:2]
 
-            # Get the neighbouring cells depending on location
-            if location == 'Top':
-                node_neighbours = get_node_neighbours_per_domain(Geo, cell_intercalated, Geo.XgTop[0])
-            elif location == 'Bottom':
-                node_neighbours = get_node_neighbours_per_domain(Geo, cell_intercalated, Geo.XgBottom[0])
-
-            # Get the vertices of the neighbouring cells that are alive
-            vertices_neighbours = np.unique(np.concatenate([Geo.Cells[cell_neighbour].Y for cell_neighbour in
-                                                            node_neighbours if Geo.Cells[cell_neighbour].AliveStatus == 1]))
-
-            # # Create a boundary around the neighbouring cells to avoid moving the vertices outside the cell
-            # outside_boundary = []
-            # for cell_neighbour in node_neighbours:
-            #     if Geo.Cells[cell_neighbour].AliveStatus == 1:
-            #         if location == 'Top':
-            #             outside_boundary.append(Geo.Cells[cell_neighbour].Y[np.any(np.isin(Geo.Cells[cell_neighbour].T, cell_intercalated), axis=1) & np.any(np.isin(Geo.Cells[cell_neighbour].T, Geo.XgTop), axis=1)])
-            #         elif location == 'Bottom':
-            #             outside_boundary.append(Geo.Cells[cell_neighbour].Y[np.any(np.isin(Geo.Cells[cell_neighbour].T, cell_intercalated), axis=1) & np.any(np.isin(Geo.Cells[cell_neighbour].T, Geo.XgBottom), axis=1)])
-            # outside_boundary = np.concatenate(outside_boundary)
-
             triangles = []
             for num_face, face in enumerate(Geo.Cells[cell_intercalated].Faces):
                 if ((get_interface(face.InterfaceType) == get_interface('Top') and location == 'Top') or
@@ -215,18 +196,7 @@ def smoothing_cell_surfaces_mesh(Geo, cells_intercalated, location='Top'):
             boundary_ids = np.where(np.sum(np.isin(Geo.Cells[cell_intercalated].T, Geo.XgID),
                                                axis=1) < 3)[0]
 
-            # Move the x_2d vertices that fall within the neighbouring cells to inside the cell
-            # centroid = np.mean(x_2d, axis=0)
-            # for vertex_id, vertex  in enumerate(x_2d):
-            #     if vertex_id not in boundary_ids:
-            #         # Move the vertex closer to the centroid of the cell
-            #         x_2d[vertex_id] = x_2d[vertex_id] + 0.5 * (centroid - x_2d[vertex_id])
-            #     else:
-            #         pass
-            #         # Boundary vertices should be correspond to a vertex of the outside boundary based on tetrahedra
-            #         # shared by the cell and the neighbouring cells
-
-            x_2d = laplacian_smoothing(x_2d[:, 0:2], np.array(triangles), boundary_ids, iteration_count=10)
+            x_2d = laplacian_smoothing(x_2d, np.array(triangles), boundary_ids, iteration_count=1000)
 
             # Correct the z-coordinate of the vertices based on their surrounding vertices
             for vertex_id, vertex in enumerate(x_2d):
@@ -258,7 +228,7 @@ def smoothing_cell_surfaces_mesh(Geo, cells_intercalated, location='Top'):
             # Update the 3D coordinates of the vertices of the cell
             Geo.Cells[cell_intercalated].Y[:, 0:2] = x_2d[0:len(x_2d)]
 
-            #face_centres_to_middle_of_neighbours_vertices(Geo, cell_intercalated, filter_location=location)
+            face_centres_to_middle_of_neighbours_vertices(Geo, cell_intercalated, filter_location=location)
 
     return Geo
 
@@ -330,53 +300,20 @@ class Remodelling:
                 cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
 
                 if len(np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])) > 3:
-                    g, _ = gGlobal(self.Geo, self.Geo, self.Geo, self.Set, self.Set.implicit_method)
-                    best_gr = np.linalg.norm(g[self.Dofs.Free])
-                    #for how_close_to_vertex in np.linspace(0.1, 0.9, 9):
                     how_close_to_vertex = 0.01
                     geo_copy = (
                         move_vertices_closer_to_ref_point(self.Geo.copy(), how_close_to_vertex,
-                                                          np.concatenate([[segmentFeatures['num_cell']],
-                                                                          cellNodesShared]),
+                                                          np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
                                                           cellToSplitFrom, ghostNode, allTnew, self.Set))
                     cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
                                                   and cell.AliveStatus == 1]
-                    self.Geo = smoothing_cell_surfaces_mesh(geo_copy, setdiff1d(cells_involved_intercalation,
-                                                                               segmentFeatures['num_cell']))
-
-                    # Move Zs to any of the Zs that were before.
-
-                    # Get the apical side of the cells that intercalated
-                    intercalating_cells = np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])
-
-                    backup_geo = backup_vars['Geo_b']
-
-                    for num_cell in intercalating_cells:
-                        apical_Ys = backup_geo.Cells[num_cell].Y[np.any(np.isin(backup_geo.Cells[num_cell].T, allTnew), axis=1)]
-
-                        # Move the Z position of the apical intercalated cells to the closest Z position of the
-                        # apical cells before the intercalation
-                        for vertex_id, vertex in enumerate(self.Geo.Cells[num_cell].Y):
-                            if vertex_id in allTnew.flatten():
-                                # Closest vertex in terms of X,Y
-                                closest_vertex = apical_Ys[np.argmin(np.linalg.norm(apical_Ys[,0:2] - vertex[0:2], axis=1))]
-                                self.Geo.Cells[num_cell].Y[vertex_id, 2] = closest_vertex[2]
-
-
-
-
-                    # g, energies = gGlobal(geo_copy, geo_copy, geo_copy, self.Set, self.Set.implicit_method)
-                    # gr = np.linalg.norm(g[self.Dofs.Free])
-                    # if gr < best_gr:
-                    #     best_gr = gr
-                    #     self.Geo = geo_copy
-                    #     logger.info(f'Best gr: {best_gr}')
-                    #     for key, energy in energies.items():
-                    #         logger.info(f"{key}: {energy}")
+                    self.Geo = smoothing_cell_surfaces_mesh(geo_copy, cells_involved_intercalation)
+                    screenshot_(self.Geo, os.path.join(self.Set.output_dir, 'remodeling'), num_step)
 
                     self.Geo.update_measures()
                     for cell in cells_involved_intercalation:
                         self.Geo.Cells[cell].Vol0 = self.Geo.Cells[cell].Vol
+                        self.Geo.Cells[cell].lambda_r_perc = self.Geo.Cells[cell].lambda_r_perc * 0.95
 
                     has_converged = self.check_if_will_converge(self.Geo.copy())
                 else:
@@ -424,7 +361,7 @@ class Remodelling:
         # else:
         #     return False
 
-        for _ in range(60):
+        for _ in range(20):
             best_geo, dy, gr, g = newton_raphson_iteration_explicit(best_geo, self.Set, self.Dofs.Free, dy, g)
             print(f'Previous gr: {previous_gr}, gr: {gr}')
             if np.all(~np.isnan(g[self.Dofs.Free])) and np.all(~np.isnan(dy[self.Dofs.Free])):
