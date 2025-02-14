@@ -213,58 +213,52 @@ def smoothing_cell_surfaces_mesh(Geo, cells_intercalated, backup_vars, location=
                     face.Centre = x_2d[id_face]
                     id_face += 1
 
-            # # Get the apical side of the cells that intercalated
-            # backup_geo = backup_vars['Geo_b']
-            # for num_cell in cells_intercalated:
-            #     # Top intercalation
-            #     if location == 'Top':
-            #         surface_Ys = backup_geo.Cells[num_cell].Y[
-            #             np.any(np.isin(backup_geo.Cells[num_cell].T, Geo.XgTop), axis=1)]
-            #         # Add surface Ys of the face centres
-            #         for face in backup_geo.Cells[num_cell].Faces:
-            #             if get_interface(face.InterfaceType) == get_interface('Top'):
-            #                 surface_Ys = np.vstack((surface_Ys, face.Centre))
-            #                 for tri in face.Tris:
-            #                     location_1 = backup_geo.Cells[num_cell].Y[tri.Edge[0]]
-            #                     location_2 = backup_geo.Cells[num_cell].Y[tri.Edge[1]]
-            #                     location_3 = face.Centre
-            #
-            #                     # Create a weight array with several combination of weights all adding up to 1
-            #                     num_weights = 10
-            #                     weights = np.array([np.linspace(0, 1, num_weights), np.linspace(0, 1, num_weights),
-            #                                         np.linspace(0, 1, num_weights)])
-            #                     # Create a meshgrid of the weights
-            #                     weights_meshgrid = np.meshgrid(weights[0], weights[1], weights[2])
-            #                     # Reshape the meshgrid to a 3xN array
-            #                     weights_combinations = np.vstack(
-            #                         [weights_meshgrid[0].ravel(), weights_meshgrid[1].ravel(),
-            #                          weights_meshgrid[2].ravel()]).T
-            #                     # Remove the combinations that do not add up to 1
-            #                     weights_combinations = weights_combinations[np.sum(weights_combinations, axis=1) == 1]
-            #                     # Get the new surface Ys
-            #                     new_surface_Ys = np.dot(weights_combinations, [location_1, location_2, location_3])
-            #
-            #                     surface_Ys = np.vstack((surface_Ys, new_surface_Ys))
-            #     # Bottom intercalation
-            #     else:
-            #         surface_Ys = backup_geo.Cells[num_cell].Y[
-            #             np.any(np.isin(backup_geo.Cells[num_cell].T, Geo.XgBottom), axis=1)]
-            #         # Add surface Ys of the face centres
-            #         for face in backup_geo.Cells[num_cell].Faces:
-            #             if get_interface(face.InterfaceType) == get_interface('Bottom'):
-            #                 surface_Ys = np.vstack((surface_Ys, face.Centre))
-            #                 for tri in face.Tris:
-            #                     surface_Ys = np.vstack((surface_Ys, np.mean([backup_geo.Cells[num_cell].Y[tri.Edge[0]],
-            #                                                                  backup_geo.Cells[num_cell].Y[tri.Edge[1]],
-            #                                                                  face.Centre], axis=0)))
-            #
-            #     # Move the Z position of the apical intercalated cells to the closest Z position of the
-            #     # apical cells before the intercalation
-            #     for vertex_id, vertex in enumerate(Geo.Cells[num_cell].Y):
-            #         if np.any(np.isin(Geo.Cells[num_cell].T[vertex_id], Geo.XgTop)):
-            #             # Closest vertex in terms of X,Y
-            #             closest_vertex = surface_Ys[np.argmin(np.linalg.norm(surface_Ys[:, 0:2] - vertex[0:2], axis=1))]
-            #             Geo.Cells[num_cell].Y[vertex_id, 2] = closest_vertex[2]
+            # Get the apical side of the cells that intercalated
+            backup_geo = backup_vars['Geo_b']
+            for num_cell in cells_intercalated:
+                # Top intercalation
+                if location == 'Top':
+                    surface_Ys = backup_geo.Cells[num_cell].Y[
+                        np.any(np.isin(backup_geo.Cells[num_cell].T, Geo.XgTop), axis=1)]
+                    # Add surface Ys of the face centres
+                    for face in backup_geo.Cells[num_cell].Faces:
+                        if get_interface(face.InterfaceType) == get_interface('Top'):
+                            surface_Ys = np.vstack((surface_Ys, face.Centre))
+                            for tri in face.Tris:
+                                location_1 = backup_geo.Cells[num_cell].Y[tri.Edge[0]]
+                                location_2 = backup_geo.Cells[num_cell].Y[tri.Edge[1]]
+                                location_3 = face.Centre
+
+                                # Create a weight array with several combination of weights all adding up to 1
+                                num_weights = 10
+                                weights = np.array([np.linspace(0, 1, num_weights), np.linspace(0, 1, num_weights),
+                                                    np.linspace(0, 1, num_weights)])
+                                # Create a meshgrid of the weights
+                                weights_meshgrid = np.meshgrid(weights[0], weights[1], weights[2])
+                                # Reshape the meshgrid to a 3xN array
+                                weights_combinations = np.vstack(
+                                    [weights_meshgrid[0].ravel(), weights_meshgrid[1].ravel(),
+                                     weights_meshgrid[2].ravel()]).T
+                                # Remove the combinations that do not add up to 1
+                                weights_combinations = weights_combinations[np.sum(weights_combinations, axis=1) == 1]
+                                # Get the new surface Ys
+                                new_surface_Ys = np.dot(weights_combinations, [location_1, location_2, location_3])
+
+                                surface_Ys = np.vstack((surface_Ys, new_surface_Ys))
+
+                # Move the Z position of the apical intercalated cells to the closest Z position of the
+                # apical cells before the intercalation
+                for vertex_id, vertex in enumerate(Geo.Cells[num_cell].Y):
+                    if np.any(np.isin(Geo.Cells[num_cell].T[vertex_id], Geo.XgTop)):
+                        # Closest vertex in terms of X,Y
+                        closest_vertex = surface_Ys[np.argmin(np.linalg.norm(surface_Ys[:, 0:2] - vertex[0:2], axis=1))]
+                        Geo.Cells[num_cell].Y[vertex_id, 2] = closest_vertex[2]
+
+                        for face in Geo.Cells[num_cell].Faces:
+                            if get_interface(face.InterfaceType) == get_interface('Top'):
+                                closest_vertex = surface_Ys[
+                                    np.argmin(np.linalg.norm(surface_Ys[:, 0:2] - face.Centre[0:2], axis=1))]
+                                face.Centre[2] = closest_vertex[2]
 
             #face_centres_to_middle_of_neighbours_vertices(Geo, cell_intercalated, filter_location=location)
 
