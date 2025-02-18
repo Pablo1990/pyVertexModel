@@ -13,6 +13,7 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.edge_length_threshold = None
         self.kCeiling = None
         self.Contractility_external_axis = None
         self.export_images = None
@@ -257,7 +258,7 @@ class Set:
 
     def wing_disc(self):
         self.InputGeo = 'VertexModelTime'
-        #self.initial_filename_state = 'Input/data_step_68.pkl'
+        #self.initial_filename_state = 'Input/wing_disc_cuboidal_150.mat'
         # 40 cells 3 cells to ablate
         # 110 cells 7 cells to ablate
         self.TotalCells = 150
@@ -298,21 +299,22 @@ class Set:
         # Brownian motion
         self.brownian_motion = False
         self.brownian_motion_scale = 0
-        self.noise_random = 0.15
+        self.noise_random = 0
 
         # Remodelling
         self.Remodelling = True
         # How big or small the edge to remodel
         # 0.15 is 15% of average the edge. This is a threshold to remodel the edge
         if self.Remodelling:
-            self.RemodelStiffness = 0.67
+            self.RemodelStiffness = 0.7
+            self.edge_length_threshold = 0.3
         else:
             self.RemodelStiffness = 2
 
         # Surface Area
         self.ref_A0 = 0.92
         # Top
-        self.lambdaS1 = 1.4
+        self.lambdaS1 = 1.4#*0.9
         # c_cell-c_cell
         self.lambdaS2 = self.lambdaS1 / 100
         # Bottom
@@ -322,7 +324,7 @@ class Set:
 
         # VTK
         self.VTK = False
-        self.export_images = False
+        self.export_images = True
 
         # Implicit vs Explicit
         self.implicit_method = False

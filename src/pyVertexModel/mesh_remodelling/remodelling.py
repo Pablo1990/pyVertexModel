@@ -601,6 +601,33 @@ class Remodelling:
                 segment_features_filtered = pd.concat(
                     [segment_features_filtered, pd.DataFrame(segment_feature).transpose()], ignore_index=True)
 
+        # Search the shortest edge to intercalate
+        while segment_features_filtered.empty is False:
+            shortest_segment = segment_features_filtered.iloc[0]
+
+            if self.Geo.Cells[shortest_segment['cell_to_split_from']].AliveStatus == 1 or \
+                    shortest_segment['node_pair_g'] not in self.Geo.XgTop:
+                # Drop the first element of the segment features
+                segment_features_filtered = segment_features_filtered.drop(segment_features_filtered.index[shortest_segment['edge_length'] == segment_features_filtered['edge_length']])
+            else:
+                segment_features_filtered = segment_features_filtered.drop(segment_features_filtered.index[shortest_segment['edge_length'] != segment_features_filtered['edge_length']])
+
+                for num_segment, segment in segment_features_filtered.iterrows():
+                    c_face, _ = get_faces_from_node(self.Geo, [segment['num_cell'], segment['node_pair_g']])
+                    shared_neighbours_cells = [segment['num_cell'], segment['cell_to_split_from']]
+                    for tri in c_face[0].Tris:
+                        if np.all(np.isin(shared_neighbours_cells, tri.SharedByCells)):
+                            tri.is_commited_to_intercalate = True
+                            break
+
+                if shortest_segment['edge_length'] >= 1: #self.Set.edge_length_threshold:
+                    segment_features_filtered = segment_features_filtered.drop(segment_features_filtered.index[
+                                                                                   shortest_segment[
+                                                                                       'edge_length'] ==
+                                                                                   segment_features_filtered[
+                                                                                       'edge_length']])
+                break
+
         return segment_features_filtered
 
     def check_edges_to_intercalate(self, edge_lengths, num_cell, segment_features, ghost_node_id):

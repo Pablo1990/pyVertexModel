@@ -23,6 +23,7 @@ class Tris:
         self.lambda_r_noise = None
         self.lambda_b_noise = None
         self.k_substrate_noise = None
+        self.is_commited_to_intercalate = False
         if mat_file is None or mat_file[0].shape[0] == 0:
             self.Edge = []
             self.SharedByCells = []
