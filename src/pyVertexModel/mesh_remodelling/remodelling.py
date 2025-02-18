@@ -161,6 +161,12 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
                 Geo.Cells[current_cell].Faces[face_id].Centre = (
                         ref_point_closer[0] * (1 - weight) + face_centre * weight)
 
+    #move_scutoid_vertex(Geo, cell_nodes_shared, close_to_new_point, ref_point_closer)
+
+    return Geo, ref_point_closer
+
+
+def move_scutoid_vertex(Geo, cell_nodes_shared, close_to_new_point, ref_point_closer):
     # Move the middle vertex of the tetrahedra that share the ghost node closer to the reference point
     for current_cell in cell_nodes_shared:
         middle_vertex_tet = np.all(np.isin(Geo.Cells[current_cell].T, cell_nodes_shared), axis=1)
@@ -170,8 +176,6 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
         weight = close_to_new_point
         Geo.Cells[current_cell].Y[middle_vertex_tet] = ref_point_closer * (1 - weight) + \
                                                        Geo.Cells[current_cell].Y[middle_vertex_tet] * weight
-
-    return Geo
 
 
 def smoothing_cell_surfaces_mesh(Geo, cells_intercalated, backup_vars, location='Top'):
@@ -203,7 +207,7 @@ def smoothing_cell_surfaces_mesh(Geo, cells_intercalated, backup_vars, location=
             boundary_ids = np.where(np.sum(np.isin(Geo.Cells[cell_intercalated].T, Geo.XgID),
                                                axis=1) < 3)[0]
 
-            x_2d = laplacian_smoothing(x_2d, np.array(triangles), boundary_ids, iteration_count=1000)
+            x_2d = laplacian_smoothing(x_2d, np.array(triangles), boundary_ids, iteration_count=1)
             # Update the 3D coordinates of the vertices of the cell
             Geo.Cells[cell_intercalated].Y = x_2d[0:starting_length]
             id_face = starting_length
@@ -260,7 +264,7 @@ def smoothing_cell_surfaces_mesh(Geo, cells_intercalated, backup_vars, location=
                                     np.argmin(np.linalg.norm(surface_Ys[:, 0:2] - face.Centre[0:2], axis=1))]
                                 face.Centre[2] = closest_vertex[2]
 
-            #face_centres_to_middle_of_neighbours_vertices(Geo, cell_intercalated, filter_location=location)
+            face_centres_to_middle_of_neighbours_vertices(Geo, cell_intercalated, filter_location=location)
 
     return Geo
 
@@ -333,13 +337,13 @@ class Remodelling:
 
                 if len(np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])) > 3:
                     how_close_to_vertex = 0.01
-                    geo_copy = (
+                    geo_copy, reference_point = (
                         move_vertices_closer_to_ref_point(self.Geo.copy(), how_close_to_vertex,
                                                           np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
                                                           cellToSplitFrom, ghostNode, allTnew, self.Set))
                     cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
                                                   and cell.AliveStatus == 1]
-                    screenshot_(geo_copy, self.Set, 0, 'after_remodelling', self.Set.OutputFolder + '/images')
+                    #screenshot_(geo_copy, self.Set, 0, 'after_remodelling', self.Set.OutputFolder + '/images')
 
                     # Equidistant vertices on the edges of the three cells
                     for cell in cellNodesShared:
@@ -363,7 +367,7 @@ class Remodelling:
                         extreme_of_edge_ys = all_ys_cell[np.sum(np.isin(all_tets_cell, geo_copy.XgID), axis=1) == 1]
                         extreme_of_edge_ys = extreme_of_edge_ys[np.sum(np.isin(extreme_of_edge, [segmentFeatures['num_cell'], cell]), axis=1) == 2]
 
-                        tets_sharing_two_cells = np.sum(np.isin(all_tets_cell, [segmentFeatures['num_cell'], cell]), axis=1) == 2
+                        tets_sharing_two_cells = (np.sum(np.isin(all_tets_cell, [segmentFeatures['num_cell'], cell]), axis=1) == 2) & (np.sum(np.isin(all_tets_cell, geo_copy.XgID), axis=1) == 2)
                         vertices_to_equidistant_move = all_ys_cell[tets_sharing_two_cells]
                         ids_two_cells = ids[tets_sharing_two_cells]
 
@@ -378,7 +382,7 @@ class Remodelling:
                         # Order the vertices to be equidistant to one of the extreme vertices
                         distances = []
                         for vertex in vertices_to_equidistant_move:
-                            distances.append(compute_distance_3d(extreme_of_edge_ys[0], vertex))
+                            distances.append(compute_distance_3d(extreme_of_edge_ys[1], vertex))
 
                         ids_sorted = np.argsort(distances)
                         ids_two_cells_sorted = ids_two_cells[ids_sorted]
@@ -388,22 +392,35 @@ class Remodelling:
                         # Update the vertices of the other cell
                         tets_to_replicate = geo_copy.Cells[cell].T[ids_two_cells_sorted]
                         for id_tet, tet_to_replicate in enumerate(tets_to_replicate):
-                            found_tet = ismember_rows(tet_to_replicate, geo_copy.Cells[segmentFeatures['num_cell']].T)[0]
+                            found_tet = ismember_rows(geo_copy.Cells[segmentFeatures['num_cell']].T, tet_to_replicate)[0]
                             if not np.any(found_tet):
                                 continue
                             geo_copy.Cells[segmentFeatures['num_cell']].Y[found_tet, :] = new_equidistant_vertices[id_tet]
 
-                    screenshot_(geo_copy, self.Set, 0, 'after_remodelling_', self.Set.OutputFolder + '/images')
+                    #screenshot_(geo_copy, self.Set, 0, 'after_remodelling_', self.Set.OutputFolder + '/images')
 
-                    self.Geo = smoothing_cell_surfaces_mesh(geo_copy, cells_involved_intercalation, backup_vars)
+                    geo_copy = smoothing_cell_surfaces_mesh(geo_copy, cells_involved_intercalation, backup_vars)
 
-                    screenshot_(self.Geo, self.Set, 0, 'after_remodelling__', self.Set.OutputFolder + '/images')
-                    Exception('Stop')
+                    screenshot_(geo_copy, self.Set, 0, 'after_remodelling__', self.Set.OutputFolder + '/images')
 
-                    self.Geo.update_measures()
-                    for cell in cells_involved_intercalation:
-                        self.Geo.Cells[cell].Vol0 = self.Geo.Cells[cell].Vol
-                        self.Geo.Cells[cell].lambda_r_perc = self.Geo.Cells[cell].lambda_r_perc * 0.95
+                    past_volumes = [cell.Vol for cell in backup_vars['Geo_b'].Cells if cell.ID in cells_involved_intercalation]
+
+                    volume_distances = []
+                    weights = np.arange(-1, 1.1, 0.1)
+                    for weight in weights:
+                        geo_vol_changed = geo_copy.copy()
+                        move_scutoid_vertex(geo_vol_changed, np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]), weight, reference_point)
+                        geo_vol_changed.update_measures()
+                        new_volumes = [cell.Vol for cell in geo_vol_changed.Cells if cell.ID in cells_involved_intercalation]
+                        volume_distances.append(np.sum(np.abs(np.array(past_volumes) - np.array(new_volumes))))
+
+                    weight = weights[np.argmin(volume_distances)]
+
+                    self.Geo = geo_copy
+
+                    #for cell in cells_involved_intercalation:
+                    #     self.Geo.Cells[cell].Vol0 = self.Geo.Cells[cell].Vol * 0.5 + self.Geo.Cells[cell].Vol0 * 0.5
+                    #     #self.Geo.Cells[cell].lambda_r_perc = self.Geo.Cells[cell].lambda_r_perc * 0
 
                     has_converged = self.check_if_will_converge(self.Geo.copy())
                 else:
@@ -451,8 +468,9 @@ class Remodelling:
         # else:
         #     return False
 
-        for _ in range(20):
+        for n_iter in range(20):
             best_geo, dy, gr, g = newton_raphson_iteration_explicit(best_geo, self.Set, self.Dofs.Free, dy, g)
+            screenshot_(best_geo, self.Set, 0, 'after_remodelling_' + str(n_iter), self.Set.OutputFolder + '/images')
             print(f'Previous gr: {previous_gr}, gr: {gr}')
             if np.all(~np.isnan(g[self.Dofs.Free])) and np.all(~np.isnan(dy[self.Dofs.Free])):
                 pass
