@@ -209,10 +209,13 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g, selected_cells=None)
     dy = map_vertices_periodic_boundaries(Geo, dy)
 
     dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
+
     Geo.update_vertices(dy_reshaped, selected_cells)
     Geo.update_measures()
 
     g, energies = gGlobal(Geo, Geo, Geo, Set, Set.implicit_method)
+    for key, energy in energies.items():
+        logger.info(f"{key}: {energy}")
     g[g_constrained] = 0
     gr = np.linalg.norm(g[dof])
     Set.iter = Set.MaxIter
@@ -564,92 +567,3 @@ def gGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
         energies["Substrate"] = kg_subs.energy
 
     return g, energies
-
-
-def remeshing_cells(Geo_0, Geo_n, Geo, Dofs, Set, cells_to_change, ghost_node):
-    """
-    Newton-Raphson method
-    :param Geo_0:
-    :param Geo_n:
-    :param Geo:
-    :param Dofs:
-    :param Set:s
-    :return:
-    """
-
-    def objective_function(dy, dof):
-        # Reshape dy to match the geometry of the system
-        dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
-
-        # Create a copy of Geo to not change the original one
-        Geo_copy = Geo.copy()
-
-        # Update the vertices in the copy
-        Geo_copy.update_vertices(dy_reshaped)
-
-        # Update the measures in the copy
-        Geo_copy.update_measures()
-
-        # Compute the energies
-        g, _, energy_total, _ = KgGlobal(Geo_0, Geo_n, Geo_copy, Set)
-
-        logger.info('Energy: ' + str(energy_total))
-        gr = np.linalg.norm(g[dof])
-        logger.info('||gr||= ' + str(gr))
-
-        # Return the total energy
-        return gr
-
-    def gradient_function(dy, dof):
-        # Reshape dy to match the geometry of the system
-        dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
-
-        # Create a copy of Geo to not change the original one
-        Geo_copy = Geo.copy()
-
-        # Update the vertices in the copy
-        Geo_copy.update_vertices(dy_reshaped)
-
-        # Update the measures in the copy
-        Geo_copy.update_measures()
-
-        # Compute the energies
-        g, _, _, _ = KgGlobal(Geo_0, Geo_n, Geo_copy, Set)
-
-        g[dof == False] = 0
-
-        # Return the gradient
-        return g.flatten()
-
-    Geo.remeshing = True
-
-    if np.isin(ghost_node, Geo.XgBottom).any():
-        interface_type = 2
-    elif np.isin(ghost_node, Geo.XgTop).any():
-        interface_type = 0
-
-    Dofs.get_remeshing_dofs(Geo, cells_to_change, interface_type)
-
-    # Set the degrees of freedom
-    dof = Dofs.remeshing
-
-    dy_initial = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3, dtype=np.float64)
-    g, K, _, _ = KgGlobal(Geo_0, Geo_n, Geo, Set)
-    dy_initial[dof] = ml_divide(K, dof, g)
-
-    lower_bounds = np.zeros_like(dy_initial)
-    upper_bounds = 10e-1 * np.ones_like(dy_initial)
-    bounds = Bounds(lower_bounds, upper_bounds)
-
-    result = minimize(
-        fun=objective_function,  # Defined as before
-        x0=dy_initial,
-        args=(dof,),
-        method='L-BFGS-B',  # Newton-CG
-        jac=gradient_function,
-        bounds=bounds,
-        options={'disp': True}
-    )
-
-    dy_reshaped = np.reshape(result.x, (Geo.numF + Geo.numY + Geo.nCells, 3))
-    return dy_reshaped
