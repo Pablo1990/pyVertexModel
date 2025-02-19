@@ -616,13 +616,19 @@ class Remodelling:
                 nodes_neighbours_g = nodes_neighbours[np.isin(nodes_neighbours, self.Geo.XgID)]
                 shared_neighbours_cells = [shortest_segment['num_cell'], shortest_segment['cell_to_split_from']]
 
+                time_to_intercalate = False
+
                 for node_neighbour_g in nodes_neighbours_g:
                     c_face, _ = get_faces_from_node(self.Geo, [shortest_segment['num_cell'], node_neighbour_g])
                     for tri in c_face[0].Tris:
                         if np.all(np.isin(shared_neighbours_cells, tri.SharedByCells)):
+                            if 'is_commited_to_intercalate' in tri.__dict__:
+                                if tri.is_commited_to_intercalate:
+                                    time_to_intercalate = True
+                                    continue
                             tri.is_commited_to_intercalate = True
 
-                if shortest_segment['edge_length'] >= 5: #self.Set.edge_length_threshold:
+                if not time_to_intercalate: #self.Set.edge_length_threshold:
                     segment_features_filtered = segment_features_filtered.drop(segment_features_filtered.index[
                                                                                    shortest_segment[
                                                                                        'edge_length'] ==
