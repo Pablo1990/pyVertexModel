@@ -622,7 +622,7 @@ class Remodelling:
                         if np.all(np.isin(shared_neighbours_cells, tri.SharedByCells)):
                             tri.is_commited_to_intercalate = True
 
-                if shortest_segment['edge_length'] >= 1: #self.Set.edge_length_threshold:
+                if shortest_segment['edge_length'] >= 5: #self.Set.edge_length_threshold:
                     segment_features_filtered = segment_features_filtered.drop(segment_features_filtered.index[
                                                                                    shortest_segment[
                                                                                        'edge_length'] ==
