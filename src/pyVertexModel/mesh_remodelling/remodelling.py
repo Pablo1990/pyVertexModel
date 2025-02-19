@@ -612,13 +612,15 @@ class Remodelling:
             else:
                 segment_features_filtered = segment_features_filtered.drop(segment_features_filtered.index[shortest_segment['edge_length'] != segment_features_filtered['edge_length']])
 
-                for num_segment, segment in segment_features_filtered.iterrows():
-                    c_face, _ = get_faces_from_node(self.Geo, [segment['num_cell'], segment['node_pair_g']])
-                    shared_neighbours_cells = [segment['num_cell'], segment['cell_to_split_from']]
+                nodes_neighbours = get_node_neighbours_per_domain(self.Geo, shortest_segment['num_cell'], shortest_segment['node_pair_g'], main_node=shortest_segment['cell_to_split_from'])
+                nodes_neighbours_g = nodes_neighbours[np.isin(nodes_neighbours, self.Geo.XgID)]
+                shared_neighbours_cells = [shortest_segment['num_cell'], shortest_segment['cell_to_split_from']]
+
+                for node_neighbour_g in nodes_neighbours_g:
+                    c_face, _ = get_faces_from_node(self.Geo, [shortest_segment['num_cell'], node_neighbour_g])
                     for tri in c_face[0].Tris:
                         if np.all(np.isin(shared_neighbours_cells, tri.SharedByCells)):
                             tri.is_commited_to_intercalate = True
-                            break
 
                 if shortest_segment['edge_length'] >= 1: #self.Set.edge_length_threshold:
                     segment_features_filtered = segment_features_filtered.drop(segment_features_filtered.index[
