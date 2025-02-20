@@ -282,6 +282,9 @@ def correct_edge_vertices(allTnew, cellNodesShared, geo_copy, segmentFeatures):
         if geo_copy.Cells[cell].AliveStatus == 0:
             continue
 
+        cell_centroid_top = np.mean(geo_copy.Cells[cell].Y[np.any(np.isin(geo_copy.Cells[cell].T, geo_copy.XgTop), axis=1)],
+                                    axis=0)
+
         all_tets_cell = geo_copy.Cells[cell].T
         all_ys_cell = geo_copy.Cells[cell].Y
         ids = []
@@ -322,6 +325,9 @@ def correct_edge_vertices(allTnew, cellNodesShared, geo_copy, segmentFeatures):
         ids_sorted = np.argsort(distances)
         ids_two_cells_sorted = ids_two_cells[ids_sorted]
 
+        # Correct X-Y coordinates with the cell centroid
+        new_equidistant_vertices = [0.8 * vertex + 0.2 * cell_centroid_top for vertex in new_equidistant_vertices]
+
         geo_copy.Cells[cell].Y[ids_two_cells_sorted, :] = new_equidistant_vertices
 
         # Update the vertices of the other cell
@@ -331,6 +337,8 @@ def correct_edge_vertices(allTnew, cellNodesShared, geo_copy, segmentFeatures):
             if not np.any(found_tet):
                 continue
             geo_copy.Cells[segmentFeatures['num_cell']].Y[found_tet, :] = new_equidistant_vertices[id_tet]
+
+
 
 
 class Remodelling:
@@ -414,25 +422,16 @@ class Remodelling:
                     geo_copy = smoothing_cell_surfaces_mesh(geo_copy, cells_involved_intercalation, backup_vars)
                     screenshot_(geo_copy, self.Set, 0, 'after_remodelling_', self.Set.OutputFolder + '/images')
 
-                    # past_volumes = [cell.Vol for cell in backup_vars['Geo_b'].Cells if cell.ID in cells_involved_intercalation]
-                    #
-                    # volume_distances = []
-                    # weights = np.arange(-1, 1.1, 0.1)
-                    # for weight in weights:
-                    #     geo_vol_changed = geo_copy.copy()
-                    #     move_scutoid_vertex(geo_vol_changed, np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]), weight, reference_point)
-                    #     geo_vol_changed.update_measures()
-                    #     new_volumes = [cell.Vol for cell in geo_vol_changed.Cells if cell.ID in cells_involved_intercalation]
-                    #     volume_distances.append(np.sum(np.abs(np.array(past_volumes) - np.array(new_volumes))))
-                    #
-                    # weight = weights[np.argmin(volume_distances)]
-
                     self.Geo = geo_copy
+                    self.Geo.update_measures()
 
-                    # Get the relation between Vol0 and Vol from the backup_vars
-                    for cell in backup_vars['Geo_b'].Cells:
-                        if cell.ID in cells_involved_intercalation:
-                            self.Geo.Cells[cell.ID].Vol0 = self.Geo.Cells[cell.ID].Vol * cell.Vol0 / cell.Vol
+                    # # Get the relation between Vol0 and Vol from the backup_vars
+                    # for cell in backup_vars['Geo_b'].Cells:
+                    #     # if cell.ID == segmentFeatures['num_cell']:
+                    #     #     continue
+                    #     if cell.ID in cells_involved_intercalation:
+                    #         self.Geo.Cells[cell.ID].Vol0 = self.Geo.Cells[cell.ID].Vol * cell.Vol0 / cell.Vol
+                    #         #self.Geo.Cells[cell.ID].lambda_r_perc = cell.lambda_r_perc
 
                     has_converged = self.check_if_will_converge(self.Geo.copy())
                 else:
@@ -602,8 +601,9 @@ class Remodelling:
                     [segment_features_filtered, pd.DataFrame(segment_feature).transpose()], ignore_index=True)
 
         # Search the shortest edge to intercalate
-        while segment_features_filtered.empty is False:
-            shortest_segment = segment_features_filtered.iloc[0]
+        num_segment = 0
+        while segment_features_filtered.empty is False and num_segment < segment_features_filtered.shape[0]:
+            shortest_segment = segment_features_filtered.iloc[num_segment]
 
             if self.Geo.Cells[shortest_segment['cell_to_split_from']].AliveStatus == 1 or \
                     shortest_segment['node_pair_g'] not in self.Geo.XgTop:
@@ -634,7 +634,7 @@ class Remodelling:
                                                                                        'edge_length'] ==
                                                                                    segment_features_filtered[
                                                                                        'edge_length']])
-                break
+            num_segment += 1
 
         return segment_features_filtered
 
