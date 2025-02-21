@@ -13,6 +13,7 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.deform_array_Z = None
         self.edge_length_threshold = None
         self.kCeiling = None
         self.Contractility_external_axis = None
@@ -258,12 +259,12 @@ class Set:
 
     def wing_disc(self):
         self.InputGeo = 'VertexModelTime'
-        #self.initial_filename_state = 'Input/wing_disc_cuboidal_150.mat'
-        # 40 cells 3 cells to ablate
-        # 110 cells 7 cells to ablate
+        #self.initial_filename_state = 'Input/cuboidal_cells.pkl'
         self.TotalCells = 150
         # per 1 micrometer of diameter on the top side of the cell
         self.CellHeight = 15
+        # Cell deformation based on 3 diameter / 45 microns of height
+        #self.deform_array_Z = 0.85  # Cuboidal
         # Tend is the final time of the simulation
         self.tend = 60+20
         # Nincr is the number of increments
@@ -314,7 +315,7 @@ class Set:
         # Surface Area
         self.ref_A0 = 0.92
         # Top
-        self.lambdaS1 = 1.4#*0.9
+        self.lambdaS1 = 1.4 #* 0.1
         # c_cell-c_cell
         self.lambdaS2 = self.lambdaS1 / 100
         # Bottom
