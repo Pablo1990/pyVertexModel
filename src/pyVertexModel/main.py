@@ -16,9 +16,8 @@ else:
     debugging = True
     vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
     if debugging:
-        output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/fix_remodelling/')
-        # output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/'
-        #                                                 '60_mins_Rok/')
+        output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/final_results/'
+                                                        '60_mins_Rok/')
         # Sorted by date file
         name_last_pkl_file = sorted(
             [f for f in os.listdir(output_folder) if f.endswith('.pkl') and not 'before_remodelling' in f and f.startswith('data_step_')],
