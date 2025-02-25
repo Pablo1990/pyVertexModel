@@ -5,7 +5,9 @@ import numpy as np
 import pandas as pd
 from numpy.ma.extras import setdiff1d
 
-from src.pyVertexModel.algorithm.newtonRaphson import gGlobal, newton_raphson_iteration_explicit
+from src.pyVertexModel.algorithm.newtonRaphson import gGlobal, newton_raphson_iteration_explicit, \
+    newton_raphson_iteration, KgGlobal
+from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours_vertices
 from src.pyVertexModel.geometry.face import get_interface
 from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
@@ -160,6 +162,12 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
                 Geo.Cells[current_cell].Faces[face_id].Centre = (
                         ref_point_closer[0] * (1 - weight) + face_centre * weight)
 
+    #move_scutoid_vertex(Geo, cell_nodes_shared, close_to_new_point, ref_point_closer)
+
+    return Geo, ref_point_closer
+
+
+def move_scutoid_vertex(Geo, cell_nodes_shared, close_to_new_point, ref_point_closer):
     # Move the middle vertex of the tetrahedra that share the ghost node closer to the reference point
     for current_cell in cell_nodes_shared:
         middle_vertex_tet = np.all(np.isin(Geo.Cells[current_cell].T, cell_nodes_shared), axis=1)
@@ -170,10 +178,8 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
         Geo.Cells[current_cell].Y[middle_vertex_tet] = ref_point_closer * (1 - weight) + \
                                                        Geo.Cells[current_cell].Y[middle_vertex_tet] * weight
 
-    return Geo
 
-
-def smoothing_cell_surfaces_mesh(Geo, cells_intercalated, location='Top'):
+def smoothing_cell_surfaces_mesh(Geo, cells_intercalated, backup_vars, location='Top'):
     """
     Smoothing the cell surfaces mesh.
     :param Geo:
@@ -183,84 +189,156 @@ def smoothing_cell_surfaces_mesh(Geo, cells_intercalated, location='Top'):
     for cell_intercalated in cells_intercalated:
         if Geo.Cells[cell_intercalated].AliveStatus == 1:
             # Get the 2D coordinates of the vertices of the cell
-            x_2d = Geo.Cells[cell_intercalated].Y[:, 0:2]
-
-            # Get the neighbouring cells depending on location
-            if location == 'Top':
-                node_neighbours = get_node_neighbours_per_domain(Geo, cell_intercalated, Geo.XgTop[0])
-            elif location == 'Bottom':
-                node_neighbours = get_node_neighbours_per_domain(Geo, cell_intercalated, Geo.XgBottom[0])
-
-            # Get the vertices of the neighbouring cells that are alive
-            vertices_neighbours = np.unique(np.concatenate([Geo.Cells[cell_neighbour].Y for cell_neighbour in
-                                                            node_neighbours if Geo.Cells[cell_neighbour].AliveStatus == 1]))
-
-            # # Create a boundary around the neighbouring cells to avoid moving the vertices outside the cell
-            # outside_boundary = []
-            # for cell_neighbour in node_neighbours:
-            #     if Geo.Cells[cell_neighbour].AliveStatus == 1:
-            #         if location == 'Top':
-            #             outside_boundary.append(Geo.Cells[cell_neighbour].Y[np.any(np.isin(Geo.Cells[cell_neighbour].T, cell_intercalated), axis=1) & np.any(np.isin(Geo.Cells[cell_neighbour].T, Geo.XgTop), axis=1)])
-            #         elif location == 'Bottom':
-            #             outside_boundary.append(Geo.Cells[cell_neighbour].Y[np.any(np.isin(Geo.Cells[cell_neighbour].T, cell_intercalated), axis=1) & np.any(np.isin(Geo.Cells[cell_neighbour].T, Geo.XgBottom), axis=1)])
-            # outside_boundary = np.concatenate(outside_boundary)
+            x_2d = Geo.Cells[cell_intercalated].Y
 
             triangles = []
+            id_face = len(x_2d)
+            starting_length = len(x_2d)
             for num_face, face in enumerate(Geo.Cells[cell_intercalated].Faces):
                 if ((get_interface(face.InterfaceType) == get_interface('Top') and location == 'Top') or
                         (get_interface(face.InterfaceType) == get_interface('Bottom') and location == 'Bottom')):
+                    x_2d = np.vstack((x_2d, face.Centre))
                     for tri in face.Tris:
                         triangles.append([tri.Edge[0], tri.Edge[1]])
+                        triangles.append([tri.Edge[0], id_face])
+                        triangles.append([tri.Edge[1], id_face])
+                    id_face += 1
 
             boundary_ids = np.where(np.sum(np.isin(Geo.Cells[cell_intercalated].T, Geo.XgID),
                                                axis=1) < 3)[0]
 
-            # Move the x_2d vertices that fall within the neighbouring cells to inside the cell
-            # centroid = np.mean(x_2d, axis=0)
-            # for vertex_id, vertex  in enumerate(x_2d):
-            #     if vertex_id not in boundary_ids:
-            #         # Move the vertex closer to the centroid of the cell
-            #         x_2d[vertex_id] = x_2d[vertex_id] + 0.5 * (centroid - x_2d[vertex_id])
-            #     else:
-            #         pass
-            #         # Boundary vertices should be correspond to a vertex of the outside boundary based on tetrahedra
-            #         # shared by the cell and the neighbouring cells
-
-            x_2d = laplacian_smoothing(x_2d[:, 0:2], np.array(triangles), boundary_ids, iteration_count=10)
-
-            # Correct the z-coordinate of the vertices based on their surrounding vertices
-            for vertex_id, vertex in enumerate(x_2d):
-                # Get the tetrahedron of the vertex
-                tet_vertex = Geo.Cells[cell_intercalated].T[vertex_id]
-
-                # Get which faces are connected to the vertex
-                faces_connected = []
-
-                # Check if the vertex is in the right location
-                if (((not np.any(np.isin(tet_vertex, Geo.XgTop)) and location == 'Top') or
-                        (not np.any(np.isin(tet_vertex, Geo.XgBottom)) and location == 'Bottom')) or
-                        vertex_id in boundary_ids):
-                    continue
-
-                for face in Geo.Cells[cell_intercalated].Faces:
-                    # Check if the face is in the right location
-                    if ((get_interface(face.InterfaceType) == get_interface('Top') and location == 'Top') or
-                            (get_interface(face.InterfaceType) == get_interface('Bottom') and location == 'Bottom')):
-                        # Check if the tet_vertex is in any of the tris of the face
-                        for tri in face.Tris:
-                            if vertex_id in tri.Edge:
-                                faces_connected.append(face)
-                                break
-
-                if len(faces_connected) > 1:
-                    Geo.Cells[cell_intercalated].Y[vertex_id, 2] = np.mean([face.Centre[2] for face in faces_connected])
-
+            x_2d = laplacian_smoothing(x_2d, np.array(triangles), boundary_ids, iteration_count=1)
             # Update the 3D coordinates of the vertices of the cell
-            Geo.Cells[cell_intercalated].Y[:, 0:2] = x_2d[0:len(x_2d)]
+            Geo.Cells[cell_intercalated].Y = x_2d[0:starting_length]
+            id_face = starting_length
+            for num_face, face in enumerate(Geo.Cells[cell_intercalated].Faces):
+                if ((get_interface(face.InterfaceType) == get_interface('Top') and location == 'Top') or
+                        (get_interface(face.InterfaceType) == get_interface('Bottom') and location == 'Bottom')):
+                    face.Centre = x_2d[id_face]
+                    id_face += 1
 
-            #face_centres_to_middle_of_neighbours_vertices(Geo, cell_intercalated, filter_location=location)
+            # Get the apical side of the cells that intercalated
+            backup_geo = backup_vars['Geo_b']
+            for num_cell in cells_intercalated:
+                # Top intercalation
+                if location == 'Top':
+                    surface_Ys = backup_geo.Cells[num_cell].Y[
+                        np.any(np.isin(backup_geo.Cells[num_cell].T, Geo.XgTop), axis=1)]
+                    # Add surface Ys of the face centres
+                    for face in backup_geo.Cells[num_cell].Faces:
+                        if get_interface(face.InterfaceType) == get_interface('Top'):
+                            surface_Ys = np.vstack((surface_Ys, face.Centre))
+                            for tri in face.Tris:
+                                location_1 = backup_geo.Cells[num_cell].Y[tri.Edge[0]]
+                                location_2 = backup_geo.Cells[num_cell].Y[tri.Edge[1]]
+                                location_3 = face.Centre
+
+                                # Create a weight array with several combination of weights all adding up to 1
+                                num_weights = 10
+                                weights = np.array([np.linspace(0, 1, num_weights), np.linspace(0, 1, num_weights),
+                                                    np.linspace(0, 1, num_weights)])
+                                # Create a meshgrid of the weights
+                                weights_meshgrid = np.meshgrid(weights[0], weights[1], weights[2])
+                                # Reshape the meshgrid to a 3xN array
+                                weights_combinations = np.vstack(
+                                    [weights_meshgrid[0].ravel(), weights_meshgrid[1].ravel(),
+                                     weights_meshgrid[2].ravel()]).T
+                                # Remove the combinations that do not add up to 1
+                                weights_combinations = weights_combinations[np.sum(weights_combinations, axis=1) == 1]
+                                # Get the new surface Ys
+                                new_surface_Ys = np.dot(weights_combinations, [location_1, location_2, location_3])
+
+                                surface_Ys = np.vstack((surface_Ys, new_surface_Ys))
+
+                # Move the Z position of the apical intercalated cells to the closest Z position of the
+                # apical cells before the intercalation
+                for vertex_id, vertex in enumerate(Geo.Cells[num_cell].Y):
+                    if np.any(np.isin(Geo.Cells[num_cell].T[vertex_id], Geo.XgTop)):
+                        # Closest vertex in terms of X,Y
+                        closest_vertex = surface_Ys[np.argmin(np.linalg.norm(surface_Ys[:, 0:2] - vertex[0:2], axis=1))]
+                        Geo.Cells[num_cell].Y[vertex_id, 2] = closest_vertex[2]
+
+                        for face in Geo.Cells[num_cell].Faces:
+                            if get_interface(face.InterfaceType) == get_interface('Top'):
+                                closest_vertex = surface_Ys[
+                                    np.argmin(np.linalg.norm(surface_Ys[:, 0:2] - face.Centre[0:2], axis=1))]
+                                face.Centre[2] = closest_vertex[2]
+
+            face_centres_to_middle_of_neighbours_vertices(Geo, cell_intercalated, filter_location=location)
 
     return Geo
+
+
+def correct_edge_vertices(allTnew, cellNodesShared, geo_copy, segmentFeatures):
+    """
+    Correct the vertices of the edges.
+    :param allTnew:
+    :param cellNodesShared:
+    :param geo_copy:
+    :param segmentFeatures:
+    :return:
+    """
+    for cell in cellNodesShared:
+        if geo_copy.Cells[cell].AliveStatus == 0:
+            continue
+
+        cell_centroid_top = np.mean(geo_copy.Cells[cell].Y[np.any(np.isin(geo_copy.Cells[cell].T, geo_copy.XgTop), axis=1)],
+                                    axis=0)
+
+        all_tets_cell = geo_copy.Cells[cell].T
+        all_ys_cell = geo_copy.Cells[cell].Y
+        ids = []
+        if np.any(np.isin(geo_copy.XgTop, allTnew.flatten())):
+            all_ys_cell = all_ys_cell[np.any(np.isin(all_tets_cell, geo_copy.XgTop), axis=1)]
+            ids = np.where(np.any(np.isin(all_tets_cell, geo_copy.XgTop), axis=1))[0]
+            all_tets_cell = all_tets_cell[np.any(np.isin(all_tets_cell, geo_copy.XgTop), axis=1)]
+        elif np.any(np.isin(geo_copy.XgBottom, allTnew.flatten())):
+            ids = np.where(np.any(np.isin(all_tets_cell, geo_copy.XgBottom), axis=1))[0]
+            all_ys_cell = all_ys_cell[np.any(np.isin(all_tets_cell, geo_copy.XgBottom), axis=1)]
+            all_tets_cell = all_tets_cell[np.any(np.isin(all_tets_cell, geo_copy.XgBottom), axis=1)]
+
+        # Obtain the vertices with 3 neighbours that should be in the extremes of the edge
+        extreme_of_edge = all_tets_cell[np.sum(np.isin(all_tets_cell, geo_copy.XgID), axis=1) == 1]
+        extreme_of_edge_ys = all_ys_cell[np.sum(np.isin(all_tets_cell, geo_copy.XgID), axis=1) == 1]
+        extreme_of_edge_ys = extreme_of_edge_ys[
+            np.sum(np.isin(extreme_of_edge, [segmentFeatures['num_cell'], cell]), axis=1) == 2]
+
+        tets_sharing_two_cells = (np.sum(np.isin(all_tets_cell, [segmentFeatures['num_cell'], cell]),
+                                         axis=1) == 2) & (
+                                             np.sum(np.isin(all_tets_cell, geo_copy.XgID), axis=1) == 2)
+        vertices_to_equidistant_move = all_ys_cell[tets_sharing_two_cells]
+        ids_two_cells = ids[tets_sharing_two_cells]
+
+        # Create the number of vertices that are going to be equidistant
+        num_vertices = len(vertices_to_equidistant_move) + 1
+        new_equidistant_vertices = []
+        for vertex_id, vertex in enumerate(vertices_to_equidistant_move):
+            weight = 1 - (vertex_id + 1) / num_vertices
+            new_vertex = extreme_of_edge_ys[1] * weight + extreme_of_edge_ys[0] * (1 - weight)
+            new_equidistant_vertices.append(new_vertex)
+
+        # Order the vertices to be equidistant to one of the extreme vertices
+        distances = []
+        for vertex in vertices_to_equidistant_move:
+            distances.append(compute_distance_3d(extreme_of_edge_ys[1], vertex))
+
+        ids_sorted = np.argsort(distances)
+        ids_two_cells_sorted = ids_two_cells[ids_sorted]
+
+        # Correct X-Y coordinates with the cell centroid
+        new_equidistant_vertices = [0.8 * vertex + 0.2 * cell_centroid_top for vertex in new_equidistant_vertices]
+
+        geo_copy.Cells[cell].Y[ids_two_cells_sorted, :] = new_equidistant_vertices
+
+        # Update the vertices of the other cell
+        tets_to_replicate = geo_copy.Cells[cell].T[ids_two_cells_sorted]
+        for id_tet, tet_to_replicate in enumerate(tets_to_replicate):
+            found_tet = ismember_rows(geo_copy.Cells[segmentFeatures['num_cell']].T, tet_to_replicate)[0]
+            if not np.any(found_tet):
+                continue
+            geo_copy.Cells[segmentFeatures['num_cell']].Y[found_tet, :] = new_equidistant_vertices[id_tet]
+
+
 
 
 class Remodelling:
@@ -330,33 +408,30 @@ class Remodelling:
                 cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
 
                 if len(np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])) > 3:
-                    g, _ = gGlobal(self.Geo, self.Geo, self.Geo, self.Set, self.Set.implicit_method)
-                    best_gr = np.linalg.norm(g[self.Dofs.Free])
-                    #for how_close_to_vertex in np.linspace(0.1, 0.9, 9):
                     how_close_to_vertex = 0.01
-                    geo_copy = (
+                    geo_copy, reference_point = (
                         move_vertices_closer_to_ref_point(self.Geo.copy(), how_close_to_vertex,
-                                                          np.concatenate([[segmentFeatures['num_cell']],
-                                                                          cellNodesShared]),
+                                                          np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
                                                           cellToSplitFrom, ghostNode, allTnew, self.Set))
                     cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
                                                   and cell.AliveStatus == 1]
-                    geo_copy = smoothing_cell_surfaces_mesh(geo_copy, setdiff1d(cells_involved_intercalation,
-                                                                               segmentFeatures['num_cell']))
+                    # Equidistant vertices on the edges of the three cells
+                    correct_edge_vertices(allTnew, cellNodesShared, geo_copy, segmentFeatures)
 
-                    screenshot_(geo_copy, self.Set, -1, 'AfterRemodelling_',
-                                os.path.join(self.Set.OutputFolder, 'images'))
+                    # Smoothing the cell surfaces mesh
+                    geo_copy = smoothing_cell_surfaces_mesh(geo_copy, cells_involved_intercalation, backup_vars)
+                    screenshot_(geo_copy, self.Set, 0, 'after_remodelling_', self.Set.OutputFolder + '/images')
 
-                    g, energies = gGlobal(geo_copy, geo_copy, geo_copy, self.Set, self.Set.implicit_method)
-                    gr = np.linalg.norm(g[self.Dofs.Free])
-                    if gr < best_gr:
-                        best_gr = gr
-                        self.Geo = geo_copy
-                        screenshot_(self.Geo, self.Set, -1, 'AfterRemodelling_',
-                                    os.path.join(self.Set.OutputFolder, 'images'))
-                        logger.info(f'Best gr: {best_gr}')
-                        for key, energy in energies.items():
-                            logger.info(f"{key}: {energy}")
+                    self.Geo = geo_copy
+                    self.Geo.update_measures()
+
+                    # # Get the relation between Vol0 and Vol from the backup_vars
+                    # for cell in backup_vars['Geo_b'].Cells:
+                    #     # if cell.ID == segmentFeatures['num_cell']:
+                    #     #     continue
+                    #     if cell.ID in cells_involved_intercalation:
+                    #         self.Geo.Cells[cell.ID].Vol0 = self.Geo.Cells[cell.ID].Vol * cell.Vol0 / cell.Vol
+                    #         #self.Geo.Cells[cell.ID].lambda_r_perc = cell.lambda_r_perc
 
                     has_converged = self.check_if_will_converge(self.Geo.copy())
                 else:
@@ -404,8 +479,9 @@ class Remodelling:
         # else:
         #     return False
 
-        for _ in range(20):
+        for n_iter in range(20):
             best_geo, dy, gr, g = newton_raphson_iteration_explicit(best_geo, self.Set, self.Dofs.Free, dy, g)
+            screenshot_(best_geo, self.Set, 0, 'after_remodelling_' + str(n_iter), self.Set.OutputFolder + '/images')
             print(f'Previous gr: {previous_gr}, gr: {gr}')
             if np.all(~np.isnan(g[self.Dofs.Free])) and np.all(~np.isnan(dy[self.Dofs.Free])):
                 pass
@@ -475,8 +551,6 @@ class Remodelling:
         # if gr / 100 > self.Set.tol:
         #     has_converged = False
 
-        screenshot_(self.Geo, self.Set, -1, 'AfterRemodelling', os.path.join(self.Set.OutputFolder, 'images'))
-
         return all_tnew, cell_to_split_from, ghost_node, ghost_nodes_tried, has_converged, old_tets
 
     def get_tris_to_remodel_ordered(self):
@@ -525,6 +599,42 @@ class Remodelling:
                     cell_nodes_shared) > 3 and len(np.unique(segment_feature.cell_to_split_from)) == 1:
                 segment_features_filtered = pd.concat(
                     [segment_features_filtered, pd.DataFrame(segment_feature).transpose()], ignore_index=True)
+
+        # Search the shortest edge to intercalate
+        num_segment = 0
+        while segment_features_filtered.empty is False and num_segment < segment_features_filtered.shape[0]:
+            shortest_segment = segment_features_filtered.iloc[num_segment]
+
+            if self.Geo.Cells[shortest_segment['cell_to_split_from']].AliveStatus == 1 or \
+                    shortest_segment['node_pair_g'] not in self.Geo.XgTop:
+                # Drop the first element of the segment features
+                segment_features_filtered = segment_features_filtered.drop(segment_features_filtered.index[shortest_segment['edge_length'] == segment_features_filtered['edge_length']])
+            else:
+                segment_features_filtered = segment_features_filtered.drop(segment_features_filtered.index[shortest_segment['edge_length'] != segment_features_filtered['edge_length']])
+
+                nodes_neighbours = get_node_neighbours_per_domain(self.Geo, shortest_segment['num_cell'], shortest_segment['node_pair_g'], main_node=shortest_segment['cell_to_split_from'])
+                nodes_neighbours_g = nodes_neighbours[np.isin(nodes_neighbours, self.Geo.XgID)]
+                shared_neighbours_cells = [shortest_segment['num_cell'], shortest_segment['cell_to_split_from']]
+
+                time_to_intercalate = False
+
+                for node_neighbour_g in nodes_neighbours_g:
+                    c_face, _ = get_faces_from_node(self.Geo, [shortest_segment['num_cell'], node_neighbour_g])
+                    for tri in c_face[0].Tris:
+                        if np.all(np.isin(shared_neighbours_cells, tri.SharedByCells)):
+                            if 'is_commited_to_intercalate' in tri.__dict__:
+                                if tri.is_commited_to_intercalate:
+                                    time_to_intercalate = True
+                                    continue
+                            tri.is_commited_to_intercalate = True
+
+                if not time_to_intercalate: #self.Set.edge_length_threshold:
+                    segment_features_filtered = segment_features_filtered.drop(segment_features_filtered.index[
+                                                                                   shortest_segment[
+                                                                                       'edge_length'] ==
+                                                                                   segment_features_filtered[
+                                                                                       'edge_length']])
+            num_segment += 1
 
         return segment_features_filtered
 

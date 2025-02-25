@@ -208,6 +208,11 @@ class KgContractility(Kg):
                         # Adding a bit of noise between cells
                         C = C * cell.c_line_tension_perc
 
+                        if 'is_commited_to_intercalate' in currentTri.__dict__:
+                            if currentTri.is_commited_to_intercalate:
+                                #C = C * 2
+                                pass
+
                         # Get the vertices of the edge
                         y_1 = cell.Y[currentTri.Edge[0]]
                         y_2 = cell.Y[currentTri.Edge[1]]

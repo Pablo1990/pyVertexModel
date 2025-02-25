@@ -4,14 +4,14 @@
 # Adapted from https://github.com/UCL-ARC/myriad-python-analysis-example/blob/main/run_analysis.sh
 
 # Request 24 hours of wallclock time (format hours:minutes:seconds).
-#$ -l h_rt=24:0:0
+#$ -l h_rt=90:0:0
 
 # Request 1 gigabyte of RAM for each core/thread
 # (must be an integer followed by M, G, or T)
 #$ -l mem=5G
 
 # Request 1 gigabyte of TMPDIR space (default is 10 GB)
-#$ -l tmpfs=30G
+#$ -l tmpfs=10G
 
 # Set the name of the job.
 #$ -N pyVertexModel
@@ -21,14 +21,14 @@
 
 # Set the working directory to project directory in your scratch space.
 # Replace "<your_UCL_id>" with your UCL user ID
-#$ -wd /home/<your_UCL_id>/Scratch/
+#$ -wd /home/dmcbpvi/Scratch/
 
 # Load python3 module - this must be the same version as loaded when creating and
 # installing dependencies in the virtual environment
 module load python3/3.9
 
 # Define a local variable pointing to the project directory in your scratch space
-PROJECT_DIR=/home/<your_UCL_id>/Scratch/pyVertexModel
+PROJECT_DIR=/home/dmcbpvi/Scratch/pyVertexModel
 
 # Activate the virtual environment in which you installed the project dependencies
 source $PROJECT_DIR/venv/bin/activate

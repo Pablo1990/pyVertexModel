@@ -7,29 +7,31 @@ from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexMo
 from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
 from src.pyVertexModel.util.utils import load_state
 
-def run_simulation(combination):
+def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
     """
     Run simulation with the given combination of variables.
+    :param output_results_dir: 
     :param combination:
     :return:
-    """
-    output_results_dir = 'Result/final_results'  # output directory
+    """  # output directory
 
     vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
-    if combination == 'WT' or combination == 'Mbs' or combination == 'Rok':
-        output_folder = os.path.join(PROJECT_DIRECTORY, output_results_dir, '60_mins_{}'.format(combination))
+    if (combination == 'WT' or combination == 'Mbs' or combination == 'Rok' or
+            combination == 'Talin' or combination == 'IntegrinDN' or
+            combination == 'ShibireTS' or combination == 'WT_substrate_gone_40_mins'):
+        output_folder = os.path.join(PROJECT_DIRECTORY, output_results_dir, length + '_{}'.format(combination))
     else:
-        output_folder = os.path.join(PROJECT_DIRECTORY, output_results_dir, '60_mins_no_{}'.format('_no_'.join(combination)))
+        output_folder = os.path.join(PROJECT_DIRECTORY, output_results_dir, length + '_no_{}'.format('_no_'.join(combination)))
 
     # Check if output_folder exists
     if not os.path.exists(output_folder):
         load_state(vModel,
-                   os.path.join(PROJECT_DIRECTORY, 'Result/'
-                                                   'new_reference/'
+                   os.path.join(PROJECT_DIRECTORY, output_results_dir,
                                                    'before_ablation.pkl'))
 
         vModel.set.wing_disc()
         vModel.set.wound_default()
+
         vModel.set.nu_bottom = vModel.set.nu * 600
         vModel.set.OutputFolder = output_folder
         if combination == 'WT':
@@ -42,6 +44,14 @@ def run_simulation(combination):
             vModel.set.lambdaS1 = vModel.set.lambdaS1 - (vModel.set.lambdaS1 * 0.51)
             vModel.set.purseStringStrength = vModel.set.purseStringStrength - (vModel.set.purseStringStrength * 0.35)
             vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength - (vModel.set.lateralCablesStrength * 0.35)
+        elif combination == 'ShibireTS':
+            vModel.set.purseStringStrength = vModel.set.purseStringStrength - (vModel.set.purseStringStrength * 0.4)
+        elif combination == 'Talin':
+            vModel.set.kSubstrate = vModel.set.kSubstrate * 0
+            vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength * 4.3/3.1
+        elif combination == 'IntegrinDN':
+            vModel.set.kSubstrate = vModel.set.kSubstrate * 0
+            vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength * 2.1/3.1
         else:
             for variable in combination:
                 if variable == 'Remodelling':
@@ -55,6 +65,9 @@ def run_simulation(combination):
         vModel.set.redirect_output()
     else:
         print("Output folder already exists: {}".format(output_folder))
+        # if os.path.exists(os.path.join(output_folder, 'features_per_time.pkl')):
+        #     print("Analysis already done for this folder: {}".format(output_folder))
+        #     return
         # Load last modified pkl file
         name_last_pkl_file = sorted(
             [f for f in os.listdir(output_folder) if f.endswith('.pkl') and not 'before_remodelling' in f
@@ -64,7 +77,15 @@ def run_simulation(combination):
         load_state(vModel, os.path.join(output_folder, name_last_pkl_file))
         vModel.set.OutputFolder = output_folder
         vModel.set.redirect_output()
+
+        if combination == 'WT_substrate_gone_40_mins':
+            vModel.set.kSubstrate = 0
+
+        if length == '120_mins':
+            vModel.set.tend = 120
+
         if vModel.t > vModel.set.tend:
+            print("Performing analysis for folder...")
             analyse_simulation(vModel.set.OutputFolder)
             return
 
@@ -77,10 +98,21 @@ combinations_of_variables = []
 for i in range(1, len(variables_to_change) + 1):
     combinations_of_variables.extend(itertools.combinations(variables_to_change, i))
 
+
+combinations_of_variables.insert(0, 'ShibireTS')
+combinations_of_variables.insert(0, 'Talin')
+combinations_of_variables.insert(0, 'IntegrinDN')
+combinations_of_variables.insert(0, 'WT_substrate_gone_40_mins')
 combinations_of_variables.insert(0, 'Mbs')
 combinations_of_variables.insert(0, 'Rok')
 combinations_of_variables.insert(0, 'WT')
 
 if __name__ == '__main__':
     index = int(sys.argv[1])
-    run_simulation(combinations_of_variables[index])
+    # Check if there are two arguments
+    if len(sys.argv) == 2:
+        run_simulation(combinations_of_variables[index])
+    elif len(sys.argv) == 4:
+        run_simulation(combinations_of_variables[index], sys.argv[2], sys.argv[3])
+    else:
+        run_simulation(combinations_of_variables[index], sys.argv[2])

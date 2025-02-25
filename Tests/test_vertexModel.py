@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from scipy.spatial import Delaunay
 
+from Tests import TEST_DIRECTORY
 from Tests.test_geo import check_if_cells_are_the_same
 from Tests.tests import Tests, assert_matrix, load_data, assert_array1D
 from src.pyVertexModel.algorithm import newtonRaphson
@@ -475,11 +476,16 @@ class TestVertexModel(Tests):
         # Test if initialize geometry function does not change anything
         vModel_test = VertexModelVoronoiFromTimeImage(set_test)
         file_name = 'voronoi_40cells.pkl'
-        test_dir = 'Tests/data/%s' % file_name
+        test_dir = TEST_DIRECTORY + 'Tests/data/%s' % file_name
         if exists(test_dir):
-            vModel_test.initialize(test_dir)
+            vModel_test.set.initial_filename_state = test_dir
         else:
-            vModel_test.initialize('data/%s' % file_name)
+            vModel_test.set.initial_filename_state = 'data/%s' % file_name
+
+        vModel_test.initialize()
+
+        # Check if the cells are initialized correctly
+        check_if_cells_are_the_same(vModel_test.geo, mat_info['geo'])
 
         vModel_test.set = set_test
 

@@ -391,7 +391,7 @@ def GetBoundary(T, X):
     return nodesExt
 
 
-def laplacian_smoothing(vertices, edges, fixed_indices, iteration_count=10, bounding_box=None):
+def laplacian_smoothing(vertices, edges, fixed_indices, iteration_count=10):
     """
     Perform Laplacian smoothing on a mesh.
 
@@ -400,7 +400,6 @@ def laplacian_smoothing(vertices, edges, fixed_indices, iteration_count=10, boun
     - edges: Mx2 array of indices into vertices forming edges.
     - fixed_indices: List of vertex indices that should not be moved.
     - iteration_count: Number of smoothing iterations to perform.
-    - bounding_box: Optional [(min_x, min_y), (max_x, max_y)] bounding box to constrain vertex movement.
     """
     # Convert fixed_indices to a set for faster lookup
     fixed_indices = set(fixed_indices)
@@ -420,11 +419,6 @@ def laplacian_smoothing(vertices, edges, fixed_indices, iteration_count=10, boun
             # Calculate the average position of neighboring vertices
             neighbor_positions = vertices[neighbors]
             mean_position = np.mean(neighbor_positions, axis=0)
-
-            # Apply bounding box constraint if specified
-            if bounding_box is not None:
-                mean_position = np.maximum(mean_position, bounding_box[0])
-                mean_position = np.minimum(mean_position, bounding_box[1])
 
             new_positions[i] = mean_position
 
