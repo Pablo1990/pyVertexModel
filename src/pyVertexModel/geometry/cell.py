@@ -1,6 +1,7 @@
 import numpy as np
 import pyvista as pv
 import vtk
+from numpy.ma.extras import setdiff1d, setxor1d
 from sklearn.decomposition import PCA
 
 from src.pyVertexModel.geometry import face
@@ -291,6 +292,7 @@ class Cell:
                     'Perimeter_top': self.compute_perimeter(filter_location=0),
                     'Perimeter_bottom': self.compute_perimeter(filter_location=2),
                     'Perimeter_cellcell': self.compute_perimeter(filter_location=1),
+                    'Scutoid': self.is_scutoid(),
                     }
 
         if centre_wound is not None:
@@ -529,3 +531,10 @@ class Cell:
         :return:
         """
         return np.linalg.norm(self.Y - centre_of_tissue)
+
+    def is_scutoid(self):
+        """
+        Check if the cell is a scutoid
+        :return:
+        """
+        return setxor1d(self.compute_neighbours(location_filter=2), self.compute_neighbours(location_filter=0)).size > 0
