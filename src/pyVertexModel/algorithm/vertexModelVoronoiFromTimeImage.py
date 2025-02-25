@@ -14,12 +14,33 @@ from skimage.measure import regionprops_table
 from skimage.morphology import dilation, disk, square
 from skimage.segmentation import find_boundaries
 
-from src import PROJECT_DIRECTORY
+from src import PROJECT_DIRECTORY, logger
 from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrahedra_from_information, \
     calculate_cell_height_on_model
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.util.utils import ismember_rows, save_variables, load_state
+from scipy.optimize import minimize
 
+def find_optimal_deform_array_X_Y(geo, deform_array_Z, middle_point, volumes):
+    def objective(deform_array_X_Y):
+        geo_copy = geo.copy()
+        deform_array = np.array([deform_array_X_Y[0], deform_array_X_Y[0], deform_array_Z])
+        for cell in geo_copy.Cells:
+            if cell.AliveStatus is not None:
+                cell.X = cell.X + (middle_point - cell.X) * deform_array
+                cell.Y = cell.Y + (middle_point - cell.Y) * deform_array
+                for face in cell.Faces:
+                    face.Centre = face.Centre + (middle_point - face.Centre) * deform_array
+
+        geo_copy.update_measures()
+        volumes_after_deformation = np.array([cell.Vol for cell in geo_copy.Cells if cell.AliveStatus is not None])
+        vol_difference = np.mean(volumes) - np.mean(volumes_after_deformation)
+        print(vol_difference)
+        return abs(vol_difference)
+
+    options = {'disp': True, 'ftol':1e-9}
+    result = minimize(objective, method='TNC', x0=np.array([2]), options=options)
+    return result.x
 
 def calculate_neighbours(labelled_img, ratio_strel):
     """
@@ -495,6 +516,24 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             # Save state with filename using the number of cells
             filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
             # save_state(self.geo, 'voronoi_40cells.pkl')
+
+        if self.set.deform_array_Z is not None:
+            middle_point = np.mean([cell.X for cell in self.geo.Cells if cell.AliveStatus is not None], axis=0)
+            volumes = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
+            optimal_deform_array_X_Y = find_optimal_deform_array_X_Y(self.geo, self.set.deform_array_Z, middle_point, volumes)
+            print(f'Optimal deform_array_X_Y: {optimal_deform_array_X_Y}')
+
+            for cell in self.geo.Cells:
+                deform_array = np.array([optimal_deform_array_X_Y[0], optimal_deform_array_X_Y[0], self.set.deform_array_Z])
+                if cell.AliveStatus is not None:
+                    cell.X = cell.X + (middle_point - cell.X) * deform_array
+                    cell.Y = cell.Y + (middle_point - cell.Y) * deform_array
+                    for face in cell.Faces:
+                        face.Centre = face.Centre + (middle_point - face.Centre) * deform_array
+
+            self.geo.update_measures()
+            volumes_after_deformation = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
+            logger.info(f'Volume difference: {np.mean(volumes) - np.mean(volumes_after_deformation)}')
 
         # Add border cells to the shared cells
         for cell in self.geo.Cells:
