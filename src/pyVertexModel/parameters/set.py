@@ -13,6 +13,7 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.myosin_pool = None
         self.deform_array_Z = None
         self.edge_length_threshold = None
         self.kCeiling = None
@@ -346,8 +347,9 @@ class Set:
         # 0: Intensity-based purse string
         # 1: Strain-based purse string (delayed)
         # 2: Fixed with linear increase purse string
-        self.purseStringStrength = 4e-5
-        self.lateralCablesStrength = 7e-5
+        self.myosin_pool = 4e-5 + 7e-5
+        self.purseStringStrength = 4/11 * self.myosin_pool
+        self.lateralCablesStrength = 7/11 * self.myosin_pool
         self.delay_lateral_cables = 5.8
         self.delay_purse_string = self.delay_lateral_cables
 
