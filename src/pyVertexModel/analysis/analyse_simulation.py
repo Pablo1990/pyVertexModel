@@ -111,7 +111,7 @@ def analyse_simulation(folder):
 
     # Correlate wound edge cells features with wound area top
     try:
-        wound_edge_cells_features_avg['wound_area_top'] = post_wound_features['wound_area_top'][1:].values
+        wound_edge_cells_features_avg['wound_area_top'] = post_wound_features['wound_area_top'][(post_wound_features.shape[0]-wound_edge_cells_features_avg.shape[0]):].values
         correlation_matrix = wound_edge_cells_features_avg.corr()
         correlation_with_feature(correlation_matrix, 'wound_area_top', folder)
 
@@ -129,9 +129,6 @@ def analyse_simulation(folder):
 
         # Compare post-wound features with pre-wound features in percentage
         for feature in post_wound_features.columns:
-            if np.any(np.isnan(pre_wound_features[feature])) or np.any(np.isnan(post_wound_features[feature])):
-                continue
-
             if 'indentation' in feature:
                 post_wound_features.loc[:, feature] = (post_wound_features[feature] - np.array(
                     pre_wound_features[feature])) * 100
