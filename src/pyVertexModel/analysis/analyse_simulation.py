@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel, logger
-from src.pyVertexModel.util.utils import load_state, load_variables, save_variables
+from src.pyVertexModel.util.utils import load_state, load_variables, save_variables, screenshot
 
 
 def analyse_simulation(folder):
@@ -40,6 +40,11 @@ def analyse_simulation(folder):
             if file.endswith('.pkl') and not file.__contains__('data_step_before_remodelling') and not file.__contains__('recoil'):
                 # Load the state of the model
                 load_state(vModel, os.path.join(folder, file))
+
+                # Export images
+                #vModel.set.export_images = True
+                #temp_dir = os.path.join(vModel.set.OutputFolder, 'images')
+                #screenshot(vModel, temp_dir)
 
                 # Analyse the simulation
                 all_cells, avg_cells = vModel.analyse_vertex_model()
@@ -108,20 +113,7 @@ def analyse_simulation(folder):
     try:
         wound_edge_cells_features_avg['wound_area_top'] = post_wound_features['wound_area_top'][1:].values
         correlation_matrix = wound_edge_cells_features_avg.corr()
-
-        # Extract the correlation of 'wound_area_top' with other features
-        wound_area_top_correlation = correlation_matrix['wound_area_top']
-
-        # Sort the correlations in descending order to see which features correlate the most
-        sorted_correlations = wound_area_top_correlation.sort_values(ascending=False)
-
-        # Plot sorted correlations with a figure big enough on the x-axis to see the feature names
-        plt.figure(figsize=(10, 5))
-        plt.bar(sorted_correlations.index, sorted_correlations)
-        plt.xticks(rotation=90)
-        plt.ylabel('Correlation with wound area top')
-        plt.tight_layout()
-        plt.savefig(os.path.join(folder, 'correlation_wound_area_top.png'))
+        correlation_with_feature(correlation_matrix, 'wound_area_top', folder)
 
         # Export to xlsx
         wound_edge_cells_features_avg.to_excel(os.path.join(folder, 'features_per_time_only_wound_edge.xlsx'))
@@ -186,6 +178,30 @@ def analyse_simulation(folder):
     plot_feature(folder, post_wound_features, name_columns='wound_area_bottom')
 
     return features_per_time_df, post_wound_features, important_features, features_per_time_all_cells_df
+
+
+def correlation_with_feature(correlation_matrix, feature_name, folder):
+    # Extract the correlation of feature_name with other features
+    wound_area_top_correlation = correlation_matrix[feature_name]
+    # Remove feature_name from the correlation matrix
+    wound_area_top_correlation = wound_area_top_correlation.drop(feature_name)
+    # And ID
+    wound_area_top_correlation = wound_area_top_correlation.drop('ID')
+    # And time
+    wound_area_top_correlation = wound_area_top_correlation.drop('time')
+    # And Distance_to_wound
+    wound_area_top_correlation = wound_area_top_correlation.drop('Distance_to_wound')
+    # Sort the correlations in descending order to see which features correlate the most
+    sorted_correlations = wound_area_top_correlation.sort_values(ascending=False)
+    # Keep the Top 5 features that correlate the most positively and negatively with wound area top
+    sorted_correlations = pd.concat([sorted_correlations.head(5), sorted_correlations.tail(5)])
+    # Plot sorted correlations with a figure big enough on the x-axis to see the feature names
+    plt.figure(figsize=(10, 5))
+    plt.bar(sorted_correlations.index, sorted_correlations)
+    plt.xticks(rotation=90)
+    plt.ylabel('Correlation with ' + feature_name)
+    plt.tight_layout()
+    plt.savefig(os.path.join(folder, 'correlation_' + feature_name + '.png'))
 
 
 def plot_feature(folder, post_wound_features, name_columns):
