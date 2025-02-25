@@ -34,6 +34,8 @@ else:
         # vModel.tr = 0
         # vModel.set.redirect_output()
         # vModel.iteration_converged()
+        vModel.set.OutputFolder = PROJECT_DIRECTORY + 'Result/final_results/60_mins_Rok/'
+        os.makedirs(vModel.set.OutputFolder + '/images', exist_ok=True)
         vModel.reset_noisy_parameters()
         vModel.iterate_over_time()
     else:
