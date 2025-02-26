@@ -292,7 +292,7 @@ class Cell:
                     'Perimeter_top': self.compute_perimeter(filter_location=0),
                     'Perimeter_bottom': self.compute_perimeter(filter_location=2),
                     'Perimeter_cellcell': self.compute_perimeter(filter_location=1),
-                    'Scutoid': self.is_scutoid(),
+                    'Scutoid': int(self.is_scutoid()),
                     }
 
         if centre_wound is not None:
