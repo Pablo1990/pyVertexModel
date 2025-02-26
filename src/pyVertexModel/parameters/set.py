@@ -25,7 +25,7 @@ class Set:
         self.delay_lateral_cables = 5.8
         self.delay_purse_string = self.delay_lateral_cables
         self.ref_A0 = None
-        self.lateralCablesStrength = None
+        self.lateralCablesStrength = 0
         self.tol0 = None
         self.dt = None
         self.implicit_method = False
@@ -33,7 +33,7 @@ class Set:
         self.Contractility_TimeVariability = None
         self.Contractility_Variability_LateralCables = None
         self.Contractility_Variability_PurseString = None
-        self.purseStringStrength = None
+        self.purseStringStrength = 0
         self.RemodelingFrequency = None
         self.i_incr = None
         self.iter = None
@@ -101,7 +101,7 @@ class Set:
             # Confinement
             self.Confinement = False
             # Contractility
-            self.Contractility = True
+            self.Contractility = False
             self.cLineTension = 0.0001
             self.noise_random = 0
             # In plane elasticity
@@ -267,6 +267,21 @@ class Set:
         self.Remodelling = True
         self.RemodelStiffness = 0.1
 
+    def wing_disc_apical_constriction(self):
+        self.Nincr = self.tend * 100
+
+        self.lambdaR = 8e-10
+        self.kSubstrate = 0
+
+        self.ref_A0 = 1
+        self.lambdaS1 = 1
+        self.lambdaS2 = self.lambdaS1 / 100
+        self.lambdaS3 = self.lambdaS1 / 10000
+
+        #self.ref_V0 = 1
+
+        self.ablation = False
+
     def wing_disc(self):
         # Energy Barrier Aspect Ratio
         self.lambdaR = 8e-7
@@ -304,6 +319,35 @@ class Set:
 
         self.check_for_non_used_parameters()
 
+    def cuboidal_cells(self):
+        self.initial_filename_state = 'Input/cuboidal_cells.pkl'
+
+        # Surface tension
+        self.lambda_s_total = (1.4 + 1.4/10 + 1.4/100) * 0.1
+        # Top
+        self.lambdaS1 = self.lambda_s_total * 2.5/10
+        # c_cell-c_cell
+        self.lambdaS2 = self.lambda_s_total * 5/10
+        # Bottom
+        self.lambdaS3 = self.lambda_s_total * 2.5/10
+
+        # Substrate
+        self.kSubstrate = 0.001
+
+        self.check_for_non_used_parameters()
+
+    def columnar_cells(self):
+        self.initial_filename_state = 'Input/columnar_cells.pkl'
+
+        # Surface tension
+        self.lambda_s_total = (1.4 + 1.4/10 + 1.4/100)
+        # Top
+        self.lambdaS1 = self.lambda_s_total * 75/100
+        # c_cell-c_cell
+        self.lambdaS2 = self.lambda_s_total * 5/100
+        # Bottom
+        self.lambdaS3 = self.lambda_s_total * 20/100
+
     def wound_default(self):
         # =========================== Contractility ==========================
         self.Contractility = True
@@ -312,7 +356,7 @@ class Set:
         # 1: Strain-based purse string (delayed)
         # 2: Fixed with linear increase purse string
         self.myosin_pool = 4e-5 + 7e-5
-        self.purseStringStrength = 7/11 * self.myosin_pool
+        self.purseStringStrength = 4/11 * self.myosin_pool
         self.lateralCablesStrength = self.myosin_pool - self.purseStringStrength
 
     def menu_input(self, inputMode=None, batchMode=None):
