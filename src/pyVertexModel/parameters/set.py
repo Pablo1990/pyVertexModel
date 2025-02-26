@@ -15,34 +15,29 @@ class Set:
     def __init__(self, mat_file=None):
         self.myosin_pool = None
         self.deform_array_Z = None
-        self.edge_length_threshold = None
+        self.edge_length_threshold = 0.3
         self.kCeiling = None
         self.Contractility_external_axis = None
-        self.export_images = None
-        self.ref_V0 = None
+        self.export_images = True
         self.cLineTension_external = None
-        self.Contractility_external = None
+        self.Contractility_external = False
         self.initial_filename_state = 'Input/wing_disc_150.mat'
-        self.delay_lateral_cables = None
-        self.delay_purse_string = None
+        self.delay_lateral_cables = 5.8
+        self.delay_purse_string = self.delay_lateral_cables
         self.ref_A0 = None
         self.lateralCablesStrength = None
         self.tol0 = None
         self.dt = None
         self.implicit_method = False
-        self.cellsToAblate = None
         self.TypeOfPurseString = None
         self.Contractility_TimeVariability = None
         self.Contractility_Variability_LateralCables = None
         self.Contractility_Variability_PurseString = None
         self.purseStringStrength = None
-        self.TEndAblation = None
-        self.debris_contribution = None
-        self.TInitAblation = None
         self.RemodelingFrequency = None
         self.i_incr = None
         self.iter = None
-        self.ablation = False
+        self.ablation = True
         self.lumen_V0 = None
         self.cell_V0 = None
         self.cell_A0 = None
@@ -53,35 +48,46 @@ class Set:
         self.ellipsoid_axis2 = None
         self.ellipsoid_axis3 = None
         self.nu_bottom = None
+        # ============================== Ablation ============================
+        self.cellsToAblate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+        self.TInitAblation = 20
+        self.TEndAblation = self.TInitAblation + 60
+        self.debris_contribution = np.finfo(float).eps
         if mat_file is None:
             # =============================  Topology ============================
             self.SeedingMethod = 1
             self.s = 1.5
             self.ObtainX = 0
             # Type of input to obtain  the initial topology of the cells
-            self.InputGeo = 'Bubbles'
+            self.InputGeo = 'VertexModelTime'
             self.CellHeight = 15
-            self.TotalCells = 40
+            self.TotalCells = 150
             # ===========================  Add Substrate =========================
             self.Substrate = True
             self.kSubstrate = 0
             # ============================ Time ==================================
-            self.tend = 61
+            self.tend = 60+20
+            self.Nincr = self.tend * 100
             # ============================ Mechanics =============================
             # Volumes
-            self.lambdaV = 5.0
+            self.lambdaV = 1.0
             self.lambdaV_Debris = 1e-8
+            self.ref_V0 = 1.0
             # Surface area
             self.SurfaceType = 1
             self.A0eq0 = True
-            self.lambdaS1 = 0.5
-            self.lambdaS1CellFactor = []
-            self.lambdaS2CellFactor = []
-            self.lambdaS3CellFactor = []
-            self.lambdaS4CellFactor = []
+            # Top
+            self.lambdaS1 = 1.4
+            # c_cell-c_cell
+            self.lambdaS2 = self.lambdaS1 / 10
+            # Bottom
+            self.lambdaS3 = self.lambdaS1 / 100
+            # Substrate - c_cell
+            self.lambdaS4 = self.lambdaS2
+            self.ref_A0 = 0.92
             # Tri energy Area
-            self.EnergyBarrierA = True
-            self.lambdaB = 5.0
+            self.EnergyBarrierA = False
+            self.lambdaB = 20.0
             self.Beta = 1
             # Tri energy Aspect ratio
             self.EnergyBarrierAR = True
@@ -109,16 +115,14 @@ class Set:
             self.brownian_motion = False
             self.brownian_motion_scale = 0
             # ============================ Viscosity =============================
-            self.nu = 1000.0
+            self.nu = 0.07
             self.LocalViscosityEdgeBased = False
             self.nu_Local_EdgeBased = 0
             self.LocalViscosityOption = 2
             # =========================== remodelling ============================
-            self.Remodelling = False
-            self.RemodelTol = 0
+            self.Remodelling = True
             self.contributionOldYs = 0
-            self.RemodelStiffness = 0.1
-            self.Reset_PercentageGeo0 = 0.15
+            self.RemodelStiffness = 0.7
             # ============================ Solution ==============================
             self.tol = 1e-08
             self.MaxIter = 30
@@ -135,7 +139,7 @@ class Set:
             # =========================== PostProcessing =========================
             self.diary = False
             self.OutputRemove = True
-            self.VTK = True
+            self.VTK = False
             self.gVTK = False
             self.VTK_iter = False
             self.SaveWorkspace = False
@@ -172,6 +176,11 @@ class Set:
             #self.tol = 100
             #self.tol0 = 100
 
+        if self.Remodelling:
+            self.RemodelStiffness = 0.7
+        else:
+            self.RemodelStiffness = 2
+
     def redirect_output(self):
         os.makedirs(self.OutputFolder, exist_ok=True)
         handler = logging.FileHandler(os.path.join(self.OutputFolder, 'log.out'))
@@ -205,7 +214,7 @@ class Set:
         Update derived parameters
         :return:
         """
-        self.define_if_not_defined("Nincr", self.tend)
+        self.define_if_not_defined("Nincr", self.tend * 100)
         self.define_if_not_defined("dt", self.tend / self.Nincr)
         self.define_if_not_defined("RemodelingFrequency", 0.1)
         self.define_if_not_defined("lambdaS2", self.lambdaS1 * 0.1)
@@ -259,38 +268,8 @@ class Set:
         self.RemodelStiffness = 0.1
 
     def wing_disc(self):
-        self.InputGeo = 'VertexModelTime'
-        #self.initial_filename_state = 'Input/cuboidal_cells.pkl'
-        self.TotalCells = 150
-        # per 1 micrometer of diameter on the top side of the cell
-        self.CellHeight = 15
-        # Cell deformation based on 3 diameter / 45 microns of height
-        #self.deform_array_Z = 0.85  # Cuboidal
-        # Tend is the final time of the simulation
-        self.tend = 60+20
-        # Nincr is the number of increments
-        self.Nincr = self.tend * 100
-        self.nu_bottom = self.nu * 600
-
-        # Viscosity
-        self.nu = 0.07
-        # Energy Barrier Area
-        self.EnergyBarrierA = False
-        if self.EnergyBarrierA:
-            self.lambdaB = 20
-        else:
-            self.lambdaB = 0
-
         # Energy Barrier Aspect Ratio
-        self.EnergyBarrierAR = True
-        if self.EnergyBarrierAR:
-            self.lambdaR = 8e-7
-        else:
-            self.lambdaR = 0
-
-        # Volume
-        self.lambdaV = 1
-        self.ref_V0 = 1
+        self.lambdaR = 8e-7
 
         # Substrate
         self.kSubstrate = 0.1
@@ -298,49 +277,34 @@ class Set:
         # Contractility
         self.cLineTension = 0
 
-        # Brownian motion
-        self.brownian_motion = False
-        self.brownian_motion_scale = 0
+        # Noise
         self.noise_random = 0
 
         # Remodelling
-        self.Remodelling = True
         # How big or small the edge to remodel
         # 0.15 is 15% of average the edge. This is a threshold to remodel the edge
-        if self.Remodelling:
-            self.RemodelStiffness = 0.7
-            self.edge_length_threshold = 0.3
-        else:
-            self.RemodelStiffness = 2
+        self.RemodelStiffness = 0.7
 
-        # Surface Area
-        self.ref_A0 = 0.92
+        self.check_for_non_used_parameters()
+
+    def squamous_cells(self):
+        self.initial_filename_state = 'Input/squamous_cells.pkl'
+
+        # Surface tension
+        self.lambda_s_total = (1.4 + 1.4/10 + 1.4/100) * 0.1
         # Top
-        self.lambdaS1 = 1.4 #* 0.1
+        self.lambdaS1 = self.lambda_s_total * 2.5/10
         # c_cell-c_cell
-        self.lambdaS2 = self.lambdaS1 / 100
+        self.lambdaS2 = self.lambda_s_total * 5/10
         # Bottom
-        self.lambdaS3 = self.lambdaS1 / 10
-        # Substrate - c_cell
-        self.lambdaS4 = self.lambdaS2
+        self.lambdaS3 = self.lambda_s_total * 2.5/10
 
-        # VTK
-        self.VTK = False
-        self.export_images = True
+        # Substrate
+        self.kSubstrate = 0.1
 
-        # Implicit vs Explicit
-        self.implicit_method = False
-
-        # Ablation yes or no
-        self.ablation = True
         self.check_for_non_used_parameters()
 
     def wound_default(self):
-        # ============================== Ablation ============================
-        self.cellsToAblate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-        self.TInitAblation = 20
-        self.TEndAblation = self.TInitAblation + 60
-        self.debris_contribution = np.finfo(float).eps
         # =========================== Contractility ==========================
         self.Contractility = True
         self.TypeOfPurseString = 0
@@ -348,10 +312,8 @@ class Set:
         # 1: Strain-based purse string (delayed)
         # 2: Fixed with linear increase purse string
         self.myosin_pool = 4e-5 + 7e-5
-        self.purseStringStrength = 4/11 * self.myosin_pool
-        self.lateralCablesStrength = 7/11 * self.myosin_pool
-        self.delay_lateral_cables = 5.8
-        self.delay_purse_string = self.delay_lateral_cables
+        self.purseStringStrength = 7/11 * self.myosin_pool
+        self.lateralCablesStrength = self.myosin_pool - self.purseStringStrength
 
     def menu_input(self, inputMode=None, batchMode=None):
         if inputMode == 7:
