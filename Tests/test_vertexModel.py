@@ -476,7 +476,7 @@ class TestVertexModel(Tests):
         # Test if initialize geometry function does not change anything
         vModel_test = VertexModelVoronoiFromTimeImage(set_test)
         file_name = 'voronoi_40cells.pkl'
-        test_dir = TEST_DIRECTORY + 'Tests/data/%s' % file_name
+        test_dir = TEST_DIRECTORY + '/Tests/data/%s' % file_name
         if exists(test_dir):
             vModel_test.set.initial_filename_state = test_dir
         else:
