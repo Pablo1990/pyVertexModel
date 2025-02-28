@@ -18,29 +18,7 @@ from src import PROJECT_DIRECTORY, logger
 from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrahedra_from_information, \
     calculate_cell_height_on_model
 from src.pyVertexModel.geometry.geo import Geo
-from src.pyVertexModel.util.utils import ismember_rows, save_variables, load_state
-from scipy.optimize import minimize
-
-def find_optimal_deform_array_X_Y(geo, deform_array_Z, middle_point, volumes):
-    def objective(deform_array_X_Y):
-        geo_copy = geo.copy()
-        deform_array = np.array([deform_array_X_Y[0], deform_array_X_Y[0], deform_array_Z])
-        for cell in geo_copy.Cells:
-            if cell.AliveStatus is not None:
-                cell.X = cell.X + (middle_point - cell.X) * deform_array
-                cell.Y = cell.Y + (middle_point - cell.Y) * deform_array
-                for face in cell.Faces:
-                    face.Centre = face.Centre + (middle_point - face.Centre) * deform_array
-
-        geo_copy.update_measures()
-        volumes_after_deformation = np.array([cell.Vol for cell in geo_copy.Cells if cell.AliveStatus is not None])
-        vol_difference = np.mean(volumes) - np.mean(volumes_after_deformation)
-        print(vol_difference)
-        return abs(vol_difference)
-
-    options = {'disp': True, 'ftol':1e-9}
-    result = minimize(objective, method='TNC', x0=np.array([2]), options=options)
-    return result.x
+from src.pyVertexModel.util.utils import ismember_rows, save_variables, load_state, find_optimal_deform_array_X_Y
 
 def calculate_neighbours(labelled_img, ratio_strel):
     """
@@ -50,19 +28,16 @@ def calculate_neighbours(labelled_img, ratio_strel):
     :return:
     """
     se = disk(ratio_strel)
-
-    cells = np.sort(np.unique(labelled_img))
-    if np.sum(labelled_img == 0) > 0:
-        # Deleting cell 0 from range
-        cells = cells[1:]
+    cells = np.unique(labelled_img)
+    cells = cells[cells != 0]  # Remove cell 0 if it exists
 
     img_neighbours = [None] * (np.max(cells) + 1)
+    boundaries = find_boundaries(labelled_img, mode='inner') * labelled_img
 
-    for idx, cell in enumerate(cells, start=1):
-        BW = find_boundaries(labelled_img == cell, mode='inner')
-        BW_dilate = dilation(BW, se)
-        neighs = np.unique(labelled_img[BW_dilate == 1])
-        img_neighbours[idx] = neighs[(neighs != 0) & (neighs != cell)]
+    for cell in cells:
+        dilated_boundaries = dilation(boundaries == cell, se)
+        neighs = np.unique(labelled_img[dilated_boundaries])
+        img_neighbours[cell] = neighs[(neighs != 0) & (neighs != cell)]
 
     return img_neighbours
 
@@ -307,7 +282,6 @@ def build_2d_voronoi_from_image(labelled_img, watershed_img, total_cells):
     if quartets is not None:
         img_neighbours = divide_quartets_neighbours(img_neighbours, labelled_img, quartets)
 
-    # labelled_img[~np.isin(labelled_img, border_of_border_cells_and_main_cells)] = 0
     vertices_info = populate_vertices_info(border_cells_and_main_cells, img_neighbours,
                                            labelled_img, main_cells, ratio)
 
@@ -517,23 +491,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
             # save_state(self.geo, 'voronoi_40cells.pkl')
 
-        if self.set.deform_array_Z is not None:
-            middle_point = np.mean([cell.X for cell in self.geo.Cells if cell.AliveStatus is not None], axis=0)
-            volumes = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
-            optimal_deform_array_X_Y = find_optimal_deform_array_X_Y(self.geo, self.set.deform_array_Z, middle_point, volumes)
-            print(f'Optimal deform_array_X_Y: {optimal_deform_array_X_Y}')
-
-            for cell in self.geo.Cells:
-                deform_array = np.array([optimal_deform_array_X_Y[0], optimal_deform_array_X_Y[0], self.set.deform_array_Z])
-                if cell.AliveStatus is not None:
-                    cell.X = cell.X + (middle_point - cell.X) * deform_array
-                    cell.Y = cell.Y + (middle_point - cell.Y) * deform_array
-                    for face in cell.Faces:
-                        face.Centre = face.Centre + (middle_point - face.Centre) * deform_array
-
-            self.geo.update_measures()
-            volumes_after_deformation = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
-            logger.info(f'Volume difference: {np.mean(volumes) - np.mean(volumes_after_deformation)}')
+        self.deform_tissue()
 
         # Add border cells to the shared cells
         for cell in self.geo.Cells:
@@ -558,15 +516,36 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         if self.geo.lmin0 is None:
             self.geo.init_reference_cell_values(self.set)
 
+    def deform_tissue(self):
+        if self.set.deform_array_Z is not None:
+            middle_point = np.mean([cell.X for cell in self.geo.Cells if cell.AliveStatus is not None], axis=0)
+            volumes = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
+            optimal_deform_array_X_Y = find_optimal_deform_array_X_Y(self.geo.copy(), self.set.deform_array_Z,
+                                                                     middle_point, volumes)
+            print(f'Optimal deform_array_X_Y: {optimal_deform_array_X_Y}')
+
+            for cell in self.geo.Cells:
+                deform_array = np.array(
+                    [optimal_deform_array_X_Y[0], optimal_deform_array_X_Y[0], self.set.deform_array_Z])
+                if cell.AliveStatus is not None:
+                    cell.X = cell.X + (middle_point - cell.X) * deform_array
+                    cell.Y = cell.Y + (middle_point - cell.Y) * deform_array
+                    for face in cell.Faces:
+                        face.Centre = face.Centre + (middle_point - face.Centre) * deform_array
+
+            self.geo.update_measures()
+            volumes_after_deformation = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
+            logger.info(f'Volume difference: {np.mean(volumes) - np.mean(volumes_after_deformation)}')
+
     def obtain_initial_x_and_tetrahedra(self, img_filename=None):
         """
         Obtain the initial X and tetrahedra for the model.
         :return:
         """
         if img_filename is None:
-            img_filename = PROJECT_DIRECTORY + '/src/pyVertexModel/resources/LblImg_imageSequence.tif'
+            img_filename = PROJECT_DIRECTORY + '/' + self.set.initial_filename_state
 
-        selectedPlanes = [0, 99]
+        selectedPlanes = [1, 0]
         img2DLabelled, imgStackLabelled = process_image(img_filename)
 
         # Building the topology of each plane
