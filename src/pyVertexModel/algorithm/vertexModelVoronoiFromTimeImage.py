@@ -20,27 +20,6 @@ from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrah
 from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.util.utils import ismember_rows, save_variables, load_state, find_optimal_deform_array_X_Y
 
-def calculate_neighbours(labelled_img, ratio_strel):
-    """
-    Calculate the neighbours of each cell
-    :param labelled_img:
-    :param ratio_strel:
-    :return:
-    """
-    se = disk(ratio_strel)
-    cells = np.unique(labelled_img)
-    cells = cells[cells != 0]  # Remove cell 0 if it exists
-
-    img_neighbours = [None] * (np.max(cells) + 1)
-    boundaries = find_boundaries(labelled_img, mode='inner') * labelled_img
-
-    for cell in cells:
-        dilated_boundaries = dilation(boundaries == cell, se)
-        neighs = np.unique(labelled_img[dilated_boundaries])
-        img_neighbours[cell] = neighs[(neighs != 0) & (neighs != cell)]
-
-    return img_neighbours
-
 
 def build_quartets_of_neighs_2d(neighbours):
     """
@@ -119,67 +98,7 @@ def build_triplets_of_neighs(neighbours):
     return triplets_of_neighs
 
 
-def calculate_vertices(labelled_img, neighbours, ratio):
-    """
-    Calculate the vertices for each cell in a labeled image.
 
-    :param labelled_img: A 2D array representing a labeled image.
-    :param neighbours: A list of lists where each sublist represents the neighbors of a cell.
-    :param ratio: The radius of the disk used for morphological dilation.
-    :return: A dictionary containing the location of each vertex and the cells connected to each vertex.
-    """
-    se = disk(ratio)
-    neighbours_vertices = build_triplets_of_neighs(neighbours)
-    # Initialize vertices
-    vertices = [None] * len(neighbours_vertices)
-
-    # Calculate the perimeter of each cell for efficiency
-    dilated_cells = [None] * (np.max(labelled_img) + 1)
-
-    for i in arange(1, np.max(labelled_img) + 1):
-        BW = np.zeros_like(labelled_img)
-        BW[labelled_img == i] = 1
-        BW_dilated = dilation(find_boundaries(BW, mode='inner'), se)
-        dilated_cells[i] = BW_dilated
-
-    # The overlap between cells in the labeled image will be the vertices
-    border_img = np.zeros_like(labelled_img)
-    border_img[labelled_img > -1] = 1
-
-    for num_triplet in range(len(neighbours_vertices)):
-        BW1_dilate = dilated_cells[neighbours_vertices[num_triplet][0]]
-        BW2_dilate = dilated_cells[neighbours_vertices[num_triplet][1]]
-        BW3_dilate = dilated_cells[neighbours_vertices[num_triplet][2]]
-
-        row, col = np.where((BW1_dilate * BW2_dilate * BW3_dilate * border_img) == 1)
-
-        if len(row) > 1:
-            if round(np.mean(col)) not in col:
-                vertices[num_triplet] = [round(np.mean([row[col > np.mean(col)], col[col > np.mean(col)]]))]
-                vertices.append([round(np.mean([row[col < np.mean(col)], col[col < np.mean(col)]]))])
-            else:
-                vertices[num_triplet] = [round(np.mean(row)), round(np.mean(col))]
-        elif len(row) == 0:
-            vertices[num_triplet] = [None, None]
-        else:
-            vertices[num_triplet] = [[row, col]]
-
-    # Store vertices and remove artifacts
-    vertices_info = {'location': vertices, 'connectedCells': neighbours_vertices}
-
-    not_empty_cells = [v[0] is not None for v in vertices_info['location']]
-    if len(vertices_info['location'][0]) == 2:
-        vertices_info['location'] = [vertices_info['location'][i] for i in range(len(not_empty_cells)) if
-                                     not_empty_cells[i]]
-        vertices_info['connectedCells'] = [vertices_info['connectedCells'][i] for i in range(len(not_empty_cells)) if
-                                           not_empty_cells[i]]
-    else:
-        vertices_info['location'] = [vertices_info['location'][i] for i in range(len(not_empty_cells)) if
-                                     not_empty_cells[i]]
-        vertices_info['connectedCells'] = [vertices_info['connectedCells'][i] for i in range(len(not_empty_cells)) if
-                                           not_empty_cells[i]]
-
-    return vertices_info
 
 
 def boundary_of_cell(vertices_of_cell, neighbours=None):
@@ -228,76 +147,6 @@ def boundary_of_cell(vertices_of_cell, neighbours=None):
     return new_vert_order
 
 
-def build_2d_voronoi_from_image(labelled_img, watershed_img, total_cells):
-    """
-    Build a 2D Voronoi diagram from an image
-    :param labelled_img:
-    :param watershed_img:
-    :param total_cells:
-    :return:
-    """
-
-    ratio = 2
-
-    labelled_img[watershed_img == 0] = 0
-
-    # Create a mask for the edges with ID 0
-    edge_mask = labelled_img == 0
-
-    # Get the closest labeled polygon for each edge pixel
-    closest_id = dilation(labelled_img, square(5))
-
-    filled_image = closest_id
-    filled_image[~edge_mask] = labelled_img[~edge_mask]
-
-    labelled_img = copy.deepcopy(filled_image)
-
-    img_neighbours = calculate_neighbours(labelled_img, ratio)
-
-    # Calculate the network of neighbours from the cell with ID 1
-    if not isinstance(total_cells, np.ndarray):
-        main_cells = img_neighbours[1]
-        while len(main_cells) < total_cells:
-            for c_cell in main_cells:
-                for c_neighbour in img_neighbours[c_cell]:
-                    if len(main_cells) >= total_cells:
-                        break
-
-                    if c_neighbour not in main_cells:
-                        main_cells = np.append(main_cells, c_neighbour)
-
-        main_cells = np.sort(main_cells)
-    else:
-        main_cells = total_cells
-
-    # Calculate the border cells from main_cells
-    border_cells_and_main_cells = np.unique(np.block([img_neighbours[i] for i in main_cells]))
-    border_ghost_cells = np.setdiff1d(border_cells_and_main_cells, main_cells)
-    border_cells = np.intersect1d(main_cells, np.unique(np.block([img_neighbours[i] for i in border_ghost_cells])))
-
-    border_of_border_cells_and_main_cells = np.unique(
-        np.concatenate([img_neighbours[i] for i in border_cells_and_main_cells]))
-
-    quartets, _ = get_four_fold_vertices(img_neighbours)
-    if quartets is not None:
-        img_neighbours = divide_quartets_neighbours(img_neighbours, labelled_img, quartets)
-
-    vertices_info = populate_vertices_info(border_cells_and_main_cells, img_neighbours,
-                                           labelled_img, main_cells, ratio)
-
-    neighbours_network = generate_neighbours_network(img_neighbours, main_cells)
-
-    triangles_connectivity = np.array(vertices_info['connectedCells'])
-    cell_edges = vertices_info['edges']
-    vertices_location = vertices_info['location']
-
-    # Remove Nones from the vertices location
-    cell_edges = [cell_edges[i] for i in range(len(cell_edges)) if cell_edges[i] is not None]
-
-    return (triangles_connectivity, neighbours_network, cell_edges, vertices_location, border_cells,
-            border_of_border_cells_and_main_cells, main_cells)
-
-
 def generate_neighbours_network(neighbours, main_cells):
     neighbours_network = []
     for num_cell in main_cells:
@@ -344,37 +193,6 @@ def divide_quartets_neighbours(img_neighbours_all, labelled_img, quartets):
         img_neighbours_all[quartets[num_quartets][row[0]]] = current_neighs
 
     return img_neighbours_all
-
-
-def populate_vertices_info(border_cells_and_main_cells, img_neighbours_all, labelled_img, main_cells,
-                           ratio):
-    """
-    Populate the vertices information.
-    :param border_cells_and_main_cells:
-    :param img_neighbours_all:
-    :param labelled_img:
-    :param main_cells:
-    :param ratio:
-    :return:
-    """
-    vertices_info = calculate_vertices(labelled_img, img_neighbours_all, ratio)
-    total_cells = np.max(border_cells_and_main_cells) + 1
-    vertices_info['PerCell'] = [None] * total_cells
-    vertices_info['edges'] = [None] * total_cells
-    for idx, num_cell in enumerate(main_cells):
-        vertices_of_cell = np.where(np.any(np.isin(vertices_info['connectedCells'], num_cell), axis=1))[0]
-        vertices_info['PerCell'][idx] = vertices_of_cell
-        current_vertices = [vertices_info['location'][i] for i in vertices_of_cell]
-        current_connected_cells = [vertices_info['connectedCells'][i] for i in vertices_of_cell]
-
-        # Remove the current cell 'num_cell' from the connected cells
-        current_connected_cells = [np.delete(cell, np.where(cell == num_cell)) for cell in current_connected_cells]
-
-        vertices_info['edges'][idx] = vertices_of_cell[
-            boundary_of_cell(current_vertices, current_connected_cells)]
-        assert (len(vertices_info['edges'][idx]) ==
-                len(img_neighbours_all[num_cell])), 'Error missing vertices of neighbours'
-    return vertices_info
 
 
 def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence.tif", redo=False):
@@ -463,6 +281,7 @@ def add_tetrahedral_intercalations(Twg, xInternal, XgBottom, XgTop, XgLateral):
 class VertexModelVoronoiFromTimeImage(VertexModel):
     def __init__(self, set_test=None, update_derived_parameters=True, create_output_folder=True):
         super().__init__(c_set=set_test, update_derived_parameters=update_derived_parameters, create_output_folder=create_output_folder)
+        self.dilated_cells = None
 
     def initialize(self):
         """
@@ -516,6 +335,105 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         if self.geo.lmin0 is None:
             self.geo.init_reference_cell_values(self.set)
 
+    def build_2d_voronoi_from_image(self, labelled_img, watershed_img, total_cells):
+        """
+        Build a 2D Voronoi diagram from an image
+        :param labelled_img:
+        :param watershed_img:
+        :param total_cells:
+        :return:
+        """
+
+        ratio = 2
+
+        labelled_img[watershed_img == 0] = 0
+
+        # Create a mask for the edges with ID 0
+        edge_mask = labelled_img == 0
+
+        # Get the closest labeled polygon for each edge pixel
+        closest_id = dilation(labelled_img, square(5))
+
+        filled_image = closest_id
+        filled_image[~edge_mask] = labelled_img[~edge_mask]
+
+        labelled_img = copy.deepcopy(filled_image)
+
+        img_neighbours = self.calculate_neighbours(labelled_img, ratio)
+
+        # Calculate the network of neighbours from the cell with ID 1
+        if not isinstance(total_cells, np.ndarray):
+            main_cells = img_neighbours[1]
+            while len(main_cells) < total_cells:
+                for c_cell in main_cells:
+                    for c_neighbour in img_neighbours[c_cell]:
+                        if len(main_cells) >= total_cells:
+                            break
+
+                        if c_neighbour not in main_cells:
+                            main_cells = np.append(main_cells, c_neighbour)
+
+            main_cells = np.sort(main_cells)
+        else:
+            main_cells = total_cells
+
+        # Calculate the border cells from main_cells
+        border_cells_and_main_cells = np.unique(np.block([img_neighbours[i] for i in main_cells]))
+        border_ghost_cells = np.setdiff1d(border_cells_and_main_cells, main_cells)
+        border_cells = np.intersect1d(main_cells, np.unique(np.block([img_neighbours[i] for i in border_ghost_cells])))
+
+        border_of_border_cells_and_main_cells = np.unique(
+            np.concatenate([img_neighbours[i] for i in border_cells_and_main_cells]))
+
+        quartets, _ = get_four_fold_vertices(img_neighbours)
+        if quartets is not None:
+            img_neighbours = divide_quartets_neighbours(img_neighbours, labelled_img, quartets)
+
+        vertices_info = self.populate_vertices_info(border_cells_and_main_cells, img_neighbours,
+                                                    labelled_img, main_cells, ratio)
+
+        neighbours_network = generate_neighbours_network(img_neighbours, main_cells)
+
+        triangles_connectivity = np.array(vertices_info['connectedCells'])
+        cell_edges = vertices_info['edges']
+        vertices_location = vertices_info['location']
+
+        # Remove Nones from the vertices location
+        cell_edges = [cell_edges[i] for i in range(len(cell_edges)) if cell_edges[i] is not None]
+
+        return (triangles_connectivity, neighbours_network, cell_edges, vertices_location, border_cells,
+                border_of_border_cells_and_main_cells, main_cells)
+
+    def populate_vertices_info(self, border_cells_and_main_cells, img_neighbours_all, labelled_img, main_cells,
+                               ratio):
+        """
+        Populate the vertices information.
+        :param border_cells_and_main_cells:
+        :param img_neighbours_all:
+        :param labelled_img:
+        :param main_cells:
+        :param ratio:
+        :return:
+        """
+        vertices_info = self.calculate_vertices(labelled_img, img_neighbours_all, ratio)
+        total_cells = np.max(border_cells_and_main_cells) + 1
+        vertices_info['PerCell'] = [None] * total_cells
+        vertices_info['edges'] = [None] * total_cells
+        for idx, num_cell in enumerate(main_cells):
+            vertices_of_cell = np.where(np.any(np.isin(vertices_info['connectedCells'], num_cell), axis=1))[0]
+            vertices_info['PerCell'][idx] = vertices_of_cell
+            current_vertices = [vertices_info['location'][i] for i in vertices_of_cell]
+            current_connected_cells = [vertices_info['connectedCells'][i] for i in vertices_of_cell]
+
+            # Remove the current cell 'num_cell' from the connected cells
+            current_connected_cells = [np.delete(cell, np.where(cell == num_cell)) for cell in current_connected_cells]
+
+            vertices_info['edges'][idx] = vertices_of_cell[
+                boundary_of_cell(current_vertices, current_connected_cells)]
+            assert (len(vertices_info['edges'][idx]) ==
+                    len(img_neighbours_all[num_cell])), 'Error missing vertices of neighbours'
+        return vertices_info
+
     def deform_tissue(self):
         if self.set.deform_array_Z is not None:
             middle_point = np.mean([cell.X for cell in self.geo.Cells if cell.AliveStatus is not None], axis=0)
@@ -536,6 +454,74 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             self.geo.update_measures()
             volumes_after_deformation = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
             logger.info(f'Volume difference: {np.mean(volumes) - np.mean(volumes_after_deformation)}')
+
+    def calculate_neighbours(self, labelled_img, ratio_strel):
+        """
+        Calculate the neighbours of each cell
+        :param labelled_img:
+        :param ratio_strel:
+        :return:
+        """
+        se = disk(ratio_strel)
+        cells = np.unique(labelled_img)
+        cells = cells[cells != 0]  # Remove cell 0 if it exists
+
+        img_neighbours = [None] * (np.max(cells) + 1)
+        boundaries = find_boundaries(labelled_img, mode='inner') * labelled_img
+
+        self.dilated_cells = [None] * (np.max(labelled_img) + 1)
+
+        for cell in cells:
+            self.dilated_cells[cell] = dilation(boundaries == cell, se)
+            neighs = np.unique(labelled_img[self.dilated_cells[cell]])
+            img_neighbours[cell] = neighs[(neighs != 0) & (neighs != cell)]
+
+        return img_neighbours
+
+    def calculate_vertices(self, labelled_img, neighbours, ratio):
+        """
+        Calculate the vertices for each cell in a labeled image.
+
+        :param labelled_img: A 2D array representing a labeled image.
+        :param neighbours: A list of lists where each sublist represents the neighbors of a cell.
+        :param ratio: The radius of the disk used for morphological dilation.
+        :return: A dictionary containing the location of each vertex and the cells connected to each vertex.
+        """
+        neighbours_vertices = build_triplets_of_neighs(neighbours)
+        # Initialize vertices
+        vertices = [None] * len(neighbours_vertices)
+
+        # The overlap between cells in the labeled image will be the vertices
+        border_img = np.zeros_like(labelled_img)
+        border_img[labelled_img > -1] = 1
+
+        for num_triplet in range(len(neighbours_vertices)):
+            BW1_dilate = self.dilated_cells[neighbours_vertices[num_triplet][0]]
+            BW2_dilate = self.dilated_cells[neighbours_vertices[num_triplet][1]]
+            BW3_dilate = self.dilated_cells[neighbours_vertices[num_triplet][2]]
+
+            row, col = np.where((BW1_dilate * BW2_dilate * BW3_dilate * border_img) == 1)
+
+            if len(row) > 1:
+                if round(np.mean(col)) not in col:
+                    vertices[num_triplet] = [round(np.mean([row[col > np.mean(col)], col[col > np.mean(col)]]))]
+                    vertices.append([round(np.mean([row[col < np.mean(col)], col[col < np.mean(col)]]))])
+                else:
+                    vertices[num_triplet] = [round(np.mean(row)), round(np.mean(col))]
+            elif len(row) == 0:
+                vertices[num_triplet] = [None, None]
+            else:
+                vertices[num_triplet] = [[row, col]]
+
+        # Store vertices and remove artifacts
+        vertices_info = {'location': vertices, 'connectedCells': neighbours_vertices}
+        not_empty_cells = [v[0] is not None for v in vertices_info['location']]
+        vertices_info['location'] = [vertices_info['location'][i] for i in range(len(not_empty_cells)) if
+                                     not_empty_cells[i]]
+        vertices_info['connectedCells'] = [vertices_info['connectedCells'][i] for i in range(len(not_empty_cells))
+                                           if not_empty_cells[i]]
+
+        return vertices_info
 
     def obtain_initial_x_and_tetrahedra(self, img_filename=None):
         """
@@ -562,7 +548,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             (triangles_connectivity, neighbours_network,
              cell_edges, vertices_location, border_cells,
              border_of_border_cells_and_main_cells,
-             main_cells) = build_2d_voronoi_from_image(current_img, current_img, main_cells)
+             main_cells) = self.build_2d_voronoi_from_image(current_img, current_img, main_cells)
 
             trianglesConnectivity[numPlane] = triangles_connectivity
             neighboursNetwork[numPlane] = neighbours_network
