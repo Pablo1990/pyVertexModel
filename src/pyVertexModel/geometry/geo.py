@@ -1518,3 +1518,21 @@ class Geo:
         distances = sorted(distances)
 
         return cell_ids, distances
+
+    def compute_percentage_of_scutoids(self):
+        """
+        Compute the percentage of scutoids
+        :return:
+        """
+        scutoid_cells = [c_cell for c_cell in self.Cells if c_cell.is_scutoid()]
+        percentage_scutoids = len(scutoid_cells) / len(self.Cells) * 100
+
+        return percentage_scutoids
+
+    def obtain_non_scutoid_cells(self):
+        """
+        Obtain the non-scutoid cells
+        :return:
+        """
+        non_scutoid_cells = [c_cell for c_cell in self.Cells if not c_cell.is_scutoid()]
+        return non_scutoid_cells
