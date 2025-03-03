@@ -13,6 +13,7 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.percentage_scutoids = 0
         self.myosin_pool = None
         self.deform_array_Z = None
         self.edge_length_threshold = 0.3
@@ -63,7 +64,7 @@ class Set:
             self.CellHeight = 15
             self.TotalCells = 150
             # ===========================  Add Substrate =========================
-            self.Substrate = True
+            self.Substrate = 2
             self.kSubstrate = 0
             # ============================ Time ==================================
             self.tend = 60+20
@@ -91,7 +92,7 @@ class Set:
             self.Beta = 1
             # Tri energy Aspect ratio
             self.EnergyBarrierAR = True
-            self.lambdaR = 5.0
+            self.lambdaR = 8e-7
             # Bending
             self.Bending = False
             self.lambdaBend = 0.01
@@ -108,9 +109,6 @@ class Set:
             self.InPlaneElasticity = False
             self.mu_bulk = 3000
             self.lambda_bulk = 2000
-            # Substrate
-            self.Substrate = 2
-            self.kSubstrate = 500.0
             # Brownian motion
             self.brownian_motion = False
             self.brownian_motion_scale = 0
@@ -173,8 +171,6 @@ class Set:
         if self.implicit_method is False:
             self.tol = self.nu
             self.tol0 = self.nu/20
-            #self.tol = 100
-            #self.tol0 = 100
 
         if self.Remodelling:
             self.RemodelStiffness = 0.7
@@ -268,23 +264,32 @@ class Set:
         self.RemodelStiffness = 0.1
 
     def wing_disc_apical_constriction(self):
-        self.Nincr = self.tend * 100
+        self.nu_bottom = self.nu
 
         self.lambdaR = 8e-10
         self.kSubstrate = 0
 
-        self.ref_A0 = 1
-        self.lambdaS1 = 1
+        self.ref_A0 = 0.5
+        # Top
+        self.lambdaS1 = 1.4  # * 0.1
+        # c_cell-c_cell
         self.lambdaS2 = self.lambdaS1 / 100
-        self.lambdaS3 = self.lambdaS1 / 10000
-
-        #self.ref_V0 = 1
+        # Bottom
+        self.lambdaS3 = self.lambdaS1 / 1000
 
         self.ablation = False
 
+        self.check_for_non_used_parameters()
+
     def wing_disc(self):
+        #self.initial_filename_state = 'Input/Stack.tif'
+        self.percentage_scutoids = 0.65
         # Energy Barrier Aspect Ratio
-        self.lambdaR = 8e-7
+        self.EnergyBarrierAR = True
+        if self.EnergyBarrierAR:
+            self.lambdaR = 8e-7
+        else:
+            self.lambdaR = 0
 
         # Substrate
         self.kSubstrate = 0.1
@@ -292,13 +297,16 @@ class Set:
         # Contractility
         self.cLineTension = 0
 
-        # Noise
-        self.noise_random = 0
-
-        # Remodelling
-        # How big or small the edge to remodel
-        # 0.15 is 15% of average the edge. This is a threshold to remodel the edge
-        self.RemodelStiffness = 0.7
+        # Surface Area
+        self.ref_A0 = 0.92
+        # Top
+        self.lambdaS1 = 1.4  # * 0.1
+        # c_cell-c_cell
+        self.lambdaS2 = self.lambdaS1 / 100
+        # Bottom
+        self.lambdaS3 = self.lambdaS1 / 10
+        # Substrate - c_cell
+        self.lambdaS4 = self.lambdaS2
 
         self.check_for_non_used_parameters()
 
