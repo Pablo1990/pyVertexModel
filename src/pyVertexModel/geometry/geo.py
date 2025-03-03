@@ -1525,7 +1525,7 @@ class Geo:
         :return:
         """
         scutoid_cells = [c_cell for c_cell in self.Cells if c_cell.is_scutoid()]
-        percentage_scutoids = len(scutoid_cells) / len(self.Cells) * 100
+        percentage_scutoids = len(scutoid_cells) / self.nCells * 100
 
         return percentage_scutoids
 
