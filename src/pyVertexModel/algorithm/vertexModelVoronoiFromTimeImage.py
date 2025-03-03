@@ -17,7 +17,8 @@ from skimage.segmentation import find_boundaries
 from src import PROJECT_DIRECTORY, logger
 from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrahedra_from_information, \
     calculate_cell_height_on_model
-from src.pyVertexModel.geometry.geo import Geo
+from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain, edge_valence
+from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
 from src.pyVertexModel.util.utils import ismember_rows, save_variables, load_state, find_optimal_deform_array_X_Y
 
 
@@ -310,6 +311,10 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
             # save_state(self.geo, 'voronoi_40cells.pkl')
 
+        # Adjust percentage of scutoids
+        self.adjust_percentage_of_scutoids()
+
+        # Deform the tissue if required
         self.deform_tissue()
 
         # Add border cells to the shared cells
@@ -334,6 +339,46 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         # Define upper and lower area threshold for remodelling
         if self.geo.lmin0 is None:
             self.geo.init_reference_cell_values(self.set)
+
+    def adjust_percentage_of_scutoids(self):
+        """
+        Adjust the percentage of scutoids in the model.
+        :return: 
+        """
+        c_scutoids = self.geo.compute_percentage_of_scutoids() / 100
+
+        # Print initial percentage of scutoids
+        print(f'Percentage of scutoids initially: {c_scutoids}')
+
+        # Check if the number of scutoids is approximately the desired one
+        while round(c_scutoids, 1) != round(self.set.percentage_scutoids, 1):
+            remodel_obj = Remodelling(self.geo, self.geo, self.geo, self.set, self.Dofs)
+
+            non_scutoids = self.geo.obtain_non_scutoid_cells()
+            non_scutoids_ids = [cell.ID for cell in non_scutoids]
+            for c_cell in non_scutoids:
+                # Get the neighbours of the cell
+                neighbours = c_cell.compute_neighbours(location_filter='Bottom')
+                neighbours_non_scutoids = np.isin(neighbours, non_scutoids_ids)
+                if np.any(neighbours_non_scutoids):
+                    shared_nodes = get_node_neighbours_per_domain(self.geo, c_cell.ID, self.geo.XgBottom,
+                                                                  neighbours[neighbours_non_scutoids][0])
+
+                    # Filter the shared nodes that are ghost nodes
+                    shared_nodes = shared_nodes[np.isin(shared_nodes, self.geo.XgID)]
+                    valence_segment, old_tets, old_ys = edge_valence(self.geo, [c_cell.ID, shared_nodes[0]])
+
+                    cell_to_split_from_all = np.unique(old_tets)
+                    cell_to_split_from_all = cell_to_split_from_all[~np.isin(cell_to_split_from_all, self.geo.XgID)]
+                    cell_to_split_from = cell_to_split_from_all[
+                        ~np.isin(cell_to_split_from_all, [c_cell.ID, neighbours[neighbours_non_scutoids][0]])]
+                    # Perform flip
+                    remodel_obj.perform_flip(c_cell.ID, neighbours[neighbours_non_scutoids][0], cell_to_split_from[0],
+                                             shared_nodes[0])
+
+                    c_scutoids = self.geo.compute_percentage_of_scutoids() / 100
+                    print(f'Percentage of scutoids: {c_scutoids}')
+                    continue
 
     def build_2d_voronoi_from_image(self, labelled_img, watershed_img, total_cells):
         """
