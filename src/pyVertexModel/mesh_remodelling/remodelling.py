@@ -534,6 +534,14 @@ class Remodelling:
         return all_tnew, cell_to_split_from, ghost_node, ghost_nodes_tried, has_converged, old_tets
 
     def perform_flip(self, cell_node, cell_to_intercalate_with, cell_to_split_from, ghost_node):
+        """
+        Perform the flip.
+        :param cell_node:
+        :param cell_to_intercalate_with:
+        :param cell_to_split_from:
+        :param ghost_node:
+        :return:
+        """
         self.Geo.non_dead_cells = [cell.ID for cell in self.Geo.Cells if cell.AliveStatus == 1]
         has_converged = True
         all_tnew = None
@@ -558,17 +566,10 @@ class Remodelling:
             if any(np.isin(shared_nodes_still, self.Geo.XgID)) and has_converged:
                 shared_nodes_still_g = shared_nodes_still[np.isin(shared_nodes_still, self.Geo.XgID)]
                 ghost_node = shared_nodes_still_g[0]
-
-                for ghost_node_provisional in shared_nodes_still_g:
-                    nodes_pair_provisional = np.array([cell_node, ghost_node_provisional])
-                    valence_segment, old_tets, old_ys = edge_valence(self.Geo, nodes_pair_provisional)
-                    cell_nodes = [cell for cell in self.Geo.non_dead_cells if cell in old_tets.flatten()]
-                    cell_node_alive = [cell for cell in cell_nodes if self.Geo.Cells[cell].AliveStatus == 1]
-                    # print(cell_node_alive)
-
-                # TODO: SELECT THE BEST GHOST NODE
             else:
                 break
+
+
         return all_tnew, ghost_node, ghost_nodes_tried, has_converged, old_tets
 
     def get_tris_to_remodel_ordered(self):
