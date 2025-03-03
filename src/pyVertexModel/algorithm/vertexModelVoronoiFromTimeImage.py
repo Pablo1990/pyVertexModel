@@ -353,7 +353,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         remodel_obj = Remodelling(self.geo, self.geo, self.geo, self.set, self.Dofs)
 
         # Check if the number of scutoids is approximately the desired one
-        while round(c_scutoids, 1) != round(self.set.percentage_scutoids, 1):
+        while c_scutoids < self.set.percentage_scutoids:
 
             non_scutoids = self.geo.obtain_non_scutoid_cells()
             non_scutoids_ids = [cell.ID for cell in non_scutoids]
