@@ -117,9 +117,9 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
 
     if np.sum(ref_tet) > 1:
         if 'Bubbles_Cyst' in Set.InputGeo:
-            return Geo
+            return Geo, ref_point_closer
         else:
-            return Geo
+            return Geo, ref_point_closer
 
     vertices_to_change = np.sort(Tnew, axis=1)
     vertices_to_change = vertices_to_change[np.sum(np.isin(vertices_to_change, cell_nodes_shared), axis=1) > 1]
@@ -269,21 +269,25 @@ def smoothing_cell_surfaces_mesh(Geo, cells_intercalated, backup_vars, location=
     return Geo
 
 
-def correct_edge_vertices(allTnew, cellNodesShared, geo_copy, segmentFeatures):
+def correct_edge_vertices(allTnew, cellNodesShared, geo_copy, num_cell):
     """
     Correct the vertices of the edges.
     :param allTnew:
     :param cellNodesShared:
     :param geo_copy:
-    :param segmentFeatures:
+    :param num_cell:
     :return:
     """
     for cell in cellNodesShared:
         if geo_copy.Cells[cell].AliveStatus == 0:
             continue
 
-        cell_centroid_top = np.mean(geo_copy.Cells[cell].Y[np.any(np.isin(geo_copy.Cells[cell].T, geo_copy.XgTop), axis=1)],
-                                    axis=0)
+        if np.any(np.isin(geo_copy.XgTop, allTnew.flatten())):
+            cell_centroid = np.mean(geo_copy.Cells[cell].Y[np.any(np.isin(geo_copy.Cells[cell].T, geo_copy.XgTop), axis=1)],
+                                        axis=0)
+        else:
+            cell_centroid = np.mean(geo_copy.Cells[cell].Y[np.any(np.isin(geo_copy.Cells[cell].T, geo_copy.XgBottom), axis=1)],
+                                        axis=0)
 
         all_tets_cell = geo_copy.Cells[cell].T
         all_ys_cell = geo_copy.Cells[cell].Y
@@ -301,9 +305,9 @@ def correct_edge_vertices(allTnew, cellNodesShared, geo_copy, segmentFeatures):
         extreme_of_edge = all_tets_cell[np.sum(np.isin(all_tets_cell, geo_copy.XgID), axis=1) == 1]
         extreme_of_edge_ys = all_ys_cell[np.sum(np.isin(all_tets_cell, geo_copy.XgID), axis=1) == 1]
         extreme_of_edge_ys = extreme_of_edge_ys[
-            np.sum(np.isin(extreme_of_edge, [segmentFeatures['num_cell'], cell]), axis=1) == 2]
+            np.sum(np.isin(extreme_of_edge, [num_cell, cell]), axis=1) == 2]
 
-        tets_sharing_two_cells = (np.sum(np.isin(all_tets_cell, [segmentFeatures['num_cell'], cell]),
+        tets_sharing_two_cells = (np.sum(np.isin(all_tets_cell, [num_cell, cell]),
                                          axis=1) == 2) & (
                                              np.sum(np.isin(all_tets_cell, geo_copy.XgID), axis=1) == 2)
         vertices_to_equidistant_move = all_ys_cell[tets_sharing_two_cells]
@@ -326,17 +330,17 @@ def correct_edge_vertices(allTnew, cellNodesShared, geo_copy, segmentFeatures):
         ids_two_cells_sorted = ids_two_cells[ids_sorted]
 
         # Correct X-Y coordinates with the cell centroid
-        new_equidistant_vertices = [0.8 * vertex + 0.2 * cell_centroid_top for vertex in new_equidistant_vertices]
+        new_equidistant_vertices = [0.8 * vertex + 0.2 * cell_centroid for vertex in new_equidistant_vertices]
 
         geo_copy.Cells[cell].Y[ids_two_cells_sorted, :] = new_equidistant_vertices
 
         # Update the vertices of the other cell
         tets_to_replicate = geo_copy.Cells[cell].T[ids_two_cells_sorted]
         for id_tet, tet_to_replicate in enumerate(tets_to_replicate):
-            found_tet = ismember_rows(geo_copy.Cells[segmentFeatures['num_cell']].T, tet_to_replicate)[0]
+            found_tet = ismember_rows(geo_copy.Cells[num_cell].T, tet_to_replicate)[0]
             if not np.any(found_tet):
                 continue
-            geo_copy.Cells[segmentFeatures['num_cell']].Y[found_tet, :] = new_equidistant_vertices[id_tet]
+            geo_copy.Cells[num_cell].Y[found_tet, :] = new_equidistant_vertices[id_tet]
 
 
 
@@ -385,7 +389,7 @@ class Remodelling:
             # Get the first segment feature
             segmentFeatures = segmentFeatures_all.iloc[0]
 
-            #if segmentFeatures['num_cell'] in self.Geo.BorderCells or np.any(np.isin(self.Geo.BorderCells, segmentFeatures['shared_neighbours'])):
+            #if num_cell['num_cell'] in self.Geo.BorderCells or np.any(np.isin(self.Geo.BorderCells, num_cell['shared_neighbours'])):
             if self.Geo.Cells[segmentFeatures['cell_to_split_from']].AliveStatus == 1 or \
                     segmentFeatures['node_pair_g'] not in self.Geo.XgTop:
 
@@ -398,7 +402,7 @@ class Remodelling:
                 self.intercalate_cells(segmentFeatures))
 
             if has_converged is True:
-                has_converged = self.post_intercalation(segmentFeatures, how_close_to_vertex, allTnew, backup_vars,
+                has_converged = self.post_intercalation(segmentFeatures['num_cell'], how_close_to_vertex, allTnew, backup_vars,
                                                         cellToSplitFrom, ghostNode, ghost_nodes_tried, has_converged)
 
                 if has_converged is False:
@@ -433,7 +437,7 @@ class Remodelling:
 
         return self.Geo, self.Geo_n
 
-    def post_intercalation(self, segmentFeatures, how_close_to_vertex, allTnew, backup_vars, cellToSplitFrom, ghostNode,
+    def post_intercalation(self, num_cell, how_close_to_vertex, allTnew, backup_vars, cellToSplitFrom, ghostNode,
                            ghost_nodes_tried, has_converged):
         # Get the degrees of freedom for the remodelling
         self.Dofs.get_dofs(self.Geo, self.Set)
@@ -442,16 +446,16 @@ class Remodelling:
                            ghost_nodes_tried]
         gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
         cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
-        if len(np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])) > 3:
+        if len(np.concatenate([[num_cell], cellNodesShared])) > 3:
             if how_close_to_vertex is not None:
                 geo_copy, reference_point = (
                     move_vertices_closer_to_ref_point(self.Geo.copy(), how_close_to_vertex,
-                                                      np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
+                                                      np.concatenate([[num_cell], cellNodesShared]),
                                                       cellToSplitFrom, ghostNode, allTnew, self.Set))
                 cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
                                                 and cell.AliveStatus == 1]
                 # Equidistant vertices on the edges of the three cells
-                correct_edge_vertices(allTnew, cellNodesShared, geo_copy, segmentFeatures)
+                correct_edge_vertices(allTnew, cellNodesShared, geo_copy, num_cell)
 
                 # Smoothing the cell surfaces mesh
                 geo_copy = smoothing_cell_surfaces_mesh(geo_copy, cells_involved_intercalation, backup_vars)
@@ -462,7 +466,7 @@ class Remodelling:
 
                 # # Get the relation between Vol0 and Vol from the backup_vars
                 # for cell in backup_vars['Geo_b'].Cells:
-                #     # if cell.ID == segmentFeatures['num_cell']:
+                #     # if cell.ID == num_cell['num_cell']:
                 #     #     continue
                 #     if cell.ID in cells_involved_intercalation:
                 #         self.Geo.Cells[cell.ID].Vol0 = self.Geo.Cells[cell.ID].Vol * cell.Vol0 / cell.Vol
@@ -473,6 +477,7 @@ class Remodelling:
                 has_converged = True
         else:
             has_converged = False
+
         return has_converged
 
     def check_if_will_converge(self, best_geo):
