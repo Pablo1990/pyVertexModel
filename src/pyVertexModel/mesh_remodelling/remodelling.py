@@ -361,7 +361,7 @@ class Remodelling:
         self.Geo_n = Geo_n.copy()
         self.Geo_0 = Geo_0.copy()
 
-    def remodel_mesh(self, num_step):
+    def remodel_mesh(self, num_step, how_close_to_vertex=0.01):
         """
         Remodel the mesh.
         :return:
@@ -398,44 +398,8 @@ class Remodelling:
                 self.intercalate_cells(segmentFeatures))
 
             if has_converged is True:
-                # Get the degrees of freedom for the remodelling
-                self.Dofs.get_dofs(self.Geo, self.Set)
-                self.Geo = self.Dofs.get_remodel_dofs(allTnew, self.Geo, cellToSplitFrom)
-
-                gNodeNeighbours = [get_node_neighbours(self.Geo, ghost_node_tried) for ghost_node_tried in
-                                   ghost_nodes_tried]
-                gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
-                cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
-
-                if len(np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])) > 3:
-                    how_close_to_vertex = 0.01
-                    geo_copy, reference_point = (
-                        move_vertices_closer_to_ref_point(self.Geo.copy(), how_close_to_vertex,
-                                                          np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
-                                                          cellToSplitFrom, ghostNode, allTnew, self.Set))
-                    cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
-                                                  and cell.AliveStatus == 1]
-                    # Equidistant vertices on the edges of the three cells
-                    correct_edge_vertices(allTnew, cellNodesShared, geo_copy, segmentFeatures)
-
-                    # Smoothing the cell surfaces mesh
-                    geo_copy = smoothing_cell_surfaces_mesh(geo_copy, cells_involved_intercalation, backup_vars)
-                    screenshot_(geo_copy, self.Set, 0, 'after_remodelling_', self.Set.OutputFolder + '/images')
-
-                    self.Geo = geo_copy
-                    self.Geo.update_measures()
-
-                    # # Get the relation between Vol0 and Vol from the backup_vars
-                    # for cell in backup_vars['Geo_b'].Cells:
-                    #     # if cell.ID == segmentFeatures['num_cell']:
-                    #     #     continue
-                    #     if cell.ID in cells_involved_intercalation:
-                    #         self.Geo.Cells[cell.ID].Vol0 = self.Geo.Cells[cell.ID].Vol * cell.Vol0 / cell.Vol
-                    #         #self.Geo.Cells[cell.ID].lambda_r_perc = cell.lambda_r_perc
-
-                    has_converged = self.check_if_will_converge(self.Geo.copy())
-                else:
-                    has_converged = False
+                has_converged = self.post_intercalation(segmentFeatures, how_close_to_vertex, allTnew, backup_vars,
+                                                        cellToSplitFrom, ghostNode, ghost_nodes_tried, has_converged)
 
                 if has_converged is False:
                     self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs = load_backup_vars(backup_vars)
@@ -468,6 +432,48 @@ class Remodelling:
             segmentFeatures_all = segmentFeatures_all.drop(rowsToRemove)
 
         return self.Geo, self.Geo_n
+
+    def post_intercalation(self, segmentFeatures, how_close_to_vertex, allTnew, backup_vars, cellToSplitFrom, ghostNode,
+                           ghost_nodes_tried, has_converged):
+        # Get the degrees of freedom for the remodelling
+        self.Dofs.get_dofs(self.Geo, self.Set)
+        self.Geo = self.Dofs.get_remodel_dofs(allTnew, self.Geo, cellToSplitFrom)
+        gNodeNeighbours = [get_node_neighbours(self.Geo, ghost_node_tried) for ghost_node_tried in
+                           ghost_nodes_tried]
+        gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
+        cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
+        if len(np.concatenate([[segmentFeatures['num_cell']], cellNodesShared])) > 3:
+            if how_close_to_vertex is not None:
+                geo_copy, reference_point = (
+                    move_vertices_closer_to_ref_point(self.Geo.copy(), how_close_to_vertex,
+                                                      np.concatenate([[segmentFeatures['num_cell']], cellNodesShared]),
+                                                      cellToSplitFrom, ghostNode, allTnew, self.Set))
+                cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
+                                                and cell.AliveStatus == 1]
+                # Equidistant vertices on the edges of the three cells
+                correct_edge_vertices(allTnew, cellNodesShared, geo_copy, segmentFeatures)
+
+                # Smoothing the cell surfaces mesh
+                geo_copy = smoothing_cell_surfaces_mesh(geo_copy, cells_involved_intercalation, backup_vars)
+                screenshot_(geo_copy, self.Set, 0, 'after_remodelling_', self.Set.OutputFolder + '/images')
+
+                self.Geo = geo_copy
+                self.Geo.update_measures()
+
+                # # Get the relation between Vol0 and Vol from the backup_vars
+                # for cell in backup_vars['Geo_b'].Cells:
+                #     # if cell.ID == segmentFeatures['num_cell']:
+                #     #     continue
+                #     if cell.ID in cells_involved_intercalation:
+                #         self.Geo.Cells[cell.ID].Vol0 = self.Geo.Cells[cell.ID].Vol * cell.Vol0 / cell.Vol
+                #         #self.Geo.Cells[cell.ID].lambda_r_perc = cell.lambda_r_perc
+
+                has_converged = self.check_if_will_converge(self.Geo.copy())
+            else:
+                has_converged = True
+        else:
+            has_converged = False
+        return has_converged
 
     def check_if_will_converge(self, best_geo):
         dy = np.zeros(((best_geo.numY + best_geo.numF + best_geo.nCells) * 3, 1), dtype=np.float64)
@@ -504,10 +510,29 @@ class Remodelling:
         ghost_node = segmentFeatures['node_pair_g']
         cell_to_intercalate_with = segmentFeatures['cell_intercalate']
         cell_to_split_from = segmentFeatures['cell_to_split_from']
+        all_tnew, ghost_node, ghost_nodes_tried, has_converged, old_tets = self.perform_flip(cell_node,
+                                                                                             cell_to_intercalate_with,
+                                                                                             cell_to_split_from,
+                                                                                             ghost_node)
+
+        # Check if the remodelling has improved the gr and the energy
+
+        # Compute the new energy
+        g, energies = gGlobal(self.Geo, self.Geo, self.Geo, self.Set, self.Set.implicit_method)
+        gr = np.linalg.norm(g[self.Dofs.Free])
+        logger.info(f'|gr| after remodelling without changes: {gr}')
+        for key, energy in energies.items():
+            logger.info(f"{key}: {energy}")
+        # if gr / 100 > self.Set.tol:
+        #     has_converged = False
+
+        return all_tnew, cell_to_split_from, ghost_node, ghost_nodes_tried, has_converged, old_tets
+
+    def perform_flip(self, cell_node, cell_to_intercalate_with, cell_to_split_from, ghost_node):
+        self.Geo.non_dead_cells = [cell.ID for cell in self.Geo.Cells if cell.AliveStatus == 1]
         has_converged = True
         all_tnew = None
         ghost_nodes_tried = []
-
         while has_converged:
             nodes_pair = np.array([cell_node, ghost_node])
             ghost_nodes_tried.append(ghost_node)
@@ -539,19 +564,7 @@ class Remodelling:
                 # TODO: SELECT THE BEST GHOST NODE
             else:
                 break
-
-        # Check if the remodelling has improved the gr and the energy
-
-        # Compute the new energy
-        g, energies = gGlobal(self.Geo, self.Geo, self.Geo, self.Set, self.Set.implicit_method)
-        gr = np.linalg.norm(g[self.Dofs.Free])
-        logger.info(f'|gr| after remodelling without changes: {gr}')
-        for key, energy in energies.items():
-            logger.info(f"{key}: {energy}")
-        # if gr / 100 > self.Set.tol:
-        #     has_converged = False
-
-        return all_tnew, cell_to_split_from, ghost_node, ghost_nodes_tried, has_converged, old_tets
+        return all_tnew, ghost_node, ghost_nodes_tried, has_converged, old_tets
 
     def get_tris_to_remodel_ordered(self):
         """
