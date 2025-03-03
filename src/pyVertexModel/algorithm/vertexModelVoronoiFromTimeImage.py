@@ -343,16 +343,17 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
     def adjust_percentage_of_scutoids(self):
         """
         Adjust the percentage of scutoids in the model.
-        :return: 
+        :return:
         """
         c_scutoids = self.geo.compute_percentage_of_scutoids() / 100
 
         # Print initial percentage of scutoids
         print(f'Percentage of scutoids initially: {c_scutoids}')
 
+        remodel_obj = Remodelling(self.geo, self.geo, self.geo, self.set, self.Dofs)
+
         # Check if the number of scutoids is approximately the desired one
         while round(c_scutoids, 1) != round(self.set.percentage_scutoids, 1):
-            remodel_obj = Remodelling(self.geo, self.geo, self.geo, self.set, self.Dofs)
 
             non_scutoids = self.geo.obtain_non_scutoid_cells()
             non_scutoids_ids = [cell.ID for cell in non_scutoids]
@@ -376,9 +377,12 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                     remodel_obj.perform_flip(c_cell.ID, neighbours[neighbours_non_scutoids][0], cell_to_split_from[0],
                                              shared_nodes[0])
 
-                    c_scutoids = self.geo.compute_percentage_of_scutoids() / 100
+                    c_scutoids = remodel_obj.Geo.compute_percentage_of_scutoids() / 100
                     print(f'Percentage of scutoids: {c_scutoids}')
                     continue
+
+        self.geo = remodel_obj.Geo
+
 
     def build_2d_voronoi_from_image(self, labelled_img, watershed_img, total_cells):
         """
