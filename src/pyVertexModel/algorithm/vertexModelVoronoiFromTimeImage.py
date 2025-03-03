@@ -19,7 +19,8 @@ from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrah
     calculate_cell_height_on_model
 from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain, edge_valence
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
-from src.pyVertexModel.util.utils import ismember_rows, save_variables, load_state, find_optimal_deform_array_X_Y
+from src.pyVertexModel.util.utils import ismember_rows, save_variables, load_state, find_optimal_deform_array_X_Y, \
+    save_backup_vars, screenshot_
 
 
 def build_quartets_of_neighs_2d(neighbours):
@@ -352,34 +353,42 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
         remodel_obj = Remodelling(self.geo, self.geo, self.geo, self.set, self.Dofs)
 
+        screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
+                    self.set.OutputFolder + '/images')
+
         # Check if the number of scutoids is approximately the desired one
         while c_scutoids < self.set.percentage_scutoids:
+            backup_vars = save_backup_vars(remodel_obj.Geo, remodel_obj.Geo_n, remodel_obj.Geo_0, 0, remodel_obj.Dofs)
 
-            non_scutoids = self.geo.obtain_non_scutoid_cells()
+            non_scutoids = remodel_obj.Geo.obtain_non_scutoid_cells()
             non_scutoids_ids = [cell.ID for cell in non_scutoids]
             for c_cell in non_scutoids:
                 # Get the neighbours of the cell
                 neighbours = c_cell.compute_neighbours(location_filter='Bottom')
                 neighbours_non_scutoids = np.isin(neighbours, non_scutoids_ids)
                 if np.any(neighbours_non_scutoids):
-                    shared_nodes = get_node_neighbours_per_domain(self.geo, c_cell.ID, self.geo.XgBottom,
+                    shared_nodes = get_node_neighbours_per_domain(remodel_obj.Geo, c_cell.ID, remodel_obj.Geo.XgBottom,
                                                                   neighbours[neighbours_non_scutoids][0])
 
                     # Filter the shared nodes that are ghost nodes
-                    shared_nodes = shared_nodes[np.isin(shared_nodes, self.geo.XgID)]
-                    valence_segment, old_tets, old_ys = edge_valence(self.geo, [c_cell.ID, shared_nodes[0]])
+                    shared_nodes = shared_nodes[np.isin(shared_nodes, remodel_obj.Geo.XgID)]
+                    valence_segment, old_tets, old_ys = edge_valence(remodel_obj.Geo, [c_cell.ID, shared_nodes[0]])
 
                     cell_to_split_from_all = np.unique(old_tets)
-                    cell_to_split_from_all = cell_to_split_from_all[~np.isin(cell_to_split_from_all, self.geo.XgID)]
+                    cell_to_split_from_all = cell_to_split_from_all[~np.isin(cell_to_split_from_all, remodel_obj.Geo.XgID)]
                     cell_to_split_from = cell_to_split_from_all[
                         ~np.isin(cell_to_split_from_all, [c_cell.ID, neighbours[neighbours_non_scutoids][0]])]
                     # Perform flip
-                    remodel_obj.perform_flip(c_cell.ID, neighbours[neighbours_non_scutoids][0], cell_to_split_from[0],
+                    all_tnew, ghost_node, ghost_nodes_tried, has_converged, old_tets = remodel_obj.perform_flip(c_cell.ID, neighbours[neighbours_non_scutoids][0], cell_to_split_from[0],
                                              shared_nodes[0])
 
-                    c_scutoids = remodel_obj.Geo.compute_percentage_of_scutoids() / 100
-                    print(f'Percentage of scutoids: {c_scutoids}')
-                    continue
+                    if has_converged:
+                        c_scutoids = remodel_obj.Geo.compute_percentage_of_scutoids() / 100
+                        print(f'Percentage of scutoids: {c_scutoids}')
+
+                        screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
+                                    self.set.OutputFolder + '/images')
+                        break
 
         self.geo = remodel_obj.Geo
 
