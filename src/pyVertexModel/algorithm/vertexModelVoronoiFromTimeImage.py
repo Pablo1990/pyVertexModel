@@ -17,10 +17,11 @@ from skimage.segmentation import find_boundaries
 from src import PROJECT_DIRECTORY, logger
 from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrahedra_from_information, \
     calculate_cell_height_on_model
+from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours_vertices
 from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain, edge_valence
-from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
+from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling, smoothing_cell_surfaces_mesh
 from src.pyVertexModel.util.utils import ismember_rows, save_variables, load_state, find_optimal_deform_array_X_Y, \
-    save_backup_vars, screenshot_
+    save_backup_vars, screenshot_, save_state
 
 
 def build_quartets_of_neighs_2d(neighbours):
@@ -314,6 +315,11 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
         # Adjust percentage of scutoids
         self.adjust_percentage_of_scutoids()
+        for cell in self.geo.Cells:
+            if cell.AliveStatus is not None:
+                face_centres_to_middle_of_neighbours_vertices(self.geo, cell.ID)
+
+        self.geo.update_measures()
 
         # Deform the tissue if required
         self.deform_tissue()
@@ -349,17 +355,18 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         c_scutoids = self.geo.compute_percentage_of_scutoids() / 100
 
         # Print initial percentage of scutoids
-        print(f'Percentage of scutoids initially: {c_scutoids}')
+        logger.info(f'Percentage of scutoids initially: {c_scutoids}')
 
         remodel_obj = Remodelling(self.geo, self.geo, self.geo, self.set, self.Dofs)
 
         screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
                     self.set.OutputFolder + '/images')
 
+        backup_vars = save_backup_vars(remodel_obj.Geo, remodel_obj.Geo_n, remodel_obj.Geo_0, 0, remodel_obj.Dofs)
+
         # Check if the number of scutoids is approximately the desired one
         while c_scutoids < self.set.percentage_scutoids:
             backup_vars = save_backup_vars(remodel_obj.Geo, remodel_obj.Geo_n, remodel_obj.Geo_0, 0, remodel_obj.Dofs)
-
             non_scutoids = remodel_obj.Geo.obtain_non_scutoid_cells()
             non_scutoids_ids = [cell.ID for cell in non_scutoids]
             for c_cell in non_scutoids:
@@ -376,8 +383,13 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
                     cell_to_split_from_all = np.unique(old_tets)
                     cell_to_split_from_all = cell_to_split_from_all[~np.isin(cell_to_split_from_all, remodel_obj.Geo.XgID)]
+
+                    if np.sum(np.isin(cell_to_split_from_all, remodel_obj.Geo.BorderCells)) > 1:
+                        print('More than one border cell')
+
                     cell_to_split_from = cell_to_split_from_all[
                         ~np.isin(cell_to_split_from_all, [c_cell.ID, neighbours[neighbours_non_scutoids][0]])]
+
                     # Perform flip
                     all_tnew, ghost_node, ghost_nodes_tried, has_converged, old_tets = remodel_obj.perform_flip(c_cell.ID, neighbours[neighbours_non_scutoids][0], cell_to_split_from[0],
                                              shared_nodes[0])
@@ -386,11 +398,15 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                         c_scutoids = remodel_obj.Geo.compute_percentage_of_scutoids() / 100
                         print(f'Percentage of scutoids: {c_scutoids}')
 
-                        screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
-                                    self.set.OutputFolder + '/images')
+                        #screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
+                        #            self.set.OutputFolder + '/images')
+
+                        self.geo = remodel_obj.Geo
+                        save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(round(c_scutoids, 2)) + '.pkl'))
                         break
 
-        self.geo = remodel_obj.Geo
+        cells_intercalated = range(self.geo.nCells)
+        #self.geo = smoothing_cell_surfaces_mesh(remodel_obj.Geo, cells_intercalated, backup_vars, location='Bottom')
 
 
     def build_2d_voronoi_from_image(self, labelled_img, watershed_img, total_cells):

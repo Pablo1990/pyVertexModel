@@ -270,6 +270,7 @@ def smoothing_cell_surfaces_mesh(Geo, cells_intercalated, backup_vars, location=
                                 face.Centre[2] = closest_vertex[2]
 
             face_centres_to_middle_of_neighbours_vertices(Geo, cell_intercalated, filter_location=location)
+            face_centres_to_middle_of_neighbours_vertices(Geo, cell_intercalated, filter_location='CellCell')
 
     return Geo
 
