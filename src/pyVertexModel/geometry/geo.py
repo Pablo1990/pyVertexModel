@@ -337,6 +337,7 @@ class Geo:
         :param c_set: The settings of the simulation
         :return: None
         """
+        logger.info('Initializing reference cell values')
         # Assemble nodes from all cells that are not None
         self.AssembleNodes = [i for i, cell in enumerate(self.Cells) if cell.AliveStatus is not None]
         # Initialize BarrierTri0 and lmin0 with the maximum possible float value
@@ -346,14 +347,14 @@ class Geo:
         # Average values
         avg_vol = np.mean([c_cell.Vol for c_cell in self.Cells if c_cell.AliveStatus is not None])
 
-        # Average area per domain
-        avg_area_top = np.mean([c_cell.compute_area(location_filter=0) for c_cell in self.Cells
-                                if c_cell.AliveStatus is not None])
-        avg_area_bottom = np.mean([c_cell.compute_area(location_filter=2) for c_cell in self.Cells
-                                   if c_cell.AliveStatus is not None])
-        avg_area_lateral = np.mean([c_cell.compute_area(location_filter=1) for c_cell in self.Cells
-                                    if c_cell.AliveStatus is not None])
-        avg_area = np.mean([c_cell.Area for c_cell in self.Cells if c_cell.AliveStatus is not None])
+        ## Average area per domain
+        # avg_area_top = np.mean([c_cell.compute_area(location_filter=0) for c_cell in self.Cells
+        #                         if c_cell.AliveStatus is not None])
+        # avg_area_bottom = np.mean([c_cell.compute_area(location_filter=2) for c_cell in self.Cells
+        #                            if c_cell.AliveStatus is not None])
+        # avg_area_lateral = np.mean([c_cell.compute_area(location_filter=1) for c_cell in self.Cells
+        #                             if c_cell.AliveStatus is not None])
+        # avg_area = np.mean([c_cell.Area for c_cell in self.Cells if c_cell.AliveStatus is not None])
 
         # Initialize list for storing minimum lengths to the centre and edge lengths of tris
         lmin_values = []
@@ -362,8 +363,8 @@ class Geo:
         for c, c_cell in enumerate(self.Cells):
             if c_cell.AliveStatus is not None:
                 # Adjust the Vol0
-                self.Cells[c].Vol0 = self.Cells[c].Vol / c_set.ref_V0
-                self.Cells[c].Area0 = avg_area
+                self.Cells[c].Vol0 = self.Cells[c].Vol * c_set.ref_V0
+                self.Cells[c].Area0 = self.Cells[c].Area * c_set.ref_A0
 
                 # Compute the mechanical parameter with noise
                 # Surface area
@@ -381,17 +382,15 @@ class Geo:
                 # Area Energy Barrier
                 self.Cells[c].lambda_b_perc = add_noise_to_parameter(1, c_set.noise_random)
 
-                # Compute number of faces per domain
-                num_faces_bottom, num_faces_lateral, num_faces_top = self.get_num_faces(c)
+                ## Compute number of faces per domain
+                #num_faces_bottom, num_faces_lateral, num_faces_top = self.get_num_faces(c)
 
                 # Iterate over all faces in the current cell
                 for f in range(len(self.Cells[c].Faces)):
-                    if get_interface(self.Cells[c].Faces[f].InterfaceType) == get_interface('Top'):
-                        self.Cells[c].Faces[f].Area0 = avg_area_top * c_set.ref_A0 / num_faces_top
-                    elif get_interface(self.Cells[c].Faces[f].InterfaceType) == get_interface('Bottom'):
-                        self.Cells[c].Faces[f].Area0 = avg_area_bottom * c_set.ref_A0 / num_faces_bottom
+                    if get_interface(self.Cells[c].Faces[f].InterfaceType) != get_interface('CellCell'):
+                        self.Cells[c].Faces[f].Area0 = self.Cells[c].Faces[f].Area * c_set.ref_A0
                     else:
-                        self.Cells[c].Faces[f].Area0 = avg_area_lateral * c_set.ref_A0 / num_faces_lateral
+                        self.Cells[c].Faces[f].Area0 = self.Cells[c].Faces[f].Area
 
                     Face = self.Cells[c].Faces[f]
 
