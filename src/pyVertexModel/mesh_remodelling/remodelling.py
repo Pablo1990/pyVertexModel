@@ -395,10 +395,9 @@ class Remodelling:
             # Get the first segment feature
             segmentFeatures = segmentFeatures_all.iloc[0]
 
-            #if num_cell['num_cell'] in self.Geo.BorderCells or np.any(np.isin(self.Geo.BorderCells, num_cell['shared_neighbours'])):
+            #if segmentFeatures['num_cell'] in self.Geo.BorderCells or np.any(np.isin(self.Geo.BorderCells, segmentFeatures['shared_neighbours'])):
             if self.Geo.Cells[segmentFeatures['cell_to_split_from']].AliveStatus == 1 or \
                     segmentFeatures['node_pair_g'] not in self.Geo.XgTop:
-
                 # Drop the first element of the segment features
                 segmentFeatures_all = segmentFeatures_all.drop(segmentFeatures_all.index[0])
                 continue
@@ -470,14 +469,7 @@ class Remodelling:
 
                 self.Geo = geo_copy
                 self.Geo.update_measures()
-
-                # # Get the relation between Vol0 and Vol from the backup_vars
-                # for cell in backup_vars['Geo_b'].Cells:
-                #     # if cell.ID == num_cell['num_cell']:
-                #     #     continue
-                #     if cell.ID in cells_involved_intercalation:
-                #         self.Geo.Cells[cell.ID].Vol0 = self.Geo.Cells[cell.ID].Vol * cell.Vol0 / cell.Vol
-                #         #self.Geo.Cells[cell.ID].lambda_r_perc = cell.lambda_r_perc
+                self.reset_preferred_values(backup_vars, cells_involved_intercalation)
 
                 has_converged = self.check_if_will_converge(self.Geo.copy())
             else:
@@ -485,19 +477,26 @@ class Remodelling:
                     if cell.AliveStatus is not None:
                         face_centres_to_middle_of_neighbours_vertices(self.Geo, cell.ID)
                 self.Geo.update_measures()
-
-                # Get the relation between Vol0 and Vol from the backup_vars
-                for cell in backup_vars['Geo_b'].Cells:
-                    # if cell.ID == num_cell['num_cell']:
-                    #     continue
-                    if cell.ID in cells_involved_intercalation:
-                        self.Geo.Cells[cell.ID].Vol0 = self.Geo.Cells[cell.ID].Vol * cell.Vol0 / cell.Vol
-
+                self.reset_preferred_values(backup_vars, cells_involved_intercalation)
                 has_converged = True
         else:
             has_converged = False
 
         return has_converged
+
+    def reset_preferred_values(self, backup_vars, cells_involved_intercalation):
+        # Get the relation between Vol0 and Vol from the backup_vars
+        for cell in backup_vars['Geo_b'].Cells:
+            # if cell.ID == num_cell['num_cell']:
+            #     continue
+            if cell.ID in cells_involved_intercalation:
+                self.Geo.Cells[cell.ID].Vol0 = self.Geo.Cells[cell.ID].Vol * cell.Vol0 / cell.Vol
+                self.Geo.Cells[cell.ID].Area0 = self.Geo.Cells[cell.ID].Area * cell.Area0 / cell.Area
+                for f in range(len(self.Geo.Cells[cell.ID].Faces)):
+                    if get_interface(self.Geo.Cells[cell.ID].Faces[f].InterfaceType) != get_interface('CellCell'):
+                        self.Geo.Cells[cell.ID].Faces[f].Area0 = self.Geo.Cells[cell.ID].Faces[f].Area * self.Set.ref_A0
+                    else:
+                        self.Geo.Cells[cell.ID].Faces[f].Area0 = self.Geo.Cells[cell.ID].Faces[f].Area
 
     def check_if_will_converge(self, best_geo):
         dy = np.zeros(((best_geo.numY + best_geo.numF + best_geo.nCells) * 3, 1), dtype=np.float64)
@@ -573,10 +572,10 @@ class Remodelling:
             valence_segment, old_tets, old_ys = edge_valence(self.Geo, nodes_pair)
             cell_nodes = [cell for cell in self.Geo.non_dead_cells if cell in old_tets.flatten()]
             #if len(cell_nodes) > 2:
-                has_converged, Tnew = self.flip_nm(nodes_pair, cell_to_intercalate_with, old_tets, old_ys,
-                                                   cell_to_split_from)
-                if Tnew is not None:
-                    all_tnew = Tnew if all_tnew is None else np.vstack((all_tnew, Tnew))
+            has_converged, Tnew = self.flip_nm(nodes_pair, cell_to_intercalate_with, old_tets, old_ys,
+                                               cell_to_split_from)
+            if Tnew is not None:
+                all_tnew = Tnew if all_tnew is None else np.vstack((all_tnew, Tnew))
             #else:
             #    logger.info(f"Remodeling: {cell_node} - {ghost_node} not possible due to cell_nodes < 2")
             #    logger.info(f"Old tets: {old_tets}")
