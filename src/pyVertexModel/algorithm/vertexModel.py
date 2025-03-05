@@ -178,6 +178,7 @@ class VertexModel:
             self.set = Set()
             # self.set.cyst()
             self.set.wing_disc()
+            #self.set.wing_disc_apical_constriction()
             if self.set.ablation:
                 self.set.wound_default()
 

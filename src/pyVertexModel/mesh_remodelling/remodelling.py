@@ -453,13 +453,14 @@ class Remodelling:
         gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
         cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
         if len(np.concatenate([[num_cell], cellNodesShared])) > 3:
-            if how_close_to_vertex is not None:
+            n_cells_wound = np.sum([cell.AliveStatus == 0 for cell in self.Geo.Cells if cell.ID in cellNodesShared])
+            cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
+                                            and cell.AliveStatus == 1]
+            if how_close_to_vertex is not None and n_cells_wound > 0:
                 geo_copy, reference_point = (
                     move_vertices_closer_to_ref_point(self.Geo.copy(), how_close_to_vertex,
                                                       np.concatenate([[num_cell], cellNodesShared]),
                                                       cellToSplitFrom, ghostNode, allTnew, self.Set))
-                cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
-                                                and cell.AliveStatus == 1]
                 # Equidistant vertices on the edges of the three cells
                 correct_edge_vertices(allTnew, cellNodesShared, geo_copy, num_cell)
 
@@ -480,6 +481,18 @@ class Remodelling:
 
                 has_converged = self.check_if_will_converge(self.Geo.copy())
             else:
+                for cell in self.Geo.Cells:
+                    if cell.AliveStatus is not None:
+                        face_centres_to_middle_of_neighbours_vertices(self.Geo, cell.ID)
+                self.Geo.update_measures()
+
+                # Get the relation between Vol0 and Vol from the backup_vars
+                for cell in backup_vars['Geo_b'].Cells:
+                    # if cell.ID == num_cell['num_cell']:
+                    #     continue
+                    if cell.ID in cells_involved_intercalation:
+                        self.Geo.Cells[cell.ID].Vol0 = self.Geo.Cells[cell.ID].Vol * cell.Vol0 / cell.Vol
+
                 has_converged = True
         else:
             has_converged = False
@@ -632,12 +645,14 @@ class Remodelling:
         while segment_features_filtered.empty is False and num_segment < segment_features_filtered.shape[0]:
             shortest_segment = segment_features_filtered.iloc[num_segment]
 
+            #if shortest_segment['num_cell'] in self.Geo.BorderCells or np.any(
+            #        np.isin(self.Geo.BorderCells, shortest_segment['shared_neighbours'])):
             if self.Geo.Cells[shortest_segment['cell_to_split_from']].AliveStatus == 1 or \
                     shortest_segment['node_pair_g'] not in self.Geo.XgTop:
                 # Drop the first element of the segment features
                 segment_features_filtered = segment_features_filtered.drop(segment_features_filtered.index[shortest_segment['edge_length'] == segment_features_filtered['edge_length']])
             else:
-                segment_features_filtered = segment_features_filtered.drop(segment_features_filtered.index[shortest_segment['edge_length'] != segment_features_filtered['edge_length']])
+                #segment_features_filtered = segment_features_filtered.drop(segment_features_filtered.index[shortest_segment['edge_length'] != segment_features_filtered['edge_length']])
 
                 nodes_neighbours = get_node_neighbours_per_domain(self.Geo, shortest_segment['num_cell'], shortest_segment['node_pair_g'], main_node=shortest_segment['cell_to_split_from'])
                 nodes_neighbours_g = nodes_neighbours[np.isin(nodes_neighbours, self.Geo.XgID)]
@@ -652,7 +667,7 @@ class Remodelling:
                             if 'is_commited_to_intercalate' in tri.__dict__:
                                 if tri.is_commited_to_intercalate:
                                     time_to_intercalate = True
-                                    continue
+                                    break
                             tri.is_commited_to_intercalate = True
 
                 if not time_to_intercalate: #self.Set.edge_length_threshold:
