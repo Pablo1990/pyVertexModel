@@ -88,8 +88,8 @@ class Set:
             self.ref_A0 = 0.92
             # Tri energy Area
             self.EnergyBarrierA = False
-            self.lambdaB = 20.0
-            self.Beta = 1
+            self.lambdaB = 3.0
+            self.Beta = 1.0
             # Tri energy Aspect ratio
             self.EnergyBarrierAR = True
             self.lambdaR = 8e-7
@@ -179,6 +179,7 @@ class Set:
 
     def redirect_output(self):
         os.makedirs(self.OutputFolder, exist_ok=True)
+        os.makedirs(self.OutputFolder + '/images', exist_ok=True)
         handler = logging.FileHandler(os.path.join(self.OutputFolder, 'log.out'))
         handler.setLevel(logging.DEBUG)
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -284,6 +285,8 @@ class Set:
     def wing_disc(self):
         #self.initial_filename_state = 'Input/Stack.tif'
         self.percentage_scutoids = 0.65
+
+        self.EnergyBarrierA = False
         # Energy Barrier Aspect Ratio
         self.EnergyBarrierAR = True
         if self.EnergyBarrierAR:
@@ -295,18 +298,21 @@ class Set:
         self.kSubstrate = 0.1
 
         # Contractility
-        self.cLineTension = 0
+        self.Contractility = False
+        #self.cLineTension = 1e-4
 
         # Surface Area
         self.ref_A0 = 0.92
         # Top
-        self.lambdaS1 = 1.4  # * 0.1
+        self.lambdaS1 = 1.4
         # c_cell-c_cell
         self.lambdaS2 = self.lambdaS1 / 100
         # Bottom
         self.lambdaS3 = self.lambdaS1 / 10
         # Substrate - c_cell
         self.lambdaS4 = self.lambdaS2
+
+        self.VTK = False
 
         self.check_for_non_used_parameters()
 
