@@ -344,8 +344,8 @@ class Geo:
         self.BarrierTri0 = np.finfo(float).max
         self.lmin0 = np.finfo(float).max
 
-        # Average values
-        avg_vol = np.mean([c_cell.Vol for c_cell in self.Cells if c_cell.AliveStatus is not None])
+        ## Average values
+        #avg_vol = np.mean([c_cell.Vol for c_cell in self.Cells if c_cell.AliveStatus is not None])
 
         ## Average area per domain
         # avg_area_top = np.mean([c_cell.compute_area(location_filter=0) for c_cell in self.Cells

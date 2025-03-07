@@ -318,11 +318,10 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         for cell in self.geo.Cells:
             if cell.AliveStatus is not None:
                 face_centres_to_middle_of_neighbours_vertices(self.geo, cell.ID)
-
         self.geo.update_measures()
 
         # Deform the tissue if required
-        self.deform_tissue()
+        #self.deform_tissue()
 
         # Add border cells to the shared cells
         for cell in self.geo.Cells:
