@@ -20,7 +20,7 @@ class KgTriAREnergyBarrier(Kg):
             for f in range(len(Cell.Faces)):
                 face = Cell.Faces[f]
 
-                if get_interface(face.InterfaceType) == get_interface('Top') :
+                if get_interface(face.InterfaceType) != get_interface('CellCell'):
                     Tris = Cell.Faces[f].Tris
 
                     for t in range(len(Tris)):
@@ -64,7 +64,6 @@ class KgTriAREnergyBarrier(Kg):
 
                         energy_c = energy_c + fact / 2 * (w1 ** 2 + w2 ** 2 + w3 ** 2)
 
-            #print(f"Energy at AREnergyBarrier: {energy_c} for cell {c}")
             self.energy += energy_c
 
         end = time.time()
