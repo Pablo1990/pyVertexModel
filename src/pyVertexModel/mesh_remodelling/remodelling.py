@@ -508,19 +508,23 @@ class Remodelling:
         # else:
         #     return False
 
-        for n_iter in range(20):
-            best_geo, dy, gr, g = newton_raphson_iteration_explicit(best_geo, self.Set, self.Dofs.Free, dy, g)
-            screenshot_(best_geo, self.Set, 0, 'after_remodelling_' + str(n_iter), self.Set.OutputFolder + '/images')
-            print(f'Previous gr: {previous_gr}, gr: {gr}')
-            if np.all(~np.isnan(g[self.Dofs.Free])) and np.all(~np.isnan(dy[self.Dofs.Free])):
-                pass
+        try:
+            for n_iter in range(20):
+                best_geo, dy, gr, g = newton_raphson_iteration_explicit(best_geo, self.Set, self.Dofs.Free, dy, g)
+                screenshot_(best_geo, self.Set, 0, 'after_remodelling_' + str(n_iter), self.Set.OutputFolder + '/images')
+                print(f'Previous gr: {previous_gr}, gr: {gr}')
+                if np.all(~np.isnan(g[self.Dofs.Free])) and np.all(~np.isnan(dy[self.Dofs.Free])):
+                    pass
+                else:
+                    return False
+
+            if (gr < self.Set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
+                    np.all(~np.isnan(dy[self.Dofs.Free]))):
+                return True
             else:
                 return False
-
-        if (gr < self.Set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
-                np.all(~np.isnan(dy[self.Dofs.Free]))):
-            return True
-        else:
+        except Exception as e:
+            logger.error(f'Error in check_if_will_converge: {e}')
             return False
 
     def intercalate_cells(self, segmentFeatures):
