@@ -213,7 +213,7 @@ class KgContractility(Kg):
 
                         if 'is_commited_to_intercalate' in currentTri.__dict__:
                             if currentTri.is_commited_to_intercalate:
-                                #C = C * 2
+                                C = C * 2
                                 pass
 
                         # Get the vertices of the edge
