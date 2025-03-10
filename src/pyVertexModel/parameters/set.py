@@ -71,7 +71,7 @@ class Set:
             self.Nincr = self.tend * 100
             # ============================ Mechanics =============================
             # Volumes
-            self.lambdaV = 1.0
+            self.lambdaV = 1e-1
             self.lambdaV_Debris = 1e-8
             self.ref_V0 = 1.0
             # Surface area
@@ -298,7 +298,7 @@ class Set:
         self.kSubstrate = 0.1
 
         # Contractility
-        self.Contractility = False
+        self.Contractility = True
         #self.cLineTension = 1e-4
 
         # Surface Area
