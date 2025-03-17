@@ -71,7 +71,7 @@ class Set:
             self.Nincr = self.tend * 100
             # ============================ Mechanics =============================
             # Volumes
-            self.lambdaV = 1e-1
+            self.lambdaV = 2e-1
             self.lambdaV_Debris = 1e-8
             self.ref_V0 = 1.0
             # Surface area
@@ -272,7 +272,7 @@ class Set:
 
         self.ref_A0 = 0.5
         # Top
-        self.lambdaS1 = 1.4  # * 0.1
+        self.lambdaS1 = 1.4
         # c_cell-c_cell
         self.lambdaS2 = self.lambdaS1 / 100
         # Bottom

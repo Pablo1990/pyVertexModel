@@ -1,4 +1,5 @@
 import itertools
+import logging
 import os
 import sys
 
@@ -6,6 +7,8 @@ from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
 from src.pyVertexModel.util.utils import load_state
+
+logger = logging.getLogger("pyVertexModel")
 
 def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
     """
@@ -89,8 +92,12 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
             analyse_simulation(vModel.set.OutputFolder)
             return
 
-    vModel.iterate_over_time()
-    analyse_simulation(vModel.set.OutputFolder)
+    try:
+        vModel.iterate_over_time()
+        analyse_simulation(vModel.set.OutputFolder)
+    except Exception as e:
+        logger.info(f"Error in simulation: {e}")
+
 
 variables_to_change = ['kSubstrate', 'Remodelling', 'purseStringStrength', 'lateralCablesStrength']
 
@@ -102,7 +109,7 @@ for i in range(1, len(variables_to_change) + 1):
 combinations_of_variables.insert(0, 'ShibireTS')
 combinations_of_variables.insert(0, 'Talin')
 combinations_of_variables.insert(0, 'IntegrinDN')
-combinations_of_variables.insert(0, 'WT_substrate_gone_40_mins')
+#combinations_of_variables.insert(0, 'WT_substrate_gone_40_mins')
 combinations_of_variables.insert(0, 'Mbs')
 combinations_of_variables.insert(0, 'Rok')
 combinations_of_variables.insert(0, 'WT')
