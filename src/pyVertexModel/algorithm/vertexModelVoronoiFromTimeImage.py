@@ -18,6 +18,7 @@ from src import PROJECT_DIRECTORY, logger
 from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrahedra_from_information, \
     calculate_cell_height_on_model
 from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours_vertices
+from src.pyVertexModel.geometry.face import get_interface
 from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain, edge_valence
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling, smoothing_cell_surfaces_mesh
 from src.pyVertexModel.util.utils import ismember_rows, save_variables, load_state, find_optimal_deform_array_X_Y, \
@@ -409,11 +410,20 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                                          shared_nodes[0])
 
                 if has_converged:
+                    for cell in self.geo.Cells:
+                        if cell.AliveStatus is not None:
+                            face_centres_to_middle_of_neighbours_vertices(self.geo, cell.ID)
+
                     # Converge a single iteration
                     remodel_obj.Geo.update_measures()
                     cells_involved_intercalation = [cell.ID for cell in remodel_obj.Geo.Cells if cell.ID in all_tnew.flatten()
                                                     and cell.AliveStatus == 1]
-                    remodel_obj.reset_preferred_values(backup_vars, cells_involved_intercalation)
+                    for cell in remodel_obj.Geo.Cells:
+                        if cell.ID in cells_involved_intercalation:
+                            remodel_obj.Geo.Cells[cell.ID].Vol0 = remodel_obj.Geo.Cells[cell.ID].Vol
+                            remodel_obj.Geo.Cells[cell.ID].Area0 = remodel_obj.Geo.Cells[cell.ID].Area
+                            for f in range(len(remodel_obj.Geo.Cells[cell.ID].Faces)):
+                                remodel_obj.Geo.Cells[cell.ID].Faces[f].Area0 = remodel_obj.Geo.Cells[cell.ID].Faces[f].Area
 
                     remodel_obj.Set.currentT = self.t
                     remodel_obj.Dofs.get_dofs(remodel_obj.Geo, self.set)
@@ -439,9 +449,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             if c_cell == non_scutoids[-1]:
                 break
 
-        for cell in self.geo.Cells:
-            if cell.AliveStatus is not None:
-                face_centres_to_middle_of_neighbours_vertices(self.geo, cell.ID)
+
         self.geo.update_measures()
 
         self.geo.init_reference_cell_values(self.set)
