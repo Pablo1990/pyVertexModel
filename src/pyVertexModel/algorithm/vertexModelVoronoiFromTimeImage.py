@@ -21,7 +21,7 @@ from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours
 from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain, edge_valence
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling, smoothing_cell_surfaces_mesh
 from src.pyVertexModel.util.utils import ismember_rows, save_variables, load_state, find_optimal_deform_array_X_Y, \
-    save_backup_vars, screenshot_, save_state
+    save_backup_vars, screenshot_, save_state, load_backup_vars
 
 
 def build_quartets_of_neighs_2d(neighbours):
@@ -365,10 +365,12 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
         remodel_obj = Remodelling(self.geo, self.geo, self.geo, self.set, self.Dofs)
 
+        polygon_distribution = remodel_obj.Geo.compute_polygon_distribution('Bottom')
+        print(f'Polygon distribution bottom: {polygon_distribution}')
+
         screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
                     self.set.OutputFolder + '/images')
 
-        backup_vars = save_backup_vars(remodel_obj.Geo, remodel_obj.Geo_n, remodel_obj.Geo_0, 0, remodel_obj.Dofs)
 
         # Check if the number of scutoids is approximately the desired one
         while c_scutoids < self.set.percentage_scutoids:
@@ -430,13 +432,13 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                     self.geo = remodel_obj.Geo
                     save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(round(c_scutoids, 2)) + '.pkl'))
                     break
+                else:
+                    remodel_obj.Geo, _, _, _, remodel_obj.Geo.Dofs = load_backup_vars(backup_vars)
 
             # If the last cell is reached, break the loop
             if c_cell == non_scutoids[-1]:
                 break
 
-        #cells_intercalated = range(self.geo.nCells)
-        #self.geo = smoothing_cell_surfaces_mesh(remodel_obj.Geo, cells_intercalated, backup_vars, location='Bottom')
         for cell in self.geo.Cells:
             if cell.AliveStatus is not None:
                 face_centres_to_middle_of_neighbours_vertices(self.geo, cell.ID)
