@@ -1247,6 +1247,26 @@ class Geo:
         debris_cells_ids = [c_cell.ID for c_cell in debris_cells]
         return debris_centre, debris_cells_ids
 
+    def compute_polygon_distribution(self, location_filter=None):
+        """
+
+        :return:
+        """
+
+        all_neighbours = []
+
+        for c_cell in self.Cells:
+            if c_cell.AliveStatus == 1 or c_cell.ID not in self.BorderCells:
+                all_neighbours.append(len(c_cell.compute_neighbours(location_filter=location_filter)))
+
+        # Count the number of different neighbours
+        polygon_distribution = np.bincount(all_neighbours)
+        # Normalise the distribution
+        polygon_distribution = polygon_distribution / self.nCells
+
+        return polygon_distribution
+
+
     def compute_cell_distance_to_wound(self, wound_cells, location_filter=None):
         """
         Compute the number of cells between the cell and a wound cell
