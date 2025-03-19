@@ -1262,7 +1262,7 @@ class Geo:
         # Count the number of different neighbours
         polygon_distribution = np.bincount(all_neighbours)
         # Normalise the distribution
-        polygon_distribution = polygon_distribution / self.nCells
+        polygon_distribution = polygon_distribution / len(all_neighbours)
 
         return polygon_distribution
 
