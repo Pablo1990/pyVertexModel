@@ -498,7 +498,7 @@ class Remodelling:
                     else:
                         self.Geo.Cells[cell.ID].Faces[f].Area0 = self.Geo.Cells[cell.ID].Faces[f].Area
 
-    def check_if_will_converge(self, best_geo):
+    def check_if_will_converge(self, best_geo, n_iter_max=20):
         dy = np.zeros(((best_geo.numY + best_geo.numF + best_geo.nCells) * 3, 1), dtype=np.float64)
         g, energies = gGlobal(best_geo, best_geo, best_geo, self.Set, self.Set.implicit_method)
         previous_gr = np.linalg.norm(g[self.Dofs.Free])
@@ -509,9 +509,9 @@ class Remodelling:
         #     return False
 
         try:
-            for n_iter in range(20):
+            for n_iter in range(n_iter_max):
                 best_geo, dy, gr, g = newton_raphson_iteration_explicit(best_geo, self.Set, self.Dofs.Free, dy, g)
-                screenshot_(best_geo, self.Set, 0, 'after_remodelling_' + str(n_iter), self.Set.OutputFolder + '/images')
+                #screenshot_(best_geo, self.Set, 0, 'after_remodelling_' + str(n_iter), self.Set.OutputFolder + '/images')
                 print(f'Previous gr: {previous_gr}, gr: {gr}')
                 if np.all(~np.isnan(g[self.Dofs.Free])) and np.all(~np.isnan(dy[self.Dofs.Free])):
                     pass

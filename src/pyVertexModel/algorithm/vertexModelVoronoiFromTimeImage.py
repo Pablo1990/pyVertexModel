@@ -313,13 +313,6 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
             # save_state(self.geo, 'voronoi_40cells.pkl')
 
-        # Adjust percentage of scutoids
-        self.adjust_percentage_of_scutoids()
-        for cell in self.geo.Cells:
-            if cell.AliveStatus is not None:
-                face_centres_to_middle_of_neighbours_vertices(self.geo, cell.ID)
-        self.geo.update_measures()
-
         # Deform the tissue if required
         #self.deform_tissue()
 
@@ -346,6 +339,20 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         if self.geo.lmin0 is None:
             self.geo.init_reference_cell_values(self.set)
 
+        if self.set.Substrate == 1:
+            self.Dofs.GetDOFsSubstrate(self.geo, self.set)
+        else:
+            self.Dofs.get_dofs(self.geo, self.set)
+
+        if self.geo_0 is None:
+            self.geo_0 = self.geo.copy(update_measurements=False)
+
+        if self.geo_n is None:
+            self.geo_n = self.geo.copy(update_measurements=False)
+
+        # Adjust percentage of scutoids
+        self.adjust_percentage_of_scutoids()
+
     def adjust_percentage_of_scutoids(self):
         """
         Adjust the percentage of scutoids in the model.
@@ -371,41 +378,71 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             for c_cell in non_scutoids:
                 # Get the neighbours of the cell
                 neighbours = c_cell.compute_neighbours(location_filter='Bottom')
-                neighbours_non_scutoids = np.isin(neighbours, non_scutoids_ids)
-                if np.any(neighbours_non_scutoids):
-                    shared_nodes = get_node_neighbours_per_domain(remodel_obj.Geo, c_cell.ID, remodel_obj.Geo.XgBottom,
-                                                                  neighbours[neighbours_non_scutoids][0])
+                # Remove border cells from neighbours
+                neighbours = np.setdiff1d(neighbours, self.geo.BorderCells)
+                if len(neighbours) == 0:
+                    continue
 
-                    # Filter the shared nodes that are ghost nodes
-                    shared_nodes = shared_nodes[np.isin(shared_nodes, remodel_obj.Geo.XgID)]
-                    valence_segment, old_tets, old_ys = edge_valence(remodel_obj.Geo, [c_cell.ID, shared_nodes[0]])
+                random_neighbour = np.random.choice(neighbours) # neighbours[0]
+                #neighbours_non_scutoids = np.isin(neighbours, non_scutoids_ids)
+                #if np.any(neighbours_non_scutoids):
+                shared_nodes = get_node_neighbours_per_domain(remodel_obj.Geo, c_cell.ID, remodel_obj.Geo.XgBottom,
+                                                              random_neighbour)
 
-                    cell_to_split_from_all = np.unique(old_tets)
-                    cell_to_split_from_all = cell_to_split_from_all[~np.isin(cell_to_split_from_all, remodel_obj.Geo.XgID)]
+                # Filter the shared nodes that are ghost nodes
+                shared_nodes = shared_nodes[np.isin(shared_nodes, remodel_obj.Geo.XgID)]
+                valence_segment, old_tets, old_ys = edge_valence(remodel_obj.Geo, [c_cell.ID, shared_nodes[0]])
 
-                    if np.sum(np.isin(cell_to_split_from_all, remodel_obj.Geo.BorderCells)) > 1:
-                        print('More than one border cell')
+                cell_to_split_from_all = np.unique(old_tets)
+                cell_to_split_from_all = cell_to_split_from_all[~np.isin(cell_to_split_from_all, remodel_obj.Geo.XgID)]
 
-                    cell_to_split_from = cell_to_split_from_all[
-                        ~np.isin(cell_to_split_from_all, [c_cell.ID, neighbours[neighbours_non_scutoids][0]])]
+                if np.sum(np.isin(cell_to_split_from_all, remodel_obj.Geo.BorderCells)) > 1:
+                    print('More than one border cell')
 
-                    # Perform flip
-                    all_tnew, ghost_node, ghost_nodes_tried, has_converged, old_tets = remodel_obj.perform_flip(c_cell.ID, neighbours[neighbours_non_scutoids][0], cell_to_split_from[0],
-                                             shared_nodes[0])
+                cell_to_split_from = cell_to_split_from_all[
+                    ~np.isin(cell_to_split_from_all, [c_cell.ID, random_neighbour])]
 
-                    if has_converged:
-                        c_scutoids = remodel_obj.Geo.compute_percentage_of_scutoids() / 100
-                        print(f'Percentage of scutoids: {c_scutoids}')
+                # Perform flip
+                all_tnew, ghost_node, ghost_nodes_tried, has_converged, old_tets = remodel_obj.perform_flip(c_cell.ID, random_neighbour, cell_to_split_from[0],
+                                         shared_nodes[0])
 
-                        #screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
-                        #            self.set.OutputFolder + '/images')
+                if has_converged:
+                    # Converge a single iteration
+                    remodel_obj.Geo.update_measures()
+                    cells_involved_intercalation = [cell.ID for cell in remodel_obj.Geo.Cells if cell.ID in all_tnew.flatten()
+                                                    and cell.AliveStatus == 1]
+                    remodel_obj.reset_preferred_values(backup_vars, cells_involved_intercalation)
 
-                        self.geo = remodel_obj.Geo
-                        save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(round(c_scutoids, 2)) + '.pkl'))
-                        break
+                    remodel_obj.Set.currentT = self.t
+                    remodel_obj.Dofs.get_dofs(remodel_obj.Geo, self.set)
+                    has_converged = remodel_obj.check_if_will_converge(remodel_obj.Geo, n_iter_max=10)
 
-        cells_intercalated = range(self.geo.nCells)
+                if has_converged:
+                    c_scutoids = remodel_obj.Geo.compute_percentage_of_scutoids() / 100
+                    print(f'Percentage of scutoids: {c_scutoids}')
+
+                    polygon_distribution = remodel_obj.Geo.compute_polygon_distribution('Bottom')
+                    print(f'Polygon distribution bottom: {polygon_distribution}')
+
+                    screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
+                                self.set.OutputFolder + '/images')
+
+                    self.geo = remodel_obj.Geo
+                    save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(round(c_scutoids, 2)) + '.pkl'))
+                    break
+
+            # If the last cell is reached, break the loop
+            if c_cell == non_scutoids[-1]:
+                break
+
+        #cells_intercalated = range(self.geo.nCells)
         #self.geo = smoothing_cell_surfaces_mesh(remodel_obj.Geo, cells_intercalated, backup_vars, location='Bottom')
+        for cell in self.geo.Cells:
+            if cell.AliveStatus is not None:
+                face_centres_to_middle_of_neighbours_vertices(self.geo, cell.ID)
+        self.geo.update_measures()
+
+        self.geo.init_reference_cell_values(self.set)
 
 
     def build_2d_voronoi_from_image(self, labelled_img, watershed_img, total_cells):
