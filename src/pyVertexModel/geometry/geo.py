@@ -1256,7 +1256,7 @@ class Geo:
         all_neighbours = []
 
         for c_cell in self.Cells:
-            if c_cell.AliveStatus == 1 or c_cell.ID not in self.BorderCells:
+            if c_cell.AliveStatus == 1 and c_cell.ID not in self.BorderCells:
                 all_neighbours.append(len(c_cell.compute_neighbours(location_filter=location_filter)))
 
         # Count the number of different neighbours
