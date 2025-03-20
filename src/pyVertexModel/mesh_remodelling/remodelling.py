@@ -378,6 +378,14 @@ class Remodelling:
         g, energies = gGlobal(self.Geo, self.Geo, self.Geo, self.Set, self.Set.implicit_method)
         gr = np.linalg.norm(g[self.Dofs.Free])
         logger.info(f'|gr| before remodelling: {gr}')
+
+        # Handle divergence
+        if np.isnan(gr) or np.isinf(gr):  # If gradient norm diverges
+            print("Divergence detected! Reducing time step...")
+            self.Set.dt0 *= 0.1  # Reduce time step to stabilize
+            self.Set.dt *= 0.1
+            return self.Geo, self.Geo_n  # Exit early to prevent further issues
+
         for key, energy in energies.items():
             logger.info(f"{key}: {energy}")
 
@@ -480,6 +488,9 @@ class Remodelling:
         #     return False
 
         for n_iter in range(20):
+            if np.isnan(gr) or np.isinf(gr):
+                print("Divergence detected during convergence check! Aborting...")
+                return False
             best_geo, dy, gr, g = newton_raphson_iteration_explicit(best_geo, self.Set, self.Dofs.Free, dy, g)
             screenshot_(best_geo, self.Set, 0, 'after_remodelling_' + str(n_iter), self.Set.OutputFolder + '/images')
             print(f'Previous gr: {previous_gr}, gr: {gr}')
@@ -663,6 +674,16 @@ class Remodelling:
         old_geo = self.Geo.copy()
         t_new, y_new, self.Geo = y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, segment_to_change, self.Geo,
                                            self.Set, cell_to_split_from)
+
+        # Ensure the edge flip does not create degenerate or collapsed structures
+        min_length = 0.1  # Define a suitable threshold
+        volume_change_too_large = np.any(
+            np.abs(self.Geo.Cells[cell_to_split_from].Vol - old_geo.Cells[cell_to_split_from].Vol) > 0.5 *
+            old_geo.Cells[cell_to_split_from].Vol)
+
+        if segment_to_change < min_length or volume_change_too_large:
+            print("Rejecting bad flip: Edge too short or volume collapsed")
+            return False, None  # Prevents bad flips
 
         if t_new is not None:
             (self.Geo_0, self.Geo_n, self.Geo, self.Dofs, hasConverged) = (
