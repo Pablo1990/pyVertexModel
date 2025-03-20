@@ -37,7 +37,7 @@ def assert_matrix(k_expected, k):
     np.testing.assert_allclose(k_expected, k, rtol=1e-3, atol=1e-1)
 
 
-def assert_array1D(array1, array2):
+def assert_array1D(g_expected, g):
     np.testing.assert_allclose(g_expected, g, rtol=1e-3, atol=1e-1)
 
 

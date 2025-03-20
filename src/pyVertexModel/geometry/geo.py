@@ -309,19 +309,6 @@ class Geo:
         # Initialize reference values
         self.init_reference_cell_values(c_set)
 
-        # Differential adhesion values
-        for l1, val in c_set.lambdaS1CellFactor:
-            ci = l1
-            self.Cells[ci].ExternalLambda = val
-
-        for l2, val in c_set.lambdaS2CellFactor:
-            ci = l2
-            self.Cells[ci].InternalLambda = val
-
-        for l3, val in c_set.lambdaS3CellFactor:
-            ci = l3
-            self.Cells[ci].SubstrateLambda = val
-
         # Unique Ids for each point (vertex, node or face center) used in K
         self.build_global_ids()
 
@@ -350,23 +337,24 @@ class Geo:
         :param c_set: The settings of the simulation
         :return: None
         """
+        logger.info('Initializing reference cell values')
         # Assemble nodes from all cells that are not None
         self.AssembleNodes = [i for i, cell in enumerate(self.Cells) if cell.AliveStatus is not None]
         # Initialize BarrierTri0 and lmin0 with the maximum possible float value
         self.BarrierTri0 = np.finfo(float).max
         self.lmin0 = np.finfo(float).max
 
-        # Average values
-        avg_vol = np.mean([c_cell.Vol for c_cell in self.Cells if c_cell.AliveStatus is not None])
+        ## Average values
+        #avg_vol = np.mean([c_cell.Vol for c_cell in self.Cells if c_cell.AliveStatus is not None])
 
-        # Average area per domain
-        avg_area_top = np.mean([c_cell.compute_area(location_filter=0) for c_cell in self.Cells
-                                if c_cell.AliveStatus is not None])
-        avg_area_bottom = np.mean([c_cell.compute_area(location_filter=2) for c_cell in self.Cells
-                                   if c_cell.AliveStatus is not None])
-        avg_area_lateral = np.mean([c_cell.compute_area(location_filter=1) for c_cell in self.Cells
-                                    if c_cell.AliveStatus is not None])
-        avg_area = np.mean([c_cell.Area for c_cell in self.Cells if c_cell.AliveStatus is not None])
+        ## Average area per domain
+        # avg_area_top = np.mean([c_cell.compute_area(location_filter=0) for c_cell in self.Cells
+        #                         if c_cell.AliveStatus is not None])
+        # avg_area_bottom = np.mean([c_cell.compute_area(location_filter=2) for c_cell in self.Cells
+        #                            if c_cell.AliveStatus is not None])
+        # avg_area_lateral = np.mean([c_cell.compute_area(location_filter=1) for c_cell in self.Cells
+        #                             if c_cell.AliveStatus is not None])
+        # avg_area = np.mean([c_cell.Area for c_cell in self.Cells if c_cell.AliveStatus is not None])
 
         # Initialize list for storing minimum lengths to the centre and edge lengths of tris
         lmin_values = []
@@ -375,8 +363,8 @@ class Geo:
         for c, c_cell in enumerate(self.Cells):
             if c_cell.AliveStatus is not None:
                 # Adjust the Vol0
-                self.Cells[c].Vol0 = self.Cells[c].Vol / c_set.ref_V0
-                self.Cells[c].Area0 = avg_area
+                self.Cells[c].Vol0 = self.Cells[c].Vol * c_set.ref_V0
+                self.Cells[c].Area0 = self.Cells[c].Area * c_set.ref_A0
 
                 # Compute the mechanical parameter with noise
                 # Surface area
@@ -394,17 +382,15 @@ class Geo:
                 # Area Energy Barrier
                 self.Cells[c].lambda_b_perc = add_noise_to_parameter(1, c_set.noise_random)
 
-                # Compute number of faces per domain
-                num_faces_bottom, num_faces_lateral, num_faces_top = self.get_num_faces(c)
+                ## Compute number of faces per domain
+                #num_faces_bottom, num_faces_lateral, num_faces_top = self.get_num_faces(c)
 
                 # Iterate over all faces in the current cell
                 for f in range(len(self.Cells[c].Faces)):
-                    if get_interface(self.Cells[c].Faces[f].InterfaceType) == get_interface('Top'):
-                        self.Cells[c].Faces[f].Area0 = avg_area_top * c_set.ref_A0 / num_faces_top
-                    elif get_interface(self.Cells[c].Faces[f].InterfaceType) == get_interface('Bottom'):
-                        self.Cells[c].Faces[f].Area0 = avg_area_bottom * c_set.ref_A0 / num_faces_bottom
+                    if get_interface(self.Cells[c].Faces[f].InterfaceType) != get_interface('CellCell'):
+                        self.Cells[c].Faces[f].Area0 = self.Cells[c].Faces[f].Area * c_set.ref_A0
                     else:
-                        self.Cells[c].Faces[f].Area0 = avg_area_lateral * c_set.ref_A0 / num_faces_lateral
+                        self.Cells[c].Faces[f].Area0 = self.Cells[c].Faces[f].Area
 
                     Face = self.Cells[c].Faces[f]
 
@@ -1261,6 +1247,26 @@ class Geo:
         debris_cells_ids = [c_cell.ID for c_cell in debris_cells]
         return debris_centre, debris_cells_ids
 
+    def compute_polygon_distribution(self, location_filter=None):
+        """
+
+        :return:
+        """
+
+        all_neighbours = []
+
+        for c_cell in self.Cells:
+            if c_cell.AliveStatus == 1 and c_cell.ID not in self.BorderCells:
+                all_neighbours.append(len(c_cell.compute_neighbours(location_filter=location_filter)))
+
+        # Count the number of different neighbours
+        polygon_distribution = np.bincount(all_neighbours)
+        # Normalise the distribution
+        polygon_distribution = polygon_distribution / len(all_neighbours)
+
+        return polygon_distribution
+
+
     def compute_cell_distance_to_wound(self, wound_cells, location_filter=None):
         """
         Compute the number of cells between the cell and a wound cell
@@ -1531,3 +1537,21 @@ class Geo:
         distances = sorted(distances)
 
         return cell_ids, distances
+
+    def compute_percentage_of_scutoids(self):
+        """
+        Compute the percentage of scutoids
+        :return:
+        """
+        scutoid_cells = [c_cell for c_cell in self.Cells if c_cell.is_scutoid()]
+        percentage_scutoids = len(scutoid_cells) / self.nCells * 100
+
+        return percentage_scutoids
+
+    def obtain_non_scutoid_cells(self):
+        """
+        Obtain the non-scutoid cells
+        :return:
+        """
+        non_scutoid_cells = [c_cell for c_cell in self.Cells if not c_cell.is_scutoid()]
+        return non_scutoid_cells

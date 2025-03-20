@@ -54,15 +54,13 @@ def analyse_simulation(folder):
         if not features_per_time:
             return None, None, None, None
 
-        # Export to xlsx
+        # Create a dataframe with all the features
         features_per_time_all_cells_df = pd.DataFrame(np.concatenate(features_per_time_all_cells),
                                                       columns=features_per_time_all_cells[0].columns)
         features_per_time_all_cells_df.sort_values(by='time', inplace=True)
-        features_per_time_all_cells_df.to_excel(os.path.join(folder, 'features_per_time_all_cells.xlsx'))
 
         features_per_time_df = pd.DataFrame(features_per_time)
         features_per_time_df.sort_values(by='time', inplace=True)
-        features_per_time_df.to_excel(os.path.join(folder, 'features_per_time.xlsx'))
 
         # Save dataframes to a single pkl
         with open(os.path.join(folder, 'features_per_time.pkl'), 'wb') as f:
@@ -70,6 +68,10 @@ def analyse_simulation(folder):
             pickle.dump(None, f)
             pickle.dump(None, f)
             pickle.dump(features_per_time_all_cells_df, f)
+
+        # Export to xlsx
+        features_per_time_all_cells_df.to_excel(os.path.join(folder, 'features_per_time_all_cells.xlsx'))
+        features_per_time_df.to_excel(os.path.join(folder, 'features_per_time.xlsx'))
     else:
         # Load dataframes from pkl
         with open(os.path.join(folder, 'features_per_time.pkl'), 'rb') as f:
@@ -129,6 +131,7 @@ def analyse_simulation(folder):
 
         # Compare post-wound features with pre-wound features in percentage
         for feature in post_wound_features.columns:
+            print(feature)
             if 'indentation' in feature:
                 post_wound_features.loc[:, feature] = (post_wound_features[feature] - np.array(
                     pre_wound_features[feature])) * 100
@@ -140,8 +143,11 @@ def analyse_simulation(folder):
             if feature == 'time':
                 continue
 
-            post_wound_features.loc[:, feature] = (post_wound_features[feature] / np.array(
-                pre_wound_features[feature])) * 100
+            if pre_wound_features[feature].iloc[0] == 0:
+                post_wound_features.loc[:, feature] = post_wound_features[feature] * 100
+            else:
+                post_wound_features.loc[:, feature] = (post_wound_features[feature] / np.array(
+                    pre_wound_features[feature])) * 100
 
         # Export to xlsx
         post_wound_features.to_excel(os.path.join(folder, 'post_wound_features.xlsx'))
@@ -277,6 +283,7 @@ def calculate_important_features(post_wound_features):
             'max_recoiling_top': np.nan,
             'max_recoiling_time_top': np.nan,
         }
+        important_features_by_time = {}
 
     return important_features, important_features_by_time
 

@@ -178,6 +178,7 @@ class VertexModel:
             self.set = Set()
             # self.set.cyst()
             self.set.wing_disc()
+            #self.set.wing_disc_apical_constriction()
             if self.set.ablation:
                 self.set.wound_default()
 
@@ -315,6 +316,7 @@ class VertexModel:
             # Ablate cells if needed
             if self.set.ablation:
                 if self.set.ablation and self.set.TInitAblation <= self.t and self.geo.cellsToAblate is not None:
+                    self.set.nu_bottom = self.set.nu * 600
                     self.save_v_model_state(file_name='before_ablation')
                 self.geo.ablate_cells(self.set, self.t)
                 self.geo_n = self.geo.copy()
@@ -552,6 +554,8 @@ class VertexModel:
 
         # Calculate average of cell features
         all_cell_features = pd.DataFrame(cell_features)
+        all_cell_features["polygon_distribution_top"] = self.geo.compute_polygon_distribution(location_filter='Top')
+        all_cell_features["polygon_distribution_bottom"] = self.geo.compute_polygon_distribution(location_filter='Bottom')
         all_cell_features["cell_distance_to_wound"] = list_of_cell_distances
         all_cell_features["cell_distance_to_wound_top"] = list_of_cell_distances_top
         all_cell_features["cell_distance_to_wound_bottom"] = list_of_cell_distances_bottom

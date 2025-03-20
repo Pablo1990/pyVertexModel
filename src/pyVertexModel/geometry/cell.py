@@ -17,7 +17,7 @@ def face_centres_to_middle_of_neighbours_vertices(Geo, c_cell, filter_location=N
     :return:
     """
     for num_face, _ in enumerate(Geo.Cells[c_cell].Faces):
-        if get_interface(Geo.Cells[c_cell].Faces[num_face].InterfaceType) == get_interface(filter_location):
+        if filter_location is None or get_interface(Geo.Cells[c_cell].Faces[num_face].InterfaceType) == get_interface(filter_location):
             all_edges = []
             for tri in Geo.Cells[c_cell].Faces[num_face].Tris:
                 all_edges.append(tri.Edge)
@@ -292,7 +292,7 @@ class Cell:
                     'Perimeter_top': self.compute_perimeter(filter_location=0),
                     'Perimeter_bottom': self.compute_perimeter(filter_location=2),
                     'Perimeter_cellcell': self.compute_perimeter(filter_location=1),
-                    'Scutoid': self.is_scutoid(),
+                    'Scutoid': int(self.is_scutoid()),
                     }
 
         if centre_wound is not None:

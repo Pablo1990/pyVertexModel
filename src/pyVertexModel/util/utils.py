@@ -8,8 +8,37 @@ import pickle
 import imageio
 import numpy as np
 import pyvista as pv
-from scipy.optimize import fsolve
+from scipy.optimize import fsolve, minimize
 
+
+def find_optimal_deform_array_X_Y(geo, deform_array_Z, middle_point, volumes):
+    """
+    Find the optimal deform array for X and Y.
+    :param geo:
+    :param deform_array_Z:
+    :param middle_point:
+    :param volumes:
+    :return:
+    """
+    def objective(deform_array_X_Y):
+        geo_copy = geo.copy()
+        deform_array = np.array([deform_array_X_Y[0], deform_array_X_Y[0], deform_array_Z])
+        for cell in geo_copy.Cells:
+            if cell.AliveStatus is not None:
+                cell.X = cell.X + (middle_point - cell.X) * deform_array
+                cell.Y = cell.Y + (middle_point - cell.Y) * deform_array
+                for face in cell.Faces:
+                    face.Centre = face.Centre + (middle_point - face.Centre) * deform_array
+
+        geo_copy.update_measures()
+        volumes_after_deformation = np.array([cell.Vol for cell in geo_copy.Cells if cell.AliveStatus is not None])
+        vol_difference = np.mean(volumes) - np.mean(volumes_after_deformation)
+        print(vol_difference)
+        return abs(vol_difference)
+
+    options = {'disp': True, 'ftol':1e-9}
+    result = minimize(objective, method='TNC', x0=np.array([2]), options=options)
+    return result.x
 
 def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None):
     """

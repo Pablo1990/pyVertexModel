@@ -21,10 +21,7 @@ class KgTriEnergyBarrier(Kg):
 
             for f in range(len(Cell.Faces)):
                 if get_interface(Cell.Faces[f].InterfaceType) != get_interface('CellCell'):
-                    if get_interface(Cell.Faces[f].InterfaceType) == get_interface('Top'):
-                        barrier_tri0 = Cell.barrier_tri0_top
-                    else:
-                        barrier_tri0 = Cell.barrier_tri0_bottom
+                    barrier_tri0 = Geo.BarrierTri0
 
                     Face = Cell.Faces[f]
                     Tris = Cell.Faces[f].Tris
