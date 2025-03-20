@@ -554,8 +554,8 @@ class VertexModel:
 
         # Calculate average of cell features
         all_cell_features = pd.DataFrame(cell_features)
-        all_cell_features["polygon_distribution_top"] = self.geo.compute_polygon_distribution(location_filter='Top')
-        all_cell_features["polygon_distribution_bottom"] = self.geo.compute_polygon_distribution(location_filter='Bottom')
+        #all_cell_features["polygon_distribution_top"] = self.geo.compute_polygon_distribution(location_filter='Top')
+        #all_cell_features["polygon_distribution_bottom"] = self.geo.compute_polygon_distribution(location_filter='Bottom')
         all_cell_features["cell_distance_to_wound"] = list_of_cell_distances
         all_cell_features["cell_distance_to_wound_top"] = list_of_cell_distances_top
         all_cell_features["cell_distance_to_wound_bottom"] = list_of_cell_distances_bottom
