@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from src import PROJECT_DIRECTORY
+from src.pyVertexModel.Kg.kgContractility import KgContractility
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
 from src.pyVertexModel.util.utils import load_state
@@ -19,22 +20,16 @@ else:
     vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
 
     if debugging:
-        output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/final_results/60_mins_Rok/')
+        output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/breaking/03-19_141121_noise_0.00e+00_bNoise_0.00e+00_lVol_1.00e+00_refV0_1.00e+00_kSubs_1.00e-01_lt_0.00e+00_refA0_9.20e-01_eARBarrier_8.00e-07_RemStiff_0.6_lS1_1.00e-01_lS2_1.00e-03_lS3_1.00e-01_ps_4.00e-05_lc_7.00e-05')
+        load_state(vModel, os.path.join(output_folder, 'data_step_0.89.pkl'))
 
-        # Find the most recent simulation state file
-        name_last_pkl_file = sorted(
-            [f for f in os.listdir(output_folder) if
-             f.endswith('.pkl') and not 'before_remodelling' in f and f.startswith('data_step_')],
-            key=lambda x: os.path.getmtime(os.path.join(output_folder, x))
-        )[-1]
-
-        load_state(vModel, os.path.join(output_folder, name_last_pkl_file))
-        vModel.set.OutputFolder = PROJECT_DIRECTORY + 'Result/final_results/60_mins_Rok/'
-        os.makedirs(vModel.set.OutputFolder + '/images', exist_ok=True)
-
-        vModel.reset_noisy_parameters()
-        vModel.iterate_over_time()
-
+        Geo = vModel.geo
+        Set = vModel.set
+        Set.currentT = 0
+        kg_lt = KgContractility(Geo)
+        kg_lt.compute_work(Geo, Set, None, False)
+        g = kg_lt.g
+        print(kg_lt.energy)
 
         ## 🔹 Add Debugging Functions
         import matplotlib.pyplot as plt

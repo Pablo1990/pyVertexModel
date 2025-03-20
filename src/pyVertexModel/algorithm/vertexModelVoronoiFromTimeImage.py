@@ -488,11 +488,7 @@ def add_tetrahedral_intercalations(Twg, xInternal, XgBottom, XgTop, XgLateral):
 
 class VertexModelVoronoiFromTimeImage(VertexModel):
     def __init__(self, set_test=None, update_derived_parameters=True, create_output_folder=True):
-        self.contractility = 0.0  # Initialize contractility to zero
         super().__init__(c_set=set_test, update_derived_parameters=update_derived_parameters, create_output_folder=create_output_folder)
-        self.total_steps = 1000 \
-        self.Geo = self.initialize_geometry()
-
 
     def initialize(self):
         """
