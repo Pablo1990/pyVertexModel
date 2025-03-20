@@ -24,6 +24,7 @@ else:
     vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
 
     if debugging:
+        # Change this folder accordingly (it doesn't really matter the name of the folder, so feel free to rename it
         output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/breaking/03-20_100319_noise_0.00e+00_bNoise_0.00e+00_lVol_1.00e+00_refV0_1.00e+00_kSubs_1.00e-01_lt_0.00e+00_refA0_9.00e-01_eARBarrier_8.00e-07_RemStiff_0.6_lS1_1.00e-01_lS2_1.00e-03_lS3_1.00e-01_ps_4.00e-05_lc_7.00e-05')
 
         # You can either load just one file or go through all of them
@@ -110,10 +111,11 @@ else:
 
         # Plot the energies and save it
         plt.figure()
-        plt.plot(times, energy_lt, label='Line tension')
-        plt.plot(times, energy_surface, label='Surface tension')
-        plt.plot(times, energy_volume, label='Volume')
-        plt.plot(times, energy_tri_ar, label='TriAR energy barrier')
+        # The parameters shown in the legend are the ones used in the simulation
+        plt.plot(times, energy_lt, label='Line tension %s' % Set.cLineTension)
+        plt.plot(times, energy_surface, label='Surface tension apical %s, basal %s, lateral %s' % (Set.lambdaS1, Set.lambdaS2, Set.lambdaS3))
+        plt.plot(times, energy_volume, label='Volume %s' % Set.lambdaV)
+        plt.plot(times, energy_tri_ar, label='TriAR energy barrier %s' % Set.lambdaR)
         plt.legend()
         # Save the plot
         plt.savefig(os.path.join(output_folder, 'total_energies.png'))
