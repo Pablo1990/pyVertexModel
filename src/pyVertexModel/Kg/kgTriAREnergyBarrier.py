@@ -11,6 +11,7 @@ class KgTriAREnergyBarrier(Kg):
         start = time.time()
 
         self.energy = 0
+        self.energy_per_cell = {}
 
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
             energy_c = 0
@@ -64,6 +65,7 @@ class KgTriAREnergyBarrier(Kg):
 
                         energy_c = energy_c + fact / 2 * (w1 ** 2 + w2 ** 2 + w3 ** 2)
 
+            self.energy_per_cell[c] = energy_c
             self.energy += energy_c
 
         end = time.time()

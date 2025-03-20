@@ -40,6 +40,7 @@ class KgVolume(Kg):
         start = time.time()
 
         self.energy = 0
+        self.energy_per_cell = {}
         gs = None
         Ks = None
 
@@ -81,6 +82,7 @@ class KgVolume(Kg):
                 self.K = kg_functions.compute_finalK_Volume(ge, self.K, Cell.Vol, Cell.Vol0, n, lambdaV)
                 # self.K = self.compute_finalK_Volume(ge, self.K, Cell.Vol, Cell.Vol0, n)
 
+            self.energy_per_cell[c] = lambdaV / n * ((Cell.Vol - Cell.Vol0) / Cell.Vol0) ** n
             self.energy += lambdaV / n * ((Cell.Vol - Cell.Vol0) / Cell.Vol0) ** n
 
         end = time.time()

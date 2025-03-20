@@ -185,6 +185,9 @@ class KgContractility(Kg):
     Class to compute the work and Jacobian for the contractility energy.
     """
 
+    def __init__(self, Geo=None):
+        super().__init__(Geo)
+
     def compute_work(self, geo, c_set, geo_n=None, calculate_k=True):
         """
         Compute the work of the contractility
@@ -237,6 +240,7 @@ class KgContractility(Kg):
             Energy[c] = Energy_c
             cell.contractility_noise = None
 
+        self.energy_per_cell = Energy
         self.energy = sum(Energy.values())
         end = time.time()
         self.timeInSeconds = f"Time at LineTension: {end - start} seconds"

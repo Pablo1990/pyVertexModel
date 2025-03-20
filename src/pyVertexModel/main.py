@@ -2,6 +2,7 @@ import os
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+from pyvista.core.utilities.cell_type_helper import cell_num
 
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.Kg.kgContractility import KgContractility
@@ -41,6 +42,8 @@ else:
         energy_volume = []
         energy_tri_ar = []
 
+        # Energy for a specific cell. You can change the cell_id to any other cell you want to analyse until 149
+        cell_id = 0
         energy_lt_cell = []
         energy_surface_cell = []
         energy_volume_cell = []
@@ -71,25 +74,32 @@ else:
                 kg_lt = KgContractility(Geo)
                 kg_lt.compute_work(Geo, Set, None, False)
                 g_lt = kg_lt.g
-                
+
+                energy_lt_cell.append(kg_lt.energy_per_cell[cell_id])
                 energy_lt.append(kg_lt.energy)
 
                 # Compute Surface Tension
                 kg_surface_area = KgSurfaceCellBasedAdhesion(Geo)
                 kg_surface_area.compute_work(Geo, Set, None, False)
                 g_surface = kg_surface_area.g
+
+                energy_surface_cell.append(kg_lt.energy_per_cell[cell_id])
                 energy_surface.append(kg_surface_area.energy)
 
                 # Compute Volume
                 kg_volume = KgVolume(Geo)
                 kg_volume.compute_work(Geo, Set, None, False)
                 g_volume = kg_volume.g
+
+                energy_volume_cell.append(kg_volume.energy_per_cell[cell_id])
                 energy_volume.append(kg_volume.energy)
 
                 # Compute TriAR energy barrier
                 kg_tri_ar = KgTriAREnergyBarrier(Geo)
                 kg_tri_ar.compute_work(Geo, Set, None, False)
                 g_tri_ar = kg_tri_ar.g
+
+                energy_tri_ar_cell.append(kg_tri_ar.energy_per_cell[cell_id])
                 energy_tri_ar.append(kg_tri_ar.energy)
 
                 # Check for unreasonable geometries
@@ -107,7 +117,18 @@ else:
         plt.legend()
         plt.show()
         # Save the plot
-        plt.savefig(os.path.join(output_folder, 'energies.png'))
+        plt.savefig(os.path.join(output_folder, 'total_energies.png'))
+
+        # Plot the energies for a specific cell and save it
+        plt.figure()
+        plt.plot(times, energy_lt_cell, label='Line tension')
+        plt.plot(times, energy_surface_cell, label='Surface tension')
+        plt.plot(times, energy_volume_cell, label='Volume')
+        plt.plot(times, energy_tri_ar_cell, label='TriAR energy barrier')
+        plt.legend()
+        plt.show()
+        # Save the plot
+        plt.savefig(os.path.join(output_folder, 'cell_%s_energies.png' % cell_id))
 
     else:
         load_state(vModel, os.path.join(PROJECT_DIRECTORY, 'Result/new_reference/before_ablation.pkl'))
