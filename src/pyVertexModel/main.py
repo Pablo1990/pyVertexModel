@@ -115,7 +115,6 @@ else:
         plt.plot(times, energy_volume, label='Volume')
         plt.plot(times, energy_tri_ar, label='TriAR energy barrier')
         plt.legend()
-        plt.show()
         # Save the plot
         plt.savefig(os.path.join(output_folder, 'total_energies.png'))
 
@@ -126,7 +125,6 @@ else:
         plt.plot(times, energy_volume_cell, label='Volume')
         plt.plot(times, energy_tri_ar_cell, label='TriAR energy barrier')
         plt.legend()
-        plt.show()
         # Save the plot
         plt.savefig(os.path.join(output_folder, 'cell_%s_energies.png' % cell_id))
 
