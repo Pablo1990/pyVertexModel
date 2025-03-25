@@ -20,7 +20,8 @@ from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrah
 from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours_vertices
 from src.pyVertexModel.geometry.face import get_interface
 from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain, edge_valence
-from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling, smoothing_cell_surfaces_mesh
+from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling, smoothing_cell_surfaces_mesh, \
+    smoothing_tissue_mesh
 from src.pyVertexModel.util.utils import ismember_rows, save_variables, load_state, find_optimal_deform_array_X_Y, \
     save_backup_vars, screenshot_, save_state, load_backup_vars
 
@@ -399,25 +400,40 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                 cell_to_split_from_all = np.unique(old_tets)
                 cell_to_split_from_all = cell_to_split_from_all[~np.isin(cell_to_split_from_all, remodel_obj.Geo.XgID)]
 
-                if np.sum(np.isin(cell_to_split_from_all, remodel_obj.Geo.BorderCells)) > 1:
-                    print('More than one border cell')
+                if np.sum(np.isin(cell_to_split_from_all, remodel_obj.Geo.BorderCells)) > 0:
+                    print('More than 0 border cell')
 
                 cell_to_split_from = cell_to_split_from_all[
                     ~np.isin(cell_to_split_from_all, [c_cell.ID, random_neighbour])]
+
+                if len(cell_to_split_from) == 0:
+                    continue
 
                 # Perform flip
                 all_tnew, ghost_node, ghost_nodes_tried, has_converged, old_tets = remodel_obj.perform_flip(c_cell.ID, random_neighbour, cell_to_split_from[0],
                                          shared_nodes[0])
 
                 if has_converged:
-                    for cell in self.geo.Cells:
-                        if cell.AliveStatus is not None:
-                            face_centres_to_middle_of_neighbours_vertices(self.geo, cell.ID)
+
+                    cells_involved_intercalation = [cell.ID for cell in remodel_obj.Geo.Cells if cell.ID in all_tnew.flatten()
+                                                    and cell.AliveStatus == 1]
+
+                    #remodel_obj.Geo.build_x_from_y_only_x_y()
+
+                    #for c, c_cell in enumerate(remodel_obj.Geo.Cells):
+                    #    if c_cell.ID in cells_involved_intercalation:
+                    #        remodel_obj.Geo.Cells[c].Y = remodel_obj.Geo.Cells[c].build_y_from_x(remodel_obj.Geo, remodel_obj.Set)
+
+                    #smoothing_tissue_mesh(remodel_obj.Geo, location='Bottom')
+                    remodel_obj.Geo = smoothing_cell_surfaces_mesh(remodel_obj.Geo, cells_involved_intercalation, backup_vars, location='Bottom')
+
+                    #for cell in self.geo.Cells:
+                    #    if cell.AliveStatus is not None:
+                    #        face_centres_to_middle_of_neighbours_vertices(self.geo, cell.ID)
 
                     # Converge a single iteration
                     remodel_obj.Geo.update_measures()
-                    cells_involved_intercalation = [cell.ID for cell in remodel_obj.Geo.Cells if cell.ID in all_tnew.flatten()
-                                                    and cell.AliveStatus == 1]
+
                     for cell in remodel_obj.Geo.Cells:
                         if cell.ID in cells_involved_intercalation:
                             remodel_obj.Geo.Cells[cell.ID].Vol0 = remodel_obj.Geo.Cells[cell.ID].Vol
@@ -427,7 +443,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
                     remodel_obj.Set.currentT = self.t
                     remodel_obj.Dofs.get_dofs(remodel_obj.Geo, self.set)
-                    has_converged = remodel_obj.check_if_will_converge(remodel_obj.Geo, n_iter_max=10)
+                    #has_converged = remodel_obj.check_if_will_converge(remodel_obj.Geo, n_iter_max=10)
 
                 if has_converged:
                     c_scutoids = remodel_obj.Geo.compute_percentage_of_scutoids() / 100
