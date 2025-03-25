@@ -24,11 +24,11 @@ for _, file in enumerate(lst):
         # Analyse the edge recoil
         if os.path.exists(os.path.join(folder, file, 'before_ablation.pkl')):
             # if the videos do not exist, create them
-            if not os.path.exists(os.path.join(folder, file, 'images', 'front_video.mp4')):
-                create_video(os.path.join(folder, file, 'images'), 'top_')
-                create_video(os.path.join(folder, file, 'images'), 'perspective_')
-                create_video(os.path.join(folder, file, 'images'), 'bottom_')
-                create_video(os.path.join(folder, file, 'images'), 'front_')
+            #if not os.path.exists(os.path.join(folder, file, 'images', 'front_video.mp4')):
+                #create_video(os.path.join(folder, file, 'images'), 'top_')
+                #create_video(os.path.join(folder, file, 'images'), 'perspective_')
+                #create_video(os.path.join(folder, file, 'images'), 'bottom_')
+                #create_video(os.path.join(folder, file, 'images'), 'front_')
 
             # if the analysis file exists, load it
             # if os.path.exists(os.path.join(folder, file, 'recoil_info_apical.pkl')):

@@ -545,6 +545,29 @@ class Geo:
 
                 self.Cells[c].X = self.Cells[c].X + np.mean(dY, axis=0)
 
+    def build_x_from_y_only_x_y(self):
+        """
+        Build the X from the current Ys
+        :return:
+        """
+        for c in range(len(self.Cells)):
+            if c in self.BorderGhostNodes or c in self.BorderCells:
+                continue
+
+            if self.Cells[c].AliveStatus is not None:
+                mean_ys = np.mean(self.Cells[c].Y, axis=0)
+            else:
+                all_ys = np.zeros((self.Cells[c].T.shape[0], 3))
+                for tet in range(self.Cells[c].T.shape[0]):
+                    gTet = self.Cells[c].T[tet]
+                    gTet_Cells = [c_cell for c_cell in gTet if c_cell in self.non_dead_cells]
+                    c_cell = self.Cells[gTet_Cells[0]]
+                    hit = np.sum(np.isin(c_cell.T, gTet), axis=1) == 4
+                    all_ys[tet, :] = c_cell.Y[hit]
+                mean_ys = np.mean(all_ys, axis=0)
+
+            self.Cells[c].X[0:2] = mean_ys[0:2]
+
 
     def build_y_substrate(self, Cell, Cells, XgID, Set, XgSub):
         """
@@ -682,7 +705,10 @@ class Geo:
                 ij = [cc, cj]
                 face_ids = np.sum(np.isin(c_cell.T, ij), axis=1) == 2
 
-                old_face_exists = any([np.all(c_face.ij == ij) for c_face in old_geo.Cells[cc].Faces])
+                if old_geo is not None:
+                    old_face_exists = any([np.all(c_face.ij == ij) for c_face in old_geo.Cells[cc].Faces])
+                else:
+                    old_face_exists = False
 
                 if old_face_exists:
                     old_face = [c_face for c_face in old_geo.Cells[cc].Faces if np.all(c_face.ij == ij)][0]
