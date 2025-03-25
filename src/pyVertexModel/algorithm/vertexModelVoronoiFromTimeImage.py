@@ -17,11 +17,8 @@ from skimage.segmentation import find_boundaries
 from src import PROJECT_DIRECTORY, logger
 from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrahedra_from_information, \
     calculate_cell_height_on_model
-from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours_vertices
-from src.pyVertexModel.geometry.face import get_interface
 from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain, edge_valence
-from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling, smoothing_cell_surfaces_mesh, \
-    smoothing_tissue_mesh
+from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling, smoothing_cell_surfaces_mesh
 from src.pyVertexModel.util.utils import ismember_rows, save_variables, load_state, find_optimal_deform_array_X_Y, \
     save_backup_vars, screenshot_, save_state, load_backup_vars
 
@@ -380,6 +377,8 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             non_scutoids = remodel_obj.Geo.obtain_non_scutoid_cells()
             non_scutoids_ids = [cell.ID for cell in non_scutoids]
             for c_cell in non_scutoids:
+                if c_cell.ID in remodel_obj.Geo.BorderCells:
+                    continue
                 # Get the neighbours of the cell
                 neighbours = c_cell.compute_neighbours(location_filter='Bottom')
                 # Remove border cells from neighbours
@@ -400,7 +399,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                 cell_to_split_from_all = np.unique(old_tets)
                 cell_to_split_from_all = cell_to_split_from_all[~np.isin(cell_to_split_from_all, remodel_obj.Geo.XgID)]
 
-                if np.sum(np.isin(cell_to_split_from_all, remodel_obj.Geo.BorderCells)) > 0:
+                if np.sum(np.isin(shared_nodes, remodel_obj.Geo.BorderCells)) > 0:
                     print('More than 0 border cell')
 
                 cell_to_split_from = cell_to_split_from_all[
