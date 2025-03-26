@@ -13,6 +13,7 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.model_name = ''
         self.percentage_scutoids = 0
         self.myosin_pool = None
         self.deform_array_Z = None
@@ -71,7 +72,7 @@ class Set:
             self.Nincr = self.tend * 100
             # ============================ Mechanics =============================
             # Volumes
-            self.lambdaV = 2e-1
+            self.lambdaV = 1
             self.lambdaV_Debris = 1e-8
             self.ref_V0 = 1.0
             # Surface area
@@ -173,7 +174,7 @@ class Set:
             self.tol0 = self.nu/20
 
         if self.Remodelling:
-            self.RemodelStiffness = 0.7
+            self.RemodelStiffness = 0.6
         else:
             self.RemodelStiffness = 2
 
@@ -229,15 +230,16 @@ class Set:
 
         current_datetime = datetime.now()
         new_outputFolder = ''.join([PROJECT_DIRECTORY, '/Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")),
-                            'noise_', '{:0.2e}'.format(self.noise_random), '_bNoise_', '{:0.2e}'.format(self.brownian_motion_scale),
-                            '_lVol_', '{:0.2e}'.format(self.lambdaV), '_refV0_', '{:0.2e}'.format(self.ref_V0),
-                            '_kSubs_', '{:0.2e}'.format(self.kSubstrate),
-                            '_lt_', '{:0.2e}'.format(self.cLineTension),
-                            '_refA0_', '{:0.2e}'.format(self.ref_A0),
-                            '_eARBarrier_', '{:0.2e}'.format(self.lambdaR),
-                            '_RemStiff_', str(self.RemodelStiffness), '_lS1_', '{:0.2e}'.format(self.lambdaS1),
-                            '_lS2_', '{:0.2e}'.format(self.lambdaS2), '_lS3_', '{:0.2e}'.format(self.lambdaS3),
-                            '_ps_', '{:0.2e}'.format(self.purseStringStrength), '_lc_', '{:0.2e}'.format(self.lateralCablesStrength)])
+                                    self.model_name,
+                                    '_noise_', '{:0.2e}'.format(self.noise_random),
+                                    '_lVol_', '{:0.2e}'.format(self.lambdaV),
+                                    '_kSubs_', '{:0.2e}'.format(self.kSubstrate),
+                                    '_lt_', '{:0.2e}'.format(self.cLineTension),
+                                    '_refA0_', '{:0.2e}'.format(self.ref_A0),
+                                    '_eARBarrier_', '{:0.2e}'.format(self.lambdaR),
+                                    '_RemStiff_', str(self.RemodelStiffness), '_lS1_', '{:0.2e}'.format(self.lambdaS1),
+                                    '_lS2_', '{:0.2e}'.format(self.lambdaS2), '_lS3_', '{:0.2e}'.format(self.lambdaS3),
+                                    '_ps_', '{:0.2e}'.format(self.purseStringStrength), '_lc_', '{:0.2e}'.format(self.lateralCablesStrength)])
         self.define_if_not_defined("OutputFolder", new_outputFolder)
 
     def stretch(self):
@@ -283,8 +285,10 @@ class Set:
         self.check_for_non_used_parameters()
 
     def wing_disc(self):
-        #self.initial_filename_state = 'Input/Stack.tif'
-        self.percentage_scutoids = 0.65
+        self.nu_bottom = self.nu
+        self.initial_filename_state = 'Input/model_2/data_step_0.71.pkl' #wing_disc_real_bottom_left.mat'
+        self.model_name = 'model_2'
+        self.percentage_scutoids = 0
 
         self.EnergyBarrierA = False
         # Energy Barrier Aspect Ratio
@@ -294,15 +298,18 @@ class Set:
         else:
             self.lambdaR = 0
 
+        # Volume
+        self.lambdaV = 0.001
+
         # Substrate
         self.kSubstrate = 0.1
 
         # Contractility
         self.Contractility = True
-        #self.cLineTension = 1e-4
+        self.cLineTension = 1e-8
 
         # Surface Area
-        self.ref_A0 = 0.92
+        self.ref_A0 = 0.85
         # Top
         self.lambdaS1 = 1.4
         # c_cell-c_cell
