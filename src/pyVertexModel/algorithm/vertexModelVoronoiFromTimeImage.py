@@ -375,7 +375,9 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         while c_scutoids < self.set.percentage_scutoids:
             backup_vars = save_backup_vars(remodel_obj.Geo, remodel_obj.Geo_n, remodel_obj.Geo_0, 0, remodel_obj.Dofs)
             non_scutoids = remodel_obj.Geo.obtain_non_scutoid_cells()
-            non_scutoids_ids = [cell.ID for cell in non_scutoids]
+            non_scutoids = [cell for cell in non_scutoids if cell.AliveStatus is not None]
+            # Order by volume with higher volume first
+            non_scutoids = sorted(non_scutoids, key=lambda x: x.Vol, reverse=True)
             for c_cell in non_scutoids:
                 if c_cell.ID in remodel_obj.Geo.BorderCells:
                     continue
@@ -386,9 +388,12 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                 if len(neighbours) == 0:
                     continue
 
-                random_neighbour = np.random.choice(neighbours) # neighbours[0]
-                #neighbours_non_scutoids = np.isin(neighbours, non_scutoids_ids)
-                #if np.any(neighbours_non_scutoids):
+                # Compute cell volume and pick the neighbour with the higher volume.
+                # These cells will be the ones that will lose neighbours
+                neighbours_vol = [cell.Vol for cell in remodel_obj.Geo.Cells if cell.ID in neighbours]
+
+                # Pick the neighbour with the lowest volume
+                random_neighbour = neighbours[np.argmin(neighbours_vol)]
                 shared_nodes = get_node_neighbours_per_domain(remodel_obj.Geo, c_cell.ID, remodel_obj.Geo.XgBottom,
                                                               random_neighbour)
 
@@ -408,9 +413,11 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                 if len(cell_to_split_from) == 0:
                     continue
 
+                # Display information about the cells in the flip
+                logger.info(f'Cell {c_cell.ID} will win neighbour {random_neighbour} and lose neighbour {cell_to_split_from[0]}')
+
                 # Perform flip
-                all_tnew, ghost_node, ghost_nodes_tried, has_converged, old_tets = remodel_obj.perform_flip(c_cell.ID, random_neighbour, cell_to_split_from[0],
-                                         shared_nodes[0])
+                all_tnew, ghost_node, ghost_nodes_tried, has_converged, old_tets = remodel_obj.perform_flip(c_cell.ID, random_neighbour, cell_to_split_from[0], shared_nodes[0])
 
                 if has_converged:
 
@@ -433,16 +440,9 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                     # Converge a single iteration
                     remodel_obj.Geo.update_measures()
 
-                    for cell in remodel_obj.Geo.Cells:
-                        if cell.ID in cells_involved_intercalation:
-                            remodel_obj.Geo.Cells[cell.ID].Vol0 = remodel_obj.Geo.Cells[cell.ID].Vol
-                            remodel_obj.Geo.Cells[cell.ID].Area0 = remodel_obj.Geo.Cells[cell.ID].Area
-                            for f in range(len(remodel_obj.Geo.Cells[cell.ID].Faces)):
-                                remodel_obj.Geo.Cells[cell.ID].Faces[f].Area0 = remodel_obj.Geo.Cells[cell.ID].Faces[f].Area
-
                     remodel_obj.Set.currentT = self.t
                     remodel_obj.Dofs.get_dofs(remodel_obj.Geo, self.set)
-                    #has_converged = remodel_obj.check_if_will_converge(remodel_obj.Geo, n_iter_max=10)
+                    #has_converged = remodel_obj.check_if_will_converge(remodel_obj.Geo, n_iter_max=20)
 
                 if has_converged:
                     c_scutoids = remodel_obj.Geo.compute_percentage_of_scutoids() / 100
