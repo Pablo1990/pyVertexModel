@@ -299,17 +299,17 @@ class Set:
             self.lambdaR = 0
 
         # Volume
-        self.lambdaV = 0.001
+        self.lambdaV = 0.2
 
         # Substrate
         self.kSubstrate = 0.1
 
         # Contractility
-        self.Contractility = True
-        self.cLineTension = 1e-8
+        self.Contractility = False
+        self.cLineTension = 1e-9
 
         # Surface Area
-        self.ref_A0 = 0.85
+        self.ref_A0 = 0.92
         # Top
         self.lambdaS1 = 1.4
         # c_cell-c_cell
