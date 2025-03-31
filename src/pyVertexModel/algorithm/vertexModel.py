@@ -511,8 +511,29 @@ class VertexModel:
 
         # Calculate average of cell features
         all_cell_features = pd.DataFrame(cell_features)
-        all_cell_features["polygon_distribution_top"] = self.geo.compute_polygon_distribution(location_filter='Top')
-        all_cell_features["polygon_distribution_bottom"] = self.geo.compute_polygon_distribution(location_filter='Bottom')
+        polygon_distribution_top = self.geo.compute_polygon_distribution(location_filter='Top')
+        polygon_distribution_top_with_zeros = np.zeros(5)
+        if len(polygon_distribution_top) < 9:
+            polygon_distribution_top_with_zeros[:len(polygon_distribution_top)-4] = polygon_distribution_top[4:len(polygon_distribution_top)]
+        else:
+            polygon_distribution_top_with_zeros = polygon_distribution_top[4:9]
+        all_cell_features["polygon_distribution_top_4"] = polygon_distribution_top_with_zeros[0]
+        all_cell_features["polygon_distribution_top_5"] = polygon_distribution_top_with_zeros[1]
+        all_cell_features["polygon_distribution_top_6"] = polygon_distribution_top_with_zeros[2]
+        all_cell_features["polygon_distribution_top_7"] = polygon_distribution_top_with_zeros[3]
+        all_cell_features["polygon_distribution_top_8"] = polygon_distribution_top_with_zeros[4]
+        polygon_distribution_bottom = self.geo.compute_polygon_distribution(location_filter='Bottom')
+        polygon_distribution_bottom_with_zeros = np.zeros(5)
+        if len(polygon_distribution_bottom) < 9:
+            polygon_distribution_bottom_with_zeros[:len(polygon_distribution_bottom)-4] = polygon_distribution_bottom[4:len(polygon_distribution_bottom)]
+        else:
+            polygon_distribution_bottom_with_zeros = polygon_distribution_bottom[4:9]
+
+        all_cell_features["polygon_distribution_bottom_4"] = polygon_distribution_bottom_with_zeros[0]
+        all_cell_features["polygon_distribution_bottom_5"] = polygon_distribution_bottom_with_zeros[1]
+        all_cell_features["polygon_distribution_bottom_6"] = polygon_distribution_bottom_with_zeros[2]
+        all_cell_features["polygon_distribution_bottom_7"] = polygon_distribution_bottom_with_zeros[3]
+        all_cell_features["polygon_distribution_bottom_8"] = polygon_distribution_bottom_with_zeros[4]
         all_cell_features["cell_distance_to_wound"] = list_of_cell_distances
         all_cell_features["cell_distance_to_wound_top"] = list_of_cell_distances_top
         all_cell_features["cell_distance_to_wound_bottom"] = list_of_cell_distances_bottom
