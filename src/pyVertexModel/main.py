@@ -23,7 +23,7 @@ else:
 
     if debugging:
         # Change this folder accordingly (it doesn't really matter the name of the folder, so feel free to rename it
-        output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/breaking/03-20_100221_noise_0.00e+00_bNoise_0.00e+00_lVol_1.00e+00_refV0_1.00e+00_kSubs_1.00e-01_lt_0.00e+00_refA0_9.00e-01_eARBarrier_8.00e-07_RemStiff_0.6_lS1_1.00e-01_lS2_1.00e-03_lS3_1.00e-01_ps_4.00e-05_lc_7.00e-05')
+        output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/breaking/03-20_100319_noise_0.00e+00_bNoise_0.00e+00_lVol_1.00e+00_refV0_1.00e+00_kSubs_1.00e-01_lt_0.00e+00_refA0_9.00e-01_eARBarrier_8.00e-07_RemStiff_0.6_lS1_1.00e-01_lS2_1.00e-03_lS3_1.00e-01_ps_4.00e-05_lc_7.00e-05')
 
         # You can either load just one file or go through all of them
         #load_state(vModel, os.path.join(output_folder, 'data_step_0.89.pkl'))
@@ -93,8 +93,7 @@ else:
                 kg_volume.compute_work(Geo, Set, None, False)
 
                 for cell_id in range(len(Geo.Cells)):
-                    print('Cell: ', cell_id)
-                    if Geo.Cells[cell_id].AliveStatus is None or cell_id in Geo.BorderCells:
+                    if Geo.Cells[cell_id].AliveStatus is None:
                         continue
 
                     energy_lt_file.append(kg_lt.energy_per_cell[cell_id])
@@ -104,11 +103,11 @@ else:
 
                     # Compute neighbours
                     neighbours_3d = Geo.Cells[cell_id].compute_neighbours()
-                    neighbours_3d_file.append(neighbours_3d)
+                    neighbours_3d_file.append(len(neighbours_3d))
                     neighbours_apical = Geo.Cells[cell_id].compute_neighbours(location_filter='Top')
-                    neighbours_apical_file.append(neighbours_apical)
+                    neighbours_apical_file.append(len(neighbours_apical))
                     neighbours_basal = Geo.Cells[cell_id].compute_neighbours(location_filter='Bottom')
-                    neighbours_basal_file.append(neighbours_basal)
+                    neighbours_basal_file.append(len(neighbours_basal))
 
                 # Append energies for the current file to the main lists
                 energy_lt_cells.append(energy_lt_file)
@@ -118,6 +117,9 @@ else:
                 neighbours_3d_cells.append(neighbours_3d_file)
                 neighbours_apical_cells.append(neighbours_apical_file)
                 neighbours_basal_cells.append(neighbours_basal_file)
+
+                times.append(time)
+                time += 1
 
         # Plot the energies and save it
         plt.figure()
