@@ -1,8 +1,5 @@
 import os
-import sys
-import numpy as np
 import matplotlib.pyplot as plt
-from pyvista.core.utilities.cell_type_helper import cell_num
 
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.Kg.kgContractility import KgContractility
@@ -38,17 +35,15 @@ else:
         time = 0
 
         times = []
-        energy_lt = []
-        energy_surface = []
-        energy_volume = []
-        energy_tri_ar = []
 
         # Energy for a specific cell. You can change the cell_id to any other cell you want to analyse until 149
-        cell_id = 0
-        energy_lt_cell = []
-        energy_surface_cell = []
-        energy_volume_cell = []
-        energy_tri_ar_cell = []
+        energy_lt_cells = []
+        energy_surface_cells = []
+        energy_volume_cells = []
+        energy_tri_ar_cells = []
+        neighbours_3d_cells = []
+        neighbours_apical_cells = []
+        neighbours_basal_cells = []
         for file_id, file in enumerate(all_files):
             if file.endswith('.pkl') and not file.__contains__(
                     'data_step_before_remodelling') and not file.__contains__('recoil'):
@@ -71,64 +66,90 @@ else:
                 Set = vModel.set
                 Set.currentT = 0
 
-                # Compute the contractility
-                kg_lt = KgContractility(Geo)
-                kg_lt.compute_work(Geo, Set, None, False)
-                g_lt = kg_lt.g
+                # Initialize lists to store energies for the current file
+                energy_lt_file = []
+                energy_surface_file = []
+                energy_volume_file = []
+                energy_tri_ar_file = []
+                neighbours_3d_file = []
+                neighbours_apical_file = []
+                neighbours_basal_file = []
 
-                energy_lt_cell.append(kg_lt.energy_per_cell[cell_id])
-                energy_lt.append(kg_lt.energy)
+                for cell_id in range(len(Geo.Cells)):
+                    print('Cell: ', cell_id)
+                    if Geo.Cells[cell_id].AliveStatus is None:
+                        continue
 
-                # Compute Surface Tension
-                kg_surface_area = KgSurfaceCellBasedAdhesion(Geo)
-                kg_surface_area.compute_work(Geo, Set, None, False)
-                g_surface = kg_surface_area.g
+                    # Compute the contractility
+                    kg_lt = KgContractility(Geo)
+                    kg_lt.compute_work(Geo, Set, None, False)
+                    energy_lt_file.append(kg_lt.energy_per_cell[cell_id])
 
-                energy_surface_cell.append(kg_lt.energy_per_cell[cell_id])
-                energy_surface.append(kg_surface_area.energy)
+                    # Compute Surface Tension
+                    kg_surface_area = KgSurfaceCellBasedAdhesion(Geo)
+                    kg_surface_area.compute_work(Geo, Set, None, False)
+                    energy_surface_file.append(kg_surface_area.energy_per_cell[cell_id])
 
-                # Compute Volume
-                kg_volume = KgVolume(Geo)
-                kg_volume.compute_work(Geo, Set, None, False)
-                g_volume = kg_volume.g
+                    # Compute Volume
+                    kg_volume = KgVolume(Geo)
+                    kg_volume.compute_work(Geo, Set, None, False)
+                    energy_volume_file.append(kg_volume.energy_per_cell[cell_id])
 
-                energy_volume_cell.append(kg_volume.energy_per_cell[cell_id])
-                energy_volume.append(kg_volume.energy)
+                    # Compute TriAR energy barrier
+                    kg_tri_ar = KgTriAREnergyBarrier(Geo)
+                    kg_tri_ar.compute_work(Geo, Set, None, False)
+                    energy_tri_ar_file.append(kg_tri_ar.energy_per_cell[cell_id])
 
-                # Compute TriAR energy barrier
-                kg_tri_ar = KgTriAREnergyBarrier(Geo)
-                kg_tri_ar.compute_work(Geo, Set, None, False)
-                g_tri_ar = kg_tri_ar.g
+                    # Compute neighbours
+                    neighbours_3d = Geo.Cells[cell_id].compute_neighbours()
+                    neighbours_3d_file.append(neighbours_3d)
+                    neighbours_apical = Geo.Cells[cell_id].compute_neighbours(location_filter='Top')
+                    neighbours_apical_file.append(neighbours_apical)
+                    neighbours_basal = Geo.Cells[cell_id].compute_neighbours(location_filter='Bottom')
+                    neighbours_basal_file.append(neighbours_basal)
 
-                energy_tri_ar_cell.append(kg_tri_ar.energy_per_cell[cell_id])
-                energy_tri_ar.append(kg_tri_ar.energy)
-
-                # Check for unreasonable geometries
-
-                # Next time
-                times.append(time)
-                time += 1
+                # Append energies for the current file to the main lists
+                energy_lt_cells.append(energy_lt_file)
+                energy_surface_cells.append(energy_surface_file)
+                energy_volume_cells.append(energy_volume_file)
+                energy_tri_ar_cells.append(energy_tri_ar_file)
+                neighbours_3d_cells.append(neighbours_3d_file)
+                neighbours_apical_cells.append(neighbours_apical_file)
+                neighbours_basal_cells.append(neighbours_basal_file)
 
         # Plot the energies and save it
         plt.figure()
         # The parameters shown in the legend are the ones used in the simulation
-        plt.plot(times, energy_lt, label='Line tension %s' % Set.cLineTension)
-        plt.plot(times, energy_surface, label='Surface tension apical %s, basal %s, lateral %s' % (Set.lambdaS1, Set.lambdaS2, Set.lambdaS3))
-        plt.plot(times, energy_volume, label='Volume %s' % Set.lambdaV)
-        plt.plot(times, energy_tri_ar, label='TriAR energy barrier %s' % Set.lambdaR)
+        plt.plot(times, [sum(energy) for energy in energy_lt_cells], label='Line tension %s' % Set.cLineTension)
+        plt.plot(times, [sum(energy) for energy in energy_surface_cells],
+                 label='Surface tension apical %s, basal %s, lateral %s' % (Set.lambdaS1, Set.lambdaS2, Set.lambdaS3))
+        plt.plot(times, [sum(energy) for energy in energy_volume_cells], label='Volume %s' % Set.lambdaV)
+        plt.plot(times, [sum(energy) for energy in energy_tri_ar_cells], label='TriAR energy barrier %s' % Set.lambdaR)
         plt.legend()
         # Save the plot
         plt.savefig(os.path.join(output_folder, 'total_energies.png'))
 
         # Plot the energies for a specific cell and save it
-        plt.figure()
-        plt.plot(times, energy_lt_cell, label='Line tension')
-        plt.plot(times, energy_surface_cell, label='Surface tension')
-        plt.plot(times, energy_volume_cell, label='Volume')
-        plt.plot(times, energy_tri_ar_cell, label='TriAR energy barrier')
-        plt.legend()
-        # Save the plot
-        plt.savefig(os.path.join(output_folder, 'cell_%s_energies.png' % cell_id))
+        for cell_id in range(len(Geo.Cells)):
+            if Geo.Cells[cell_id].AliveStatus is None or cell_id in Geo.BorderCells:
+                continue
+
+            plt.figure()
+            plt.plot(times, [energy[cell_id] for energy in energy_lt_cells], label='Line tension')
+            plt.plot(times, [energy[cell_id] for energy in energy_surface_cells], label='Surface tension')
+            plt.plot(times, [energy[cell_id] for energy in energy_volume_cells], label='Volume')
+            plt.plot(times, [energy[cell_id] for energy in energy_tri_ar_cells], label='TriAR energy barrier')
+            plt.legend()
+            # Save the plot
+            plt.savefig(os.path.join(output_folder, 'cell_%s_energies.png' % cell_id))
+
+            plt.figure()
+            plt.plot(times, [neighbours_3d[cell_id] for neighbours_3d in neighbours_3d_cells], label='3D neighbours')
+            plt.plot(times, [neighbours_apical[cell_id] for neighbours_apical in neighbours_apical_cells], label='Apical neighbours')
+            plt.plot(times, [neighbours_basal[cell_id] for neighbours_basal in neighbours_basal_cells], label='Basal neighbours')
+            plt.legend()
+            # Save the plot
+            plt.savefig(os.path.join(output_folder, 'cell_%s_neighbours.png' % cell_id))
 
     else:
         load_state(vModel, os.path.join(PROJECT_DIRECTORY, 'Result/new_reference/before_ablation.pkl'))
