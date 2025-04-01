@@ -1,5 +1,6 @@
 import os
 import matplotlib.pyplot as plt
+import numpy as np
 
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.Kg.kgContractility import KgContractility
@@ -22,7 +23,7 @@ else:
 
     if debugging:
         # Change this folder accordingly (it doesn't really matter the name of the folder, so feel free to rename it
-        output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/breaking/03-20_100319_noise_0.00e+00_bNoise_0.00e+00_lVol_1.00e+00_refV0_1.00e+00_kSubs_1.00e-01_lt_0.00e+00_refA0_9.00e-01_eARBarrier_8.00e-07_RemStiff_0.6_lS1_1.00e-01_lS2_1.00e-03_lS3_1.00e-01_ps_4.00e-05_lc_7.00e-05')
+        output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/breaking/03-20_100221_noise_0.00e+00_bNoise_0.00e+00_lVol_1.00e+00_refV0_1.00e+00_kSubs_1.00e-01_lt_0.00e+00_refA0_9.00e-01_eARBarrier_8.00e-07_RemStiff_0.6_lS1_1.00e-01_lS2_1.00e-03_lS3_1.00e-01_ps_4.00e-05_lc_7.00e-05')
 
         # You can either load just one file or go through all of them
         #load_state(vModel, os.path.join(output_folder, 'data_step_0.89.pkl'))
@@ -75,29 +76,30 @@ else:
                 neighbours_apical_file = []
                 neighbours_basal_file = []
 
+                # Compute TriAR energy barrier
+                kg_tri_ar = KgTriAREnergyBarrier(Geo)
+                kg_tri_ar.compute_work(Geo, Set, None, False)
+
+                # Compute the contractility
+                kg_lt = KgContractility(Geo)
+                kg_lt.compute_work(Geo, Set, None, False)
+
+                # Compute Surface Tension
+                kg_surface_area = KgSurfaceCellBasedAdhesion(Geo)
+                kg_surface_area.compute_work(Geo, Set, None, False)
+
+                # Compute Volume
+                kg_volume = KgVolume(Geo)
+                kg_volume.compute_work(Geo, Set, None, False)
+
                 for cell_id in range(len(Geo.Cells)):
                     print('Cell: ', cell_id)
-                    if Geo.Cells[cell_id].AliveStatus is None:
+                    if Geo.Cells[cell_id].AliveStatus is None or cell_id in Geo.BorderCells:
                         continue
 
-                    # Compute the contractility
-                    kg_lt = KgContractility(Geo)
-                    kg_lt.compute_work(Geo, Set, None, False)
                     energy_lt_file.append(kg_lt.energy_per_cell[cell_id])
-
-                    # Compute Surface Tension
-                    kg_surface_area = KgSurfaceCellBasedAdhesion(Geo)
-                    kg_surface_area.compute_work(Geo, Set, None, False)
                     energy_surface_file.append(kg_surface_area.energy_per_cell[cell_id])
-
-                    # Compute Volume
-                    kg_volume = KgVolume(Geo)
-                    kg_volume.compute_work(Geo, Set, None, False)
                     energy_volume_file.append(kg_volume.energy_per_cell[cell_id])
-
-                    # Compute TriAR energy barrier
-                    kg_tri_ar = KgTriAREnergyBarrier(Geo)
-                    kg_tri_ar.compute_work(Geo, Set, None, False)
                     energy_tri_ar_file.append(kg_tri_ar.energy_per_cell[cell_id])
 
                     # Compute neighbours
@@ -128,6 +130,15 @@ else:
         plt.legend()
         # Save the plot
         plt.savefig(os.path.join(output_folder, 'total_energies.png'))
+
+        # Plot the average neighbours and save it
+        plt.figure()
+        plt.plot(times, [np.mean(energy) for energy in neighbours_3d_cells], label='3D neighbours')
+        plt.plot(times, [np.mean(energy) for energy in neighbours_apical_cells], label='Apical neighbours')
+        plt.plot(times, [np.mean(energy) for energy in neighbours_basal_cells], label='Basal neighbours')
+        plt.legend()
+        # Save the plot
+        plt.savefig(os.path.join(output_folder, 'average_neighbours.png'))
 
         # Plot the energies for a specific cell and save it
         for cell_id in range(len(Geo.Cells)):
