@@ -406,6 +406,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
                 if np.sum(np.isin(shared_nodes, remodel_obj.Geo.BorderCells)) > 0:
                     print('More than 0 border cell')
+                    continue
 
                 cell_to_split_from = cell_to_split_from_all[
                     ~np.isin(cell_to_split_from_all, [c_cell.ID, random_neighbour])]
