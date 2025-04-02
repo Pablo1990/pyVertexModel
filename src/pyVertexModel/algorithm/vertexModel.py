@@ -153,7 +153,7 @@ class VertexModel:
     iterating over time, applying Brownian motion, and checking the integrity of the model.
     """
 
-    def __init__(self, c_set=None, create_output_folder=True, update_derived_parameters=True):
+    def __init__(self, set_option='wing_disc', c_set=None, create_output_folder=True, update_derived_parameters=True):
         """
         Vertex Model class.
         :param c_set:
@@ -174,11 +174,12 @@ class VertexModel:
         if c_set is not None:
             self.set = c_set
         else:
-            # TODO Create a menu to select the set
             self.set = Set()
-            # self.set.cyst()
-            self.set.wing_disc()
-            #self.set.wing_disc_apical_constriction()
+            if hasattr(self.set, set_option):
+                getattr(self.set, set_option)()
+            else:
+                raise ValueError(f"Invalid set option: {set_option}")
+
             if self.set.ablation:
                 self.set.wound_default()
 

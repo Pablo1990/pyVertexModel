@@ -281,8 +281,8 @@ def add_tetrahedral_intercalations(Twg, xInternal, XgBottom, XgTop, XgLateral):
 
 
 class VertexModelVoronoiFromTimeImage(VertexModel):
-    def __init__(self, set_test=None, update_derived_parameters=True, create_output_folder=True):
-        super().__init__(c_set=set_test, update_derived_parameters=update_derived_parameters, create_output_folder=create_output_folder)
+    def __init__(self, set_option=None, set_test=None, update_derived_parameters=True, create_output_folder=True):
+        super().__init__(set_option=set_option, c_set=set_test, update_derived_parameters=update_derived_parameters, create_output_folder=create_output_folder)
         self.dilated_cells = None
 
     def initialize(self):
