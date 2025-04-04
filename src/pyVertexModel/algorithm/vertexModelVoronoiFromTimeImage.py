@@ -281,7 +281,7 @@ def add_tetrahedral_intercalations(Twg, xInternal, XgBottom, XgTop, XgLateral):
 
 
 class VertexModelVoronoiFromTimeImage(VertexModel):
-    def __init__(self, set_option=None, set_test=None, update_derived_parameters=True, create_output_folder=True):
+    def __init__(self, set_option='wing_disc', set_test=None, update_derived_parameters=True, create_output_folder=True):
         super().__init__(set_option=set_option, c_set=set_test, update_derived_parameters=update_derived_parameters, create_output_folder=create_output_folder)
         self.dilated_cells = None
 
@@ -311,6 +311,9 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             # Save state with filename using the number of cells
             filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
             # save_state(self.geo, 'voronoi_40cells.pkl')
+
+        # Resize the geometry to a given cell volume average
+        self.resize_tissue()
 
         # Deform the tissue if required
         #self.deform_tissue()
@@ -590,6 +593,30 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             self.geo.update_measures()
             volumes_after_deformation = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
             logger.info(f'Volume difference: {np.mean(volumes) - np.mean(volumes_after_deformation)}')
+
+    def resize_tissue(self, average_volume=0.0003168604676977124):
+        """
+        Resize the tissue to a specific average volume.
+        :param average_volume: The target average volume for the cells.
+        """
+        # Calculate the current average volume of the cells
+        current_average_volume = np.mean([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
+        middle_point = np.mean([cell.X for cell in self.geo.Cells if cell.AliveStatus is not None], axis=0)
+        # Calculate the scaling factor
+        scaling_factor = (average_volume / current_average_volume) ** (1 / 3)
+        # Resize the cells
+        for cell in self.geo.Cells:
+            if cell.AliveStatus is not None:
+                cell.X = middle_point + (cell.X - middle_point) * scaling_factor
+                cell.Y = middle_point + (cell.Y - middle_point) * scaling_factor
+                for face in cell.Faces:
+                    face.Centre = middle_point + (face.Centre - middle_point) * scaling_factor
+
+        # Update the geometry
+        self.geo.update_measures()
+
+        volumes_after_deformation = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
+        logger.info(f'Volume difference: {np.mean(volumes_after_deformation) - average_volume}')
 
     def calculate_neighbours(self, labelled_img, ratio_strel):
         """
