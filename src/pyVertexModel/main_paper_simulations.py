@@ -3,6 +3,8 @@ import logging
 import os
 import sys
 
+import numpy as np
+
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
@@ -13,6 +15,7 @@ logger = logging.getLogger("pyVertexModel")
 def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
     """
     Run simulation with the given combination of variables.
+    :param length: 
     :param output_results_dir: 
     :param combination:
     :return:
@@ -34,6 +37,14 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
 
         vModel.set.wing_disc()
         vModel.set.wound_default()
+        if vModel.set.model_name == 'wing_disc_real_bottom_left':
+            cells_to_ablate = np.array([0, 1, 2, 3, 4, 7, 8, 10, 13])
+            vModel.set.cellsToAblate = cells_to_ablate
+            vModel.geo.cellsToAblate = cells_to_ablate
+        if vModel.set.model_name == 'wing_disc_real_top_right':
+            cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8])
+            vModel.set.cellsToAblate = cells_to_ablate
+            vModel.geo.cellsToAblate = cells_to_ablate
 
         vModel.set.nu_bottom = vModel.set.nu * 600
         vModel.set.OutputFolder = output_folder
@@ -92,11 +103,11 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
             analyse_simulation(vModel.set.OutputFolder)
             return
 
-    try:
-        vModel.iterate_over_time()
-        analyse_simulation(vModel.set.OutputFolder)
-    except Exception as e:
-        logger.info(f"Error in simulation: {e}")
+    #try:
+    vModel.iterate_over_time()
+    analyse_simulation(vModel.set.OutputFolder)
+    #except Exception as e:
+    #    logger.info(f"Error in simulation: {e}")
 
 
 variables_to_change = ['kSubstrate', 'Remodelling', 'purseStringStrength', 'lateralCablesStrength']

@@ -461,7 +461,10 @@ class Remodelling:
                                                       np.concatenate([[num_cell], cellNodesShared]),
                                                       cellToSplitFrom, ghostNode, allTnew, self.Set))
                 # Equidistant vertices on the edges of the three cells
-                correct_edge_vertices(allTnew, cellNodesShared, geo_copy, num_cell)
+                try:
+                    correct_edge_vertices(allTnew, cellNodesShared, geo_copy, num_cell)
+                except Exception as e:
+                    logger.error(f'Error in correct_edge_vertices: {e}')
 
                 # Smoothing the cell surfaces mesh
                 geo_copy = smoothing_cell_surfaces_mesh(geo_copy, cells_involved_intercalation, backup_vars)

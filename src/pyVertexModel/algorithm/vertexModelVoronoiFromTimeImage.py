@@ -599,6 +599,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         Resize the tissue to a specific average volume.
         :param average_volume: The target average volume for the cells.
         """
+        self.geo.update_measures()
         # Calculate the current average volume of the cells
         current_average_volume = np.mean([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
         middle_point = np.mean([cell.X for cell in self.geo.Cells if cell.AliveStatus is not None], axis=0)
