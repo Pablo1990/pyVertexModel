@@ -284,11 +284,46 @@ class Set:
 
         self.check_for_non_used_parameters()
 
-    def wing_disc(self):
+    def wing_disc_equilibrium(self):
         self.nu_bottom = self.nu
-        self.initial_filename_state = 'Input/model_2/data_step_0.71.pkl' #wing_disc_real_bottom_left.mat'
-        self.model_name = 'model_2'
-        self.percentage_scutoids = 0
+        self.model_name = 'wing_disc_real_top_right'
+        self.initial_filename_state = 'Input/' + self.model_name + '.mat'
+        self.percentage_scutoids = 0.45
+        self.Nincr = self.tend * 100
+
+        self.EnergyBarrierAR = True
+        if self.EnergyBarrierAR:
+            self.lambdaR = 8e-7
+        else:
+            self.lambdaR = 0
+
+        # Volume
+        self.lambdaV = 1
+
+        # Substrate
+        self.kSubstrate = 0.1
+
+        # Surface Area
+        self.ref_A0 = 0.92
+        # Top
+        self.lambdaS1 = 1.4
+        # c_cell-c_cell
+        self.lambdaS2 = self.lambdaS1 / 100
+        # Bottom
+        self.lambdaS3 = self.lambdaS1
+        # Substrate - c_cell
+        self.lambdaS4 = self.lambdaS2
+
+        self.VTK = False
+
+        self.check_for_non_used_parameters()
+
+    def wing_disc(self):
+        #self.nu_bottom = self.nu
+        #self.model_name = 'in_silico_movie_0'
+        #self.initial_filename_state = 'Input/' + self.model_name + '.mat'
+        #self.percentage_scutoids = 0
+        self.Nincr = self.tend * 100
 
         self.EnergyBarrierA = False
         # Energy Barrier Aspect Ratio
@@ -299,14 +334,14 @@ class Set:
             self.lambdaR = 0
 
         # Volume
-        self.lambdaV = 0.2
+        self.lambdaV = 1
 
         # Substrate
         self.kSubstrate = 0.1
 
         # Contractility
         self.Contractility = False
-        self.cLineTension = 1e-9
+        self.cLineTension = 1e-7
 
         # Surface Area
         self.ref_A0 = 0.92
@@ -315,7 +350,7 @@ class Set:
         # c_cell-c_cell
         self.lambdaS2 = self.lambdaS1 / 100
         # Bottom
-        self.lambdaS3 = self.lambdaS1 / 10
+        self.lambdaS3 = self.lambdaS1
         # Substrate - c_cell
         self.lambdaS4 = self.lambdaS2
 
