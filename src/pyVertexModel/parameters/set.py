@@ -174,7 +174,7 @@ class Set:
             self.tol0 = self.nu/20
 
         if self.Remodelling:
-            self.RemodelStiffness = 0.6
+            self.RemodelStiffness = 0.7
         else:
             self.RemodelStiffness = 2
 
