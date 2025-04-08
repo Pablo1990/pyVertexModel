@@ -9,7 +9,8 @@ import imageio
 import numpy as np
 import pyvista as pv
 from scipy.optimize import fsolve, minimize
-
+import gzip
+import pickle
 
 def find_optimal_deform_array_X_Y(geo, deform_array_Z, middle_point, volumes):
     """
@@ -236,14 +237,17 @@ def load_variables(filename):
 
 def load_state(obj, filename, objs_to_load=None):
     """
-    Load state of the different attributes of obj from filename
-    :param objs_to_load:
-    :param obj:
-    :param filename:
-    :return:
+    Load state of the different attributes of obj from filename.
+    Automatically detects if file is gzipped or not.
     """
+    # Check magic number for gzip
+    with open(filename, 'rb') as f:
+        magic = f.read(2)
+
+    open_fn = gzip.open if magic == b'\x1f\x8b' else open
+
     try:
-        with gzip.open(filename, 'rb') as f:
+        with open_fn(filename, 'rb') as f:
             while True:
                 try:
                     data = pickle.load(f)
@@ -252,19 +256,8 @@ def load_state(obj, filename, objs_to_load=None):
                             setattr(obj, attr, value)
                 except EOFError:
                     break
-    except gzip.BadGzipFile:
-        with open(filename, 'rb') as f:
-            while True:
-                try:
-                    data = pickle.load(f)
-                    for attr, value in data.items():
-                        if objs_to_load is None or attr in objs_to_load:
-                            setattr(obj, attr, value)
-                except EOFError:
-                    break
-                except:
-                    print('Error loading file: ', filename)
-                    break
+    except Exception as e:
+        print(f"Error loading file {filename}: {e}")
 
 
 def ismember_rows(a, b):

@@ -1,6 +1,7 @@
 import os
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.Kg.kgContractility import KgContractility
@@ -23,7 +24,7 @@ else:
 
     if debugging:
         # Change this folder accordingly (it doesn't really matter the name of the folder, so feel free to rename it
-        output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/breaking/03-20_100319_noise_0.00e+00_bNoise_0.00e+00_lVol_1.00e+00_refV0_1.00e+00_kSubs_1.00e-01_lt_0.00e+00_refA0_9.00e-01_eARBarrier_8.00e-07_RemStiff_0.6_lS1_1.00e-01_lS2_1.00e-03_lS3_1.00e-01_ps_4.00e-05_lc_7.00e-05')
+        output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/03-20_100319')
 
         # You can either load just one file or go through all of them
         #load_state(vModel, os.path.join(output_folder, 'data_step_0.89.pkl'))
@@ -120,6 +121,40 @@ else:
 
                 times.append(time)
                 time += 1
+
+        # Custom cell geometry analysis
+        weird_cells = []
+
+        for cell_id in range(len(Geo.Cells)):
+            if Geo.Cells[cell_id].AliveStatus is None:
+                continue
+
+            neighs = Geo.Cells[cell_id].compute_neighbours()
+            if len(neighs) != 6:
+                print(f'Cell {cell_id} has {len(neighs)} neighbours')
+                print(f'Energy (LT): {kg_lt.energy_per_cell[cell_id]}')
+                print(f'Energy (Surface): {kg_surface_area.energy_per_cell[cell_id]}')
+                print(f'Energy (Volume): {kg_volume.energy_per_cell[cell_id]}')
+
+                weird_cells.append({
+                    'id': cell_id,
+                    'neighs': len(neighs),
+                    'energy_lt': kg_lt.energy_per_cell[cell_id],
+                    'energy_surface': kg_surface_area.energy_per_cell[cell_id],
+                    'energy_volume': kg_volume.energy_per_cell[cell_id]
+                })
+        # Save the weird cells to an excel sheet
+        weird_cells_df = pd.DataFrame(weird_cells)
+        weird_cells_df.to_excel(os.path.join(output_folder, 'weird_cells.xlsx'), index=False)
+
+        df = pd.read_excel('Result/weird_cells.xlsx')
+
+        plt.scatter(df['neighs'], df['energy_surface'], c='blue', label='surface energy')
+        plt.xlabel('Number of Neighbors')
+        plt.ylabel('Surface Energy')
+        plt.title('Surface Energy vs Neighbor Count')
+        plt.grid(True)
+        plt.show()
 
         # Plot the energies and save it
         plt.figure()
