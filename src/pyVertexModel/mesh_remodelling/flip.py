@@ -384,8 +384,10 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
         if np.all(np.sum(np.isin(new_tets, Geo.XgID), axis=1) < 4):
             if intercalation_flip:
                 Xs_c = Xs[~np.isin(Xs, ghost_nodes_without_debris)]
-                if ~ismember_rows(Xs_c, np.vstack([new_tets, tets4_cells]))[0][0]:
-                    new_tets = np.append(new_tets, [Xs_c], axis=0)
+                # Split into the different combination of tets using 'combinations'
+                for combination in combinations(Xs_c, 4):
+                    if ~ismember_rows(np.array(combination), np.vstack([new_tets, tets4_cells]))[0][0]:
+                        new_tets = np.append(new_tets, np.array([combination]), axis=0)
 
             current_valence_segment, shared_tets, _ = (
                 edge_valence_t(new_tets, [xs_to_disconnect_cells, cell_to_split_from]))
