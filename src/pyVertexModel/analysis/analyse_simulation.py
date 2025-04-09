@@ -47,7 +47,7 @@ def analyse_simulation(folder):
                 #screenshot(vModel, temp_dir)
 
                 # Analyse the simulation
-                all_cells, avg_cells = vModel.analyse_vertex_model()
+                all_cells, avg_cells, _ = vModel.analyse_vertex_model()
                 features_per_time_all_cells.append(all_cells)
                 features_per_time.append(avg_cells)
 

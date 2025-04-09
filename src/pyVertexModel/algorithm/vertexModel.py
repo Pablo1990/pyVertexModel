@@ -540,6 +540,7 @@ class VertexModel:
         all_cell_features["cell_distance_to_wound_bottom"] = list_of_cell_distances_bottom
         all_cell_features["time"] = self.t
         avg_cell_features = all_cell_features.mean()
+        std_cell_features = all_cell_features.std()
 
         # Compute wound features
         #try:
@@ -548,7 +549,7 @@ class VertexModel:
         # except Exception as e:
         #     logger.error(f"Error while computing wound features: {e}")
 
-        return all_cell_features, avg_cell_features
+        return all_cell_features, avg_cell_features, std_cell_features
 
     def compute_wound_features(self):
         """
