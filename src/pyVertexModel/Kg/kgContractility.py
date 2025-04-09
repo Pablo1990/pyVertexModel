@@ -211,7 +211,7 @@ class KgContractility(Kg):
                         # Adding a bit of noise between cells
                         C = C * cell.c_line_tension_perc
 
-                        if 'is_commited_to_intercalate' in currentTri.__dict__:
+                        if 'is_commited_to_intercalate' in currentTri.__dict__ and c_set.Remodelling:
                             if currentTri.is_commited_to_intercalate:
                                 C = C * 2
                                 pass
