@@ -404,14 +404,14 @@ class Set:
         # Bottom
         self.lambdaS3 = self.lambda_s_total * 20/100
 
-    def wound_default(self):
+    def wound_default(self, myosin_pool_multiplier=1):
         # =========================== Contractility ==========================
         self.Contractility = True
         self.TypeOfPurseString = 0
         # 0: Intensity-based purse string
         # 1: Strain-based purse string (delayed)
         # 2: Fixed with linear increase purse string
-        self.myosin_pool = 4e-5 + 7e-5
+        self.myosin_pool = (4e-5 + 7e-5) * myosin_pool_multiplier
         self.purseStringStrength = 4/11 * self.myosin_pool
         self.lateralCablesStrength = self.myosin_pool - self.purseStringStrength
 
