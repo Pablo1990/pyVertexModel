@@ -350,7 +350,7 @@ class Set:
         # c_cell-c_cell
         self.lambdaS2 = self.lambdaS1 / 100
         # Bottom
-        self.lambdaS3 = self.lambdaS1
+        self.lambdaS3 = self.lambdaS1 / 10
         # Substrate - c_cell
         self.lambdaS4 = self.lambdaS2
 
