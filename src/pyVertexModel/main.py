@@ -12,6 +12,90 @@ from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexMo
 from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
 from src.pyVertexModel.util.utils import load_state
 
+
+
+def compute_aspect_ratios(cell):
+    """Compute 2D and 3D aspect ratios for a cell"""
+    aspect_2d_top = cell.compute_2d_aspect_ratio(filter_location=0)
+    aspect_2d_bottom = cell.compute_2d_aspect_ratio(filter_location=2)
+
+    if cell.axes_lengths is None:
+        cell.compute_principal_axis_length()
+    aspect_3d = max(cell.axes_lengths) / min(cell.axes_lengths)
+
+    return {
+        'aspect_2d_top': aspect_2d_top,
+        'aspect_2d_bottom': aspect_2d_bottom,
+        'aspect_3d': aspect_3d
+    }
+
+
+def check_inverted(cell):
+    """Check for inverted cells using signed volume"""
+    return cell.compute_volume() < 0
+
+
+def compute_min_angles(cell):
+    """Compute minimum angles in all triangular faces"""
+    min_angles = []
+    for face in cell.Faces:
+        for tri in face.Tris:
+            v0 = cell.Y[tri.Edge[0]]
+            v1 = cell.Y[tri.Edge[1]]
+            v2 = face.Centre
+
+            vec1 = v1 - v0
+            vec2 = v2 - v0
+            vec3 = v2 - v1
+
+            vec1 = vec1 / np.linalg.norm(vec1)
+            vec2 = vec2 / np.linalg.norm(vec2)
+            vec3 = vec3 / np.linalg.norm(vec3)
+
+            angle1 = np.arccos(np.clip(np.dot(vec1, vec2), -1.0, 1.0))
+            angle2 = np.arccos(np.clip(np.dot(-vec1, vec3), -1.0, 1.0))
+            angle3 = np.pi - angle1 - angle2
+
+            min_angle = min(angle1, angle2, angle3)
+            min_angles.append(np.degrees(min_angle))
+
+    return min(min_angles) if min_angles else 0
+
+
+def export_diagnostic_vtk(Geo, output_path, time):
+    """Export VTK with geometry diagnostic fields"""
+    dataset = pv.PolyData()
+
+    for cell in Geo.Cells:
+        if cell.AliveStatus is None:
+            continue
+
+        aspect_ratios = compute_aspect_ratios(cell)
+        is_inverted = check_inverted(cell)
+        min_angle = compute_min_angles(cell)
+
+        cell_mesh = cell.create_pyvista_mesh()
+
+        # Add scalar fields
+        cell_mesh['aspect_3d'] = aspect_ratios['aspect_3d']
+        cell_mesh['aspect_2d_top'] = aspect_ratios['aspect_2d_top']
+        cell_mesh['aspect_2d_bottom'] = aspect_ratios['aspect_2d_bottom']
+        cell_mesh['is_inverted'] = float(is_inverted)
+        cell_mesh['min_angle'] = min_angle
+        cell_mesh['cell_id'] = cell.ID
+
+        dataset += cell_mesh
+
+    dataset.save(output_path)
+
+# Add threshold constants
+ASPECT_RATIO_3D_THRESHOLD = 5.0
+ASPECT_RATIO_2D_THRESHOLD = 3.0
+MIN_ANGLE_THRESHOLD = 5.0
+ENERGY_THRESHOLD_FACTOR = 2.0
+
+
+
 start_new = False
 if start_new:
     vModel = VertexModelVoronoiFromTimeImage()
@@ -41,6 +125,8 @@ else:
         times = []
 
         # Energy for a specific cell. You can change the cell_id to any other cell you want to analyse until 149
+        geometry_issues_all_times = []
+        diagnostic_vtk_files = []
         energy_lt_cells = []
         energy_surface_cells = []
         energy_volume_cells = []
@@ -58,6 +144,43 @@ else:
                 # Load the state of the model
                 load_state(vModel, os.path.join(output_folder, file))
 
+                # Right after load_state() call
+                geometry_issues = {
+                    'time': time,
+                    'distorted_cells': [],
+                    'inverted_cells': [],
+                    'small_angle_cells': [],
+                    'high_energy_cells': []
+                }
+
+                # Cell-by-cell geometry checks
+                for cell_id, cell in enumerate(Geo.Cells):
+                    if cell.AliveStatus is None:
+                        continue
+
+                    # Aspect ratio checks
+                    aspect_ratios = compute_aspect_ratios(cell)
+                    if (aspect_ratios['aspect_3d'] > ASPECT_RATIO_3D_THRESHOLD or
+                            aspect_ratios['aspect_2d_top'] > ASPECT_RATIO_2D_THRESHOLD or
+                            aspect_ratios['aspect_2d_bottom'] > ASPECT_RATIO_2D_THRESHOLD):
+                        geometry_issues['distorted_cells'].append({
+                            'cell_id': cell_id,
+                            **aspect_ratios
+                        })
+
+                    # Inversion check
+                    if check_inverted(cell):
+                        geometry_issues['inverted_cells'].append(cell_id)
+
+                    # Small angle check
+                    min_angle = compute_min_angles(cell)
+                    if min_angle < MIN_ANGLE_THRESHOLD:
+                        geometry_issues['small_angle_cells'].append({
+                            'cell_id': cell_id,
+                            'min_angle': min_angle
+                        })
+
+                geometry_issues_all_times.append(geometry_issues)
 
                 # Track intercalations
                 if hasattr(vModel.geo, 'num_flips_this_step'):
@@ -154,6 +277,27 @@ else:
 
                 times.append(time)
                 time += 1
+
+        # High energy cell detection
+        if energy_lt_cells and energy_surface_cells and energy_volume_cells:
+            current_energies = [
+                energy_lt_cells[-1][i] + energy_surface_cells[-1][i] + energy_volume_cells[-1][i]
+                for i in range(len(energy_lt_cells[-1]))
+            ]
+            mean_energy = np.mean(current_energies)
+
+            for cell_id, energy in enumerate(current_energies):
+                if energy > mean_energy * ENERGY_THRESHOLD_FACTOR:
+                    geometry_issues_all_times[-1]['high_energy_cells'].append({
+                        'cell_id': cell_id,
+                        'energy': energy,
+                        'mean_energy': mean_energy
+                    })
+
+        # Export diagnostic VTK
+        export_path = os.path.join(output_folder, f'diagnostics_{time:04d}.vtk')
+        export_diagnostic_vtk(Geo, export_path, time)
+        diagnostic_vtk_files.append(export_path)
 
         # Custom cell geometry analysis
         weird_cells = []
@@ -280,6 +424,60 @@ else:
 
             plt.savefig(os.path.join(output_folder, f'cell_{cell_id}_analysis.png'))
             plt.close()
+
+        # Geometry diagnostics summary plot
+        plt.figure(figsize=(15, 10))
+        plt.suptitle('Geometry Quality Diagnostics')
+
+        # Subplot 1: Aspect ratios
+        plt.subplot(2, 2, 1)
+        max_aspect_3d = [max([c['aspect_3d'] for c in t['distorted_cells']], default=1)
+                         for t in geometry_issues_all_times]
+        plt.plot(times, max_aspect_3d, 'r-')
+        plt.axhline(ASPECT_RATIO_3D_THRESHOLD, color='r', linestyle='--')
+        plt.title('Max 3D Aspect Ratio')
+        plt.xlabel('Time')
+        plt.ylabel('Ratio')
+
+        # Subplot 2: Issue counts
+        plt.subplot(2, 2, 2)
+        plt.plot(times, [len(t['distorted_cells']) for t in geometry_issues_all_times], 'r-', label='Distorted')
+        plt.plot(times, [len(t['inverted_cells']) for t in geometry_issues_all_times], 'b-', label='Inverted')
+        plt.plot(times, [len(t['small_angle_cells']) for t in geometry_issues_all_times], 'g-', label='Small Angles')
+        plt.title('Issue Counts')
+        plt.xlabel('Time')
+        plt.ylabel('Number of Cells')
+        plt.legend()
+
+        # Subplot 3: Energy correlation
+        plt.subplot(2, 2, 3)
+        plt.plot(times, [len(t['high_energy_cells']) for t in geometry_issues_all_times], 'm-')
+        plt.title('High Energy Cells')
+        plt.xlabel('Time')
+        plt.ylabel('Count')
+
+        # Subplot 4: Minimum angles
+        plt.subplot(2, 2, 4)
+        min_angles = [min([c['min_angle'] for c in t['small_angle_cells']], default=90)
+                      for t in geometry_issues_all_times]
+        plt.plot(times, min_angles, 'g-')
+        plt.axhline(MIN_ANGLE_THRESHOLD, color='g', linestyle='--')
+        plt.title('Minimum Face Angle')
+        plt.xlabel('Time')
+        plt.ylabel('Degrees')
+
+        plt.tight_layout()
+        plt.savefig(os.path.join(output_folder, 'geometry_diagnostics_summary.png'))
+        plt.close()
+
+        # Export detailed diagnostics
+        diagnostics_df = pd.DataFrame([
+            {**issue, 'time': t['time']}
+            for t in geometry_issues_all_times
+            for issue_type in ['distorted_cells', 'inverted_cells', 'small_angle_cells', 'high_energy_cells']
+            for issue in t[issue_type]
+        ])
+        diagnostics_df.to_excel(os.path.join(output_folder, 'geometry_diagnostics.xlsx'), index=False)
 
 
     else:
