@@ -138,12 +138,17 @@ else:
         apical_flip_times = []
         basal_flip_times = []
         scutoid_cells = []
+
         for file_id, file in enumerate(all_files):
             if file.endswith('.pkl') and not file.__contains__(
                     'data_step_before_remodelling') and not file.__contains__('recoil'):
                 # Load the state of the model
                 load_state(vModel, os.path.join(output_folder, file))
 
+                 #get Geo from the loaded model
+                Geo = vModel.geo
+                Set = vModel.set
+                Set.currentT = 0
                 # Right after load_state() call
                 geometry_issues = {
                     'time': time,
