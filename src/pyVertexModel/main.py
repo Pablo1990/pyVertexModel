@@ -65,30 +65,60 @@ def compute_min_angles(cell):
 
 def export_diagnostic_vtk(Geo, output_path, time):
     """Export VTK with geometry diagnostic fields"""
-    dataset = pv.PolyData()
+    try:
+        import pyvista as pv
+    except ImportError:
+        print("Warning: PyVista not available - skipping VTK export")
+        return False
 
-    for cell in Geo.Cells:
-        if cell.AliveStatus is None:
-            continue
+    try:
+        # Initialize lists to store cell data
+        aspect_3d_values = []
+        aspect_2d_top_values = []
+        aspect_2d_bottom_values = []
+        is_inverted_values = []
+        min_angle_values = []
+        cell_id_values = []
 
-        aspect_ratios = compute_aspect_ratios(cell)
-        is_inverted = check_inverted(cell)
-        min_angle = compute_min_angles(cell)
+        # First pass: collect all cell data
+        for cell in Geo.Cells:
+            if cell.AliveStatus is None:
+                continue
 
-        cell_mesh = cell.create_pyvista_mesh()
+            aspect_ratios = compute_aspect_ratios(cell)
+            is_inverted = check_inverted(cell)
+            min_angle = compute_min_angles(cell)
 
-        # Add scalar fields
-        cell_mesh['aspect_3d'] = aspect_ratios['aspect_3d']
-        cell_mesh['aspect_2d_top'] = aspect_ratios['aspect_2d_top']
-        cell_mesh['aspect_2d_bottom'] = aspect_ratios['aspect_2d_bottom']
-        cell_mesh['is_inverted'] = float(is_inverted)
-        cell_mesh['min_angle'] = min_angle
-        cell_mesh['cell_id'] = cell.ID
+            # Get the number of triangles in this cell
+            num_tris = sum(len(face.Tris) for face in cell.Faces)
 
-        dataset += cell_mesh
+            # Repeat values for each triangle in the cell
+            aspect_3d_values.extend([aspect_ratios['aspect_3d']] * num_tris)
+            aspect_2d_top_values.extend([aspect_ratios['aspect_2d_top']] * num_tris)
+            aspect_2d_bottom_values.extend([aspect_ratios['aspect_2d_bottom']] * num_tris)
+            is_inverted_values.extend([float(is_inverted)] * num_tris)
+            min_angle_values.extend([min_angle] * num_tris)
+            cell_id_values.extend([cell.ID] * num_tris)
 
-    dataset.save(output_path)
+        # Create the mesh (assuming create_pyvista_mesh() creates the full mesh)
+        dataset = Geo.Cells[0].create_pyvista_mesh()  # Start with first cell
+        for cell in Geo.Cells[1:]:
+            if cell.AliveStatus is not None:
+                dataset += cell.create_pyvista_mesh()
 
+        # Add cell data (must match number of cells)
+        dataset.cell_data['aspect_3d'] = aspect_3d_values
+        dataset.cell_data['aspect_2d_top'] = aspect_2d_top_values
+        dataset.cell_data['aspect_2d_bottom'] = aspect_2d_bottom_values
+        dataset.cell_data['is_inverted'] = is_inverted_values
+        dataset.cell_data['min_angle'] = min_angle_values
+        dataset.cell_data['cell_id'] = cell_id_values
+
+        dataset.save(output_path)
+        return True
+    except Exception as e:
+        print(f"Error exporting VTK: {str(e)}")
+        return False
 # Add threshold constants
 ASPECT_RATIO_3D_THRESHOLD = 5.0
 ASPECT_RATIO_2D_THRESHOLD = 3.0
