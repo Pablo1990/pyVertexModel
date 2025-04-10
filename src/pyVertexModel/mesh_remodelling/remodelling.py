@@ -450,6 +450,7 @@ class Remodelling:
 
         return self.Geo, self.Geo_n
 
+
     def post_intercalation(self, num_cell, how_close_to_vertex, allTnew, backup_vars, cellToSplitFrom, ghostNode,
                            ghost_nodes_tried, has_converged):
         # Get the degrees of freedom for the remodelling

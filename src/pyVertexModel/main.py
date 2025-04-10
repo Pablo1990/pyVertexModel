@@ -29,6 +29,8 @@ else:
         # You can either load just one file or go through all of them
         #load_state(vModel, os.path.join(output_folder, 'data_step_0.89.pkl'))
 
+
+
         # Sort files by date
         all_files = os.listdir(output_folder)
         all_files = sorted(all_files, key=lambda x: os.path.getmtime(os.path.join(output_folder, x)))
@@ -46,11 +48,30 @@ else:
         neighbours_3d_cells = []
         neighbours_apical_cells = []
         neighbours_basal_cells = []
+        num_intercalations = []
+        apical_flip_times = []
+        basal_flip_times = []
+        scutoid_cells = []
         for file_id, file in enumerate(all_files):
             if file.endswith('.pkl') and not file.__contains__(
                     'data_step_before_remodelling') and not file.__contains__('recoil'):
                 # Load the state of the model
                 load_state(vModel, os.path.join(output_folder, file))
+
+
+                # Track intercalations
+                if hasattr(vModel.geo, 'num_flips_this_step'):
+                    num_intercalations.append(vModel.geo.num_flips_this_step)
+                else:
+                    num_intercalations.append(0)  # Default if not tracking flips
+
+                # Track apical vs basal flips
+                if hasattr(vModel.geo, 'apical_flips_this_step'):
+                    apical_flip_times.append(vModel.geo.apical_flips_this_step)
+                    basal_flip_times.append(vModel.geo.basal_flips_this_step)
+                else:
+                    apical_flip_times.append(0)
+                    basal_flip_times.append(0)
 
                 print('File: ', file)
 
@@ -102,6 +123,18 @@ else:
                     energy_volume_file.append(kg_volume.energy_per_cell[cell_id])
                     energy_tri_ar_file.append(kg_tri_ar.energy_per_cell[cell_id])
 
+                    # Scutoid detection
+                    apical_neigh = Geo.Cells[cell_id].compute_neighbours(location_filter='Top')
+                    basal_neigh = Geo.Cells[cell_id].compute_neighbours(location_filter='Bottom')
+
+                    if set(apical_neigh) != set(basal_neigh):
+                        scutoid_cells.append({
+                            'time': time,
+                            'cell_id': cell_id,
+                            'apical_neigh': len(apical_neigh),
+                            'basal_neigh': len(basal_neigh)
+                        })
+
                     # Compute neighbours
                     neighbours_3d = Geo.Cells[cell_id].compute_neighbours()
                     neighbours_3d_file.append(len(neighbours_3d))
@@ -147,57 +180,107 @@ else:
         weird_cells_df = pd.DataFrame(weird_cells)
         weird_cells_df.to_excel(os.path.join(output_folder, 'weird_cells.xlsx'), index=False)
 
-        df = pd.read_excel('Result/weird_cells.xlsx')
+        pass
 
-        plt.scatter(df['neighs'], df['energy_surface'], c='blue', label='surface energy')
-        plt.xlabel('Number of Neighbors')
-        plt.ylabel('Surface Energy')
-        plt.title('Surface Energy vs Neighbor Count')
-        plt.grid(True)
-        plt.show()
+        # ====== PLOTTING SECTION (AFTER ALL DATA COLLECTION) ======
 
-        # Plot the energies and save it
+        # 1. Total Energies Plot
         plt.figure()
-        # The parameters shown in the legend are the ones used in the simulation
-        plt.plot(times, [sum(energy) for energy in energy_lt_cells], label='Line tension %s' % Set.cLineTension)
+        plt.plot(times, [sum(energy) for energy in energy_lt_cells], label=f'Line tension {Set.cLineTension}')
         plt.plot(times, [sum(energy) for energy in energy_surface_cells],
-                 label='Surface tension apical %s, basal %s, lateral %s' % (Set.lambdaS1, Set.lambdaS2, Set.lambdaS3))
-        plt.plot(times, [sum(energy) for energy in energy_volume_cells], label='Volume %s' % Set.lambdaV)
-        plt.plot(times, [sum(energy) for energy in energy_tri_ar_cells], label='TriAR energy barrier %s' % Set.lambdaR)
+                 label=f'Surface tension apical {Set.lambdaS1}, basal {Set.lambdaS2}, lateral {Set.lambdaS3}')
+        plt.plot(times, [sum(energy) for energy in energy_volume_cells], label=f'Volume {Set.lambdaV}')
+        plt.plot(times, [sum(energy) for energy in energy_tri_ar_cells], label=f'TriAR energy barrier {Set.lambdaR}')
         plt.legend()
-        # Save the plot
         plt.savefig(os.path.join(output_folder, 'total_energies.png'))
+        plt.close()
 
-        # Plot the average neighbours and save it
-        plt.figure()
-        plt.plot(times, [np.mean(energy) for energy in neighbours_3d_cells], label='3D neighbours')
-        plt.plot(times, [np.mean(energy) for energy in neighbours_apical_cells], label='Apical neighbours')
-        plt.plot(times, [np.mean(energy) for energy in neighbours_basal_cells], label='Basal neighbours')
+        # 2. Neighbor Analysis
+        plt.figure(figsize=(12, 5))
+        plt.subplot(121)
+        plt.plot(times, [np.mean(n) for n in neighbours_3d_cells], label='3D neighbours')
+        plt.plot(times, [np.mean(n) for n in neighbours_apical_cells], label='Apical neighbours')
+        plt.plot(times, [np.mean(n) for n in neighbours_basal_cells], label='Basal neighbours')
         plt.legend()
-        # Save the plot
-        plt.savefig(os.path.join(output_folder, 'average_neighbours.png'))
+        plt.title("Average Neighbors")
 
-        # Plot the energies for a specific cell and save it
+        plt.subplot(122)
+        plt.plot(times, [np.std(n) for n in neighbours_3d_cells], label='3D neighbours')
+        plt.plot(times, [np.std(n) for n in neighbours_apical_cells], label='Apical neighbours')
+        plt.plot(times, [np.std(n) for n in neighbours_basal_cells], label='Basal neighbours')
+        plt.legend()
+        plt.title("Neighbor Variability")
+        plt.savefig(os.path.join(output_folder, 'neighbour_analysis.png'))
+        plt.close()
+
+        # 3. Intercalation Analysis
+
+
+        if len(num_intercalations) > 0:
+            plt.figure(figsize=(15, 5))
+
+            plt.subplot(131)
+            plt.plot(times, num_intercalations, 'o-')
+            plt.title("T1 Intercalation Events")
+            plt.xlabel("Time")
+            plt.ylabel("Count")
+
+            plt.subplot(132)
+            if len(apical_flip_times) == len(times):
+                plt.plot(times, apical_flip_times, 'o-', label='Apical')
+                plt.plot(times, basal_flip_times, 'o-', label='Basal')
+                plt.legend()
+                plt.title("Layer-Specific Flips")
+
+            plt.subplot(133)
+            plt.plot([sum(e) for e in energy_lt_cells], num_intercalations, 'o')
+            plt.xlabel("Total Contractility Energy")
+            plt.ylabel("Intercalations")
+            plt.title("Energy vs Intercalations")
+
+            plt.tight_layout()
+            plt.savefig(os.path.join(output_folder, 'intercalation_analysis.png'))
+            plt.close()
+
+        # 4. Energy Composition
+        if len(energy_lt_cells) > 0:
+            total_energy = np.array([sum(e) for e in energy_lt_cells]) + \
+                           np.array([sum(e) for e in energy_surface_cells]) + \
+                           np.array([sum(e) for e in energy_volume_cells]) + \
+                           np.array([sum(e) for e in energy_tri_ar_cells])
+
+            plt.figure()
+            plt.stackplot(times,
+                          [sum(e) / te for e, te in zip(energy_lt_cells, total_energy)],
+                          [sum(e) / te for e, te in zip(energy_surface_cells, total_energy)],
+                          [sum(e) / te for e, te in zip(energy_volume_cells, total_energy)],
+                          [sum(e) / te for e, te in zip(energy_tri_ar_cells, total_energy)],
+                          labels=['Line Tension', 'Surface', 'Volume', 'TriAR'])
+            plt.legend(loc='upper left')
+            plt.title("Energy Composition Over Time")
+            plt.savefig(os.path.join(output_folder, 'energy_composition.png'))
+            plt.close()
+
+        # 5. Individual Cell Analysis (keep this in the loop but add proper closing)
         for cell_id in range(len(Geo.Cells)):
             if Geo.Cells[cell_id].AliveStatus is None or cell_id in Geo.BorderCells:
                 continue
 
-            plt.figure()
-            plt.plot(times, [energy[cell_id] for energy in energy_lt_cells], label='Line tension')
-            plt.plot(times, [energy[cell_id] for energy in energy_surface_cells], label='Surface tension')
-            plt.plot(times, [energy[cell_id] for energy in energy_volume_cells], label='Volume')
-            plt.plot(times, [energy[cell_id] for energy in energy_tri_ar_cells], label='TriAR energy barrier')
-            plt.legend()
-            # Save the plot
-            plt.savefig(os.path.join(output_folder, 'cell_%s_energies.png' % cell_id))
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 8))
 
-            plt.figure()
-            plt.plot(times, [neighbours_3d[cell_id] for neighbours_3d in neighbours_3d_cells], label='3D neighbours')
-            plt.plot(times, [neighbours_apical[cell_id] for neighbours_apical in neighbours_apical_cells], label='Apical neighbours')
-            plt.plot(times, [neighbours_basal[cell_id] for neighbours_basal in neighbours_basal_cells], label='Basal neighbours')
-            plt.legend()
-            # Save the plot
-            plt.savefig(os.path.join(output_folder, 'cell_%s_neighbours.png' % cell_id))
+            # Energy plot
+            ax1.plot(times, [e[cell_id] for e in energy_lt_cells], label='Line tension')
+            ax1.plot(times, [e[cell_id] for e in energy_surface_cells], label='Surface')
+            ax1.legend()
+
+            # Neighbor plot
+            ax2.plot(times, [n[cell_id] for n in neighbours_3d_cells], label='3D')
+            ax2.plot(times, [n[cell_id] for n in neighbours_apical_cells], label='Apical')
+            ax2.legend()
+
+            plt.savefig(os.path.join(output_folder, f'cell_{cell_id}_analysis.png'))
+            plt.close()
+
 
     else:
         load_state(vModel, os.path.join(PROJECT_DIRECTORY, 'Result/new_reference/before_ablation.pkl'))
