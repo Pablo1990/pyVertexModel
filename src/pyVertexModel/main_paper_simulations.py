@@ -39,14 +39,14 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
         vModel.set.wound_default()
         if getattr(vModel.set, 'model_name', None) is None:
             vModel.set.model_name = 'in_silico_movie'
-            vModel.set.RemodelStiffness = 0.6
+            vModel.set.RemodelStiffness = 0.65
         elif vModel.set.model_name == 'wing_disc_real_bottom_left':
             cells_to_ablate = np.array([0, 1, 2, 3, 4, 7, 8, 10, 13])
             vModel.set.cellsToAblate = cells_to_ablate
             vModel.geo.cellsToAblate = cells_to_ablate
             vModel.set.RemodelStiffness = 0.7
         elif vModel.set.model_name == 'wing_disc_real_top_right':
-            cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 15])
+            cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 10, 13, 15])
             vModel.set.cellsToAblate = cells_to_ablate
             vModel.geo.cellsToAblate = cells_to_ablate
             vModel.set.wound_default(myosin_pool_multiplier=1.3)
