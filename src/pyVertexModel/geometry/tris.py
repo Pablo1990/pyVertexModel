@@ -6,7 +6,7 @@ from src.pyVertexModel.util.utils import copy_non_mutable_attributes
 def compute_tri_aspect_ratio(side_lengths):
     s = np.sum(side_lengths) / 2
     aspectRatio = (side_lengths[0] * side_lengths[1] * side_lengths[2]) / (
-            8 * (s - side_lengths[0]) * (s - side_lengths[1]) * (s - side_lengths[2]))
+            8 * (sratio - side_lengths[0]) * (s - side_lengths[1]) * (s - side_lengths[2]))
     return aspectRatio
 
 
