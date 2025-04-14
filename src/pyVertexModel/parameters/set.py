@@ -412,8 +412,8 @@ class Set:
         # 1: Strain-based purse string (delayed)
         # 2: Fixed with linear increase purse string
         self.myosin_pool = (4e-5 + 7e-5) * myosin_pool_multiplier
-        self.purseStringStrength = 4/11 * self.myosin_pool
-        self.lateralCablesStrength = self.myosin_pool - self.purseStringStrength
+        self.purseStringStrength = 3e-5
+        self.lateralCablesStrength = 7e-5
 
     def menu_input(self, inputMode=None, batchMode=None):
         if inputMode == 7:
