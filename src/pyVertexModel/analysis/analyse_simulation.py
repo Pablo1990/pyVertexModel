@@ -131,7 +131,6 @@ def analyse_simulation(folder):
 
         # Compare post-wound features with pre-wound features in percentage
         for feature in post_wound_features.columns:
-            print(feature)
             if 'indentation' in feature:
                 post_wound_features.loc[:, feature] = (post_wound_features[feature] - np.array(
                     pre_wound_features[feature])) * 100
