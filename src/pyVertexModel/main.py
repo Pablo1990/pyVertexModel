@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pyvista as pv
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
 
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.Kg.kgContractility import KgContractility
@@ -126,6 +128,52 @@ MIN_ANGLE_THRESHOLD = 5.0
 ENERGY_THRESHOLD_FACTOR = 2.0
 
 
+def track_cell_metrics(Geo, kg_lt, kg_surface_area, kg_volume, kg_tri_ar, time):
+    """Track comprehensive metrics for all cells at each time step"""
+    cell_data = []
+
+    for cell_id, cell in enumerate(Geo.Cells):
+        if cell.AliveStatus is None:
+            continue
+
+        # Energy components
+        energies = {
+            'time': time,
+            'cell_id': cell_id,
+            'energy_lt': kg_lt.energy_per_cell[cell_id],
+            'energy_surface': kg_surface_area.energy_per_cell[cell_id],
+            'energy_volume': kg_volume.energy_per_cell[cell_id],
+            'energy_tri_ar': kg_tri_ar.energy_per_cell[cell_id],
+            'total_energy': (kg_lt.energy_per_cell[cell_id] +
+                             kg_surface_area.energy_per_cell[cell_id] +
+                             kg_volume.energy_per_cell[cell_id] +
+                             kg_tri_ar.energy_per_cell[cell_id])
+        }
+
+        # Geometry metrics
+        aspect_ratios = compute_aspect_ratios(cell)
+        geometry = {
+            'aspect_3d': aspect_ratios['aspect_3d'],
+            'aspect_2d_top': aspect_ratios['aspect_2d_top'],
+            'aspect_2d_bottom': aspect_ratios['aspect_2d_bottom'],
+            'min_angle': compute_min_angles(cell),
+            'volume': cell.compute_volume(),
+            'is_inverted': check_inverted(cell)
+        }
+
+        # Topology metrics
+        topology = {
+            'neighbours_3d': len(cell.compute_neighbours()),
+            'neighbours_apical': len(cell.compute_neighbours(location_filter='Top')),
+            'neighbours_basal': len(cell.compute_neighbours(location_filter='Bottom')),
+            'is_scutoid': (len(cell.compute_neighbours(location_filter='Top')) !=
+                           len(cell.compute_neighbours(location_filter='Bottom')))
+        }
+
+        cell_data.append({**energies, **geometry, **topology})
+
+    return pd.DataFrame(cell_data)
+
 
 start_new = False
 if start_new:
@@ -139,7 +187,7 @@ else:
 
     if debugging:
         # Change this folder accordingly (it doesn't really matter the name of the folder, so feel free to rename it
-        output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/breaking/03-19_102352')
+        output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/03-20_100319')
 
         # You can either load just one file or go through all of them
         #load_state(vModel, os.path.join(output_folder, 'data_step_0.89.pkl'))
@@ -169,6 +217,7 @@ else:
         apical_flip_times = []
         basal_flip_times = []
         scutoid_cells = []
+        all_cell_metrics = []
 
         for file_id, file in enumerate(all_files):
             if file.endswith('.pkl') and not file.__contains__(
@@ -302,6 +351,11 @@ else:
                     neighbours_basal = Geo.Cells[cell_id].compute_neighbours(location_filter='Bottom')
                     neighbours_basal_file.append(len(neighbours_basal))
 
+                # Track comprehensive metrics for all cells at this time step
+                current_metrics = track_cell_metrics(Geo, kg_lt, kg_surface_area, kg_volume, kg_tri_ar, time)
+                all_cell_metrics.append(current_metrics)
+
+
                 # Append energies for the current file to the main lists
                 energy_lt_cells.append(energy_lt_file)
                 energy_surface_cells.append(energy_surface_file)
@@ -362,7 +416,74 @@ else:
 
         pass
 
+        # Combine all time steps
+        full_metrics_df = pd.concat(all_cell_metrics)
+
+        # Save the complete dataset
+        full_metrics_df.to_excel(os.path.join(output_folder, 'full_cell_metrics.xlsx'), index=False)
+
+        # Identify persistent high-energy cells
+        mean_energy = full_metrics_df['total_energy'].mean()
+        high_energy_cells = full_metrics_df[full_metrics_df['total_energy'] > ENERGY_THRESHOLD_FACTOR * mean_energy]
+        high_energy_ids = high_energy_cells['cell_id'].unique()
+
+        # Save high energy cell IDs
+        def plot_metric_comparison(metric):
+            """Compare evolution of a metric between high-energy and normal cells"""
+            plt.figure(figsize=(10, 6))
+
+            # Generate a color map for unique cell IDs
+            unique_ids = high_energy_ids[:17]
+            colors = cm.get_cmap('tab20', len(unique_ids))
+
+            # Plot high-energy cells individually with labels and unique colors
+            for i, cell_id in enumerate(unique_ids):
+                cell_data = full_metrics_df[full_metrics_df['cell_id'] == cell_id]
+                plt.plot(cell_data['time'], cell_data[metric], marker='o',
+                         color=colors(i),
+                         label=f'High Energy Cell {cell_id}',
+                         linewidth=1.5)
+
+            # Plot average of normal cells
+            normal_avg = full_metrics_df[~full_metrics_df['cell_id'].isin(high_energy_ids)].groupby('time')[
+                metric].mean()
+            plt.plot(normal_avg.index, normal_avg.values, 'k--', marker='o', linewidth= 1 , label='Normal Cells Avg')
+
+            plt.title(f'Comparison of {metric} Evolution')
+            plt.xlabel('Time')
+            plt.ylabel(metric)
+            plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+            plt.tight_layout()
+            plt.savefig(os.path.join(output_folder, f'{metric}_comparison.png'))
+            plt.close()
+
+
         # ====== PLOTTING SECTION (AFTER ALL DATA COLLECTION) ======
+
+        pd.DataFrame({'cell_id': high_energy_ids}).to_excel(os.path.join(output_folder, 'high_energy_cell_ids.xlsx'),
+                                                            index=False)
+
+
+        def plot_energy_around_t1(cell_id, window=2, t1_time=6):
+            """Plot energy components before/during/after T1 transition"""
+            time_range = range(t1_time - window, t1_time + window + 1)
+            cell_data = full_metrics_df[(full_metrics_df['cell_id'] == cell_id) &
+                                        (full_metrics_df['time'].isin(time_range))]
+
+            plt.figure(figsize=(10, 6))
+            plt.stackplot(cell_data['time'],
+                          cell_data['energy_lt'],
+                          cell_data['energy_surface'],
+                          cell_data['energy_volume'],
+                          cell_data['energy_tri_ar'],
+                          labels=['Line Tension', 'Surface', 'Volume', 'TriAR'])
+            plt.title(f'Energy Composition for Cell {cell_id} Around T1 Transition')
+            plt.xlabel('Time')
+            plt.ylabel('Energy')
+            plt.axvline(t1_time, color='r', linestyle='--', label='T1 Transition')
+            plt.legend()
+            plt.savefig(os.path.join(output_folder, f'cell_{cell_id}_t1_energy.png'))
+            plt.close()
 
         # 1. Total Energies Plot
         plt.figure()
@@ -505,6 +626,37 @@ else:
         plt.tight_layout()
         plt.savefig(os.path.join(output_folder, 'geometry_diagnostics_summary.png'))
         plt.close()
+
+        # Right after your existing plotting code, add:
+
+        # Generate plots for high-energy cells around T1 transitions
+        for cell_id in high_energy_ids[:17]:  # Just plot first 5 as example
+            plot_energy_around_t1(cell_id)
+
+        # Generate comparison plots for key metrics
+        for metric in ['aspect_3d', 'min_angle', 'total_energy', 'neighbours_basal']:
+            plot_metric_comparison(metric)
+
+        # Create energy phase diagram
+        plt.figure(figsize=(10, 8))
+        sc = plt.scatter(full_metrics_df['aspect_3d'],
+                         full_metrics_df['min_angle'],
+                         c=full_metrics_df['total_energy'],
+                         cmap='viridis', alpha=0.6)
+        plt.colorbar(sc, label='Total Energy')
+        plt.axvline(ASPECT_RATIO_3D_THRESHOLD, color='r', linestyle='--')
+        plt.axhline(MIN_ANGLE_THRESHOLD, color='r', linestyle='--')
+        plt.xlabel('3D Aspect Ratio')
+        plt.ylabel('Minimum Angle (degrees)')
+        plt.title('Energy Landscape vs Geometric Parameters')
+        plt.savefig(os.path.join(output_folder, 'energy_phase_diagram.png'))
+        plt.close()
+
+        # Correlation analysis
+        breakdown_corr = full_metrics_df.corr()['total_energy'].sort_values(ascending=False)
+        print("Parameters most correlated with high energy:")
+        print(breakdown_corr)
+        pd.DataFrame(breakdown_corr).to_excel(os.path.join(output_folder, 'energy_correlations.xlsx'))
 
         # Export detailed diagnostics
         diagnostics_df = pd.DataFrame([
