@@ -311,9 +311,7 @@ for file_id, file in enumerate(all_files):
             if Geo.Cells[cell_id].AliveStatus is None:
                 continue
 
-            if kg_lt.energy_per_cell is not None:
-                energy_lt_file.append(kg_lt.energy_per_cell[cell_id])
-
+            energy_lt_file.append(kg_lt.energy_per_cell[cell_id])
             energy_surface_file.append(kg_surface_area.energy_per_cell[cell_id])
             energy_volume_file.append(kg_volume.energy_per_cell[cell_id])
             energy_tri_ar_file.append(kg_tri_ar.energy_per_cell[cell_id])

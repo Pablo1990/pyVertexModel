@@ -195,8 +195,8 @@ class KgContractility(Kg):
         :return:
         """
         start = time.time()
-
         Energy = {}
+        self.energy_per_cell = {}
         for cell in [cell for cell in geo.Cells if cell.AliveStatus == 1]:
             c = cell.ID
             ge = np.zeros(self.g.shape, dtype=self.precision_type)
@@ -235,6 +235,7 @@ class KgContractility(Kg):
                         Energy_c += compute_energy_contractility(l_i0, np.linalg.norm(y_1 - y_2), C)
             self.g += ge
             Energy[c] = Energy_c
+            self.energy_per_cell[c] = Energy_c
             cell.contractility_noise = None
 
         self.energy = sum(Energy.values())
