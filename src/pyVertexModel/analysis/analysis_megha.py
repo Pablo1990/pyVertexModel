@@ -13,8 +13,7 @@ from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
 from src.pyVertexModel.Kg.kgVolume import KgVolume
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
-from src.pyVertexModel.util.utils import load_state
-
+from src.pyVertexModel.util.utils import load_state, save_state, save_variables, load_variables
 
 
 def compute_aspect_ratios(cell):
@@ -179,179 +178,220 @@ vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
 # Change this folder accordingly (it doesn't really matter the name of the folder, so feel free to rename it
 output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/final_results_wing_disc_real/60_mins_Rok')
 
-# Sort files by date
-all_files = os.listdir(output_folder)
-all_files = sorted(all_files, key=lambda x: os.path.getmtime(os.path.join(output_folder, x)))
+# Load
+if os.path.exists(os.path.join(output_folder, 'megha_analysis.pkl')):
+    print('Loading previous analysis')
+    data = load_variables(os.path.join(output_folder, 'megha_analysis.pkl'))
+    geometry_issues_all_times = data['geometry_issues_all_times']
+    energy_lt_cells = data['energy_lt_cells']
+    energy_surface_cells = data['energy_surface_cells']
+    energy_volume_cells = data['energy_volume_cells']
+    energy_tri_ar_cells = data['energy_tri_ar_cells']
+    neighbours_3d_cells = data['neighbours_3d_cells']
+    neighbours_apical_cells = data['neighbours_apical_cells']
+    neighbours_basal_cells = data['neighbours_basal_cells']
+    num_intercalations = data['num_intercalations']
+    apical_flip_times = data['apical_flip_times']
+    basal_flip_times = data['basal_flip_times']
+    scutoid_cells = data['scutoid_cells']
+    all_cell_metrics = data['all_cell_metrics']
+    times = data['times']
+    time = data['times'][-1]
+    load_state(vModel, os.path.join(output_folder, 'before_ablation.pkl'))
+    Geo = vModel.geo
+    Set = vModel.set
+else:
+    # Sort files by date
+    all_files = os.listdir(output_folder)
+    all_files = sorted(all_files, key=lambda x: os.path.getmtime(os.path.join(output_folder, x)))
 
-# Time here means just the number of intercalations or file number
-time = 0
+    # Time here means just the number of intercalations or file number
+    time = 0
 
-times = []
+    times = []
 
-# Energy for a specific cell. You can change the cell_id to any other cell you want to analyse until 149
-geometry_issues_all_times = []
-diagnostic_vtk_files = []
-energy_lt_cells = []
-energy_surface_cells = []
-energy_volume_cells = []
-energy_tri_ar_cells = []
-neighbours_3d_cells = []
-neighbours_apical_cells = []
-neighbours_basal_cells = []
-num_intercalations = []
-apical_flip_times = []
-basal_flip_times = []
-scutoid_cells = []
-all_cell_metrics = []
+    # Energy for a specific cell. You can change the cell_id to any other cell you want to analyse until 149
+    geometry_issues_all_times = []
+    diagnostic_vtk_files = []
+    energy_lt_cells = []
+    energy_surface_cells = []
+    energy_volume_cells = []
+    energy_tri_ar_cells = []
+    neighbours_3d_cells = []
+    neighbours_apical_cells = []
+    neighbours_basal_cells = []
+    num_intercalations = []
+    apical_flip_times = []
+    basal_flip_times = []
+    scutoid_cells = []
+    all_cell_metrics = []
 
-for file_id, file in enumerate(all_files):
-    if file.endswith('.pkl') and not file.__contains__(
-            'data_step_before_remodelling') and not file.__contains__('recoil'):
-        # Load the state of the model
-        load_state(vModel, os.path.join(output_folder, file))
+    for file_id, file in enumerate(all_files):
+        if file.endswith('.pkl') and not file.__contains__(
+                'data_step_before_remodelling') and not file.__contains__('recoil'):
+            # Load the state of the model
+            load_state(vModel, os.path.join(output_folder, file))
 
-         #get Geo from the loaded model
-        Geo = vModel.geo
-        Set = vModel.set
-        Set.currentT = 0
-        # Right after load_state() call
-        geometry_issues = {
-            'time': time,
-            'distorted_cells': [],
-            'inverted_cells': [],
-            'small_angle_cells': [],
-            'high_energy_cells': []
-        }
+             #get Geo from the loaded model
+            Geo = vModel.geo
+            Set = vModel.set
+            Set.currentT = 0
+            # Right after load_state() call
+            geometry_issues = {
+                'time': time,
+                'distorted_cells': [],
+                'inverted_cells': [],
+                'small_angle_cells': [],
+                'high_energy_cells': []
+            }
 
-        # Cell-by-cell geometry checks
-        for cell_id, cell in enumerate(Geo.Cells):
-            if cell.AliveStatus is None:
-                continue
+            # Cell-by-cell geometry checks
+            for cell_id, cell in enumerate(Geo.Cells):
+                if cell.AliveStatus is None:
+                    continue
 
-            # Aspect ratio checks
-            aspect_ratios = compute_aspect_ratios(cell)
-            if (aspect_ratios['aspect_3d'] > ASPECT_RATIO_3D_THRESHOLD or
-                    aspect_ratios['aspect_2d_top'] > ASPECT_RATIO_2D_THRESHOLD or
-                    aspect_ratios['aspect_2d_bottom'] > ASPECT_RATIO_2D_THRESHOLD):
-                geometry_issues['distorted_cells'].append({
-                    'cell_id': cell_id,
-                    **aspect_ratios
-                })
+                # Aspect ratio checks
+                aspect_ratios = compute_aspect_ratios(cell)
+                if (aspect_ratios['aspect_3d'] > ASPECT_RATIO_3D_THRESHOLD or
+                        aspect_ratios['aspect_2d_top'] > ASPECT_RATIO_2D_THRESHOLD or
+                        aspect_ratios['aspect_2d_bottom'] > ASPECT_RATIO_2D_THRESHOLD):
+                    geometry_issues['distorted_cells'].append({
+                        'cell_id': cell_id,
+                        **aspect_ratios
+                    })
 
-            # Inversion check
-            if check_inverted(cell):
-                geometry_issues['inverted_cells'].append(cell_id)
+                # Inversion check
+                if check_inverted(cell):
+                    geometry_issues['inverted_cells'].append(cell_id)
 
-            # Small angle check
-            min_angle = compute_min_angles(cell)
-            if min_angle < MIN_ANGLE_THRESHOLD:
-                geometry_issues['small_angle_cells'].append({
-                    'cell_id': cell_id,
-                    'min_angle': min_angle
-                })
+                # Small angle check
+                min_angle = compute_min_angles(cell)
+                if min_angle < MIN_ANGLE_THRESHOLD:
+                    geometry_issues['small_angle_cells'].append({
+                        'cell_id': cell_id,
+                        'min_angle': min_angle
+                    })
 
-        geometry_issues_all_times.append(geometry_issues)
+            geometry_issues_all_times.append(geometry_issues)
 
-        # Track intercalations
-        if hasattr(vModel.geo, 'num_flips_this_step'):
-            num_intercalations.append(vModel.geo.num_flips_this_step)
-        else:
-            num_intercalations.append(0)  # Default if not tracking flips
+            # Track intercalations
+            if hasattr(vModel.geo, 'num_flips_this_step'):
+                num_intercalations.append(vModel.geo.num_flips_this_step)
+            else:
+                num_intercalations.append(0)  # Default if not tracking flips
 
-        # Track apical vs basal flips
-        if hasattr(vModel.geo, 'apical_flips_this_step'):
-            apical_flip_times.append(vModel.geo.apical_flips_this_step)
-            basal_flip_times.append(vModel.geo.basal_flips_this_step)
-        else:
-            apical_flip_times.append(0)
-            basal_flip_times.append(0)
+            # Track apical vs basal flips
+            if hasattr(vModel.geo, 'apical_flips_this_step'):
+                apical_flip_times.append(vModel.geo.apical_flips_this_step)
+                basal_flip_times.append(vModel.geo.basal_flips_this_step)
+            else:
+                apical_flip_times.append(0)
+                basal_flip_times.append(0)
 
-        print('File: ', file)
+            print('File: ', file)
 
-        # Export images
-        # vModel.set.export_images = True
-        # temp_dir = os.path.join(vModel.set.OutputFolder, 'images')
-        # screenshot(vModel, temp_dir)
+            # Export images
+            # vModel.set.export_images = True
+            # temp_dir = os.path.join(vModel.set.OutputFolder, 'images')
+            # screenshot(vModel, temp_dir)
 
-        # Analyse the simulation
-        all_cells, avg_cells, _ = vModel.analyse_vertex_model()
-        # Export excel with all_cells per file
-        all_cells.to_excel(os.path.join(output_folder, 'all_cells_%s.xlsx' % file))
+            # Analyse the simulation
+            #all_cells, avg_cells, _ = vModel.analyse_vertex_model()
+            # Export excel with all_cells per file
+            #all_cells.to_excel(os.path.join(output_folder, 'all_cells_%s.xlsx' % file))
 
-        Geo = vModel.geo
-        Set = vModel.set
-        Set.currentT = 0
+            Geo = vModel.geo
+            Set = vModel.set
+            Set.currentT = 0
 
-        # Initialize lists to store energies for the current file
-        energy_lt_file = []
-        energy_surface_file = []
-        energy_volume_file = []
-        energy_tri_ar_file = []
-        neighbours_3d_file = []
-        neighbours_apical_file = []
-        neighbours_basal_file = []
+            # Initialize lists to store energies for the current file
+            energy_lt_file = []
+            energy_surface_file = []
+            energy_volume_file = []
+            energy_tri_ar_file = []
+            neighbours_3d_file = []
+            neighbours_apical_file = []
+            neighbours_basal_file = []
 
-        # Compute TriAR energy barrier
-        kg_tri_ar = KgTriAREnergyBarrier(Geo)
-        kg_tri_ar.compute_work(Geo, Set, None, False)
+            # Compute TriAR energy barrier
+            kg_tri_ar = KgTriAREnergyBarrier(Geo)
+            kg_tri_ar.compute_work(Geo, Set, None, False)
 
-        # Compute the contractility
-        kg_lt = KgContractility(Geo)
-        kg_lt.compute_work(Geo, Set, None, False)
+            # Compute the contractility
+            kg_lt = KgContractility(Geo)
+            kg_lt.compute_work(Geo, Set, None, False)
 
-        # Compute Surface Tension
-        kg_surface_area = KgSurfaceCellBasedAdhesion(Geo)
-        kg_surface_area.compute_work(Geo, Set, None, False)
+            # Compute Surface Tension
+            kg_surface_area = KgSurfaceCellBasedAdhesion(Geo)
+            kg_surface_area.compute_work(Geo, Set, None, False)
 
-        # Compute Volume
-        kg_volume = KgVolume(Geo)
-        kg_volume.compute_work(Geo, Set, None, False)
+            # Compute Volume
+            kg_volume = KgVolume(Geo)
+            kg_volume.compute_work(Geo, Set, None, False)
 
-        for cell_id in range(len(Geo.Cells)):
-            if Geo.Cells[cell_id].AliveStatus is None:
-                continue
+            for cell_id in range(len(Geo.Cells)):
+                if Geo.Cells[cell_id].AliveStatus is None:
+                    continue
 
-            energy_lt_file.append(kg_lt.energy_per_cell[cell_id])
-            energy_surface_file.append(kg_surface_area.energy_per_cell[cell_id])
-            energy_volume_file.append(kg_volume.energy_per_cell[cell_id])
-            energy_tri_ar_file.append(kg_tri_ar.energy_per_cell[cell_id])
+                energy_lt_file.append(kg_lt.energy_per_cell[cell_id])
+                energy_surface_file.append(kg_surface_area.energy_per_cell[cell_id])
+                energy_volume_file.append(kg_volume.energy_per_cell[cell_id])
+                energy_tri_ar_file.append(kg_tri_ar.energy_per_cell[cell_id])
 
-            # Scutoid detection
-            apical_neigh = Geo.Cells[cell_id].compute_neighbours(location_filter='Top')
-            basal_neigh = Geo.Cells[cell_id].compute_neighbours(location_filter='Bottom')
+                # Scutoid detection
+                apical_neigh = Geo.Cells[cell_id].compute_neighbours(location_filter='Top')
+                basal_neigh = Geo.Cells[cell_id].compute_neighbours(location_filter='Bottom')
 
-            if set(apical_neigh) != set(basal_neigh):
-                scutoid_cells.append({
-                    'time': time,
-                    'cell_id': cell_id,
-                    'apical_neigh': len(apical_neigh),
-                    'basal_neigh': len(basal_neigh)
-                })
+                if set(apical_neigh) != set(basal_neigh):
+                    scutoid_cells.append({
+                        'time': time,
+                        'cell_id': cell_id,
+                        'apical_neigh': len(apical_neigh),
+                        'basal_neigh': len(basal_neigh)
+                    })
 
-            # Compute neighbours
-            neighbours_3d = Geo.Cells[cell_id].compute_neighbours()
-            neighbours_3d_file.append(len(neighbours_3d))
-            neighbours_apical = Geo.Cells[cell_id].compute_neighbours(location_filter='Top')
-            neighbours_apical_file.append(len(neighbours_apical))
-            neighbours_basal = Geo.Cells[cell_id].compute_neighbours(location_filter='Bottom')
-            neighbours_basal_file.append(len(neighbours_basal))
+                # Compute neighbours
+                neighbours_3d = Geo.Cells[cell_id].compute_neighbours()
+                neighbours_3d_file.append(len(neighbours_3d))
+                neighbours_apical = Geo.Cells[cell_id].compute_neighbours(location_filter='Top')
+                neighbours_apical_file.append(len(neighbours_apical))
+                neighbours_basal = Geo.Cells[cell_id].compute_neighbours(location_filter='Bottom')
+                neighbours_basal_file.append(len(neighbours_basal))
 
-        # Track comprehensive metrics for all cells at this time step
-        current_metrics = track_cell_metrics(Geo, kg_lt, kg_surface_area, kg_volume, kg_tri_ar, time)
-        all_cell_metrics.append(current_metrics)
+            # Track comprehensive metrics for all cells at this time step
+            current_metrics = track_cell_metrics(Geo, kg_lt, kg_surface_area, kg_volume, kg_tri_ar, time)
+            all_cell_metrics.append(current_metrics)
 
 
-        # Append energies for the current file to the main lists
-        energy_lt_cells.append(energy_lt_file)
-        energy_surface_cells.append(energy_surface_file)
-        energy_volume_cells.append(energy_volume_file)
-        energy_tri_ar_cells.append(energy_tri_ar_file)
-        neighbours_3d_cells.append(neighbours_3d_file)
-        neighbours_apical_cells.append(neighbours_apical_file)
-        neighbours_basal_cells.append(neighbours_basal_file)
+            # Append energies for the current file to the main lists
+            energy_lt_cells.append(energy_lt_file)
+            energy_surface_cells.append(energy_surface_file)
+            energy_volume_cells.append(energy_volume_file)
+            energy_tri_ar_cells.append(energy_tri_ar_file)
+            neighbours_3d_cells.append(neighbours_3d_file)
+            neighbours_apical_cells.append(neighbours_apical_file)
+            neighbours_basal_cells.append(neighbours_basal_file)
 
-        times.append(time)
-        time += 1
+            times.append(time)
+            time += 1
+
+    # Save all the information to a pkl file
+    save_variables({'geometry_issues_all_times': geometry_issues_all_times,
+                    'energy_lt_cells': energy_lt_cells,
+                    'energy_surface_cells': energy_surface_cells,
+                    'energy_volume_cells': energy_volume_cells,
+                    'energy_tri_ar_cells': energy_tri_ar_cells,
+                    'neighbours_3d_cells': neighbours_3d_cells,
+                    'neighbours_apical_cells': neighbours_apical_cells,
+                    'neighbours_basal_cells': neighbours_basal_cells,
+                    'num_intercalations': num_intercalations,
+                    'apical_flip_times': apical_flip_times,
+                    'basal_flip_times': basal_flip_times,
+                    'scutoid_cells': scutoid_cells,
+                    'all_cell_metrics': all_cell_metrics,
+                    'diagnostic_vtk_files': diagnostic_vtk_files,
+                    'times': times,
+                    }, '%s/megha_analysis.pkl' % output_folder)
 
 # High energy cell detection
 if energy_lt_cells and energy_surface_cells and energy_volume_cells:
@@ -370,36 +410,34 @@ if energy_lt_cells and energy_surface_cells and energy_volume_cells:
             })
 
 # Export diagnostic VTK
-export_path = os.path.join(output_folder, f'diagnostics_{time:04d}.vtk')
-export_diagnostic_vtk(Geo, export_path, time)
-diagnostic_vtk_files.append(export_path)
+#export_path = os.path.join(output_folder, f'diagnostics_{time:04d}.vtk')
+#export_diagnostic_vtk(Geo, export_path, time)
+#diagnostic_vtk_files.append(export_path)
 
-# Custom cell geometry analysis
-weird_cells = []
-
-for cell_id in range(len(Geo.Cells)):
-    if Geo.Cells[cell_id].AliveStatus is None:
-        continue
-
-    neighs = Geo.Cells[cell_id].compute_neighbours()
-    if len(neighs) != 6:
-        print(f'Cell {cell_id} has {len(neighs)} neighbours')
-        print(f'Energy (LT): {kg_lt.energy_per_cell[cell_id]}')
-        print(f'Energy (Surface): {kg_surface_area.energy_per_cell[cell_id]}')
-        print(f'Energy (Volume): {kg_volume.energy_per_cell[cell_id]}')
-
-        weird_cells.append({
-            'id': cell_id,
-            'neighs': len(neighs),
-            'energy_lt': kg_lt.energy_per_cell[cell_id],
-            'energy_surface': kg_surface_area.energy_per_cell[cell_id],
-            'energy_volume': kg_volume.energy_per_cell[cell_id]
-        })
+# # Custom cell geometry analysis
+# weird_cells = []
+#
+# for cell_id in range(len(Geo.Cells)):
+#     if Geo.Cells[cell_id].AliveStatus is None:
+#         continue
+#
+#     neighs = Geo.Cells[cell_id].compute_neighbours()
+#     if len(neighs) != 6:
+#         print(f'Cell {cell_id} has {len(neighs)} neighbours')
+#         print(f'Energy (LT): {kg_lt.energy_per_cell[cell_id]}')
+#         print(f'Energy (Surface): {kg_surface_area.energy_per_cell[cell_id]}')
+#         print(f'Energy (Volume): {kg_volume.energy_per_cell[cell_id]}')
+#
+#         weird_cells.append({
+#             'id': cell_id,
+#             'neighs': len(neighs),
+#             'energy_lt': kg_lt.energy_per_cell[cell_id],
+#             'energy_surface': kg_surface_area.energy_per_cell[cell_id],
+#             'energy_volume': kg_volume.energy_per_cell[cell_id]
+#         })
 # Save the weird cells to an excel sheet
-weird_cells_df = pd.DataFrame(weird_cells)
-weird_cells_df.to_excel(os.path.join(output_folder, 'weird_cells.xlsx'), index=False)
-
-pass
+# weird_cells_df = pd.DataFrame(weird_cells)
+# weird_cells_df.to_excel(os.path.join(output_folder, 'weird_cells.xlsx'), index=False)
 
 # Combine all time steps
 full_metrics_df = pd.concat(all_cell_metrics)
@@ -407,9 +445,11 @@ full_metrics_df = pd.concat(all_cell_metrics)
 # Save the complete dataset
 full_metrics_df.to_excel(os.path.join(output_folder, 'full_cell_metrics.xlsx'), index=False)
 
-# Identify persistent high-energy cells
-mean_energy = full_metrics_df['total_energy'].mean()
-high_energy_cells = full_metrics_df[full_metrics_df['total_energy'] > ENERGY_THRESHOLD_FACTOR * mean_energy]
+# Identify persistent high-energy cells with respect the last two time steps
+#mean_energy = full_metrics_df['total_energy'].mean()
+#high_energy_cells = full_metrics_df[full_metrics_df['total_energy'] > mean_energy * ENERGY_THRESHOLD_FACTOR]
+energy_trend = all_cell_metrics[-1]['total_energy'] / all_cell_metrics[-2]['total_energy']
+high_energy_cells = full_metrics_df[np.isin(full_metrics_df.cell_id, all_cell_metrics[-1][energy_trend > 1.3]['cell_id'])]
 high_energy_ids = high_energy_cells['cell_id'].unique()
 
 # Save high energy cell IDs
@@ -418,7 +458,7 @@ def plot_metric_comparison(metric):
     plt.figure(figsize=(10, 6))
 
     # Generate a color map for unique cell IDs
-    unique_ids = high_energy_ids[:17]
+    unique_ids = high_energy_ids
     colors = cm.get_cmap('tab20', len(unique_ids))
 
     # Plot high-energy cells individually with labels and unique colors
@@ -449,11 +489,9 @@ pd.DataFrame({'cell_id': high_energy_ids}).to_excel(os.path.join(output_folder, 
                                                     index=False)
 
 
-def plot_energy_around_t1(cell_id, window=2, t1_time=6):
+def plot_energy_around_t1(cell_id):
     """Plot energy components before/during/after T1 transition"""
-    time_range = range(t1_time - window, t1_time + window + 1)
-    cell_data = full_metrics_df[(full_metrics_df['cell_id'] == cell_id) &
-                                (full_metrics_df['time'].isin(time_range))]
+    cell_data = full_metrics_df[full_metrics_df['cell_id'] == cell_id]
 
     plt.figure(figsize=(10, 6))
     plt.stackplot(cell_data['time'],
@@ -465,7 +503,6 @@ def plot_energy_around_t1(cell_id, window=2, t1_time=6):
     plt.title(f'Energy Composition for Cell {cell_id} Around T1 Transition')
     plt.xlabel('Time')
     plt.ylabel('Energy')
-    plt.axvline(t1_time, color='r', linestyle='--', label='T1 Transition')
     plt.legend()
     plt.savefig(os.path.join(output_folder, f'cell_{cell_id}_t1_energy.png'))
     plt.close()
@@ -615,7 +652,7 @@ plt.close()
 # Right after your existing plotting code, add:
 
 # Generate plots for high-energy cells around T1 transitions
-for cell_id in high_energy_ids[:17]:  # Just plot first 5 as example
+for cell_id in high_energy_ids:  # Just plot first 5 as example
     plot_energy_around_t1(cell_id)
 
 # Generate comparison plots for key metrics
