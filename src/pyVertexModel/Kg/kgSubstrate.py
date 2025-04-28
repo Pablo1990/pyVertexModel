@@ -20,7 +20,7 @@ class KgSubstrate(Kg):
         start = time.time()
         self.energy = 0
 
-        energy_per_cell = []
+        self.energy_per_cell = {}
 
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
             currentCell = Geo.Cells[c]
@@ -66,7 +66,7 @@ class KgSubstrate(Kg):
                         Energy_c = Energy_c + self.compute_energy_substrate(kSubstrate, currentVertexYs[2], z0)
 
             self.g = self.g + ge
-            energy_per_cell.append(Energy_c)
+            self.energy_per_cell[c] = Energy_c
             self.energy += Energy_c
 
         end = time.time()

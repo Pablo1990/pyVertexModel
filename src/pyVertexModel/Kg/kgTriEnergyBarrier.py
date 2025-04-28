@@ -11,6 +11,7 @@ class KgTriEnergyBarrier(Kg):
     def compute_work(self, Geo, Set, Geo_n=None, calculate_K=True):
         start = time.time()
         self.energy = 0
+        self.energy_per_cell = {}
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
             if Geo.remodelling and c not in Geo.AssembleNodes:
                 continue
@@ -18,6 +19,7 @@ class KgTriEnergyBarrier(Kg):
             Cell = Geo.Cells[c]
             Ys = Cell.Y
             lambda_b = Set.lambdaB * Cell.lambda_b_perc
+            energy_per_cell = 0
 
             for f in range(len(Cell.Faces)):
                 if get_interface(Cell.Faces[f].InterfaceType) != get_interface('CellCell'):
@@ -47,7 +49,10 @@ class KgTriEnergyBarrier(Kg):
                             gs_ = gs.reshape((gs.size, 1))
                             Ks = (np.dot(gs_, gs_transpose) * fact2) + Ks * fact + Kss * fact
                             self.assemble_k(Ks, np.array(nY, dtype='int'))
-                        self.energy += np.exp(lambda_b * (1 - Set.Beta * Face.Tris[t].Area / barrier_tri0))
+                        energy_per_cell += np.exp(lambda_b * (1 - Set.Beta * Face.Tris[t].Area / barrier_tri0))
 
+            self.energy_per_cell[Cell.ID] = energy_per_cell
+
+        self.energy = sum(self.energy_per_cell)
         end = time.time()
         self.timeInSeconds = f"Time at EnergyBarrier: {end - start} seconds"

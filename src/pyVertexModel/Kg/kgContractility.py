@@ -238,6 +238,9 @@ class KgContractility(Kg):
             self.energy_per_cell[c] = Energy_c
             cell.contractility_noise = None
 
+        for cell in [cell for cell in geo.Cells if cell.AliveStatus == 0]:
+            self.energy_per_cell[cell.ID] = 0
+
         self.energy = sum(Energy.values())
         end = time.time()
         self.timeInSeconds = f"Time at LineTension: {end - start} seconds"

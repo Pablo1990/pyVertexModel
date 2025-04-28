@@ -43,6 +43,9 @@ class KgSurfaceCellBasedAdhesion(Kg):
             Energy_c = self.work_per_cell(Cell, Geo, Set, calculate_K)
             Energy[c] = Energy_c
 
+        for cell in [cell for cell in Geo.Cells if cell.AliveStatus == 0]:
+            Energy[cell.ID] = 0
+
         self.energy_per_cell = Energy
         self.energy = sum(Energy.values())
 
