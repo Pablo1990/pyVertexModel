@@ -230,16 +230,9 @@ class VertexModel:
         updating measures, and checking for convergence.
         :return:
         """
-        contractility_values = []
-        for step in range(self.total_steps):
-            self.compute_contractility()  # Ensure contractility is calculated
-            contractility_values.append(self.contractility)
-
         temp_dir = os.path.join(self.set.OutputFolder, 'images')
         if not os.path.exists(temp_dir):
             os.makedirs(temp_dir)
-
-
 
         if self.set.Substrate == 1:
             self.Dofs.GetDOFsSubstrate(self.geo, self.set)
@@ -258,51 +251,15 @@ class VertexModel:
         print("File: ", self.set.OutputFolder)
         self.save_v_model_state()
 
-    def compute_contractility(self):
-        """Compute contractility based on edge tensions"""
-        self.contractility = sum(edge.line_tension for cell in self.Geo.Cells for edge in cell.edges)
-
-        import matplotlib.pyplot as plt
-
-        contractility_values = []
-        contractility_values.append(self.contractility)
-
-        if self.numStep % 100 == 0:  # Plot every 100 steps
-            plt.plot(range(len(contractility_values)), contractility_values)
-            plt.xlabel("Time Step")
-            plt.ylabel("Contractility")
-            plt.title("Contractility Evolution")
-            plt.show()
-
         while self.t <= self.set.tend and not self.didNotConverge:
             gr = self.single_iteration()
-            # Check for divergence
-            if np.isnan(gr) or np.isinf(gr):
-                print("🚨 Divergence detected! Reducing time step...")
-                self.set.dt0 *= 0.1  # Reduce the initial time step
-                self.set.dt *= 0.1  # Reduce the current time step
-                break  # Stop the iteration if the model is unstable
 
-            # Debugging prints to track model behavior
-            if hasattr(self, "cell_volumes"):
-                print(
-                    f"Step: {self.numStep}, Min Cell Volume: {min(self.cell_volumes)}, Max Cell Volume: {max(self.cell_volumes)}")
-
-            if hasattr(self.geo, "tetrahedron_determinants"):
-                detJ = np.array(self.geo.tetrahedron_determinants)
-                print(f"Step: {self.numStep}, Min Tetrahedral Determinant: {np.min(detJ)}, Max: {np.max(detJ)}")
-
-            if hasattr(self, "contractility"):
-                print(f"Step: {self.numStep}, Contractility: {self.contractility}")
-
-            if hasattr(self.geo, "forces"):
-                max_force = np.max(np.abs(self.geo.forces))
-                print(f"Step: {self.numStep}, Max Force Magnitude: {max_force}")
+            if np.isnan(gr):
+                break
 
         self.save_v_model_state()
 
         return self.didNotConverge
-
 
     def single_iteration(self, post_operations=True):
         """
