@@ -177,7 +177,7 @@ def track_cell_metrics(Geo, kg_lt, kg_surface_area, kg_volume, kg_tri_ar, time):
 
 vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
 # Change this folder accordingly (it doesn't really matter the name of the folder, so feel free to rename it
-output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/03-20_100319')
+output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/final_results_wing_disc_real/60_mins_Rok')
 
 # Sort files by date
 all_files = os.listdir(output_folder)
@@ -274,7 +274,7 @@ for file_id, file in enumerate(all_files):
         # screenshot(vModel, temp_dir)
 
         # Analyse the simulation
-        all_cells, avg_cells = vModel.analyse_vertex_model()
+        all_cells, avg_cells, _ = vModel.analyse_vertex_model()
         # Export excel with all_cells per file
         all_cells.to_excel(os.path.join(output_folder, 'all_cells_%s.xlsx' % file))
 
@@ -311,7 +311,9 @@ for file_id, file in enumerate(all_files):
             if Geo.Cells[cell_id].AliveStatus is None:
                 continue
 
-            energy_lt_file.append(kg_lt.energy_per_cell[cell_id])
+            if kg_lt.energy_per_cell is not None:
+                energy_lt_file.append(kg_lt.energy_per_cell[cell_id])
+
             energy_surface_file.append(kg_surface_area.energy_per_cell[cell_id])
             energy_volume_file.append(kg_volume.energy_per_cell[cell_id])
             energy_tri_ar_file.append(kg_tri_ar.energy_per_cell[cell_id])
@@ -362,7 +364,7 @@ if energy_lt_cells and energy_surface_cells and energy_volume_cells:
     mean_energy = np.mean(current_energies)
 
     for cell_id, energy in enumerate(current_energies):
-        if energy > mean_energy * ENERGY_THRESHOLD_FACTOR:
+        if energy > (mean_energy * ENERGY_THRESHOLD_FACTOR):
             geometry_issues_all_times[-1]['high_energy_cells'].append({
                 'cell_id': cell_id,
                 'energy': energy,
