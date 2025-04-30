@@ -5,6 +5,7 @@ import pandas as pd
 import pyvista as pv
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
+from scipy import stats
 
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.Kg.kgContractility import KgContractility
@@ -13,6 +14,7 @@ from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
 from src.pyVertexModel.Kg.kgVolume import KgVolume
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
+from src.pyVertexModel.geometry.cell import compute_2d_circularity
 from src.pyVertexModel.util.utils import load_state, save_state, save_variables, load_variables
 
 
@@ -127,7 +129,7 @@ MIN_ANGLE_THRESHOLD = 5.0
 ENERGY_THRESHOLD_FACTOR = 2.0
 
 
-def track_cell_metrics(Geo, kg_lt, kg_surface_area, kg_volume, kg_tri_ar, time):
+def track_cell_metrics(vModel, Geo, kg_lt, kg_surface_area, kg_volume, kg_tri_ar, time):
     """Track comprehensive metrics for all cells at each time step"""
     cell_data = []
 
@@ -156,8 +158,30 @@ def track_cell_metrics(Geo, kg_lt, kg_surface_area, kg_volume, kg_tri_ar, time):
             'aspect_2d_top': aspect_ratios['aspect_2d_top'],
             'aspect_2d_bottom': aspect_ratios['aspect_2d_bottom'],
             'min_angle': compute_min_angles(cell),
-            'volume': cell.compute_volume(),
-            'is_inverted': check_inverted(cell)
+            'is_inverted': check_inverted(cell),
+            'Area': cell.compute_area(),
+            'Area_top': cell.compute_area(location_filter=0),
+            'Area_bottom': cell.compute_area(location_filter=2),
+            'Area_cellcell': cell.compute_area(location_filter=1),
+            'Volume': cell.compute_volume(),
+            'Height': cell.compute_height(),
+            'Width': cell.compute_width(),
+            'Length': cell.compute_length(),
+            'Perimeter': cell.compute_perimeter(),
+            '2D_circularity_top': compute_2d_circularity(cell.compute_area(location_filter=0),
+                                                         cell.compute_perimeter(filter_location=0)),
+            '2d_circularity_bottom': compute_2d_circularity(cell.compute_area(location_filter=2),
+                                                            cell.compute_perimeter(filter_location=2)),
+            '2D_aspect_ratio_top': cell.compute_2d_aspect_ratio(filter_location=0),
+            '2D_aspect_ratio_bottom': cell.compute_2d_aspect_ratio(filter_location=2),
+            '2D_aspect_ratio_cellcell': cell.compute_2d_aspect_ratio(filter_location=1),
+            'Sphericity': cell.compute_sphericity(),
+            'Elongation': cell.compute_elongation(),
+            'Ellipticity': cell.compute_ellipticity(),
+            'Tilting': cell.compute_tilting(),
+            'Perimeter_top': cell.compute_perimeter(filter_location=0),
+            'Perimeter_bottom': cell.compute_perimeter(filter_location=2),
+            'Perimeter_cellcell': cell.compute_perimeter(filter_location=1),
         }
 
         # Topology metrics
@@ -165,8 +189,7 @@ def track_cell_metrics(Geo, kg_lt, kg_surface_area, kg_volume, kg_tri_ar, time):
             'neighbours_3d': len(cell.compute_neighbours()),
             'neighbours_apical': len(cell.compute_neighbours(location_filter='Top')),
             'neighbours_basal': len(cell.compute_neighbours(location_filter='Bottom')),
-            'is_scutoid': (len(cell.compute_neighbours(location_filter='Top')) !=
-                           len(cell.compute_neighbours(location_filter='Bottom')))
+            'Scutoid': int(cell.is_scutoid()),
         }
 
         cell_data.append({**energies, **geometry, **topology})
@@ -176,7 +199,7 @@ def track_cell_metrics(Geo, kg_lt, kg_surface_area, kg_volume, kg_tri_ar, time):
 
 vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
 # Change this folder accordingly (it doesn't really matter the name of the folder, so feel free to rename it
-output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/final_results_wing_disc_real/60_mins_Rok')
+output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/04-29_121205_wing_disc_real_noise_0.00e+00_lVol_1.00e+01_kSubs_1.00e-01_lt_0.00e+00_refA0_9.20e-01_eARBarrier_8.00e-07_RemStiff_0.7_lS1_1.40e+00_lS2_1.40e-01_lS3_1.40e+00_ps_3.00e-05_lc_7.00e-05/')
 
 # Load
 if os.path.exists(os.path.join(output_folder, 'megha_analysis.pkl')):
@@ -197,7 +220,16 @@ if os.path.exists(os.path.join(output_folder, 'megha_analysis.pkl')):
     all_cell_metrics = data['all_cell_metrics']
     times = data['times']
     time = data['times'][-1]
-    load_state(vModel, os.path.join(output_folder, 'before_ablation.pkl'))
+    if os.path.exists(os.path.join(output_folder, 'before_ablation.pkl')):
+        print('Loading previous state')
+        load_state(vModel, os.path.join(output_folder, 'before_ablation.pkl'))
+    else:
+        # Find the last file
+        last_file = sorted(
+            [f for f in os.listdir(output_folder) if f.endswith('.pkl') and not 'before_remodelling' in f and f.startswith('data_step_')],
+            key=lambda x: os.path.getmtime(os.path.join(output_folder, x))
+        )[-1]
+        load_state(vModel, os.path.join(output_folder, last_file))
     Geo = vModel.geo
     Set = vModel.set
 else:
@@ -228,7 +260,7 @@ else:
 
     for file_id, file in enumerate(all_files):
         if file.endswith('.pkl') and not file.__contains__(
-                'data_step_before_remodelling') and not file.__contains__('recoil'):
+                'data_step_before_remodelling') and not file.__contains__('recoil') and file.startswith('data_step_'):
             # Load the state of the model
             load_state(vModel, os.path.join(output_folder, file))
 
@@ -313,6 +345,9 @@ else:
             neighbours_apical_file = []
             neighbours_basal_file = []
 
+            # Update measurements before computing energies
+            Geo.update_measures()
+
             # Compute TriAR energy barrier
             kg_tri_ar = KgTriAREnergyBarrier(Geo)
             kg_tri_ar.compute_work(Geo, Set, None, False)
@@ -359,9 +394,8 @@ else:
                 neighbours_basal_file.append(len(neighbours_basal))
 
             # Track comprehensive metrics for all cells at this time step
-            current_metrics = track_cell_metrics(Geo, kg_lt, kg_surface_area, kg_volume, kg_tri_ar, time)
+            current_metrics = track_cell_metrics(vModel, Geo, kg_lt, kg_surface_area, kg_volume, kg_tri_ar, time)
             all_cell_metrics.append(current_metrics)
-
 
             # Append energies for the current file to the main lists
             energy_lt_cells.append(energy_lt_file)
@@ -443,7 +477,7 @@ if energy_lt_cells and energy_surface_cells and energy_volume_cells:
 full_metrics_df = pd.concat(all_cell_metrics)
 
 # Save the complete dataset
-full_metrics_df.to_excel(os.path.join(output_folder, 'full_cell_metrics.xlsx'), index=False)
+#full_metrics_df.to_excel(os.path.join(output_folder, 'full_cell_metrics.xlsx'), index=False)
 
 # Identify persistent high-energy cells with respect the last two time steps
 #mean_energy = full_metrics_df['total_energy'].mean()
@@ -451,6 +485,54 @@ full_metrics_df.to_excel(os.path.join(output_folder, 'full_cell_metrics.xlsx'), 
 energy_trend = all_cell_metrics[-1]['total_energy'] / all_cell_metrics[-2]['total_energy']
 high_energy_cells = full_metrics_df[np.isin(full_metrics_df.cell_id, all_cell_metrics[-1][energy_trend > 1.3]['cell_id'])]
 high_energy_ids = high_energy_cells['cell_id'].unique()
+
+# Define pre-spike window (Δt=5)
+At = 2
+cases = []
+controls = []
+t = np.max(high_energy_cells['time'])
+
+for cell_id in all_cell_metrics[-1]['cell_id'].unique():
+    current_cell = full_metrics_df[full_metrics_df['cell_id'] == cell_id]
+    case_features = current_cell.iloc[t - 2 * At:t - At].mean().to_dict()  # Baseline
+    case_features.update(current_cell.iloc[t - At:t].std().add_prefix('volatility_'))  # Trends
+    if cell_id in high_energy_ids:
+        # Case: Pre-spike features
+        cases.append(case_features)
+    else:
+        # Control: Random non-spike window (matched to time phase)
+        controls.append(case_features)
+
+# Create DataFrames
+df_cases = pd.DataFrame(cases).assign(label=1)
+df_controls = pd.DataFrame(controls).assign(label=0)
+df_combined = pd.concat([df_cases, df_controls])
+
+# Statistical tests
+results = []
+for feature in df_combined.columns.drop('label'):
+    t_stat, p_val = stats.mannwhitneyu(
+        df_cases[feature],
+        df_controls[feature],
+        alternative='two-sided'
+    )
+    results.append({'feature': feature, 'p_val': p_val})
+
+# Correct for multiple testing
+df_results = pd.DataFrame(results)
+df_results['p_val_adj'] = stats.false_discovery_control(df_results['p_val'])
+
+# Plot top features
+top_features = df_results.loc[df_results['p_val_adj'] < 0.01, 'feature']
+# Remove 'volatility_' prefix
+top_features = top_features.str.replace('volatility_', '', regex=False)
+# Unique feature names
+top_features = top_features.unique()
+plt.figure()
+plt.plot(full_metrics_df.loc[high_energy_ids, top_features], label=top_features)
+#plt.scatter(high_energy_ids, full_metrics_df.loc[high_energy_ids, top_features], c='red', label='Spike')
+plt.legend()
+plt.show()
 
 # Save high energy cell IDs
 def plot_metric_comparison(metric):
@@ -485,7 +567,7 @@ def plot_metric_comparison(metric):
 
 # ====== PLOTTING SECTION (AFTER ALL DATA COLLECTION) ======
 
-pd.DataFrame({'cell_id': high_energy_ids}).to_excel(os.path.join(output_folder, 'high_energy_cell_ids.xlsx'),
+pd.DataFrame(high_energy_cells).to_excel(os.path.join(output_folder, 'high_energy_cell_ids.xlsx'),
                                                     index=False)
 
 
@@ -594,6 +676,8 @@ for cell_id in range(len(Geo.Cells)):
     # Energy plot
     ax1.plot(times, [e[cell_id] for e in energy_lt_cells], label='Line tension')
     ax1.plot(times, [e[cell_id] for e in energy_surface_cells], label='Surface')
+    ax1.plot(times, [e[cell_id] for e in energy_volume_cells], label='Volume')
+    ax1.plot(times, [e[cell_id] for e in energy_tri_ar_cells], label='TriAR')
     ax1.legend()
 
     # Neighbor plot
