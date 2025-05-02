@@ -14,8 +14,8 @@ class KgTriAREnergyBarrier(Kg):
         self.energy_per_cell = {}
 
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
-            Cell.energy_tri_aspect_ratio = 0
             Cell = Geo.Cells[c]
+            Cell.energy_tri_aspect_ratio = 0
             Ys = Cell.Y
 
             for f in range(len(Cell.Faces)):
