@@ -109,7 +109,13 @@ class Cell:
         # Volume
         self.Vol0 = None
 
-
+        # Current energy values
+        self.energy_volume = None
+        self.energy_surface_area = None
+        self.energy_tri_aspect_ratio = None
+        self.energy_contractility = None
+        self.energy_substrate = None
+        self.energy_tri_area = None
 
         # In case the geometry is not provided, the cell is empty
         if mat_file is None:

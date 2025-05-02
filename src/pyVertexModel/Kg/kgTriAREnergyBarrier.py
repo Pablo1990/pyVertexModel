@@ -14,7 +14,7 @@ class KgTriAREnergyBarrier(Kg):
         self.energy_per_cell = {}
 
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
-            energy_c = 0
+            Cell.energy_tri_aspect_ratio = 0
             Cell = Geo.Cells[c]
             Ys = Cell.Y
 
@@ -63,10 +63,10 @@ class KgTriAREnergyBarrier(Kg):
                                              np.dot(g3, g3.T))
                             self.assemble_k(Ks_c[:, :] * fact, nY_original)
 
-                        energy_c = energy_c + fact / 2 * (w1 ** 2 + w2 ** 2 + w3 ** 2)
+                        Cell.energy_tri_aspect_ratio = Cell.energy_tri_aspect_ratio + fact / 2 * (w1 ** 2 + w2 ** 2 + w3 ** 2)
 
-            self.energy_per_cell[c] = energy_c
-            self.energy += energy_c
+            self.energy_per_cell[c] = Cell.energy_tri_aspect_ratio
+            self.energy += Cell.energy_tri_aspect_ratio
 
         for cell in [cell for cell in Geo.Cells if cell.AliveStatus == 0]:
             self.energy_per_cell[cell.ID] = 0

@@ -19,7 +19,7 @@ class KgTriEnergyBarrier(Kg):
             Cell = Geo.Cells[c]
             Ys = Cell.Y
             lambda_b = Set.lambdaB * Cell.lambda_b_perc
-            energy_per_cell = 0
+            Cell.energy_tri_area = 0
 
             for f in range(len(Cell.Faces)):
                 if get_interface(Cell.Faces[f].InterfaceType) != get_interface('CellCell'):
@@ -49,9 +49,9 @@ class KgTriEnergyBarrier(Kg):
                             gs_ = gs.reshape((gs.size, 1))
                             Ks = (np.dot(gs_, gs_transpose) * fact2) + Ks * fact + Kss * fact
                             self.assemble_k(Ks, np.array(nY, dtype='int'))
-                        energy_per_cell += np.exp(lambda_b * (1 - Set.Beta * Face.Tris[t].Area / barrier_tri0))
+                        Cell.energy_tri_area += np.exp(lambda_b * (1 - Set.Beta * Face.Tris[t].Area / barrier_tri0))
 
-            self.energy_per_cell[Cell.ID] = energy_per_cell
+            self.energy_per_cell[Cell.ID] = Cell.energy_tri_area
 
         self.energy = sum(self.energy_per_cell)
         end = time.time()

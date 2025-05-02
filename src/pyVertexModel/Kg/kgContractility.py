@@ -200,7 +200,7 @@ class KgContractility(Kg):
         for cell in [cell for cell in geo.Cells if cell.AliveStatus == 1]:
             c = cell.ID
             ge = np.zeros(self.g.shape, dtype=self.precision_type)
-            Energy_c = 0
+            cell.energy_contractility = 0
 
             for face_id, currentFace in enumerate(cell.Faces):
                 l_i0 = geo.EdgeLengthAvg_0[get_interface(currentFace.InterfaceType)]
@@ -232,10 +232,10 @@ class KgContractility(Kg):
                             K_current = self.compute_k_contractility(l_i0, y_1, y_2, C)
                             self.assemble_k(K_current[:, :], cell.globalIds[currentTri.Edge])
 
-                        Energy_c += compute_energy_contractility(l_i0, np.linalg.norm(y_1 - y_2), C)
+                        cell.energy_contractility += compute_energy_contractility(l_i0, np.linalg.norm(y_1 - y_2), C)
             self.g += ge
-            Energy[c] = Energy_c
-            self.energy_per_cell[c] = Energy_c
+            Energy[c] = cell.energy_contractility
+            self.energy_per_cell[c] = cell.energy_contractility
             cell.contractility_noise = None
 
         for cell in [cell for cell in geo.Cells if cell.AliveStatus == 0]:

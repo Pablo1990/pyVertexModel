@@ -29,7 +29,7 @@ class KgSubstrate(Kg):
                 continue
 
             ge = np.zeros(self.g.shape, dtype=self.precision_type)
-            Energy_c = 0
+            currentCell.energy_substrate = 0
 
             for numFace in range(len(currentCell.Faces)):
                 current_face = Geo.Cells[c].Faces[numFace]
@@ -63,11 +63,11 @@ class KgSubstrate(Kg):
                             self.assemble_k(K_current, currentGlobalID)
 
                         # Calculate energy
-                        Energy_c = Energy_c + self.compute_energy_substrate(kSubstrate, currentVertexYs[2], z0)
+                        currentCell.energy_substrate += self.compute_energy_substrate(kSubstrate, currentVertexYs[2], z0)
 
             self.g = self.g + ge
-            self.energy_per_cell[c] = Energy_c
-            self.energy += Energy_c
+            self.energy_per_cell[c] = currentCell.energy_substrate
+            self.energy += currentCell.energy_substrate
 
         end = time.time()
         self.timeInSeconds = f"Time at Substrate: {end - start} seconds"
