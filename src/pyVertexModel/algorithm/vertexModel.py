@@ -311,8 +311,8 @@ class VertexModel:
         :param gr:
         :return:
         """
-        if (gr < self.set.tol and dyr < self.set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
-                np.all(~np.isnan(dy[self.Dofs.Free]))):
+        if (dyr < self.set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
+                np.all(~np.isnan(dy[self.Dofs.Free])) and np.all(dy[self.Dofs.Free] < (self.set.tol / 100))):
             self.iteration_converged()
             # if self.set.implicit_method is False:
             #     self.set.tol = gr

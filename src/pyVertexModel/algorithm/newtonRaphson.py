@@ -110,7 +110,7 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t, implicit_meth
                                                                             dy, g, gr0, ig, numStep, t)
     else:
         Geo, dy, gr, _ = newton_raphson_iteration_explicit(Geo, Set, dof, dy, g)
-        dyr = 0
+        dyr = np.linalg.norm(dy[dof, 0])
 
     logger.info(f"New gradient norm: {gr:.3e}")
 
