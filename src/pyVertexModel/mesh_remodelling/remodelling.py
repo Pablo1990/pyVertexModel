@@ -7,12 +7,10 @@ from numpy.ma.extras import setdiff1d
 
 from src.pyVertexModel.algorithm.newtonRaphson import gGlobal, newton_raphson_iteration_explicit, \
     newton_raphson_iteration, KgGlobal
-from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours_vertices
-from src.pyVertexModel.geometry.face import get_interface
 from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
 from src.pyVertexModel.util.utils import ismember_rows, save_backup_vars, load_backup_vars, compute_distance_3d, \
-    laplacian_smoothing, screenshot_
+    laplacian_smoothing, screenshot_, face_centres_to_middle_of_neighbours_vertices, get_interface
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -395,9 +393,9 @@ class Remodelling:
             # Get the first segment feature
             segmentFeatures = segmentFeatures_all.iloc[0]
 
-            #if segmentFeatures['num_cell'] in self.Geo.BorderCells or np.any(np.isin(self.Geo.BorderCells, segmentFeatures['shared_neighbours'])):
-            if self.Geo.Cells[segmentFeatures['cell_to_split_from']].AliveStatus == 1 or \
-                    segmentFeatures['node_pair_g'] not in self.Geo.XgTop:
+            if segmentFeatures['num_cell'] in self.Geo.BorderCells or np.any(np.isin(self.Geo.BorderCells, segmentFeatures['shared_neighbours'])):
+            #if self.Geo.Cells[segmentFeatures['cell_to_split_from']].AliveStatus == 1 or \
+            #        segmentFeatures['node_pair_g'] not in self.Geo.XgTop:
                 # Drop the first element of the segment features
                 segmentFeatures_all = segmentFeatures_all.drop(segmentFeatures_all.index[0])
                 continue
@@ -549,6 +547,7 @@ class Remodelling:
 
         # Compute the new energy
         g, energies = gGlobal(self.Geo, self.Geo, self.Geo, self.Set, self.Set.implicit_method)
+        self.Dofs.get_dofs(self.Geo, self.Set)
         gr = np.linalg.norm(g[self.Dofs.Free])
         logger.info(f'|gr| after remodelling without changes: {gr}')
         for key, energy in energies.items():
@@ -651,10 +650,10 @@ class Remodelling:
         while segment_features_filtered.empty is False and num_segment < segment_features_filtered.shape[0]:
             shortest_segment = segment_features_filtered.iloc[num_segment]
 
-            #if shortest_segment['num_cell'] in self.Geo.BorderCells or np.any(
-            #        np.isin(self.Geo.BorderCells, shortest_segment['shared_neighbours'])):
-            if self.Geo.Cells[shortest_segment['cell_to_split_from']].AliveStatus == 1 or \
-                    shortest_segment['node_pair_g'] not in self.Geo.XgTop:
+            if shortest_segment['num_cell'] in self.Geo.BorderCells or np.any(
+                    np.isin(self.Geo.BorderCells, shortest_segment['shared_neighbours'])):
+            #if self.Geo.Cells[shortest_segment['cell_to_split_from']].AliveStatus == 1 or \
+            #        shortest_segment['node_pair_g'] not in self.Geo.XgTop:
                 # Drop the first element of the segment features
                 segment_features_filtered = segment_features_filtered.drop(segment_features_filtered.index[shortest_segment['edge_length'] == segment_features_filtered['edge_length']])
             else:

@@ -40,7 +40,7 @@ def find_optimal_deform_array_X_Y(geo, deform_array_Z, middle_point, volumes):
     result = minimize(objective, method='TNC', x0=np.array([2]), options=options)
     return result.x
 
-def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None):
+def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None, scalar_to_display='Volume'):
     """
     Create a screenshot of the current state of the model.
     :param geo:
@@ -59,8 +59,10 @@ def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None):
     total_real_cells = len([cell.ID for cell in geo.Cells if cell.AliveStatus is not None])
 
     # Create a colormap_lim
-    #if colormap_lim is None:
-    #    colormap_lim = [0, total_real_cells]
+    if scalar_to_display == 'Volume':
+        colormap_lim = [0.0001, 0.0006]
+    else:
+        colormap_lim = None
 
     # Create a plotter
     if selected_cells is None:
@@ -76,8 +78,8 @@ def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None):
             # Add the mesh to the plotter
             # Cmaps that I like: 'tab20b', 'BuPu', 'Blues'
             # Cmaps that I don't like: 'prism', 'bone'
-            plotter.add_mesh(mesh, name=f'cell_{cell.ID}', scalars='Volume', lighting=True, cmap="pink",
-                             clim=[0.0001, 0.0006], show_edges=True, edge_color='white', edge_opacity=0.3)
+            plotter.add_mesh(mesh, name=f'cell_{cell.ID}', scalars=scalar_to_display, lighting=True, cmap="pink",
+                             clim=colormap_lim, show_edges=True, edge_color='white', edge_opacity=0.3)
 
 
     for _, cell in enumerate(geo.Cells):
@@ -152,7 +154,7 @@ def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None):
     # Close the plotter
     plotter.close()
 
-def screenshot(v_model, temp_dir, selected_cells=None):
+def screenshot(v_model, temp_dir, selected_cells=None, scalar_to_display='Volume'):
     """
     Create a screenshot of the current state of the model.
     :param v_model:
@@ -160,7 +162,7 @@ def screenshot(v_model, temp_dir, selected_cells=None):
     :param selected_cells:
     :return:
     """
-    screenshot_(v_model.geo, v_model.set, v_model.t, v_model.numStep, temp_dir, selected_cells)
+    screenshot_(v_model.geo, v_model.set, v_model.t, v_model.numStep, temp_dir, selected_cells, scalar_to_display)
 
 def load_backup_vars(backup_vars):
     return (backup_vars['Geo_b'].copy(), backup_vars['Geo_n_b'].copy(), backup_vars['Geo_0_b'], backup_vars['tr_b'],
@@ -471,3 +473,40 @@ def calculate_polygon_area(points):
         area -= points[j][0] * points[i][1]
     area = abs(area) / 2.0
     return area
+
+
+def face_centres_to_middle_of_neighbours_vertices(Geo, c_cell, filter_location=None):
+    """
+    Move the face centres to the middle of the neighbours vertices.
+    :param Geo:
+    :param c_cell:
+    :return:
+    """
+    for num_face, _ in enumerate(Geo.Cells[c_cell].Faces):
+        if filter_location is None or get_interface(Geo.Cells[c_cell].Faces[num_face].InterfaceType) == get_interface(filter_location):
+            all_edges = []
+            for tri in Geo.Cells[c_cell].Faces[num_face].Tris:
+                all_edges.append(tri.Edge)
+
+            all_edges = np.unique(np.concatenate(all_edges))
+            Geo.Cells[c_cell].Faces[num_face].Centre = np.mean(
+                Geo.Cells[c_cell].Y[all_edges, :], axis=0)
+
+
+def get_interface(interface_type):
+    """
+    Standardize the InterfaceType attribute.
+    :return:
+    """
+    valueset = [0, 1, 2]
+    catnames = ['Top', 'CellCell', 'Bottom']
+    interface_type_all_values = dict(zip(valueset, catnames))
+
+    # Set InterfaceType to the string value
+    interface_type_str = None
+    if interface_type is not None:
+        interface_type_str = next(key for key, value in interface_type_all_values.items()
+                                  if
+                                  value == interface_type or key == interface_type)
+
+    return interface_type_str

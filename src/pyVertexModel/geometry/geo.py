@@ -7,8 +7,8 @@ from scipy.spatial import ConvexHull
 
 from src.pyVertexModel.Kg.kg import add_noise_to_parameter
 from src.pyVertexModel.geometry import face, cell
-from src.pyVertexModel.geometry.face import get_interface
-from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes, calculate_polygon_area
+from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes, calculate_polygon_area, \
+    get_interface
 
 logger = logging.getLogger("pyVertexModel")
 

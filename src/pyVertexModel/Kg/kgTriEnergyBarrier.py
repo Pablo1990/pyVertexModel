@@ -4,7 +4,7 @@ import numpy as np
 
 from src.pyVertexModel.Kg import kg_functions
 from src.pyVertexModel.Kg.kg import Kg
-from src.pyVertexModel.geometry.face import get_interface
+from src.pyVertexModel.util.utils import get_interface
 
 
 class KgTriEnergyBarrier(Kg):

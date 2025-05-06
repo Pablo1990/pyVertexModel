@@ -3,7 +3,7 @@ import time
 import numpy as np
 
 from src.pyVertexModel.Kg.kg import Kg
-from src.pyVertexModel.geometry.face import get_interface
+from src.pyVertexModel.util.utils import get_interface
 
 
 def get_intensity_based_contractility(c_set, current_face, intensity_images=True):

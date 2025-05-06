@@ -11,7 +11,7 @@ from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
 from src.pyVertexModel.Kg.kgTriEnergyBarrier import KgTriEnergyBarrier
 from src.pyVertexModel.Kg.kgViscosity import KgViscosity
 from src.pyVertexModel.Kg.kgVolume import KgVolume
-from src.pyVertexModel.geometry.face import get_interface
+from src.pyVertexModel.util.utils import face_centres_to_middle_of_neighbours_vertices, get_interface
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -211,6 +211,10 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g, selected_cells=None)
     dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
 
     Geo.update_vertices(dy_reshaped, selected_cells)
+    if Set.frozen_face_centres:
+        for cell in Geo.Cells:
+           if cell.AliveStatus is not None:
+               face_centres_to_middle_of_neighbours_vertices(Geo, cell.ID)
     Geo.update_measures()
 
     g, energies = gGlobal(Geo, Geo, Geo, Set, Set.implicit_method)

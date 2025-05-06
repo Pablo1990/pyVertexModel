@@ -4,7 +4,7 @@ import time
 import numpy as np
 
 from src.pyVertexModel.Kg.kgContractility import KgContractility, compute_energy_contractility
-from src.pyVertexModel.geometry.face import get_interface
+from src.pyVertexModel.util.utils import get_interface
 
 
 class KgContractilityExternal(KgContractility):

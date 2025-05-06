@@ -1,30 +1,11 @@
 import numpy as np
 import pyvista as pv
 import vtk
-from numpy.ma.extras import setdiff1d, setxor1d
+from numpy.ma.extras import setxor1d
 from sklearn.decomposition import PCA
 
 from src.pyVertexModel.geometry import face
-from src.pyVertexModel.geometry.face import get_interface
-from src.pyVertexModel.util.utils import copy_non_mutable_attributes
-
-
-def face_centres_to_middle_of_neighbours_vertices(Geo, c_cell, filter_location=None):
-    """
-    Move the face centres to the middle of the neighbours vertices.
-    :param Geo:
-    :param c_cell:
-    :return:
-    """
-    for num_face, _ in enumerate(Geo.Cells[c_cell].Faces):
-        if filter_location is None or get_interface(Geo.Cells[c_cell].Faces[num_face].InterfaceType) == get_interface(filter_location):
-            all_edges = []
-            for tri in Geo.Cells[c_cell].Faces[num_face].Tris:
-                all_edges.append(tri.Edge)
-
-            all_edges = np.unique(np.concatenate(all_edges))
-            Geo.Cells[c_cell].Faces[num_face].Centre = np.mean(
-                Geo.Cells[c_cell].Y[all_edges, :], axis=0)
+from src.pyVertexModel.util.utils import copy_non_mutable_attributes, get_interface
 
 
 def compute_2d_circularity(area, perimeter):
@@ -110,12 +91,12 @@ class Cell:
         self.Vol0 = None
 
         # Current energy values
-        self.energy_volume = None
-        self.energy_surface_area = None
-        self.energy_tri_aspect_ratio = None
-        self.energy_contractility = None
-        self.energy_substrate = None
-        self.energy_tri_area = None
+        self.energy_volume = 0
+        self.energy_surface_area = 0
+        self.energy_tri_aspect_ratio = 0
+        self.energy_contractility = 0
+        self.energy_substrate = 0
+        self.energy_tri_area = 0
 
         # In case the geometry is not provided, the cell is empty
         if mat_file is None:
@@ -299,6 +280,11 @@ class Cell:
                     'Perimeter_bottom': self.compute_perimeter(filter_location=2),
                     'Perimeter_cellcell': self.compute_perimeter(filter_location=1),
                     'Scutoid': int(self.is_scutoid()),
+                    # 'energy_contractility': self.energy_contractility,
+                    # 'energy_surface_area': self.energy_surface_area,
+                    # 'energy_volume': self.energy_volume,
+                    # 'energy_tri_ar': self.energy_tri_aspect_ratio,
+                    # 'energy_substrate': self.energy_substrate,
                     }
 
         if centre_wound is not None:
@@ -544,3 +530,35 @@ class Cell:
         :return:
         """
         return setxor1d(self.compute_neighbours(location_filter=2), self.compute_neighbours(location_filter=0)).size > 0
+
+
+    def check_inverted(self):
+        """Check for inverted cells using signed volume"""
+        return self.compute_volume() < 0
+
+
+    def compute_min_angles(self):
+        """Compute minimum angles in all triangular faces"""
+        min_angles = []
+        for face in self.Faces:
+            for tri in face.Tris:
+                v0 = self.Y[tri.Edge[0]]
+                v1 = self.Y[tri.Edge[1]]
+                v2 = face.Centre
+
+                vec1 = v1 - v0
+                vec2 = v2 - v0
+                vec3 = v2 - v1
+
+                vec1 = vec1 / np.linalg.norm(vec1)
+                vec2 = vec2 / np.linalg.norm(vec2)
+                vec3 = vec3 / np.linalg.norm(vec3)
+
+                angle1 = np.arccos(np.clip(np.dot(vec1, vec2), -1.0, 1.0))
+                angle2 = np.arccos(np.clip(np.dot(-vec1, vec3), -1.0, 1.0))
+                angle3 = np.pi - angle1 - angle2
+
+                min_angle = min(angle1, angle2, angle3)
+                min_angles.append(np.degrees(min_angle))
+
+        return min(min_angles) if min_angles else 0

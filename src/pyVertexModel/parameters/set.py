@@ -13,10 +13,11 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.frozen_face_centres = False
         self.model_name = ''
         self.percentage_scutoids = 0
         self.myosin_pool = None
-        self.deform_array_Z = None
+        self.resize_z = None
         self.edge_length_threshold = 0.3
         self.kCeiling = None
         self.Contractility_external_axis = None
@@ -89,7 +90,7 @@ class Set:
             self.ref_A0 = 0.92
             # Tri energy Area
             self.EnergyBarrierA = False
-            self.lambdaB = 3.0
+            self.lambdaB = 5.0
             self.Beta = 1.0
             # Tri energy Aspect ratio
             self.EnergyBarrierAR = True
@@ -121,7 +122,7 @@ class Set:
             # =========================== remodelling ============================
             self.Remodelling = True
             self.contributionOldYs = 0
-            self.RemodelStiffness = 0.7
+            self.RemodelStiffness = None
             # ============================ Solution ==============================
             self.tol = 1e-08
             self.MaxIter = 30
@@ -173,6 +174,7 @@ class Set:
             self.tol = self.nu
             self.tol0 = self.nu/20
 
+        if self.RemodelStiffness is None:
         if self.Remodelling:
             self.RemodelStiffness = 0.7
         else:

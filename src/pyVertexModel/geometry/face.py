@@ -1,7 +1,7 @@
 import numpy as np
 
 from src.pyVertexModel.geometry import tris
-from src.pyVertexModel.util.utils import copy_non_mutable_attributes
+from src.pyVertexModel.util.utils import copy_non_mutable_attributes, get_interface
 
 
 def get_key(dictionary, target_value):
@@ -9,25 +9,6 @@ def get_key(dictionary, target_value):
         if value == target_value:
             return key
     return None
-
-
-def get_interface(interface_type):
-    """
-    Standardize the InterfaceType attribute.
-    :return:
-    """
-    valueset = [0, 1, 2]
-    catnames = ['Top', 'CellCell', 'Bottom']
-    interface_type_all_values = dict(zip(valueset, catnames))
-
-    # Set InterfaceType to the string value
-    interface_type_str = None
-    if interface_type is not None:
-        interface_type_str = next(key for key, value in interface_type_all_values.items()
-                                  if
-                                  value == interface_type or key == interface_type)
-
-    return interface_type_str
 
 
 class Face:
