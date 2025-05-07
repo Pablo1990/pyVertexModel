@@ -960,7 +960,7 @@ class Geo:
 
         return np.array(Ynew)
 
-    def create_vtk_cell(self, c_set, step, folder_name):
+    def create_vtk_cell(self, c_set, step, folder_name, additional_info=None):
         """
         Creates a VTK file for each cell
 
@@ -986,13 +986,20 @@ class Geo:
 
             for c in [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]:
                 writer = vtk.vtkPolyDataWriter()
+                if folder_name.startswith('Cells'):
+                    vtk_cells.append(self.Cells[c].create_vtk())
+                elif folder_name.startswith('Edges'):
+                    vtk_cells.append(self.Cells[c].create_vtk_edges())
+                elif folder_name.startswith('Arrows'):
+                    gradients = [additional_info[(3 * global_id): ((3 * global_id) + 3)] for global_id in self.Cells[c].globalIds]
+                    # Add face gradients
+                    for f in range(len(self.Cells[c].Faces)):
+                        gradients.extend([additional_info[(3 * self.Cells[c].Faces[f].globalIds): ((3 * self.Cells[c].Faces[f].globalIds) + 3)]])
+                    vtk_cells.append(self.Cells[c].create_vtk_arrows(gradients))
+
+                # Set the file name for the VTK file
                 name_out = os.path.join(cell_sub_folder, f'{folder_name}.{c:04d}.{step:04d}{file_extension}')
                 writer.SetFileName(name_out)
-                if folder_name == 'Cells':
-                    vtk_cells.append(self.Cells[c].create_vtk())
-                elif folder_name == 'Edges':
-                    vtk_cells.append(self.Cells[c].create_vtk_edges())
-
                 # Write to a VTK file
                 writer.SetInputData(vtk_cells[-1])
                 writer.Write()

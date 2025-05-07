@@ -2,20 +2,18 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import pyvista as pv
 import matplotlib.cm as cm
-import matplotlib.colors as mcolors
 from scipy import stats
 
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.Kg.kgContractility import KgContractility
+from src.pyVertexModel.Kg.kgSubstrate import KgSubstrate
 from src.pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
 from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
 from src.pyVertexModel.Kg.kgVolume import KgVolume
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
-from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
 from src.pyVertexModel.geometry.cell import compute_2d_circularity
-from src.pyVertexModel.util.utils import load_state, save_state, save_variables, load_variables
+from src.pyVertexModel.util.utils import load_state, save_variables, load_variables, screenshot
 
 
 def compute_aspect_ratios(cell):
@@ -32,39 +30,6 @@ def compute_aspect_ratios(cell):
         'aspect_2d_bottom': aspect_2d_bottom,
         'aspect_3d': aspect_3d
     }
-
-
-def check_inverted(cell):
-    """Check for inverted cells using signed volume"""
-    return cell.compute_volume() < 0
-
-
-def compute_min_angles(cell):
-    """Compute minimum angles in all triangular faces"""
-    min_angles = []
-    for face in cell.Faces:
-        for tri in face.Tris:
-            v0 = cell.Y[tri.Edge[0]]
-            v1 = cell.Y[tri.Edge[1]]
-            v2 = face.Centre
-
-            vec1 = v1 - v0
-            vec2 = v2 - v0
-            vec3 = v2 - v1
-
-            vec1 = vec1 / np.linalg.norm(vec1)
-            vec2 = vec2 / np.linalg.norm(vec2)
-            vec3 = vec3 / np.linalg.norm(vec3)
-
-            angle1 = np.arccos(np.clip(np.dot(vec1, vec2), -1.0, 1.0))
-            angle2 = np.arccos(np.clip(np.dot(-vec1, vec3), -1.0, 1.0))
-            angle3 = np.pi - angle1 - angle2
-
-            min_angle = min(angle1, angle2, angle3)
-            min_angles.append(np.degrees(min_angle))
-
-    return min(min_angles) if min_angles else 0
-
 
 def export_diagnostic_vtk(Geo, output_path, time):
     """Export VTK with geometry diagnostic fields"""
@@ -89,8 +54,8 @@ def export_diagnostic_vtk(Geo, output_path, time):
                 continue
 
             aspect_ratios = compute_aspect_ratios(cell)
-            is_inverted = check_inverted(cell)
-            min_angle = compute_min_angles(cell)
+            is_inverted = cell.check_inverted()
+            min_angle = cell.compute_min_angles()
 
             # Get the number of triangles in this cell
             num_tris = sum(len(face.Tris) for face in cell.Faces)
@@ -157,8 +122,8 @@ def track_cell_metrics(vModel, Geo, kg_lt, kg_surface_area, kg_volume, kg_tri_ar
             'aspect_3d': aspect_ratios['aspect_3d'],
             'aspect_2d_top': aspect_ratios['aspect_2d_top'],
             'aspect_2d_bottom': aspect_ratios['aspect_2d_bottom'],
-            'min_angle': compute_min_angles(cell),
-            'is_inverted': check_inverted(cell),
+            'min_angle': cell.compute_min_angles(),
+            'is_inverted': cell.check_inverted(),
             'Area': cell.compute_area(),
             'Area_top': cell.compute_area(location_filter=0),
             'Area_bottom': cell.compute_area(location_filter=2),
@@ -199,7 +164,7 @@ def track_cell_metrics(vModel, Geo, kg_lt, kg_surface_area, kg_volume, kg_tri_ar
 
 vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
 # Change this folder accordingly (it doesn't really matter the name of the folder, so feel free to rename it
-output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/04-29_121205_wing_disc_real_noise_0.00e+00_lVol_1.00e+01_kSubs_1.00e-01_lt_0.00e+00_refA0_9.20e-01_eARBarrier_8.00e-07_RemStiff_0.7_lS1_1.40e+00_lS2_1.40e-01_lS3_1.40e+00_ps_3.00e-05_lc_7.00e-05/')
+output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/05-06_145038_wing_disc_real_73_noise_0.00e+00_lVol_1.00e+00_kSubs_1.00e-01_lt_0.00e+00_refA0_9.20e-01_eARBarrier_8.00e-07_RemStiff_0.9_lS1_1.40e+00_lS2_1.40e-01_lS3_1.40e+00_ps_3.00e-05_lc_7.00e-05/')
 
 # Load
 if os.path.exists(os.path.join(output_folder, 'megha_analysis.pkl')):
@@ -264,7 +229,7 @@ else:
             # Load the state of the model
             load_state(vModel, os.path.join(output_folder, file))
 
-             #get Geo from the loaded model
+            # Get Geo from the loaded model
             Geo = vModel.geo
             Set = vModel.set
             Set.currentT = 0
@@ -293,11 +258,11 @@ else:
                     })
 
                 # Inversion check
-                if check_inverted(cell):
+                if cell.check_inverted():
                     geometry_issues['inverted_cells'].append(cell_id)
 
                 # Small angle check
-                min_angle = compute_min_angles(cell)
+                min_angle = cell.compute_min_angles()
                 if min_angle < MIN_ANGLE_THRESHOLD:
                     geometry_issues['small_angle_cells'].append({
                         'cell_id': cell_id,
@@ -332,10 +297,6 @@ else:
             # Export excel with all_cells per file
             #all_cells.to_excel(os.path.join(output_folder, 'all_cells_%s.xlsx' % file))
 
-            Geo = vModel.geo
-            Set = vModel.set
-            Set.currentT = 0
-
             # Initialize lists to store energies for the current file
             energy_lt_file = []
             energy_surface_file = []
@@ -363,6 +324,24 @@ else:
             # Compute Volume
             kg_volume = KgVolume(Geo)
             kg_volume.compute_work(Geo, Set, None, False)
+
+            # Compute substrate adhesion
+            kg_substrate = KgSubstrate(Geo)
+            kg_substrate.compute_work(Geo, Set, None, False)
+
+            # Visualise the geometry with the energy values
+            vModel.set.export_images = True
+            energies = ['energy_surface_area', 'energy_volume', 'energy_tri_ar', 'energy_substrate']
+            for energy in energies:
+                temp_dir = os.path.join(vModel.set.OutputFolder, 'images_' + energy)
+                os.makedirs(temp_dir, exist_ok=True)
+                #screenshot(vModel, temp_dir, scalar_to_display=energy)
+                vModel.set.VTK = True
+                #vModel.geo.create_vtk_cell(vModel.set, vModel.numStep, 'Cells')
+                vModel.geo.create_vtk_cell(vModel.set, vModel.numStep, 'Arrows_sa', -kg_surface_area.g)
+                vModel.geo.create_vtk_cell(vModel.set, vModel.numStep, 'Arrows_vol', -kg_volume.g)
+                vModel.geo.create_vtk_cell(vModel.set, vModel.numStep, 'Arrows_tri_ar', -kg_tri_ar.g)
+                vModel.geo.create_vtk_cell(vModel.set, vModel.numStep, 'Arrows_substrate', -kg_substrate.g)
 
             for cell_id in range(len(Geo.Cells)):
                 if Geo.Cells[cell_id].AliveStatus is None:
