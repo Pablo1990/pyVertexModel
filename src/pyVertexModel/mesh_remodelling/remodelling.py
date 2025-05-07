@@ -6,7 +6,7 @@ import pandas as pd
 from numpy.ma.extras import setdiff1d
 
 from src.pyVertexModel.algorithm.newtonRaphson import gGlobal, newton_raphson_iteration_explicit, \
-    newton_raphson_iteration, KgGlobal
+    newton_raphson_iteration, KgGlobal, constrain_bottom_vertices_x_y
 from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
 from src.pyVertexModel.util.utils import ismember_rows, save_backup_vars, load_backup_vars, compute_distance_3d, \
@@ -500,17 +500,19 @@ class Remodelling:
         dy = np.zeros(((best_geo.numY + best_geo.numF + best_geo.nCells) * 3, 1), dtype=np.float64)
         g, energies = gGlobal(best_geo, best_geo, best_geo, self.Set, self.Set.implicit_method)
         previous_gr = np.linalg.norm(g[self.Dofs.Free])
-        # if (previous_gr < self.Set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
-        #         np.all(~np.isnan(dy[self.Dofs.Free]))):
-        #     pass
-        # else:
-        #     return False
 
         try:
             for n_iter in range(n_iter_max):
-                best_geo, dy, gr, g = newton_raphson_iteration_explicit(best_geo, self.Set, self.Dofs.Free, dy, g)
-                #screenshot_(best_geo, self.Set, 0, 'after_remodelling_' + str(n_iter), self.Set.OutputFolder + '/images')
-                print(f'Previous gr: {previous_gr}, gr: {gr}')
+                best_geo, dy, dyr = newton_raphson_iteration_explicit(best_geo, self.Set, self.Dofs.Free, dy, g)
+
+                g, energies = gGlobal(best_geo, best_geo, best_geo, self.Set, self.Set.implicit_method)
+                for key, energy in energies.items():
+                    logger.info(f"{key}: {energy}")
+                g_constrained = constrain_bottom_vertices_x_y(best_geo)
+                g[g_constrained] = 0
+                gr = np.linalg.norm(g[self.Dofs.Free])
+
+                print(f'Previous gr: {previous_gr}, dyr: {dyr}')
                 if np.all(~np.isnan(g[self.Dofs.Free])) and np.all(~np.isnan(dy[self.Dofs.Free])):
                     pass
                 else:

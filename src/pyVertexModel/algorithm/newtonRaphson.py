@@ -15,6 +15,24 @@ from src.pyVertexModel.util.utils import face_centres_to_middle_of_neighbours_ve
 
 logger = logging.getLogger("pyVertexModel")
 
+def constrain_bottom_vertices_x_y(geo, dim=3):
+    """
+    Constrain the bottom vertices of the geometry in the x and y directions.
+    :param geo:
+    :param dim:
+    :return:
+    """
+    g_constrained = np.zeros((geo.numY + geo.numF + geo.nCells) * 3, dtype=bool)
+    for cell in geo.Cells:
+        if cell.AliveStatus is not None:
+            c_global_ids = cell.globalIds[np.any(np.isin(cell.T, geo.XgBottom), axis=1)]
+            for i in c_global_ids:
+                g_constrained[(dim * i): ((dim * i) + 2)] = 1
+
+            for face in cell.Faces:
+                if get_interface(face.InterfaceType) == get_interface('Bottom'):
+                    g_constrained[(dim * face.globalIds): ((dim * face.globalIds) + 2)] = 1
+    return g_constrained
 
 def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
     """
@@ -92,11 +110,8 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t, implicit_meth
         dof = Dofs.Free
 
     dy = np.zeros(((Geo.numY + Geo.numF + Geo.nCells) * 3, 1), dtype=np.float64)
-    dyr = np.linalg.norm(dy[dof, 0])
     gr = np.linalg.norm(g[dof])
     gr0 = gr
-
-    logger.info(f"Step: {numStep}, Iter: 0 ||gr||= {gr} ||dyr||= {dyr} dt/dt0={Set.dt / Set.dt0:.3g}")
 
     Set.iter = 1
     auxgr = np.zeros(3, dtype=np.float64)
@@ -109,9 +124,9 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t, implicit_meth
             Energy, K, dyr, g, gr, ig, auxgr, dy = newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof,
                                                                             dy, g, gr0, ig, numStep, t)
     else:
-        Geo, dy, gr, _ = newton_raphson_iteration_explicit(Geo, Set, dof, dy, g)
-        dyr = np.linalg.norm(dy[dof, 0])
+        Geo, dy, dyr = newton_raphson_iteration_explicit(Geo, Set, dof, dy, g)
 
+    logger.info(f"Step: {numStep}, Iter: 0 ||gr||= {gr} ||dyr||= {dyr} dt/dt0={Set.dt / Set.dt0:.3g}")
     logger.info(f"New gradient norm: {gr:.3e}")
 
     return Geo, g, K, Energy, Set, gr, dyr, dy
@@ -189,17 +204,7 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g, selected_cells=None)
     :return:
     """
     # Bottom nodes
-    dim=3
-    g_constrained = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3, dtype=bool)
-    for cell in Geo.Cells:
-        if cell.AliveStatus is not None:
-            c_global_ids = cell.globalIds[np.any(np.isin(cell.T, Geo.XgBottom), axis=1)]
-            for i in c_global_ids:
-                g_constrained[(dim * i): ((dim * i) + 2)] = 1
-
-            for face in cell.Faces:
-                if get_interface(face.InterfaceType) == get_interface('Bottom'):
-                    g_constrained[(dim * face.globalIds): ((dim * face.globalIds) + 2)] = 1
+    g_constrained = constrain_bottom_vertices_x_y(Geo)
 
     # Update the bottom nodes with the same displacement as the corresponding real nodes
     dy[dof, 0] = -Set.dt / Set.nu * g[dof]
@@ -207,7 +212,7 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g, selected_cells=None)
 
     # Update border ghost nodes with the same displacement as the corresponding real nodes
     dy = map_vertices_periodic_boundaries(Geo, dy)
-
+    dyr = np.linalg.norm(dy[dof, 0])
     dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
 
     Geo.update_vertices(dy_reshaped, selected_cells)
@@ -215,16 +220,11 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g, selected_cells=None)
         for cell in Geo.Cells:
            if cell.AliveStatus is not None:
                face_centres_to_middle_of_neighbours_vertices(Geo, cell.ID)
-    Geo.update_measures()
 
-    g, energies = gGlobal(Geo, Geo, Geo, Set, Set.implicit_method)
-    for key, energy in energies.items():
-        logger.info(f"{key}: {energy}")
-    g[g_constrained] = 0
-    gr = np.linalg.norm(g[dof])
+    Geo.update_measures()
     Set.iter = Set.MaxIter
 
-    return Geo, dy, gr, g
+    return Geo, dy, dyr
 
 
 def map_vertices_periodic_boundaries(Geo, dy):

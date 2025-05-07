@@ -285,13 +285,15 @@ class VertexModel:
             # IMPORTANT: Here it updates: Areas, Volumes, etc... Should be
             # up-to-date
             self.geo.update_measures()
+
         if self.set.implicit_method is True:
             g, K, _, energies = newtonRaphson.KgGlobal(self.geo_0, self.geo_n, self.geo, self.set,
                                                        self.set.implicit_method)
         else:
             K = 0
             g, energies = newtonRaphson.gGlobal(self.geo_0, self.geo_n, self.geo, self.set,
-                                                self.set.implicit_method)
+                                                self.set.implicit_method, self.numStep)
+
         for key, energy in energies.items():
             logger.info(f"{key}: {energy}")
         self.geo, g, __, __, self.set, gr, dyr, dy = newtonRaphson.newton_raphson(self.geo_0, self.geo_n, self.geo,
@@ -299,25 +301,21 @@ class VertexModel:
                                                                                   self.numStep, self.t,
                                                                                   self.set.implicit_method)
         if not np.isnan(gr) and post_operations:
-            self.post_newton_raphson(dy, dyr, g, gr)
+            self.post_newton_raphson(dy, g, gr)
         return gr
 
-    def post_newton_raphson(self, dy, dyr, g, gr):
+    def post_newton_raphson(self, dy, g, gr):
         """
         Post Newton Raphson operations.
         :param dy:
-        :param dyr:
         :param g:
         :param gr:
         :return:
         """
-        if (dyr < self.set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
-                np.all(~np.isnan(dy[self.Dofs.Free])) and np.all(dy[self.Dofs.Free] < (self.set.tol / 100))):
+        if ((gr * self.set.dt / self.set.dt0) < self.set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
+                np.all(~np.isnan(dy[self.Dofs.Free])) and
+                (np.max(abs(g[self.Dofs.Free])) * self.set.dt / self.set.dt0) < self.set.tol):
             self.iteration_converged()
-            # if self.set.implicit_method is False:
-            #     self.set.tol = gr
-            #     if self.set.tol < self.set.tol0:
-            #         self.set.tol = self.set.tol0
         else:
             self.iteration_did_not_converged()
 
@@ -365,12 +363,7 @@ class VertexModel:
                     # Remodelling
                     remodel_obj = Remodelling(self.geo, self.geo_n, self.geo_0, self.set, self.Dofs)
                     self.geo, self.geo_n = remodel_obj.remodel_mesh(self.numStep)
-                    # Update tolerance if remodelling was performed to the current one
-                    if self.set.implicit_method is False:
-                        g, energies = newtonRaphson.gGlobal(self.geo_0, self.geo_n, self.geo, self.set,
-                                                            self.set.implicit_method)
-                        self.Dofs.get_dofs(self.geo, self.set)
-                        gr = np.linalg.norm(g[self.Dofs.Free])
+                    self.Dofs.get_dofs(self.geo, self.set)
 
             # Update last time converged
             self.set.last_t_converged = self.t

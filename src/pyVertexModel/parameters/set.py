@@ -31,6 +31,7 @@ class Set:
         self.lateralCablesStrength = 0
         self.tol0 = None
         self.dt = None
+        self.dt0 = None
         self.implicit_method = False
         self.TypeOfPurseString = None
         self.Contractility_TimeVariability = None
@@ -225,7 +226,7 @@ class Set:
         self.define_if_not_defined("nu_LP_Initial", self.nu)
         self.define_if_not_defined("BarrierTri0", 0.001 * self.s)
         self.define_if_not_defined("nu0", self.nu)
-        self.define_if_not_defined("dt0", self.tend / self.Nincr)
+        self.define_if_not_defined("dt0", self.dt)
         self.define_if_not_defined("MaxIter0", self.MaxIter)
         self.define_if_not_defined("contributionOldFaceCentre", self.contributionOldYs)
         self.define_if_not_defined("nu_bottom", self.nu * 600)
