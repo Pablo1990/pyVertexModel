@@ -201,7 +201,6 @@ class Cell:
 
         vpoly = vtk.vtkPolyData()
         vpoly.SetPoints(points)
-
         vpoly.SetPolys(cell)
 
         # Get all the different properties of a cell
@@ -249,6 +248,14 @@ class Cell:
         Compute the features of the cell and create a dictionary with them
         :return: a dictionary with the features of the cell
         """
+        # Check if any of these features is missing
+        to_check = ['energy_contractility', 'energy_surface_area', 'energy_volume', 'energy_tri_aspect_ratio',
+                    'energy_substrate']
+        for feature in to_check:
+            if not hasattr(self, feature):
+                self.__setattr__(feature, 0)
+
+        # Compute the features of the cell
         features = {'ID': self.ID,
                     'Area': self.compute_area(),
                     'Area_top': self.compute_area(location_filter=0),
@@ -280,11 +287,11 @@ class Cell:
                     'Perimeter_bottom': self.compute_perimeter(filter_location=2),
                     'Perimeter_cellcell': self.compute_perimeter(filter_location=1),
                     'Scutoid': int(self.is_scutoid()),
-                    # 'energy_contractility': self.energy_contractility,
-                    # 'energy_surface_area': self.energy_surface_area,
-                    # 'energy_volume': self.energy_volume,
-                    # 'energy_tri_ar': self.energy_tri_aspect_ratio,
-                    # 'energy_substrate': self.energy_substrate,
+                    'energy_contractility': self.energy_contractility,
+                    'energy_surface_area': self.energy_surface_area,
+                    'energy_volume': self.energy_volume,
+                    'energy_tri_ar': self.energy_tri_aspect_ratio,
+                    'energy_substrate': self.energy_substrate,
                     }
 
         if centre_wound is not None:
@@ -317,7 +324,6 @@ class Cell:
 
         vpoly = vtk.vtkPolyData()
         vpoly.SetPoints(points)
-
         vpoly.SetLines(cell)
 
         # Get all the different properties of a cell
@@ -344,6 +350,70 @@ class Cell:
             #    vpoly.GetCellData().SetScalars(property_array)
 
         return vpoly
+
+    def create_vtk_arrows(self, gradients):
+        """
+        Create a glyph to visualize the gradient of a cell.
+
+        :param cell: The cell object containing geometry data.
+        :param gradients: A numpy array of gradient vectors for the cell.
+        :return: vtkPolyData with glyphs representing the gradients.
+        :param gradients:
+        :return:
+        """
+        # Create a vtkAppendPolyData to combine all arrows
+        append_filter = vtk.vtkAppendPolyData()
+
+        ys = self.Y
+        face_centres = np.array([face.Centre for face in self.Faces])
+        ys_and_face_centres = np.concatenate((ys, face_centres), axis=0)
+
+        for i in range(len(ys_and_face_centres)):
+            point = ys_and_face_centres[i]
+            grad = gradients[i]
+            grad_norm = np.linalg.norm(grad)
+
+            # Skip zero gradients
+            if grad_norm < 1e-6:
+                continue
+
+            # Create arrow source (default: along x-axis)
+            arrow = vtk.vtkArrowSource()
+            arrow.SetTipLength(0.3)  # Relative to arrow length
+            arrow.SetTipRadius(0.1)
+            arrow.SetShaftRadius(0.03)
+
+            # Compute rotation to align arrow with gradient
+            transform = vtk.vtkTransform()
+
+            # Translate to the point's position
+            transform.Translate(point[0], point[1], point[2])
+
+            # Rotate from default x-axis to gradient direction
+            if grad_norm > 0:
+                # Axis-angle rotation
+                x_axis = np.array([1, 0, 0])
+                grad_dir = grad / grad_norm
+                rotation_axis = np.cross(x_axis, grad_dir)
+                rotation_angle = np.arccos(np.dot(x_axis, grad_dir)) * 180.0 / np.pi
+                transform.RotateWXYZ(rotation_angle, *rotation_axis)
+
+            # Scale arrow length by gradient magnitude (or fixed size)
+            arrow_length = grad_norm * 2  # Adjust scaling factor as needed
+            transform.Scale(arrow_length, arrow_length, arrow_length)
+
+            # Apply transform
+            transform_filter = vtk.vtkTransformPolyDataFilter()
+            transform_filter.SetTransform(transform)
+            transform_filter.SetInputConnection(arrow.GetOutputPort())
+            transform_filter.Update()
+
+            # Add to the append filter
+            append_filter.AddInputData(transform_filter.GetOutput())
+
+        # Combine all arrows into a single polydata
+        append_filter.Update()
+        return append_filter.GetOutput()
 
     def compute_edge_features(self):
         """
