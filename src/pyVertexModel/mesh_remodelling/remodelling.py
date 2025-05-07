@@ -474,9 +474,6 @@ class Remodelling:
 
                 has_converged = self.check_if_will_converge(self.Geo.copy())
             else:
-                for cell in self.Geo.Cells:
-                    if cell.AliveStatus is not None:
-                        face_centres_to_middle_of_neighbours_vertices(self.Geo, cell.ID)
                 self.Geo.update_measures()
                 self.reset_preferred_values(backup_vars, cells_involved_intercalation)
                 has_converged = True
@@ -576,16 +573,10 @@ class Remodelling:
             logger.info(f"Remodeling: {cell_node} - {ghost_node}")
 
             valence_segment, old_tets, old_ys = edge_valence(self.Geo, nodes_pair)
-            cell_nodes = [cell for cell in self.Geo.non_dead_cells if cell in old_tets.flatten()]
-            #if len(cell_nodes) > 2:
             has_converged, Tnew = self.flip_nm(nodes_pair, cell_to_intercalate_with, old_tets, old_ys,
                                                cell_to_split_from)
             if Tnew is not None:
                 all_tnew = Tnew if all_tnew is None else np.vstack((all_tnew, Tnew))
-            #else:
-            #    logger.info(f"Remodeling: {cell_node} - {ghost_node} not possible due to cell_nodes < 2")
-            #    logger.info(f"Old tets: {old_tets}")
-            #    has_converged = False
 
             shared_nodes_still = get_node_neighbours_per_domain(self.Geo, cell_node, ghost_node, cell_to_split_from)
 
