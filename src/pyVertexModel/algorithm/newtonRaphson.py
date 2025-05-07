@@ -487,7 +487,7 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
     return g, K, energy_total, energies
 
 
-def gGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
+def gGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True, num_step=None):
     """
     Compute the global gradient
     :param Geo_0:
@@ -505,6 +505,7 @@ def gGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
         kg_SA = KgSurfaceCellBasedAdhesion(Geo)
         kg_SA.compute_work(Geo, Set, None, False)
         g += kg_SA.g
+        Geo.create_vtk_cell(Set, num_step, 'Arrows_surface', -kg_SA.g)
         energies["Surface"] = kg_SA.energy
 
     # Volume Energy
@@ -512,6 +513,7 @@ def gGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
         kg_Vol = KgVolume(Geo)
         kg_Vol.compute_work(Geo, Set, None, False)
         g += kg_Vol.g[:]
+        Geo.create_vtk_cell(Set, num_step, 'Arrows_volume', -kg_Vol.g)
         energies["Volume"] = kg_Vol.energy
 
     if implicit_method is True:
@@ -519,6 +521,7 @@ def gGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
         kg_Viscosity = KgViscosity(Geo)
         kg_Viscosity.compute_work(Geo, Set, Geo_n, False)
         g += kg_Viscosity.g
+        Geo.create_vtk_cell(Set, num_step, 'Arrows_viscosity', -kg_Viscosity.g)
         energies["Viscosity"] = kg_Viscosity.energy
 
     # # TODO: Plane Elasticity
@@ -537,6 +540,7 @@ def gGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
         kg_Tri = KgTriEnergyBarrier(Geo)
         kg_Tri.compute_work(Geo, Set, None, False)
         g += kg_Tri.g
+        Geo.create_vtk_cell(Set, num_step, 'Arrows_tri', -kg_Tri.g)
         energies["TriEnergyBarrier"] = kg_Tri.energy
 
     # Triangle Energy Barrier Aspect Ratio
@@ -544,6 +548,7 @@ def gGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
         kg_TriAR = KgTriAREnergyBarrier(Geo)
         kg_TriAR.compute_work(Geo, Set, None, False)
         g += kg_TriAR.g
+        Geo.create_vtk_cell(Set, num_step, 'Arrows_tri_ar', -kg_TriAR.g)
         energies["TriEnergyBarrierAR"] = kg_TriAR.energy
 
     # Propulsion Forces
@@ -554,6 +559,7 @@ def gGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
         kg_lt = KgContractility(Geo)
         kg_lt.compute_work(Geo, Set, None, False)
         g += kg_lt.g
+        Geo.create_vtk_cell(Set, num_step, 'Arrows_contractility', -kg_lt.g)
         energies["Contractility"] = kg_lt.energy
 
     # Contractility as external force
@@ -561,6 +567,7 @@ def gGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
         kg_ext = KgContractilityExternal(Geo)
         kg_ext.compute_work(Geo, Set, None, False)
         g += kg_ext.g
+        Geo.create_vtk_cell(Set, num_step, 'Arrows_contractility_external', -kg_ext.g)
         energies["Contractility_external"] = kg_ext.energy
 
     # Substrate
@@ -568,6 +575,7 @@ def gGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
         kg_subs = KgSubstrate(Geo)
         kg_subs.compute_work(Geo, Set, None, False)
         g += kg_subs.g
+        Geo.create_vtk_cell(Set, num_step, 'Arrows_substrate', -kg_subs.g)
         energies["Substrate"] = kg_subs.energy
 
     return g, energies

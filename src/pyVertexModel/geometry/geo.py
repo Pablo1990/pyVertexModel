@@ -973,13 +973,12 @@ class Geo:
         # Initialize an array to store the VTK of each cell
         vtk_cells = []
 
-        if c_set.VTK:
+        if c_set.VTK and step is not None:
             # Initial setup: defining file paths and extensions
             str0 = c_set.OutputFolder  # Base name for the output file
             file_extension = '.vtk'  # File extension
 
-            # Creating a new subdirect
-            #             self.geo.create_vtk_cell(self.geo_0, self.c_set, self.numStep)ory for cells data
+            # Creating a new subdirectory for cells data
             cell_sub_folder = os.path.join(str0, folder_name)
             if not os.path.exists(cell_sub_folder):
                 os.makedirs(cell_sub_folder)

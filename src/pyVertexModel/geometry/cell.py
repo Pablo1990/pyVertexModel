@@ -169,6 +169,9 @@ class Cell:
                 if current_v < 0:
                     ytri = np.array([y2, y1, y3])
                     current_v = np.linalg.det(ytri) / 6
+                    # If the volume is negative, switch two the other option
+                    if current_v < 0:
+                        raise "Negative volume detected. Check the cell geometry."
 
                 v += current_v
 
@@ -372,10 +375,6 @@ class Cell:
             point = ys_and_face_centres[i]
             grad = gradients[i]
             grad_norm = np.linalg.norm(grad)
-
-            # Skip zero gradients
-            if grad_norm < 1e-6:
-                continue
 
             # Create arrow source (default: along x-axis)
             arrow = vtk.vtkArrowSource()
