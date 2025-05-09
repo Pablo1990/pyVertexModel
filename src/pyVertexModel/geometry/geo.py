@@ -342,7 +342,8 @@ class Geo:
         self.AssembleNodes = [i for i, cell in enumerate(self.Cells) if cell.AliveStatus is not None]
         # Initialize BarrierTri0 and lmin0 with the maximum possible float value
         self.BarrierTri0 = np.finfo(float).max
-        self.lmin0 = np.finfo(float).max
+        if self.lmin0 is None:
+            self.lmin0 = np.finfo(float).max
 
         ## Average values
         #avg_vol = np.mean([c_cell.Vol for c_cell in self.Cells if c_cell.AliveStatus is not None])
@@ -405,10 +406,12 @@ class Geo:
                         lmin_values.append(tri.EdgeLength)
 
         # Update lmin0 with the minimum value in lmin_values
-        self.lmin0 = min(lmin_values)
+        if self.lmin0 is None:
+            self.lmin0 = min(lmin_values)
+            self.lmin0 = self.lmin0 * 10
+
         # Update BarrierTri0 and lmin0 based on their initial values
         self.BarrierTri0 = self.BarrierTri0 / 10
-        self.lmin0 = self.lmin0 * 10
 
         # Edge lengths 0 as average of all cells by location (Top, bottom, or lateral)
         self.EdgeLengthAvg_0 = []
