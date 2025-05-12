@@ -7,6 +7,7 @@ from scipy.spatial import ConvexHull
 
 from src.pyVertexModel.Kg.kg import add_noise_to_parameter
 from src.pyVertexModel.geometry import face, cell
+from src.pyVertexModel.geometry.cell import Cell
 from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes, calculate_polygon_area, \
     get_interface
 
@@ -286,7 +287,7 @@ class Geo:
             XgSub = X.shape[0]  # THE SUBSTRATE NODE
             for c, c_cell in enumerate(self.Cells):
                 if c_cell.AliveStatus is not None:
-                    self.Cells[c].Y = self.build_y_substrate(self.Cells[c], self.Cells, self.XgID, c_set, XgSub)
+                    self.Cells[c].Y = self.build_y_substrate(self.Cells[c], c_set, XgSub)
 
         # Build regular cells
         for c, c_cell in enumerate(self.Cells):
@@ -572,19 +573,17 @@ class Geo:
             self.Cells[c].X[0:2] = mean_ys[0:2]
 
 
-    def build_y_substrate(self, Cell, Cells, XgID, Set, XgSub):
+    def build_y_substrate(self, Cell, Set, XgSub):
         """
         Build the Y of the substrate
         :param Cell:
-        :param Cells:
-        :param XgID:
         :param Set:
         :param XgSub:
         :return:
         """
         Tets = Cell.T
         Y = Cell.Y
-        X = np.array([c_cell.X for c_cell in Cells])
+        X = np.array([c_cell.X for c_cell in self.Cells])
         nverts = len(Tets)
         for i in range(nverts):
             aux = [i in XgSub for i in Tets[i]]
@@ -613,7 +612,6 @@ class Geo:
                 elif len(XX) == 3:
                     Y[i] = 1 / 3 * np.sum(X[Tets[i], ~np.array(XgSub)], axis=0)
                     Y[i][2] = Set.SubstrateZ
-        return Y
 
     def build_global_ids(self):
         """
@@ -1590,3 +1588,101 @@ class Geo:
         """
         non_scutoid_cells = [c_cell for c_cell in self.Cells if not c_cell.is_scutoid()]
         return non_scutoid_cells
+
+    def create_substrate_cells(self, c_set, domain='Bottom'):
+        """
+        Create a substrate bubble cell with different mechanics
+        :param domain:
+        :return:
+        """
+        ghost_nodes_domain = self.XgBottom if domain == 'Bottom' else self.XgTop
+
+        # Create the new substrate cells
+        for c, c_cell in enumerate(self.Cells):
+            if c_cell.AliveStatus is not None:
+                if c_cell.AliveStatus == 2:
+                    continue
+                new_xs = np.mean(c_cell.Y[np.any(np.isin(c_cell.T, ghost_nodes_domain), axis=1)], axis=0)
+                substrate_cell_id = self.add_new_cell(new_xs, alive_status=2)
+                c_cell.substrate_cell_id = substrate_cell_id
+
+        # Populate the tets of the new substrate cells
+        for c, c_cell in enumerate(self.Cells):
+            if c_cell.AliveStatus is not None:
+                if c_cell.AliveStatus == 2:
+                    continue
+
+                self.divide_cell(c_cell.ID, num_pieces=3, axis=[0, 0, 1])
+
+                # # Obtain ghost nodes of this cell
+                # ghost_nodes = np.unique(c_cell.T[np.isin(c_cell.T, ghost_nodes_domain)])
+                # domain_tets = np.any(np.isin(c_cell.T, ghost_nodes), axis=1)
+                #
+                # new_cell = self.Cells[c_cell.substrate_cell_id]
+                #
+                # # Get the tets from the real cell
+                # new_cell.T = c_cell.T[domain_tets]
+                # # Substitute the id of the old cell with the new ID
+                # new_cell.T = np.where(np.isin(new_cell.T, c_cell.ID), new_cell.ID, new_cell.T)
+                # # Remove the ghost nodes from the tets
+                # c_cell.T =
+
+    def divide_cell(self, cell_id, num_pieces=2, axis=None):
+        """
+        Divide a cell into a given number of pieces
+        :param num_pieces:
+        :param axis:
+        :param cell_id:
+        :return:
+        """
+        # Get the cell to split
+        if axis is None:
+            axis = [0, 0, 1] # Z axis
+
+        # Get the cell to split
+        cell = self.Cells[cell_id]
+
+        # Get the vertices of the cell
+        vertices = cell.Y
+        dotted_vertices = np.dot(vertices, axis)
+
+        # Get minimum and maximum coordinates of the vertices based on the axis
+        min_coord = np.min(dotted_vertices)
+        max_coord = np.max(dotted_vertices)
+
+        # Split the vertices into num_pieces given the axis
+        split_vertices = []
+        # Split the vertices based on a plane formed by the axis
+        for i in range(num_pieces):
+            current_plane_coord = min_coord + (max_coord - min_coord) * ((i + 1) / num_pieces)
+            previous_plane_coord = min_coord + (max_coord - min_coord) * (i / num_pieces)
+            split_vertices.append(vertices[np.where((dotted_vertices <= current_plane_coord) & (dotted_vertices >= previous_plane_coord))[0]])
+
+        # Create new cells from the split vertices
+        new_cells = []
+        for i in range(num_pieces):
+            new_cell = Cell()
+            new_cell.X = np.mean(split_vertices[i], axis=0)
+            new_cell.ID = len(self.Cells) + i
+            new_cell.AliveStatus = 1
+            new_cells.append(new_cell)
+
+        # Add the new cells to the list of cells
+        self.Cells.extend(new_cells)
+
+        return [new_cell.ID for new_cell in new_cells]
+
+    def add_new_cell(self, xs, alive_status=1):
+        """
+        Add a new cell to the list of cells
+        :param alive_status: 0: dead, 1: alive, 2: substrate
+        :param xs:
+        :return: the ID of the new cell
+        """
+        new_cell = Cell()
+        new_cell.X = xs
+        new_cell.ID = len(self.Cells)
+        new_cell.AliveStatus = alive_status
+        self.Cells.append(new_cell)
+
+        return new_cell.ID
