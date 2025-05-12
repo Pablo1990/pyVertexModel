@@ -1641,6 +1641,8 @@ class Geo:
 
         # Get the cell to split
         cell = self.Cells[cell_id]
+        original_X = cell.X
+        original_T = cell.T
 
         # Get the vertices of the cell
         vertices = cell.Y
@@ -1656,21 +1658,29 @@ class Geo:
         for i in range(num_pieces):
             current_plane_coord = min_coord + (max_coord - min_coord) * ((i + 1) / num_pieces)
             previous_plane_coord = min_coord + (max_coord - min_coord) * (i / num_pieces)
-            split_vertices.append(vertices[np.where((dotted_vertices <= current_plane_coord) & (dotted_vertices >= previous_plane_coord))[0]])
+            split_vertices.append(np.where((dotted_vertices <= current_plane_coord) & (dotted_vertices >= previous_plane_coord))[0])
+
+        # Create a vector from the centre of the vertices of the first piece to the last piece
+        director_vector = np.mean(cell.Y[split_vertices[-1]], axis=0) - np.mean(cell.Y[split_vertices[0]], axis=0)
 
         # Create new cells from the split vertices
-        new_cells = []
+        new_cell_ids_ordered = []
         for i in range(num_pieces):
-            new_cell = Cell()
-            new_cell.X = np.mean(split_vertices[i], axis=0)
-            new_cell.ID = len(self.Cells) + i
-            new_cell.AliveStatus = 1
-            new_cells.append(new_cell)
+            new_X = np.mean(cell.Y[split_vertices[0]], axis=0) + (i * director_vector / num_pieces)
+            new_X = np.mean([new_X, original_X], axis=0)
+            if i == round((num_pieces-1)/2):
+                cell.X = new_X
+                id_cell = cell.ID
+            else:
+                id_cell = self.add_new_cell(new_X, alive_status=1)
 
-        # Add the new cells to the list of cells
-        self.Cells.extend(new_cells)
+            self.Cells[id_cell].T = np.where(np.isin(original_T[split_vertices[i]], cell.ID), id_cell, original_T[split_vertices[i]])
+            new_cell_ids_ordered.append(id_cell)
 
-        return [new_cell.ID for new_cell in new_cells]
+        # Connect cells between each other
+        for new_cell_id in new_cell_ids_ordered:
+            new_cell = self.Cells[new_cell_id]
+
 
     def add_new_cell(self, xs, alive_status=1):
         """
