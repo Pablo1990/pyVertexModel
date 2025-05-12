@@ -1677,9 +1677,20 @@ class Geo:
             self.Cells[id_cell].T = np.where(np.isin(original_T[split_vertices[i]], cell.ID), id_cell, original_T[split_vertices[i]])
             new_cell_ids_ordered.append(id_cell)
 
+        #TODO: WE HAVE TO DO SOMETHING WITH SCUTOID VERTICES (4 CELLS CONNECTED) I THINK THERE ARE TWO SCENARIOS HERE:
+        # 1) ODD NUMBER OF PIECES AND AXIS Z: THE MIDDLE ONE WILL GET ALL 4 CELLS CONNECTED WHICH SHOULD HAPPEN AUTOMATICALLY. TOP AND BOTTOM SHOULD NOT BE SCUTOIDS
+        # 2) EVEN NUMBER OF PIECES AND AXIS XY: SCUTOID CONNECTIONS SHOULD BE DIVIDED BASED ON DISTANCE. BOTH ARE SCUTOIDS
+
         # Connect cells between each other
-        for new_cell_id in new_cell_ids_ordered:
+        for id, new_cell_id in enumerate(new_cell_ids_ordered):
             new_cell = self.Cells[new_cell_id]
+            if i == round((id - 1) / 2):
+                # This is the middle cell that should get all connections from top and bottom
+                neighbours = np.unique(original_T)
+                cell_neighbours = [neighbour for neighbour in neighbours if self.Cells[neighbour].AliveStatus is not None]
+            else:
+                neighbours = np.unique(self.Cells[new_cell_id].T)
+
 
 
     def add_new_cell(self, xs, alive_status=1):
