@@ -64,7 +64,8 @@ class Cell:
         self.Vol = None
         self.AliveStatus = None
         self.vertices_and_faces_to_remodel = np.array([], dtype='int')
-        self.substrate_cell = None
+        self.substrate_cell_top = None
+        self.substrate_cell_bottom = None
 
         ## Individual mechanical parameters
         # Surface area

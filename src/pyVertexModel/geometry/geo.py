@@ -1,9 +1,11 @@
 import logging
 import os
+from itertools import combinations
 
 import numpy as np
 import vtk
 from scipy.spatial import ConvexHull
+from skimage.util import unique_rows
 
 from src.pyVertexModel.Kg.kg import add_noise_to_parameter
 from src.pyVertexModel.geometry import face, cell
@@ -905,8 +907,14 @@ class Geo:
         :param Set:
         :return:
         """
-        allTs = np.vstack([c_cell.T for c_cell in self.Cells if c_cell.AliveStatus is not None])
-        allYs = np.vstack([c_cell.Y for c_cell in self.Cells if c_cell.AliveStatus is not None])
+        allYs = np.vstack([
+            c_cell.Y for c_cell in self.Cells
+            if c_cell.AliveStatus is not None and c_cell.T.size > 0
+        ])
+        allTs = np.vstack([
+            c_cell.T for c_cell in self.Cells
+            if c_cell.AliveStatus is not None and c_cell.T.size > 0
+        ])
         nGhostNodes_allTs = np.sum(np.isin(allTs, self.XgID), axis=1)
         Ynew = []
 
@@ -1612,7 +1620,7 @@ class Geo:
                 if c_cell.AliveStatus == 2:
                     continue
 
-                self.divide_cell(c_cell.ID, num_pieces=3, axis=[0, 0, 1])
+                self.divide_cell(c_cell.ID, c_set, num_pieces=3, axis=[0, 0, 1])
 
                 # # Obtain ghost nodes of this cell
                 # ghost_nodes = np.unique(c_cell.T[np.isin(c_cell.T, ghost_nodes_domain)])
@@ -1627,7 +1635,7 @@ class Geo:
                 # # Remove the ghost nodes from the tets
                 # c_cell.T =
 
-    def divide_cell(self, cell_id, num_pieces=2, axis=None):
+    def divide_cell(self, cell_id, c_set, num_pieces=2, axis=None):
         """
         Divide a cell into a given number of pieces
         :param num_pieces:
@@ -1635,14 +1643,26 @@ class Geo:
         :param cell_id:
         :return:
         """
+        if num_pieces > 3:
+            raise ValueError('Number of pieces must be less than or equal to 3')
+
+        if num_pieces < 2:
+            raise ValueError('A cell is not divided into less than 2 pieces')
+
         # Get the cell to split
         if axis is None:
             axis = [0, 0, 1] # Z axis
 
         # Get the cell to split
-        cell = self.Cells[cell_id]
+        cell_ = self.Cells[cell_id]
+        cell = cell_.copy()
+        original_Y = cell.Y
         original_X = cell.X
         original_T = cell.T
+        old_geo = self.copy()
+
+        # Remove the tets
+        self.remove_tetrahedra(original_T)
 
         # Get the vertices of the cell
         vertices = cell.Y
@@ -1669,12 +1689,17 @@ class Geo:
             new_X = np.mean(cell.Y[split_vertices[0]], axis=0) + (i * director_vector / num_pieces)
             new_X = np.mean([new_X, original_X], axis=0)
             if i == round((num_pieces-1)/2):
-                cell.X = new_X
-                id_cell = cell.ID
+                self.Cells[cell_id].X = new_X
+                self.Cells[cell_id].substrate_cell_bottom = new_cell_ids_ordered[0]
+                self.Cells[cell_id].substrate_cell_top = new_cell_ids_ordered[0] + 1
+                id_cell = cell_id
             else:
                 id_cell = self.add_new_cell(new_X, alive_status=1)
 
-            self.Cells[id_cell].T = np.where(np.isin(original_T[split_vertices[i]], cell.ID), id_cell, original_T[split_vertices[i]])
+            new_tetrahedra = np.where(np.isin(original_T[split_vertices[i]], cell.ID), id_cell, original_T[split_vertices[i]])
+            ##TODO: BUGFIX
+            self.Cells[id_cell].T = new_tetrahedra
+            #self.add_tetrahedra(self, new_tetrahedra, y_new=original_Y[split_vertices[i]], c_set=c_set)
             new_cell_ids_ordered.append(id_cell)
 
         #TODO: WE HAVE TO DO SOMETHING WITH SCUTOID VERTICES (4 CELLS CONNECTED) I THINK THERE ARE TWO SCENARIOS HERE:
@@ -1682,15 +1707,33 @@ class Geo:
         # 2) EVEN NUMBER OF PIECES AND AXIS XY: SCUTOID CONNECTIONS SHOULD BE DIVIDED BASED ON DISTANCE. BOTH ARE SCUTOIDS
 
         # Connect cells between each other
-        for id, new_cell_id in enumerate(new_cell_ids_ordered):
-            new_cell = self.Cells[new_cell_id]
-            if i == round((id - 1) / 2):
-                # This is the middle cell that should get all connections from top and bottom
-                neighbours = np.unique(original_T)
-                cell_neighbours = [neighbour for neighbour in neighbours if self.Cells[neighbour].AliveStatus is not None]
-            else:
-                neighbours = np.unique(self.Cells[new_cell_id].T)
+        if num_pieces == 2:
+            #TODO: Some of the vertices should be in the intersection of both cells
+            raise NotImplementedError('Not implemented division yet')
+        elif num_pieces == 3:
+            for i in range(num_pieces):
+                if i == round((num_pieces-1)/2):
+                    continue
+                # Get the cell
+                c_cell = self.Cells[new_cell_ids_ordered[i]]
 
+                # Get the neighbours of the cell
+                neighbours = np.unique(c_cell.T)
+                cell_neighbours = [neighbour for neighbour in neighbours if self.Cells[neighbour].AliveStatus is not None and neighbour != c_cell.ID]
+
+                # Create a triangulation mesh based on neighbours
+                new_tets = []
+                for neighbour in cell_neighbours:
+                    list_of_neighbours = get_node_neighbours(old_geo, neighbour, [cell_id])
+                    list_of_neighbours_cell = [n_cell for n_cell in list_of_neighbours if n_cell != cell_id and self.Cells[n_cell].AliveStatus is not None]
+
+                    # Make pairs of list of neighbours
+                    if len(list_of_neighbours_cell) > 0:
+                        for neighbour_of_neighbour in list_of_neighbours_cell:
+                            new_tets.append(np.sort([neighbour_of_neighbour, cell_id, c_cell.ID, neighbour]))
+
+                self.add_tetrahedra(self, unique_rows(np.array(new_tets)), y_new=[], c_set=c_set)
+                pass
 
 
     def add_new_cell(self, xs, alive_status=1):
@@ -1702,6 +1745,8 @@ class Geo:
         """
         new_cell = Cell()
         new_cell.X = xs
+        new_cell.Y = np.array([])
+        new_cell.T = np.array([])
         new_cell.ID = len(self.Cells)
         new_cell.AliveStatus = alive_status
         self.Cells.append(new_cell)
