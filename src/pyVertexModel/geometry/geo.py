@@ -4,12 +4,13 @@ from itertools import combinations
 
 import numpy as np
 import vtk
-from scipy.spatial import ConvexHull
+from scipy.spatial import ConvexHull, Delaunay
 from skimage.util import unique_rows
 
 from src.pyVertexModel.Kg.kg import add_noise_to_parameter
 from src.pyVertexModel.geometry import face, cell
 from src.pyVertexModel.geometry.cell import Cell
+from src.pyVertexModel.geometry.face import build_edge_based_on_tetrahedra
 from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes, calculate_polygon_area, \
     get_interface
 
@@ -636,7 +637,7 @@ class Geo:
                 ij = [ci, cj]
                 CellJ = self.Cells[cj]
 
-                if CellJ.AliveStatus is None:
+                if CellJ.AliveStatus is None or CellJ.T is None:
                     continue
 
                 face_ids_i = np.sum(np.isin(Cell.T, ij), axis=1) == 2
@@ -692,49 +693,55 @@ class Geo:
         """
         alive_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1]
         debris_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
+        substrate_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 2]
         if cells_to_rebuild is None:
-            cells_to_rebuild = alive_cells + debris_cells
+            cells_to_rebuild = alive_cells + debris_cells + substrate_cells
         else:
-            cells_to_rebuild = [c for c in cells_to_rebuild if c in alive_cells or c in debris_cells]
+            cells_to_rebuild = [c for c in cells_to_rebuild if c in alive_cells or c in debris_cells or c in substrate_cells]
 
         # Rebuild the cells
         for cc in cells_to_rebuild:
-            c_cell = self.Cells[cc]
-            neigh_nodes = np.unique(c_cell.T)
-            neigh_nodes = neigh_nodes[neigh_nodes != cc]
+            self.rebuild_cell(self.Cells[cc], Set, cc, old_geo)
 
-            for j in range(len(neigh_nodes)):
-                cj = neigh_nodes[j]
-                ij = [cc, cj]
-                face_ids = np.sum(np.isin(c_cell.T, ij), axis=1) == 2
+    def rebuild_cell(self, c_cell, Set, cc, old_geo):
+        """
+        Rebuild the cell
+        :param c_cell:
+        :param Set:
+        :param cc:
+        :param old_geo:
+        :return:
+        """
+        neigh_nodes = np.unique(c_cell.T)
+        neigh_nodes = neigh_nodes[neigh_nodes != cc]
+        for j in range(len(neigh_nodes)):
+            cj = neigh_nodes[j]
+            ij = [cc, cj]
+            face_ids = np.sum(np.isin(c_cell.T, ij), axis=1) == 2
 
-                if old_geo is not None:
-                    old_face_exists = any([np.all(c_face.ij == ij) for c_face in old_geo.Cells[cc].Faces])
-                else:
-                    old_face_exists = False
+            if old_geo is not None:
+                old_face_exists = any([np.all(c_face.ij == ij) for c_face in old_geo.Cells[cc].Faces])
+            else:
+                old_face_exists = False
 
-                if old_face_exists:
-                    old_face = [c_face for c_face in old_geo.Cells[cc].Faces if np.all(c_face.ij == ij)][0]
+            if old_face_exists:
+                old_face = [c_face for c_face in old_geo.Cells[cc].Faces if np.all(c_face.ij == ij)][0]
 
-                    # Check if the last of the old faces Tris' edge goes beyond the number of Ys
-                    all_tris = [max(tri.Edge) for tri in old_face.Tris]
-                    if max(all_tris) >= c_cell.Y.shape[0]:
-                        old_face = None
-                else:
+                # Check if the last of the old faces Tris' edge goes beyond the number of Ys
+                all_tris = [max(tri.Edge) for tri in old_face.Tris]
+                if max(all_tris) >= c_cell.Y.shape[0]:
                     old_face = None
+            else:
+                old_face = None
 
-                if j >= len(c_cell.Faces):
-                    self.Cells[cc].Faces.append(face.Face())
-                else:
-                    self.Cells[cc].Faces[j] = face.Face()
-                self.Cells[cc].Faces[j].build_face(cc, cj, face_ids, self.nCells, self.Cells[cc], self.XgID, Set,
-                                                   self.XgTop, self.XgBottom, old_face)
-
-            self.Cells[cc].Faces = self.Cells[cc].Faces[:len(neigh_nodes)]
-
-            if c_cell.AliveStatus is None:
-                continue
-
+            if j >= len(c_cell.Faces):
+                c_cell.Faces.append(face.Face())
+            else:
+                c_cell.Faces[j] = face.Face()
+            c_cell.Faces[j].build_face(cc, cj, face_ids, self.nCells, c_cell, self.XgID, Set,
+                                       self.XgTop, self.XgBottom, old_face)
+        c_cell.Faces = c_cell.Faces[:len(neigh_nodes)]
+        if c_cell.AliveStatus is not None:
             # Update the area0 of all the faces
             # num_faces_bottom, num_faces_lateral, num_faces_top = self.get_num_faces(cc)
             # old_faces_bottom, old_faces_lateral, old_faces_top = old_geo.get_num_faces(cc)
@@ -744,14 +751,14 @@ class Geo:
             # old_area0_lateral = np.mean([c_face.Area0 for c_face in old_geo.Cells[cc].Faces if get_interface(c_face.InterfaceType) == get_interface('CellCell')])
 
             # Iterate over all faces in the current cell
-            for f in range(len(self.Cells[cc].Faces)):
-                # if get_interface(self.Cells[cc].Faces[f].InterfaceType) == get_interface('Top'):
-                #     self.Cells[cc].Faces[f].Area0 = old_area0_top * old_faces_top / num_faces_top
-                # elif get_interface(self.Cells[cc].Faces[f].InterfaceType) == get_interface('Bottom'):
-                #     self.Cells[cc].Faces[f].Area0 = old_area0_bottom * old_faces_bottom / num_faces_bottom
+            for f in range(len(c_cell.Faces)):
+                # if get_interface(c_cell.Faces[f].InterfaceType) == get_interface('Top'):
+                #     c_cell.Faces[f].Area0 = old_area0_top * old_faces_top / num_faces_top
+                # elif get_interface(c_cell.Faces[f].InterfaceType) == get_interface('Bottom'):
+                #     c_cell.Faces[f].Area0 = old_area0_bottom * old_faces_bottom / num_faces_bottom
                 # else:
-                #     self.Cells[cc].Faces[f].Area0 = old_area0_lateral * old_faces_lateral / num_faces_lateral
-                self.Cells[cc].Faces[f].Area0 = self.Cells[cc].Faces[f].Area * Set.ref_A0
+                #     c_cell.Faces[f].Area0 = old_area0_lateral * old_faces_lateral / num_faces_lateral
+                c_cell.Faces[f].Area0 = c_cell.Faces[f].Area * Set.ref_A0
 
     def get_num_faces(self, num_cell):
         """
@@ -875,9 +882,13 @@ class Geo:
                     else:
                         if len(self.Cells[num_node].T) == 0 or not np.any(
                                 np.isin(self.Cells[num_node].T, new_tet).all(axis=1)):
-                            self.Cells[num_node].T = np.append(self.Cells[num_node].T, [new_tet], axis=0)
+                            if len(self.Cells[num_node].T) == 0:
+                                self.Cells[num_node].T = np.array([new_tet])
+                            else:
+                                self.Cells[num_node].T = np.append(self.Cells[num_node].T, [new_tet], axis=0)
+
                             if self.Cells[num_node].AliveStatus is not None and c_set is not None:
-                                if y_new:
+                                if len(y_new) > 0:
                                     # Find indices where all elements in new_tets match newTet
                                     matching_indices = np.where(np.all(np.isin(new_tets, new_tet), axis=1))[0]
 
@@ -888,9 +899,12 @@ class Geo:
                                         first_matching_index = matching_indices[0]
                                         selected_y_new = y_new[first_matching_index]
                                         # Now you can use selected_y_new as needed
-                                        self.Cells[num_node].Y = np.append(self.Cells[num_node].Y,
-                                                                          selected_y_new.reshape(1, -1),
-                                                                          axis=0)
+                                        if len(self.Cells[num_node].Y) == 0:
+                                            self.Cells[num_node].Y = np.array([selected_y_new])
+                                        else:
+                                            self.Cells[num_node].Y = np.append(self.Cells[num_node].Y,
+                                                                              selected_y_new.reshape(1, -1),
+                                                                              axis=0)
                                 else:
                                     self.Cells[num_node].Y = np.append(self.Cells[num_node].Y,
                                                                       old_geo.recalculate_ys_from_previous(
@@ -1697,9 +1711,7 @@ class Geo:
                 id_cell = self.add_new_cell(new_X, alive_status=1)
 
             new_tetrahedra = np.where(np.isin(original_T[split_vertices[i]], cell.ID), id_cell, original_T[split_vertices[i]])
-            ##TODO: BUGFIX
-            self.Cells[id_cell].T = new_tetrahedra
-            #self.add_tetrahedra(self, new_tetrahedra, y_new=original_Y[split_vertices[i]], c_set=c_set)
+            self.add_tetrahedra(self, new_tetrahedra, y_new=original_Y[split_vertices[i]], c_set=c_set)
             new_cell_ids_ordered.append(id_cell)
 
         #TODO: WE HAVE TO DO SOMETHING WITH SCUTOID VERTICES (4 CELLS CONNECTED) I THINK THERE ARE TWO SCENARIOS HERE:
@@ -1712,28 +1724,46 @@ class Geo:
             raise NotImplementedError('Not implemented division yet')
         elif num_pieces == 3:
             for i in range(num_pieces):
-                if i == round((num_pieces-1)/2):
-                    continue
+
                 # Get the cell
                 c_cell = self.Cells[new_cell_ids_ordered[i]]
 
                 # Get the neighbours of the cell
                 neighbours = np.unique(c_cell.T)
-                cell_neighbours = [neighbour for neighbour in neighbours if self.Cells[neighbour].AliveStatus is not None and neighbour != c_cell.ID]
+                neighbours_xg = neighbours[np.isin(neighbours, self.XgID)]
+                cell_neighbours = [neighbour for neighbour in neighbours if
+                                   self.Cells[neighbour].AliveStatus is not None and neighbour != c_cell.ID]
 
-                # Create a triangulation mesh based on neighbours
-                new_tets = []
-                for neighbour in cell_neighbours:
-                    list_of_neighbours = get_node_neighbours(old_geo, neighbour, [cell_id])
-                    list_of_neighbours_cell = [n_cell for n_cell in list_of_neighbours if n_cell != cell_id and self.Cells[n_cell].AliveStatus is not None]
+                if i == round((num_pieces-1)/2):
+                    # cell_neighbours.extend(new_cell_ids_ordered)
+                    # delaunay = Delaunay(
+                    #     np.array([cell.X for cell in self.Cells if cell.ID in cell_neighbours]))
+                    #
+                    # cell_neighbours = np.unique(cell_neighbours)
+                    # new_tets = cell_neighbours[delaunay.simplices]
+                    continue
+                else:
+                    # Create a triangulation mesh based on neighbours
+                    new_tets = []
+                    for neighbour in cell_neighbours:
+                        list_of_neighbours = get_node_neighbours_per_domain(old_geo, neighbour, neighbours_xg, [cell_id])
+                        list_of_neighbours_cell = [n_cell for n_cell in list_of_neighbours if n_cell != cell_id and self.Cells[n_cell].AliveStatus is not None]
 
-                    # Make pairs of list of neighbours
-                    if len(list_of_neighbours_cell) > 0:
-                        for neighbour_of_neighbour in list_of_neighbours_cell:
-                            new_tets.append(np.sort([neighbour_of_neighbour, cell_id, c_cell.ID, neighbour]))
+                        # Make pairs of list of neighbours
+                        if len(list_of_neighbours_cell) > 0:
+                            for neighbour_of_neighbour in list_of_neighbours_cell:
+                                new_tets.append(np.sort([neighbour_of_neighbour, cell_id, c_cell.ID, neighbour]))
 
                 self.add_tetrahedra(self, unique_rows(np.array(new_tets)), y_new=[], c_set=c_set)
-                pass
+
+            # Check tetrahedra validity at the end otherwise there will be missing tetrahedra
+            if not self.check_tetrahedra_validity(fix_it=True):
+                raise ValueError('Tetrahedra are not valid')
+
+            # Rebuild the geometry of the cells
+            self.rebuild(self, c_set)
+            self.build_global_ids()
+            pass
 
 
     def add_new_cell(self, xs, alive_status=1):
@@ -1752,3 +1782,29 @@ class Geo:
         self.Cells.append(new_cell)
 
         return new_cell.ID
+
+    def check_tetrahedra_validity(self, fix_it=False):
+        """
+        Check the validity of the tetrahedra
+        :return:
+        """
+        for c_cell in self.Cells:
+            if c_cell.AliveStatus is not None:
+
+                neigh_nodes = np.unique(c_cell.T)
+                neigh_nodes = neigh_nodes[neigh_nodes != c_cell.ID]
+
+                for j in range(len(neigh_nodes)):
+                    cj = neigh_nodes[j]
+                    ij = [c_cell.ID, cj]
+                    face_tets = c_cell.T[np.sum(np.isin(c_cell.T, ij), axis=1) == 2, :]
+                    try:
+                        build_edge_based_on_tetrahedra(face_tets)
+                    except Exception as e:
+                        if fix_it:
+                            # Add missing tetrahedra
+                            pass
+                        else:
+                            return False
+
+        return True
