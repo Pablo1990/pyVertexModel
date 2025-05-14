@@ -11,6 +11,33 @@ def get_key(dictionary, target_value):
     return None
 
 
+def build_edge_based_on_tetrahedra(face_tets):
+    """
+    Build the edges of the face based on the tetrahedra.
+    :param face_tets:
+    :return:
+    """
+    tet_order = np.zeros(len(face_tets), dtype=int) - 1
+    tet_order[0] = 0
+    prev_tet = face_tets[0, :]
+    if len(face_tets) > 3:
+        for yi in range(1, len(face_tets)):
+            i = np.sum(np.isin(face_tets, prev_tet), axis=1) == 3
+            i = i & ~np.isin(np.arange(len(face_tets)), tet_order)
+            i = np.where(i)[0]
+            if len(i) == 0:
+                raise Exception('BuildEdges:TetrahedraOrdering', 'Cannot create a face with these tetrahedra')
+            tet_order[yi] = i[0]
+            prev_tet = face_tets[i[0], :]
+
+        if np.sum(np.isin(face_tets[0, :], prev_tet)) != 3:
+            raise Exception('BuildEdges:TetrahedraOrdering', 'Cannot create a face with these tetrahedra')
+    else:
+        tet_order = np.array([0, 1, 2])
+    tet_order = np.array(tet_order, dtype=int)
+    return tet_order
+
+
 class Face:
     """
     Class that contains the information of a face.
@@ -122,27 +149,7 @@ class Face:
         :return:
         """
         FaceTets = T[face_ids,]
-
-        tet_order = np.zeros(len(FaceTets), dtype=int) - 1
-        tet_order[0] = 0
-        prev_tet = FaceTets[0, :]
-
-        if len(FaceTets) > 3:
-            for yi in range(1, len(FaceTets)):
-                i = np.sum(np.isin(FaceTets, prev_tet), axis=1) == 3
-                i = i & ~np.isin(np.arange(len(FaceTets)), tet_order)
-                i = np.where(i)[0]
-                if len(i) == 0:
-                    raise Exception('BuildEdges:TetrahedraOrdering', 'Cannot create a face with these tetrahedra')
-                tet_order[yi] = i[0]
-                prev_tet = FaceTets[i[0], :]
-
-            if np.sum(np.isin(FaceTets[0, :], prev_tet)) != 3:
-                raise Exception('BuildEdges:TetrahedraOrdering', 'Cannot create a face with these tetrahedra')
-        else:
-            tet_order = np.array([0, 1, 2])
-
-        tet_order = np.array(tet_order, dtype=int)
+        tet_order = build_edge_based_on_tetrahedra(FaceTets)
 
         surf_ids = np.arange(len(T))
         surf_ids = surf_ids[face_ids]
