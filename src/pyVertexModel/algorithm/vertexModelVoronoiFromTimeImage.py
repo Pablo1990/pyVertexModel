@@ -326,7 +326,6 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         if self.set.Substrate == 3:
            # Create a substrate cell for each cell
            self.geo.create_substrate_cells(self.set, domain='Top')
-           self.geo.create_substrate_cells(self.set, domain='Bottom')
 
         # Add border cells to the shared cells
         for cell in self.geo.Cells:

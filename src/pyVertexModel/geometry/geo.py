@@ -9,10 +9,10 @@ from skimage.util import unique_rows
 
 from src.pyVertexModel.Kg.kg import add_noise_to_parameter
 from src.pyVertexModel.geometry import face, cell
-from src.pyVertexModel.geometry.cell import Cell
+from src.pyVertexModel.geometry.cell import Cell, compute_y
 from src.pyVertexModel.geometry.face import build_edge_based_on_tetrahedra
 from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes, calculate_polygon_area, \
-    get_interface
+    get_interface, screenshot
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -633,11 +633,14 @@ class Geo:
             g_ids = np.zeros(len(Cell.Y), dtype=int) - 1
             g_ids_f = np.zeros(len(Cell.Faces), dtype=int) - 1
 
+            if len(Cell.T) < 1:
+                continue
+
             for cj in range(ci):
                 ij = [ci, cj]
                 CellJ = self.Cells[cj]
 
-                if CellJ.AliveStatus is None or CellJ.T is None:
+                if CellJ.AliveStatus is None:
                     continue
 
                 face_ids_i = np.sum(np.isin(Cell.T, ij), axis=1) == 2
@@ -873,45 +876,53 @@ class Geo:
         for new_tet in new_tets:
             if np.any(~np.isin(new_tet, self.XgID)):
                 for num_node in new_tet:
-                    if (not np.any(np.isin(new_tet, self.XgID)) and
-                            np.any(ismember_rows(self.Cells[num_node].T, new_tet)[0])):
-                        self.Cells[num_node].Y = self.Cells[num_node].Y[
-                            ~ismember_rows(self.Cells[num_node].T, new_tet)[0]]
-                        self.Cells[num_node].T = self.Cells[num_node].T[
-                            ~ismember_rows(self.Cells[num_node].T, new_tet)[0]]
+                    if len(self.Cells[num_node].T) == 0:
+                        self.Cells[num_node].T = np.array([new_tet])
+                        # Compute Y
+                        if len(y_new) == 1:
+                            self.Cells[num_node].Y = np.array(y_new)
+                        else:
+                            # Compute Y
+                            self.Cells[num_node].Y = np.array([compute_y(self, new_tet, self.Cells[num_node].X, c_set)])
+                        self.numY += 1
                     else:
-                        if len(self.Cells[num_node].T) == 0 or not np.any(
-                                np.isin(self.Cells[num_node].T, new_tet).all(axis=1)):
-                            if len(self.Cells[num_node].T) == 0:
-                                self.Cells[num_node].T = np.array([new_tet])
-                            else:
+                        if (not np.any(np.isin(new_tet, self.XgID)) and
+                                np.any(ismember_rows(self.Cells[num_node].T, new_tet)[0])):
+                            self.Cells[num_node].Y = self.Cells[num_node].Y[
+                                ~ismember_rows(self.Cells[num_node].T, new_tet)[0]]
+                            self.Cells[num_node].T = self.Cells[num_node].T[
+                                ~ismember_rows(self.Cells[num_node].T, new_tet)[0]]
+                        else:
+                            if len(self.Cells[num_node].T) == 0 or not np.any(
+                                    np.isin(self.Cells[num_node].T, new_tet).all(axis=1)):
+
                                 self.Cells[num_node].T = np.append(self.Cells[num_node].T, [new_tet], axis=0)
 
-                            if self.Cells[num_node].AliveStatus is not None and c_set is not None:
-                                if len(y_new) > 0:
-                                    # Find indices where all elements in new_tets match newTet
-                                    matching_indices = np.where(np.all(np.isin(new_tets, new_tet), axis=1))[0]
+                                if self.Cells[num_node].AliveStatus is not None and c_set is not None:
+                                    if len(y_new) > 0:
+                                        # Find indices where all elements in new_tets match newTet
+                                        matching_indices = np.where(np.all(np.isin(new_tets, new_tet), axis=1))[0]
 
-                                    # Check if there are any matching indices
-                                    if len(matching_indices) > 0:
-                                        # Assuming y_new is structured with rows corresponding to tetrahedra in new_tets
-                                        # Use the first matching index as an example
-                                        first_matching_index = matching_indices[0]
-                                        selected_y_new = y_new[first_matching_index]
-                                        # Now you can use selected_y_new as needed
-                                        if len(self.Cells[num_node].Y) == 0:
-                                            self.Cells[num_node].Y = np.array([selected_y_new])
-                                        else:
-                                            self.Cells[num_node].Y = np.append(self.Cells[num_node].Y,
-                                                                              selected_y_new.reshape(1, -1),
-                                                                              axis=0)
-                                else:
-                                    self.Cells[num_node].Y = np.append(self.Cells[num_node].Y,
-                                                                      old_geo.recalculate_ys_from_previous(
-                                                                          np.array([new_tet]),
-                                                                          num_node,
-                                                                          c_set), axis=0)
-                                self.numY += 1
+                                        # Check if there are any matching indices
+                                        if len(matching_indices) > 0:
+                                            # Assuming y_new is structured with rows corresponding to tetrahedra in new_tets
+                                            # Use the first matching index as an example
+                                            first_matching_index = matching_indices[0]
+                                            selected_y_new = y_new[first_matching_index]
+                                            # Now you can use selected_y_new as needed
+                                            if len(self.Cells[num_node].Y) == 0:
+                                                self.Cells[num_node].Y = np.array([selected_y_new])
+                                            else:
+                                                self.Cells[num_node].Y = np.append(self.Cells[num_node].Y,
+                                                                                  selected_y_new.reshape(1, -1),
+                                                                                  axis=0)
+                                    else:
+                                        self.Cells[num_node].Y = np.append(self.Cells[num_node].Y,
+                                                                          old_geo.recalculate_ys_from_previous(
+                                                                              np.array([new_tet]),
+                                                                              num_node,
+                                                                              c_set), axis=0)
+                                    self.numY += 1
 
     def recalculate_ys_from_previous(self, Tnew, mainNodesToConnect, Set):
         """
@@ -1617,37 +1628,17 @@ class Geo:
         :param domain:
         :return:
         """
-        ghost_nodes_domain = self.XgBottom if domain == 'Bottom' else self.XgTop
-
         # Create the new substrate cells
         for c, c_cell in enumerate(self.Cells):
             if c_cell.AliveStatus is not None:
                 if c_cell.AliveStatus == 2:
                     continue
-                new_xs = np.mean(c_cell.Y[np.any(np.isin(c_cell.T, ghost_nodes_domain), axis=1)], axis=0)
-                substrate_cell_id = self.add_new_cell(new_xs, alive_status=2)
-                c_cell.substrate_cell_id = substrate_cell_id
-
-        # Populate the tets of the new substrate cells
-        for c, c_cell in enumerate(self.Cells):
-            if c_cell.AliveStatus is not None:
-                if c_cell.AliveStatus == 2:
-                    continue
-
+                new_xs = np.mean(c_cell.Y[np.any(np.isin(c_cell.T, self.XgBottom), axis=1)], axis=0)
+                self.add_new_cell(new_xs, alive_status=2)
+                new_xs = np.mean(c_cell.Y[np.any(np.isin(c_cell.T, self.XgTop), axis=1)], axis=0)
+                self.add_new_cell(new_xs, alive_status=2)
                 self.divide_cell(c_cell.ID, c_set, num_pieces=3, axis=[0, 0, 1])
-
-                # # Obtain ghost nodes of this cell
-                # ghost_nodes = np.unique(c_cell.T[np.isin(c_cell.T, ghost_nodes_domain)])
-                # domain_tets = np.any(np.isin(c_cell.T, ghost_nodes), axis=1)
-                #
-                # new_cell = self.Cells[c_cell.substrate_cell_id]
-                #
-                # # Get the tets from the real cell
-                # new_cell.T = c_cell.T[domain_tets]
-                # # Substitute the id of the old cell with the new ID
-                # new_cell.T = np.where(np.isin(new_cell.T, c_cell.ID), new_cell.ID, new_cell.T)
-                # # Remove the ghost nodes from the tets
-                # c_cell.T =
+                break
 
     def divide_cell(self, cell_id, c_set, num_pieces=2, axis=None):
         """
@@ -1723,8 +1714,10 @@ class Geo:
             #TODO: Some of the vertices should be in the intersection of both cells
             raise NotImplementedError('Not implemented division yet')
         elif num_pieces == 3:
-            for i in range(num_pieces):
 
+            all_new_tets = []
+
+            for i in range(num_pieces):
                 # Get the cell
                 c_cell = self.Cells[new_cell_ids_ordered[i]]
 
@@ -1735,12 +1728,6 @@ class Geo:
                                    self.Cells[neighbour].AliveStatus is not None and neighbour != c_cell.ID]
 
                 if i == round((num_pieces-1)/2):
-                    # cell_neighbours.extend(new_cell_ids_ordered)
-                    # delaunay = Delaunay(
-                    #     np.array([cell.X for cell in self.Cells if cell.ID in cell_neighbours]))
-                    #
-                    # cell_neighbours = np.unique(cell_neighbours)
-                    # new_tets = cell_neighbours[delaunay.simplices]
                     continue
                 else:
                     # Create a triangulation mesh based on neighbours
@@ -1755,15 +1742,15 @@ class Geo:
                                 new_tets.append(np.sort([neighbour_of_neighbour, cell_id, c_cell.ID, neighbour]))
 
                 self.add_tetrahedra(self, unique_rows(np.array(new_tets)), y_new=[], c_set=c_set)
+                all_new_tets.extend(new_tets)
 
             # Check tetrahedra validity at the end otherwise there will be missing tetrahedra
             if not self.check_tetrahedra_validity(fix_it=True):
                 raise ValueError('Tetrahedra are not valid')
 
             # Rebuild the geometry of the cells
-            self.rebuild(self, c_set)
+            self.rebuild(self, c_set, cells_to_rebuild=np.unique(all_new_tets))
             self.build_global_ids()
-            pass
 
 
     def add_new_cell(self, xs, alive_status=1):
