@@ -1700,10 +1700,6 @@ class Geo:
             self.add_tetrahedra(self, new_tetrahedra, y_new=original_Y[split_vertices[i]], c_set=c_set)
             new_cell_ids_ordered.append(id_cell)
 
-        #TODO: WE HAVE TO DO SOMETHING WITH SCUTOID VERTICES (4 CELLS CONNECTED) I THINK THERE ARE TWO SCENARIOS HERE:
-        # 1) ODD NUMBER OF PIECES AND AXIS Z: THE MIDDLE ONE WILL GET ALL 4 CELLS CONNECTED WHICH SHOULD HAPPEN AUTOMATICALLY. TOP AND BOTTOM SHOULD NOT BE SCUTOIDS
-        # 2) EVEN NUMBER OF PIECES AND AXIS XY: SCUTOID CONNECTIONS SHOULD BE DIVIDED BASED ON DISTANCE. BOTH ARE SCUTOIDS
-
         # Connect cells between each other
         if num_pieces == 2:
             #TODO: Some of the vertices should be in the intersection of both cells
@@ -1742,6 +1738,29 @@ class Geo:
             # Check tetrahedra validity at the end otherwise there will be missing tetrahedra
             if not self.check_tetrahedra_validity(fix_it=True):
                 raise ValueError('Tetrahedra are not valid')
+
+            # Set a given Z for each substrate cell
+            for c_cell in new_cell_ids_ordered:
+                if c_cell == cell_id:
+                    tets_substrate = np.where(np.isin(self.Cells[c_cell].T, self.Cells[c_cell].substrate_cell_top))[0]
+                    self.Cells[c_cell].Y[tets_substrate, 2] = self.SubstrateZ
+                    tets_substrate = np.where(np.isin(self.Cells[c_cell].T, self.Cells[c_cell].substrate_cell_bottom))[0]
+                    self.Cells[c_cell].Y[tets_substrate, 2] = -self.SubstrateZ
+                else:
+                    tets_cell = np.where(np.isin(self.Cells[c_cell].T, cell_id))[0]
+                    if c_cell == self.Cells[cell_id].substrate_cell_top:
+                        self.Cells[c_cell].Y[tets_cell, 2] = self.SubstrateZ
+                    else:
+                        self.Cells[c_cell].Y[tets_cell, 2] = -self.SubstrateZ
+
+                    # Get ghost cells
+                    ghost_cells = np.where(np.isin(self.Cells[c_cell].T, self.XgTop))[0]
+                    if len(ghost_cells) > 0:
+                        self.Cells[c_cell].Y[ghost_cells, 2] = (self.SubstrateZ + (self.SubstrateZ * 0.1))
+
+                    ghost_cells = np.where(np.isin(self.Cells[c_cell].T, self.XgBottom))[0]
+                    if len(ghost_cells) > 0:
+                        self.Cells[c_cell].Y[ghost_cells, 2] = -(self.SubstrateZ + (self.SubstrateZ * 0.1))
 
             # Rebuild the geometry of the cells
             self.rebuild(self, c_set, cells_to_rebuild=np.unique(all_new_tets))
