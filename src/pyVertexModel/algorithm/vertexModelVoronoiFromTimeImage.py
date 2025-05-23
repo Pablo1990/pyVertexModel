@@ -346,7 +346,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         if self.set.ablation:
             self.geo.cellsToAblate = self.set.cellsToAblate
 
-            self.geo.init_reference_cell_values(self.set)
+        self.geo.init_reference_cell_values(self.set)
 
         if self.set.Substrate == 1:
             self.Dofs.GetDOFsSubstrate(self.geo, self.set)

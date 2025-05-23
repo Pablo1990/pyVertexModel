@@ -1633,12 +1633,7 @@ class Geo:
             if c_cell.AliveStatus is not None:
                 if c_cell.AliveStatus == 2:
                     continue
-                new_xs = np.mean(c_cell.Y[np.any(np.isin(c_cell.T, self.XgBottom), axis=1)], axis=0)
-                self.add_new_cell(new_xs, alive_status=2)
-                new_xs = np.mean(c_cell.Y[np.any(np.isin(c_cell.T, self.XgTop), axis=1)], axis=0)
-                self.add_new_cell(new_xs, alive_status=2)
                 self.divide_cell(c_cell.ID, c_set, num_pieces=3, axis=[0, 0, 1])
-                break
 
     def divide_cell(self, cell_id, c_set, num_pieces=2, axis=None):
         """
@@ -1699,7 +1694,7 @@ class Geo:
                 self.Cells[cell_id].substrate_cell_top = new_cell_ids_ordered[0] + 1
                 id_cell = cell_id
             else:
-                id_cell = self.add_new_cell(new_X, alive_status=1)
+                id_cell = self.add_new_cell(new_X, alive_status=2)
 
             new_tetrahedra = np.where(np.isin(original_T[split_vertices[i]], cell.ID), id_cell, original_T[split_vertices[i]])
             self.add_tetrahedra(self, new_tetrahedra, y_new=original_Y[split_vertices[i]], c_set=c_set)
@@ -1751,6 +1746,7 @@ class Geo:
             # Rebuild the geometry of the cells
             self.rebuild(self, c_set, cells_to_rebuild=np.unique(all_new_tets))
             self.build_global_ids()
+            self.update_measures()
 
 
     def add_new_cell(self, xs, alive_status=1):
@@ -1766,6 +1762,7 @@ class Geo:
         new_cell.T = np.array([])
         new_cell.ID = len(self.Cells)
         new_cell.AliveStatus = alive_status
+        new_cell.Vol = 0
         self.Cells.append(new_cell)
 
         return new_cell.ID
