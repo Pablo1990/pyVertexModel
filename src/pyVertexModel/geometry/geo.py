@@ -1,14 +1,18 @@
 import logging
 import os
+from itertools import combinations
 
 import numpy as np
 import vtk
-from scipy.spatial import ConvexHull
+from scipy.spatial import ConvexHull, Delaunay
+from skimage.util import unique_rows
 
 from src.pyVertexModel.Kg.kg import add_noise_to_parameter
 from src.pyVertexModel.geometry import face, cell
-from src.pyVertexModel.geometry.face import get_interface
-from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes, calculate_polygon_area
+from src.pyVertexModel.geometry.cell import Cell, compute_y
+from src.pyVertexModel.geometry.face import build_edge_based_on_tetrahedra
+from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes, calculate_polygon_area, \
+    get_interface, screenshot
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -286,7 +290,7 @@ class Geo:
             XgSub = X.shape[0]  # THE SUBSTRATE NODE
             for c, c_cell in enumerate(self.Cells):
                 if c_cell.AliveStatus is not None:
-                    self.Cells[c].Y = self.build_y_substrate(self.Cells[c], self.Cells, self.XgID, c_set, XgSub)
+                    self.Cells[c].Y = self.build_y_substrate(self.Cells[c], c_set, XgSub)
 
         # Build regular cells
         for c, c_cell in enumerate(self.Cells):
@@ -342,7 +346,8 @@ class Geo:
         self.AssembleNodes = [i for i, cell in enumerate(self.Cells) if cell.AliveStatus is not None]
         # Initialize BarrierTri0 and lmin0 with the maximum possible float value
         self.BarrierTri0 = np.finfo(float).max
-        self.lmin0 = np.finfo(float).max
+        if self.lmin0 is None:
+            self.lmin0 = np.finfo(float).max
 
         ## Average values
         #avg_vol = np.mean([c_cell.Vol for c_cell in self.Cells if c_cell.AliveStatus is not None])
@@ -405,10 +410,12 @@ class Geo:
                         lmin_values.append(tri.EdgeLength)
 
         # Update lmin0 with the minimum value in lmin_values
-        self.lmin0 = min(lmin_values)
+        if self.lmin0 is None:
+            self.lmin0 = min(lmin_values)
+            self.lmin0 = self.lmin0 * 10
+
         # Update BarrierTri0 and lmin0 based on their initial values
         self.BarrierTri0 = self.BarrierTri0 / 10
-        self.lmin0 = self.lmin0 * 10
 
         # Edge lengths 0 as average of all cells by location (Top, bottom, or lateral)
         self.EdgeLengthAvg_0 = []
@@ -569,19 +576,17 @@ class Geo:
             self.Cells[c].X[0:2] = mean_ys[0:2]
 
 
-    def build_y_substrate(self, Cell, Cells, XgID, Set, XgSub):
+    def build_y_substrate(self, Cell, Set, XgSub):
         """
         Build the Y of the substrate
         :param Cell:
-        :param Cells:
-        :param XgID:
         :param Set:
         :param XgSub:
         :return:
         """
         Tets = Cell.T
         Y = Cell.Y
-        X = np.array([c_cell.X for c_cell in Cells])
+        X = np.array([c_cell.X for c_cell in self.Cells])
         nverts = len(Tets)
         for i in range(nverts):
             aux = [i in XgSub for i in Tets[i]]
@@ -610,7 +615,6 @@ class Geo:
                 elif len(XX) == 3:
                     Y[i] = 1 / 3 * np.sum(X[Tets[i], ~np.array(XgSub)], axis=0)
                     Y[i][2] = Set.SubstrateZ
-        return Y
 
     def build_global_ids(self):
         """
@@ -628,6 +632,9 @@ class Geo:
 
             g_ids = np.zeros(len(Cell.Y), dtype=int) - 1
             g_ids_f = np.zeros(len(Cell.Faces), dtype=int) - 1
+
+            if len(Cell.T) < 1:
+                continue
 
             for cj in range(ci):
                 ij = [ci, cj]
@@ -689,49 +696,55 @@ class Geo:
         """
         alive_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 1]
         debris_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
+        substrate_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 2]
         if cells_to_rebuild is None:
-            cells_to_rebuild = alive_cells + debris_cells
+            cells_to_rebuild = alive_cells + debris_cells + substrate_cells
         else:
-            cells_to_rebuild = [c for c in cells_to_rebuild if c in alive_cells or c in debris_cells]
+            cells_to_rebuild = [c for c in cells_to_rebuild if c in alive_cells or c in debris_cells or c in substrate_cells]
 
         # Rebuild the cells
         for cc in cells_to_rebuild:
-            c_cell = self.Cells[cc]
-            neigh_nodes = np.unique(c_cell.T)
-            neigh_nodes = neigh_nodes[neigh_nodes != cc]
+            self.rebuild_cell(self.Cells[cc], Set, cc, old_geo)
 
-            for j in range(len(neigh_nodes)):
-                cj = neigh_nodes[j]
-                ij = [cc, cj]
-                face_ids = np.sum(np.isin(c_cell.T, ij), axis=1) == 2
+    def rebuild_cell(self, c_cell, Set, cc, old_geo):
+        """
+        Rebuild the cell
+        :param c_cell:
+        :param Set:
+        :param cc:
+        :param old_geo:
+        :return:
+        """
+        neigh_nodes = np.unique(c_cell.T)
+        neigh_nodes = neigh_nodes[neigh_nodes != cc]
+        for j in range(len(neigh_nodes)):
+            cj = neigh_nodes[j]
+            ij = [cc, cj]
+            face_ids = np.sum(np.isin(c_cell.T, ij), axis=1) == 2
 
-                if old_geo is not None:
-                    old_face_exists = any([np.all(c_face.ij == ij) for c_face in old_geo.Cells[cc].Faces])
-                else:
-                    old_face_exists = False
+            if old_geo is not None:
+                old_face_exists = any([np.all(c_face.ij == ij) for c_face in old_geo.Cells[cc].Faces])
+            else:
+                old_face_exists = False
 
-                if old_face_exists:
-                    old_face = [c_face for c_face in old_geo.Cells[cc].Faces if np.all(c_face.ij == ij)][0]
+            if old_face_exists:
+                old_face = [c_face for c_face in old_geo.Cells[cc].Faces if np.all(c_face.ij == ij)][0]
 
-                    # Check if the last of the old faces Tris' edge goes beyond the number of Ys
-                    all_tris = [max(tri.Edge) for tri in old_face.Tris]
-                    if max(all_tris) >= c_cell.Y.shape[0]:
-                        old_face = None
-                else:
+                # Check if the last of the old faces Tris' edge goes beyond the number of Ys
+                all_tris = [max(tri.Edge) for tri in old_face.Tris]
+                if max(all_tris) >= c_cell.Y.shape[0]:
                     old_face = None
+            else:
+                old_face = None
 
-                if j >= len(c_cell.Faces):
-                    self.Cells[cc].Faces.append(face.Face())
-                else:
-                    self.Cells[cc].Faces[j] = face.Face()
-                self.Cells[cc].Faces[j].build_face(cc, cj, face_ids, self.nCells, self.Cells[cc], self.XgID, Set,
-                                                   self.XgTop, self.XgBottom, old_face)
-
-            self.Cells[cc].Faces = self.Cells[cc].Faces[:len(neigh_nodes)]
-
-            if c_cell.AliveStatus is None:
-                continue
-
+            if j >= len(c_cell.Faces):
+                c_cell.Faces.append(face.Face())
+            else:
+                c_cell.Faces[j] = face.Face()
+            c_cell.Faces[j].build_face(cc, cj, face_ids, self.nCells, c_cell, self.XgID, Set,
+                                       self.XgTop, self.XgBottom, old_face)
+        c_cell.Faces = c_cell.Faces[:len(neigh_nodes)]
+        if c_cell.AliveStatus is not None:
             # Update the area0 of all the faces
             # num_faces_bottom, num_faces_lateral, num_faces_top = self.get_num_faces(cc)
             # old_faces_bottom, old_faces_lateral, old_faces_top = old_geo.get_num_faces(cc)
@@ -741,14 +754,14 @@ class Geo:
             # old_area0_lateral = np.mean([c_face.Area0 for c_face in old_geo.Cells[cc].Faces if get_interface(c_face.InterfaceType) == get_interface('CellCell')])
 
             # Iterate over all faces in the current cell
-            for f in range(len(self.Cells[cc].Faces)):
-                # if get_interface(self.Cells[cc].Faces[f].InterfaceType) == get_interface('Top'):
-                #     self.Cells[cc].Faces[f].Area0 = old_area0_top * old_faces_top / num_faces_top
-                # elif get_interface(self.Cells[cc].Faces[f].InterfaceType) == get_interface('Bottom'):
-                #     self.Cells[cc].Faces[f].Area0 = old_area0_bottom * old_faces_bottom / num_faces_bottom
+            for f in range(len(c_cell.Faces)):
+                # if get_interface(c_cell.Faces[f].InterfaceType) == get_interface('Top'):
+                #     c_cell.Faces[f].Area0 = old_area0_top * old_faces_top / num_faces_top
+                # elif get_interface(c_cell.Faces[f].InterfaceType) == get_interface('Bottom'):
+                #     c_cell.Faces[f].Area0 = old_area0_bottom * old_faces_bottom / num_faces_bottom
                 # else:
-                #     self.Cells[cc].Faces[f].Area0 = old_area0_lateral * old_faces_lateral / num_faces_lateral
-                self.Cells[cc].Faces[f].Area0 = self.Cells[cc].Faces[f].Area * Set.ref_A0
+                #     c_cell.Faces[f].Area0 = old_area0_lateral * old_faces_lateral / num_faces_lateral
+                c_cell.Faces[f].Area0 = c_cell.Faces[f].Area * Set.ref_A0
 
     def get_num_faces(self, num_cell):
         """
@@ -863,38 +876,53 @@ class Geo:
         for new_tet in new_tets:
             if np.any(~np.isin(new_tet, self.XgID)):
                 for num_node in new_tet:
-                    if (not np.any(np.isin(new_tet, self.XgID)) and
-                            np.any(ismember_rows(self.Cells[num_node].T, new_tet)[0])):
-                        self.Cells[num_node].Y = self.Cells[num_node].Y[
-                            ~ismember_rows(self.Cells[num_node].T, new_tet)[0]]
-                        self.Cells[num_node].T = self.Cells[num_node].T[
-                            ~ismember_rows(self.Cells[num_node].T, new_tet)[0]]
+                    if len(self.Cells[num_node].T) == 0:
+                        self.Cells[num_node].T = np.array([new_tet])
+                        # Compute Y
+                        if len(y_new) == 1:
+                            self.Cells[num_node].Y = np.array(y_new)
+                        else:
+                            # Compute Y
+                            self.Cells[num_node].Y = np.array([compute_y(self, new_tet, self.Cells[num_node].X, c_set)])
+                        self.numY += 1
                     else:
-                        if len(self.Cells[num_node].T) == 0 or not np.any(
-                                np.isin(self.Cells[num_node].T, new_tet).all(axis=1)):
-                            self.Cells[num_node].T = np.append(self.Cells[num_node].T, [new_tet], axis=0)
-                            if self.Cells[num_node].AliveStatus is not None and c_set is not None:
-                                if y_new:
-                                    # Find indices where all elements in new_tets match newTet
-                                    matching_indices = np.where(np.all(np.isin(new_tets, new_tet), axis=1))[0]
+                        if (not np.any(np.isin(new_tet, self.XgID)) and
+                                np.any(ismember_rows(self.Cells[num_node].T, new_tet)[0])):
+                            self.Cells[num_node].Y = self.Cells[num_node].Y[
+                                ~ismember_rows(self.Cells[num_node].T, new_tet)[0]]
+                            self.Cells[num_node].T = self.Cells[num_node].T[
+                                ~ismember_rows(self.Cells[num_node].T, new_tet)[0]]
+                        else:
+                            if len(self.Cells[num_node].T) == 0 or not np.any(
+                                    np.isin(self.Cells[num_node].T, new_tet).all(axis=1)):
 
-                                    # Check if there are any matching indices
-                                    if len(matching_indices) > 0:
-                                        # Assuming y_new is structured with rows corresponding to tetrahedra in new_tets
-                                        # Use the first matching index as an example
-                                        first_matching_index = matching_indices[0]
-                                        selected_y_new = y_new[first_matching_index]
-                                        # Now you can use selected_y_new as needed
+                                self.Cells[num_node].T = np.append(self.Cells[num_node].T, [new_tet], axis=0)
+
+                                if self.Cells[num_node].AliveStatus is not None and c_set is not None:
+                                    if len(y_new) > 0:
+                                        # Find indices where all elements in new_tets match newTet
+                                        matching_indices = np.where(np.all(np.isin(new_tets, new_tet), axis=1))[0]
+
+                                        # Check if there are any matching indices
+                                        if len(matching_indices) > 0:
+                                            # Assuming y_new is structured with rows corresponding to tetrahedra in new_tets
+                                            # Use the first matching index as an example
+                                            first_matching_index = matching_indices[0]
+                                            selected_y_new = y_new[first_matching_index]
+                                            # Now you can use selected_y_new as needed
+                                            if len(self.Cells[num_node].Y) == 0:
+                                                self.Cells[num_node].Y = np.array([selected_y_new])
+                                            else:
+                                                self.Cells[num_node].Y = np.append(self.Cells[num_node].Y,
+                                                                                  selected_y_new.reshape(1, -1),
+                                                                                  axis=0)
+                                    else:
                                         self.Cells[num_node].Y = np.append(self.Cells[num_node].Y,
-                                                                          selected_y_new.reshape(1, -1),
-                                                                          axis=0)
-                                else:
-                                    self.Cells[num_node].Y = np.append(self.Cells[num_node].Y,
-                                                                      old_geo.recalculate_ys_from_previous(
-                                                                          np.array([new_tet]),
-                                                                          num_node,
-                                                                          c_set), axis=0)
-                                self.numY += 1
+                                                                          old_geo.recalculate_ys_from_previous(
+                                                                              np.array([new_tet]),
+                                                                              num_node,
+                                                                              c_set), axis=0)
+                                    self.numY += 1
 
     def recalculate_ys_from_previous(self, Tnew, mainNodesToConnect, Set):
         """
@@ -904,8 +932,14 @@ class Geo:
         :param Set:
         :return:
         """
-        allTs = np.vstack([c_cell.T for c_cell in self.Cells if c_cell.AliveStatus is not None])
-        allYs = np.vstack([c_cell.Y for c_cell in self.Cells if c_cell.AliveStatus is not None])
+        allYs = np.vstack([
+            c_cell.Y for c_cell in self.Cells
+            if c_cell.AliveStatus is not None and c_cell.T.size > 0
+        ])
+        allTs = np.vstack([
+            c_cell.T for c_cell in self.Cells
+            if c_cell.AliveStatus is not None and c_cell.T.size > 0
+        ])
         nGhostNodes_allTs = np.sum(np.isin(allTs, self.XgID), axis=1)
         Ynew = []
 
@@ -960,7 +994,7 @@ class Geo:
 
         return np.array(Ynew)
 
-    def create_vtk_cell(self, c_set, step, folder_name):
+    def create_vtk_cell(self, c_set, step, folder_name, additional_info=None):
         """
         Creates a VTK file for each cell
 
@@ -973,26 +1007,32 @@ class Geo:
         # Initialize an array to store the VTK of each cell
         vtk_cells = []
 
-        if c_set.VTK:
+        if c_set.VTK and step is not None:
             # Initial setup: defining file paths and extensions
             str0 = c_set.OutputFolder  # Base name for the output file
             file_extension = '.vtk'  # File extension
 
-            # Creating a new subdirect
-            #             self.geo.create_vtk_cell(self.geo_0, self.c_set, self.numStep)ory for cells data
+            # Creating a new subdirectory for cells data
             cell_sub_folder = os.path.join(str0, folder_name)
             if not os.path.exists(cell_sub_folder):
                 os.makedirs(cell_sub_folder)
 
             for c in [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]:
                 writer = vtk.vtkPolyDataWriter()
+                if folder_name.startswith('Cells'):
+                    vtk_cells.append(self.Cells[c].create_vtk())
+                elif folder_name.startswith('Edges'):
+                    vtk_cells.append(self.Cells[c].create_vtk_edges())
+                elif folder_name.startswith('Arrows'):
+                    gradients = [additional_info[(3 * global_id): ((3 * global_id) + 3)] for global_id in self.Cells[c].globalIds]
+                    # Add face gradients
+                    for f in range(len(self.Cells[c].Faces)):
+                        gradients.extend([additional_info[(3 * self.Cells[c].Faces[f].globalIds): ((3 * self.Cells[c].Faces[f].globalIds) + 3)]])
+                    vtk_cells.append(self.Cells[c].create_vtk_arrows(gradients))
+
+                # Set the file name for the VTK file
                 name_out = os.path.join(cell_sub_folder, f'{folder_name}.{c:04d}.{step:04d}{file_extension}')
                 writer.SetFileName(name_out)
-                if folder_name == 'Cells':
-                    vtk_cells.append(self.Cells[c].create_vtk())
-                elif folder_name == 'Edges':
-                    vtk_cells.append(self.Cells[c].create_vtk_edges())
-
                 # Write to a VTK file
                 writer.SetInputData(vtk_cells[-1])
                 writer.Write()
@@ -1581,3 +1621,193 @@ class Geo:
         """
         non_scutoid_cells = [c_cell for c_cell in self.Cells if not c_cell.is_scutoid()]
         return non_scutoid_cells
+
+    def create_substrate_cells(self, c_set, domain='Bottom'):
+        """
+        Create a substrate bubble cell with different mechanics
+        :param domain:
+        :return:
+        """
+        # Create the new substrate cells
+        for c, c_cell in enumerate(self.Cells):
+            if c_cell.AliveStatus is not None:
+                if c_cell.AliveStatus == 2:
+                    continue
+                self.divide_cell(c_cell.ID, c_set, num_pieces=3, axis=[0, 0, 1])
+
+    def divide_cell(self, cell_id, c_set, num_pieces=2, axis=None):
+        """
+        Divide a cell into a given number of pieces
+        :param num_pieces:
+        :param axis:
+        :param cell_id:
+        :return:
+        """
+        if num_pieces > 3:
+            raise ValueError('Number of pieces must be less than or equal to 3')
+
+        if num_pieces < 2:
+            raise ValueError('A cell is not divided into less than 2 pieces')
+
+        # Get the cell to split
+        if axis is None:
+            axis = [0, 0, 1] # Z axis
+
+        # Get the cell to split
+        cell_ = self.Cells[cell_id]
+        cell = cell_.copy()
+        original_Y = cell.Y
+        original_X = cell.X
+        original_T = cell.T
+        old_geo = self.copy()
+
+        # Remove the tets
+        self.remove_tetrahedra(original_T)
+
+        # Get the vertices of the cell
+        vertices = cell.Y
+        dotted_vertices = np.dot(vertices, axis)
+
+        # Get minimum and maximum coordinates of the vertices based on the axis
+        min_coord = np.min(dotted_vertices)
+        max_coord = np.max(dotted_vertices)
+
+        # Split the vertices into num_pieces given the axis
+        split_vertices = []
+        # Split the vertices based on a plane formed by the axis
+        for i in range(num_pieces):
+            current_plane_coord = min_coord + (max_coord - min_coord) * ((i + 1) / num_pieces)
+            previous_plane_coord = min_coord + (max_coord - min_coord) * (i / num_pieces)
+            split_vertices.append(np.where((dotted_vertices <= current_plane_coord) & (dotted_vertices >= previous_plane_coord))[0])
+
+        # Create a vector from the centre of the vertices of the first piece to the last piece
+        director_vector = np.mean(cell.Y[split_vertices[-1]], axis=0) - np.mean(cell.Y[split_vertices[0]], axis=0)
+
+        # Create new cells from the split vertices
+        new_cell_ids_ordered = []
+        for i in range(num_pieces):
+            new_X = np.mean(cell.Y[split_vertices[0]], axis=0) + (i * director_vector / num_pieces)
+            new_X = np.mean([new_X, original_X], axis=0)
+            if i == round((num_pieces-1)/2):
+                self.Cells[cell_id].X = new_X
+                self.Cells[cell_id].substrate_cell_bottom = new_cell_ids_ordered[0]
+                self.Cells[cell_id].substrate_cell_top = new_cell_ids_ordered[0] + 1
+                id_cell = cell_id
+            else:
+                id_cell = self.add_new_cell(new_X, alive_status=2)
+
+            new_tetrahedra = np.where(np.isin(original_T[split_vertices[i]], cell.ID), id_cell, original_T[split_vertices[i]])
+            self.add_tetrahedra(self, new_tetrahedra, y_new=original_Y[split_vertices[i]], c_set=c_set)
+            new_cell_ids_ordered.append(id_cell)
+
+        # Connect cells between each other
+        if num_pieces == 2:
+            #TODO: Some of the vertices should be in the intersection of both cells
+            raise NotImplementedError('Not implemented division yet')
+        elif num_pieces == 3:
+
+            all_new_tets = []
+
+            for i in range(num_pieces):
+                # Get the cell
+                c_cell = self.Cells[new_cell_ids_ordered[i]]
+
+                # Get the neighbours of the cell
+                neighbours = np.unique(c_cell.T)
+                neighbours_xg = neighbours[np.isin(neighbours, self.XgID)]
+                cell_neighbours = [neighbour for neighbour in neighbours if
+                                   self.Cells[neighbour].AliveStatus is not None and neighbour != c_cell.ID]
+
+                if i == round((num_pieces-1)/2):
+                    continue
+                else:
+                    # Create a triangulation mesh based on neighbours
+                    new_tets = []
+                    for neighbour in cell_neighbours:
+                        list_of_neighbours = get_node_neighbours_per_domain(old_geo, neighbour, neighbours_xg, [cell_id])
+                        list_of_neighbours_cell = [n_cell for n_cell in list_of_neighbours if n_cell != cell_id and self.Cells[n_cell].AliveStatus is not None]
+
+                        # Make pairs of list of neighbours
+                        if len(list_of_neighbours_cell) > 0:
+                            for neighbour_of_neighbour in list_of_neighbours_cell:
+                                new_tets.append(np.sort([neighbour_of_neighbour, cell_id, c_cell.ID, neighbour]))
+
+                self.add_tetrahedra(self, unique_rows(np.array(new_tets)), y_new=[], c_set=c_set)
+                all_new_tets.extend(new_tets)
+
+            # Check tetrahedra validity at the end otherwise there will be missing tetrahedra
+            if not self.check_tetrahedra_validity(fix_it=True):
+                raise ValueError('Tetrahedra are not valid')
+
+            # Set a given Z for each substrate cell
+            for c_cell in new_cell_ids_ordered:
+                if c_cell == cell_id:
+                    tets_substrate = np.where(np.isin(self.Cells[c_cell].T, self.Cells[c_cell].substrate_cell_top))[0]
+                    self.Cells[c_cell].Y[tets_substrate, 2] = self.SubstrateZ
+                    tets_substrate = np.where(np.isin(self.Cells[c_cell].T, self.Cells[c_cell].substrate_cell_bottom))[0]
+                    self.Cells[c_cell].Y[tets_substrate, 2] = -self.SubstrateZ
+                else:
+                    tets_cell = np.where(np.isin(self.Cells[c_cell].T, cell_id))[0]
+                    if c_cell == self.Cells[cell_id].substrate_cell_top:
+                        self.Cells[c_cell].Y[tets_cell, 2] = self.SubstrateZ
+                    else:
+                        self.Cells[c_cell].Y[tets_cell, 2] = -self.SubstrateZ
+
+                    # Get ghost cells
+                    ghost_cells = np.where(np.isin(self.Cells[c_cell].T, self.XgTop))[0]
+                    if len(ghost_cells) > 0:
+                        self.Cells[c_cell].Y[ghost_cells, 2] = (self.SubstrateZ + (self.SubstrateZ * 0.1))
+
+                    ghost_cells = np.where(np.isin(self.Cells[c_cell].T, self.XgBottom))[0]
+                    if len(ghost_cells) > 0:
+                        self.Cells[c_cell].Y[ghost_cells, 2] = -(self.SubstrateZ + (self.SubstrateZ * 0.1))
+
+            # Rebuild the geometry of the cells
+            self.rebuild(self, c_set, cells_to_rebuild=np.unique(all_new_tets))
+            self.build_global_ids()
+            self.update_measures()
+
+
+    def add_new_cell(self, xs, alive_status=1):
+        """
+        Add a new cell to the list of cells
+        :param alive_status: 0: dead, 1: alive, 2: substrate
+        :param xs:
+        :return: the ID of the new cell
+        """
+        new_cell = Cell()
+        new_cell.X = xs
+        new_cell.Y = np.array([])
+        new_cell.T = np.array([])
+        new_cell.ID = len(self.Cells)
+        new_cell.AliveStatus = alive_status
+        new_cell.Vol = 0
+        self.Cells.append(new_cell)
+
+        return new_cell.ID
+
+    def check_tetrahedra_validity(self, fix_it=False):
+        """
+        Check the validity of the tetrahedra
+        :return:
+        """
+        for c_cell in self.Cells:
+            if c_cell.AliveStatus is not None:
+
+                neigh_nodes = np.unique(c_cell.T)
+                neigh_nodes = neigh_nodes[neigh_nodes != c_cell.ID]
+
+                for j in range(len(neigh_nodes)):
+                    cj = neigh_nodes[j]
+                    ij = [c_cell.ID, cj]
+                    face_tets = c_cell.T[np.sum(np.isin(c_cell.T, ij), axis=1) == 2, :]
+                    try:
+                        build_edge_based_on_tetrahedra(face_tets)
+                    except Exception as e:
+                        if fix_it:
+                            # Add missing tetrahedra
+                            pass
+                        else:
+                            return False
+
+        return True

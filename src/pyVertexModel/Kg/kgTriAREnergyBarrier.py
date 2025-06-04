@@ -3,7 +3,7 @@ import time
 import numpy as np
 
 from src.pyVertexModel.Kg.kg import Kg
-from src.pyVertexModel.geometry.face import get_interface
+from src.pyVertexModel.util.utils import get_interface
 
 
 class KgTriAREnergyBarrier(Kg):
@@ -11,10 +11,11 @@ class KgTriAREnergyBarrier(Kg):
         start = time.time()
 
         self.energy = 0
+        self.energy_per_cell = {}
 
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
-            energy_c = 0
             Cell = Geo.Cells[c]
+            Cell.energy_tri_aspect_ratio = 0
             Ys = Cell.Y
 
             for f in range(len(Cell.Faces)):
@@ -62,9 +63,13 @@ class KgTriAREnergyBarrier(Kg):
                                              np.dot(g3, g3.T))
                             self.assemble_k(Ks_c[:, :] * fact, nY_original)
 
-                        energy_c = energy_c + fact / 2 * (w1 ** 2 + w2 ** 2 + w3 ** 2)
+                        Cell.energy_tri_aspect_ratio = Cell.energy_tri_aspect_ratio + fact / 2 * (w1 ** 2 + w2 ** 2 + w3 ** 2)
 
-            self.energy += energy_c
+            self.energy_per_cell[c] = Cell.energy_tri_aspect_ratio
+            self.energy += Cell.energy_tri_aspect_ratio
+
+        for cell in [cell for cell in Geo.Cells if cell.AliveStatus == 0]:
+            self.energy_per_cell[cell.ID] = 0
 
         end = time.time()
         self.timeInSeconds = f"Time at AREnergyBarrier: {end - start} seconds"

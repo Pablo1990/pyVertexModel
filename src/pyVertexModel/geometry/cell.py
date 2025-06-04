@@ -1,30 +1,11 @@
 import numpy as np
 import pyvista as pv
 import vtk
-from numpy.ma.extras import setdiff1d, setxor1d
+from numpy.ma.extras import setxor1d
 from sklearn.decomposition import PCA
 
 from src.pyVertexModel.geometry import face
-from src.pyVertexModel.geometry.face import get_interface
-from src.pyVertexModel.util.utils import copy_non_mutable_attributes
-
-
-def face_centres_to_middle_of_neighbours_vertices(Geo, c_cell, filter_location=None):
-    """
-    Move the face centres to the middle of the neighbours vertices.
-    :param Geo:
-    :param c_cell:
-    :return:
-    """
-    for num_face, _ in enumerate(Geo.Cells[c_cell].Faces):
-        if filter_location is None or get_interface(Geo.Cells[c_cell].Faces[num_face].InterfaceType) == get_interface(filter_location):
-            all_edges = []
-            for tri in Geo.Cells[c_cell].Faces[num_face].Tris:
-                all_edges.append(tri.Edge)
-
-            all_edges = np.unique(np.concatenate(all_edges))
-            Geo.Cells[c_cell].Faces[num_face].Centre = np.mean(
-                Geo.Cells[c_cell].Y[all_edges, :], axis=0)
+from src.pyVertexModel.util.utils import copy_non_mutable_attributes, get_interface
 
 
 def compute_2d_circularity(area, perimeter):
@@ -83,6 +64,8 @@ class Cell:
         self.Vol = None
         self.AliveStatus = None
         self.vertices_and_faces_to_remodel = np.array([], dtype='int')
+        self.substrate_cell_top = None
+        self.substrate_cell_bottom = None
 
         ## Individual mechanical parameters
         # Surface area
@@ -109,7 +92,13 @@ class Cell:
         # Volume
         self.Vol0 = None
 
-
+        # Current energy values
+        self.energy_volume = 0
+        self.energy_surface_area = 0
+        self.energy_tri_aspect_ratio = 0
+        self.energy_contractility = 0
+        self.energy_substrate = 0
+        self.energy_tri_area = 0
 
         # In case the geometry is not provided, the cell is empty
         if mat_file is None:
@@ -182,6 +171,9 @@ class Cell:
                 if current_v < 0:
                     ytri = np.array([y2, y1, y3])
                     current_v = np.linalg.det(ytri) / 6
+                    # If the volume is negative, switch two the other option
+                    if current_v < 0:
+                        raise "Negative volume detected. Check the cell geometry."
 
                 v += current_v
 
@@ -214,7 +206,6 @@ class Cell:
 
         vpoly = vtk.vtkPolyData()
         vpoly.SetPoints(points)
-
         vpoly.SetPolys(cell)
 
         # Get all the different properties of a cell
@@ -262,6 +253,14 @@ class Cell:
         Compute the features of the cell and create a dictionary with them
         :return: a dictionary with the features of the cell
         """
+        # Check if any of these features is missing
+        to_check = ['energy_contractility', 'energy_surface_area', 'energy_volume', 'energy_tri_aspect_ratio',
+                    'energy_substrate']
+        for feature in to_check:
+            if not hasattr(self, feature):
+                self.__setattr__(feature, 0)
+
+        # Compute the features of the cell
         features = {'ID': self.ID,
                     'Area': self.compute_area(),
                     'Area_top': self.compute_area(location_filter=0),
@@ -293,6 +292,11 @@ class Cell:
                     'Perimeter_bottom': self.compute_perimeter(filter_location=2),
                     'Perimeter_cellcell': self.compute_perimeter(filter_location=1),
                     'Scutoid': int(self.is_scutoid()),
+                    'energy_contractility': self.energy_contractility,
+                    'energy_surface_area': self.energy_surface_area,
+                    'energy_volume': self.energy_volume,
+                    'energy_tri_ar': self.energy_tri_aspect_ratio,
+                    'energy_substrate': self.energy_substrate,
                     }
 
         if centre_wound is not None:
@@ -325,7 +329,6 @@ class Cell:
 
         vpoly = vtk.vtkPolyData()
         vpoly.SetPoints(points)
-
         vpoly.SetLines(cell)
 
         # Get all the different properties of a cell
@@ -352,6 +355,66 @@ class Cell:
             #    vpoly.GetCellData().SetScalars(property_array)
 
         return vpoly
+
+    def create_vtk_arrows(self, gradients):
+        """
+        Create a glyph to visualize the gradient of a cell.
+
+        :param cell: The cell object containing geometry data.
+        :param gradients: A numpy array of gradient vectors for the cell.
+        :return: vtkPolyData with glyphs representing the gradients.
+        :param gradients:
+        :return:
+        """
+        # Create a vtkAppendPolyData to combine all arrows
+        append_filter = vtk.vtkAppendPolyData()
+
+        ys = self.Y
+        face_centres = np.array([face.Centre for face in self.Faces])
+        ys_and_face_centres = np.concatenate((ys, face_centres), axis=0)
+
+        for i in range(len(ys_and_face_centres)):
+            point = ys_and_face_centres[i]
+            grad = gradients[i]
+            grad_norm = np.linalg.norm(grad)
+
+            # Create arrow source (default: along x-axis)
+            arrow = vtk.vtkArrowSource()
+            arrow.SetTipLength(0.3)  # Relative to arrow length
+            arrow.SetTipRadius(0.1)
+            arrow.SetShaftRadius(0.03)
+
+            # Compute rotation to align arrow with gradient
+            transform = vtk.vtkTransform()
+
+            # Translate to the point's position
+            transform.Translate(point[0], point[1], point[2])
+
+            # Rotate from default x-axis to gradient direction
+            if grad_norm > 0:
+                # Axis-angle rotation
+                x_axis = np.array([1, 0, 0])
+                grad_dir = grad / grad_norm
+                rotation_axis = np.cross(x_axis, grad_dir)
+                rotation_angle = np.arccos(np.dot(x_axis, grad_dir)) * 180.0 / np.pi
+                transform.RotateWXYZ(rotation_angle, *rotation_axis)
+
+            # Scale arrow length by gradient magnitude (or fixed size)
+            arrow_length = grad_norm * 2  # Adjust scaling factor as needed
+            transform.Scale(arrow_length, arrow_length, arrow_length)
+
+            # Apply transform
+            transform_filter = vtk.vtkTransformPolyDataFilter()
+            transform_filter.SetTransform(transform)
+            transform_filter.SetInputConnection(arrow.GetOutputPort())
+            transform_filter.Update()
+
+            # Add to the append filter
+            append_filter.AddInputData(transform_filter.GetOutput())
+
+        # Combine all arrows into a single polydata
+        append_filter.Update()
+        return append_filter.GetOutput()
 
     def compute_edge_features(self):
         """
@@ -538,3 +601,35 @@ class Cell:
         :return:
         """
         return setxor1d(self.compute_neighbours(location_filter=2), self.compute_neighbours(location_filter=0)).size > 0
+
+
+    def check_inverted(self):
+        """Check for inverted cells using signed volume"""
+        return self.compute_volume() < 0
+
+
+    def compute_min_angles(self):
+        """Compute minimum angles in all triangular faces"""
+        min_angles = []
+        for face in self.Faces:
+            for tri in face.Tris:
+                v0 = self.Y[tri.Edge[0]]
+                v1 = self.Y[tri.Edge[1]]
+                v2 = face.Centre
+
+                vec1 = v1 - v0
+                vec2 = v2 - v0
+                vec3 = v2 - v1
+
+                vec1 = vec1 / np.linalg.norm(vec1)
+                vec2 = vec2 / np.linalg.norm(vec2)
+                vec3 = vec3 / np.linalg.norm(vec3)
+
+                angle1 = np.arccos(np.clip(np.dot(vec1, vec2), -1.0, 1.0))
+                angle2 = np.arccos(np.clip(np.dot(-vec1, vec3), -1.0, 1.0))
+                angle3 = np.pi - angle1 - angle2
+
+                min_angle = min(angle1, angle2, angle3)
+                min_angles.append(np.degrees(min_angle))
+
+        return min(min_angles) if min_angles else 0

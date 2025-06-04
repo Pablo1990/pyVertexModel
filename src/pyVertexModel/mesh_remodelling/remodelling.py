@@ -6,13 +6,11 @@ import pandas as pd
 from numpy.ma.extras import setdiff1d
 
 from src.pyVertexModel.algorithm.newtonRaphson import gGlobal, newton_raphson_iteration_explicit, \
-    newton_raphson_iteration, KgGlobal
-from src.pyVertexModel.geometry.cell import face_centres_to_middle_of_neighbours_vertices
-from src.pyVertexModel.geometry.face import get_interface
+    newton_raphson_iteration, KgGlobal, constrain_bottom_vertices_x_y
 from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
 from src.pyVertexModel.util.utils import ismember_rows, save_backup_vars, load_backup_vars, compute_distance_3d, \
-    laplacian_smoothing, screenshot_
+    laplacian_smoothing, screenshot_, face_centres_to_middle_of_neighbours_vertices, get_interface
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -395,9 +393,9 @@ class Remodelling:
             # Get the first segment feature
             segmentFeatures = segmentFeatures_all.iloc[0]
 
-            #if segmentFeatures['num_cell'] in self.Geo.BorderCells or np.any(np.isin(self.Geo.BorderCells, segmentFeatures['shared_neighbours'])):
-            if self.Geo.Cells[segmentFeatures['cell_to_split_from']].AliveStatus == 1 or \
-                    segmentFeatures['node_pair_g'] not in self.Geo.XgTop:
+            if segmentFeatures['num_cell'] in self.Geo.BorderCells or np.any(np.isin(self.Geo.BorderCells, segmentFeatures['shared_neighbours'])):
+            #if self.Geo.Cells[segmentFeatures['cell_to_split_from']].AliveStatus == 1 or \
+            #        segmentFeatures['node_pair_g'] not in self.Geo.XgTop:
                 # Drop the first element of the segment features
                 segmentFeatures_all = segmentFeatures_all.drop(segmentFeatures_all.index[0])
                 continue
@@ -476,9 +474,6 @@ class Remodelling:
 
                 has_converged = self.check_if_will_converge(self.Geo.copy())
             else:
-                for cell in self.Geo.Cells:
-                    if cell.AliveStatus is not None:
-                        face_centres_to_middle_of_neighbours_vertices(self.Geo, cell.ID)
                 self.Geo.update_measures()
                 self.reset_preferred_values(backup_vars, cells_involved_intercalation)
                 has_converged = True
@@ -505,17 +500,19 @@ class Remodelling:
         dy = np.zeros(((best_geo.numY + best_geo.numF + best_geo.nCells) * 3, 1), dtype=np.float64)
         g, energies = gGlobal(best_geo, best_geo, best_geo, self.Set, self.Set.implicit_method)
         previous_gr = np.linalg.norm(g[self.Dofs.Free])
-        # if (previous_gr < self.Set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
-        #         np.all(~np.isnan(dy[self.Dofs.Free]))):
-        #     pass
-        # else:
-        #     return False
 
         try:
             for n_iter in range(n_iter_max):
-                best_geo, dy, gr, g = newton_raphson_iteration_explicit(best_geo, self.Set, self.Dofs.Free, dy, g)
-                #screenshot_(best_geo, self.Set, 0, 'after_remodelling_' + str(n_iter), self.Set.OutputFolder + '/images')
-                print(f'Previous gr: {previous_gr}, gr: {gr}')
+                best_geo, dy, dyr = newton_raphson_iteration_explicit(best_geo, self.Set, self.Dofs.Free, dy, g)
+
+                g, energies = gGlobal(best_geo, best_geo, best_geo, self.Set, self.Set.implicit_method)
+                for key, energy in energies.items():
+                    logger.info(f"{key}: {energy}")
+                g_constrained = constrain_bottom_vertices_x_y(best_geo)
+                g[g_constrained] = 0
+                gr = np.linalg.norm(g[self.Dofs.Free])
+
+                print(f'Previous gr: {previous_gr}, dyr: {dyr}')
                 if np.all(~np.isnan(g[self.Dofs.Free])) and np.all(~np.isnan(dy[self.Dofs.Free])):
                     pass
                 else:
@@ -549,6 +546,7 @@ class Remodelling:
 
         # Compute the new energy
         g, energies = gGlobal(self.Geo, self.Geo, self.Geo, self.Set, self.Set.implicit_method)
+        self.Dofs.get_dofs(self.Geo, self.Set)
         gr = np.linalg.norm(g[self.Dofs.Free])
         logger.info(f'|gr| after remodelling without changes: {gr}')
         for key, energy in energies.items():
@@ -577,16 +575,10 @@ class Remodelling:
             logger.info(f"Remodeling: {cell_node} - {ghost_node}")
 
             valence_segment, old_tets, old_ys = edge_valence(self.Geo, nodes_pair)
-            cell_nodes = [cell for cell in self.Geo.non_dead_cells if cell in old_tets.flatten()]
-            #if len(cell_nodes) > 2:
             has_converged, Tnew = self.flip_nm(nodes_pair, cell_to_intercalate_with, old_tets, old_ys,
                                                cell_to_split_from)
             if Tnew is not None:
                 all_tnew = Tnew if all_tnew is None else np.vstack((all_tnew, Tnew))
-            #else:
-            #    logger.info(f"Remodeling: {cell_node} - {ghost_node} not possible due to cell_nodes < 2")
-            #    logger.info(f"Old tets: {old_tets}")
-            #    has_converged = False
 
             shared_nodes_still = get_node_neighbours_per_domain(self.Geo, cell_node, ghost_node, cell_to_split_from)
 
@@ -651,10 +643,10 @@ class Remodelling:
         while segment_features_filtered.empty is False and num_segment < segment_features_filtered.shape[0]:
             shortest_segment = segment_features_filtered.iloc[num_segment]
 
-            #if shortest_segment['num_cell'] in self.Geo.BorderCells or np.any(
-            #        np.isin(self.Geo.BorderCells, shortest_segment['shared_neighbours'])):
-            if self.Geo.Cells[shortest_segment['cell_to_split_from']].AliveStatus == 1 or \
-                    shortest_segment['node_pair_g'] not in self.Geo.XgTop:
+            if shortest_segment['num_cell'] in self.Geo.BorderCells or np.any(
+                    np.isin(self.Geo.BorderCells, shortest_segment['shared_neighbours'])):
+            #if self.Geo.Cells[shortest_segment['cell_to_split_from']].AliveStatus == 1 or \
+            #        shortest_segment['node_pair_g'] not in self.Geo.XgTop:
                 # Drop the first element of the segment features
                 segment_features_filtered = segment_features_filtered.drop(segment_features_filtered.index[shortest_segment['edge_length'] == segment_features_filtered['edge_length']])
             else:

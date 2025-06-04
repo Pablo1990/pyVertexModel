@@ -3,7 +3,7 @@ import time
 import numpy as np
 
 from src.pyVertexModel.Kg.kg import Kg
-from src.pyVertexModel.geometry.face import get_interface
+from src.pyVertexModel.util.utils import get_interface
 
 
 class KgSubstrate(Kg):
@@ -20,7 +20,7 @@ class KgSubstrate(Kg):
         start = time.time()
         self.energy = 0
 
-        energy_per_cell = []
+        self.energy_per_cell = {}
 
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
             currentCell = Geo.Cells[c]
@@ -29,7 +29,7 @@ class KgSubstrate(Kg):
                 continue
 
             ge = np.zeros(self.g.shape, dtype=self.precision_type)
-            Energy_c = 0
+            currentCell.energy_substrate = 0
 
             for numFace in range(len(currentCell.Faces)):
                 current_face = Geo.Cells[c].Faces[numFace]
@@ -63,11 +63,11 @@ class KgSubstrate(Kg):
                             self.assemble_k(K_current, currentGlobalID)
 
                         # Calculate energy
-                        Energy_c = Energy_c + self.compute_energy_substrate(kSubstrate, currentVertexYs[2], z0)
+                        currentCell.energy_substrate += self.compute_energy_substrate(kSubstrate, currentVertexYs[2], z0)
 
             self.g = self.g + ge
-            energy_per_cell.append(Energy_c)
-            self.energy += Energy_c
+            self.energy_per_cell[c] = currentCell.energy_substrate
+            self.energy += currentCell.energy_substrate
 
         end = time.time()
         self.timeInSeconds = f"Time at Substrate: {end - start} seconds"

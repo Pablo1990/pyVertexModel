@@ -15,7 +15,7 @@ dynamic = [
 ]
 dependencies = [
     "cython",
-    "numpy==1.26.4",
+    "numpy",
     "scipy",
     "pillow",
     "scikit-image",

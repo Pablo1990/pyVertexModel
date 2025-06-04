@@ -40,6 +40,7 @@ class Kg:
             self.energy = None
             self.dim = 3
             self.timeInSeconds = -1
+            self.energy_per_cell = None
 
     @abstractmethod
     def compute_work(self, Geo, Set, Geo_n=None, calculate_K=True):

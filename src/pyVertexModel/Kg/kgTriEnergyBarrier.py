@@ -4,13 +4,14 @@ import numpy as np
 
 from src.pyVertexModel.Kg import kg_functions
 from src.pyVertexModel.Kg.kg import Kg
-from src.pyVertexModel.geometry.face import get_interface
+from src.pyVertexModel.util.utils import get_interface
 
 
 class KgTriEnergyBarrier(Kg):
     def compute_work(self, Geo, Set, Geo_n=None, calculate_K=True):
         start = time.time()
         self.energy = 0
+        self.energy_per_cell = {}
         for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
             if Geo.remodelling and c not in Geo.AssembleNodes:
                 continue
@@ -18,9 +19,10 @@ class KgTriEnergyBarrier(Kg):
             Cell = Geo.Cells[c]
             Ys = Cell.Y
             lambda_b = Set.lambdaB * Cell.lambda_b_perc
+            Cell.energy_tri_area = 0
 
             for f in range(len(Cell.Faces)):
-                if get_interface(Cell.Faces[f].InterfaceType) != get_interface('CellCell'):
+                if 1: #get_interface(Cell.Faces[f].InterfaceType) != get_interface('CellCell'):
                     barrier_tri0 = Geo.BarrierTri0
 
                     Face = Cell.Faces[f]
@@ -47,7 +49,11 @@ class KgTriEnergyBarrier(Kg):
                             gs_ = gs.reshape((gs.size, 1))
                             Ks = (np.dot(gs_, gs_transpose) * fact2) + Ks * fact + Kss * fact
                             self.assemble_k(Ks, np.array(nY, dtype='int'))
-                        self.energy += np.exp(lambda_b * (1 - Set.Beta * Face.Tris[t].Area / barrier_tri0))
 
+                        Cell.energy_tri_area += np.exp(lambda_b * (1 - Set.Beta * Face.Tris[t].Area / barrier_tri0))
+
+            self.energy_per_cell[Cell.ID] = Cell.energy_tri_area
+
+        self.energy = sum(self.energy_per_cell.values())
         end = time.time()
         self.timeInSeconds = f"Time at EnergyBarrier: {end - start} seconds"

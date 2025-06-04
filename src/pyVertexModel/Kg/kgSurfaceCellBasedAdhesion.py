@@ -4,7 +4,7 @@ import numpy as np
 
 from src.pyVertexModel.Kg import kg_functions
 from src.pyVertexModel.Kg.kg import Kg
-from src.pyVertexModel.geometry.face import get_interface
+from src.pyVertexModel.util.utils import get_interface
 
 
 def get_lambda(c_cell, face, Set):
@@ -43,13 +43,17 @@ class KgSurfaceCellBasedAdhesion(Kg):
             Energy_c = self.work_per_cell(Cell, Geo, Set, calculate_K)
             Energy[c] = Energy_c
 
+        for cell in [cell for cell in Geo.Cells if cell.AliveStatus == 0]:
+            Energy[cell.ID] = 0
+
+        self.energy_per_cell = Energy
         self.energy = sum(Energy.values())
 
         end = time.time()
         self.timeInSeconds = f"Time at SurfaceCell: {end - start} seconds"
 
     def work_per_cell(self, Cell, Geo, Set, calculate_K=True):
-        Energy_c = 0
+        Cell.energy_surface_area = 0
         Ys = Cell.Y
         ge = np.zeros(self.g.shape, dtype=self.precision_type)
         fact0 = 0
@@ -85,13 +89,13 @@ class KgSurfaceCellBasedAdhesion(Kg):
         if calculate_K:
             self.K = kg_functions.compute_finalK_SurfaceEnergy(ge, self.K, Cell.Area0)
 
-        Energy_c += (1 / 2) * fact0 * fact
+        Cell.energy_surface_area += (1 / 2) * fact0 * fact
 
         Cell.lambda_s1_noise = None
         Cell.lambda_s2_noise = None
         Cell.lambda_s3_noise = None
 
-        return Energy_c
+        return Cell.energy_surface_area
 
     def calculate_kg(self, Lambda, fact, ge, nY, y1, y2, y3):
         gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)

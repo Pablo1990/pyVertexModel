@@ -298,6 +298,10 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             output_folder = self.set.OutputFolder
             load_state(self, filename, ['geo', 'geo_0', 'geo_n'])
             self.set.OutputFolder = output_folder
+            self.geo.update_measures()
+            for cell in self.geo.Cells:
+                self.geo.Cells[cell.ID].Vol0 = self.geo.Cells[cell.ID].Vol
+                self.geo.Cells[cell.ID].Area0 = self.geo.Cells[cell.ID].Area
         elif filename.endswith('.mat'):
             mat_info = scipy.io.loadmat(filename)
             self.geo = Geo(mat_info['Geo'])
@@ -316,7 +320,12 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         self.resize_tissue()
 
         # Deform the tissue if required
-        #self.deform_tissue()
+        self.deform_tissue()
+
+        # Create substrate(s)
+        if self.set.Substrate == 3:
+           # Create a substrate cell for each cell
+           self.geo.create_substrate_cells(self.set, domain='Top')
 
         # Add border cells to the shared cells
         for cell in self.geo.Cells:
@@ -337,9 +346,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         if self.set.ablation:
             self.geo.cellsToAblate = self.set.cellsToAblate
 
-        # Define upper and lower area threshold for remodelling
-        if self.geo.lmin0 is None:
-            self.geo.init_reference_cell_values(self.set)
+        self.geo.init_reference_cell_values(self.set)
 
         if self.set.Substrate == 1:
             self.Dofs.GetDOFsSubstrate(self.geo, self.set)
@@ -470,7 +477,6 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
 
         self.geo.update_measures()
-
         self.geo.init_reference_cell_values(self.set)
 
 
@@ -574,18 +580,19 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         return vertices_info
 
     def deform_tissue(self):
-        if self.set.deform_array_Z is not None:
+        if self.set.resize_z is not None:
             middle_point = np.mean([cell.X for cell in self.geo.Cells if cell.AliveStatus is not None], axis=0)
             volumes = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
-            optimal_deform_array_X_Y = find_optimal_deform_array_X_Y(self.geo.copy(), self.set.deform_array_Z,
+            optimal_deform_array_X_Y = find_optimal_deform_array_X_Y(self.geo.copy(), self.set.resize_z,
                                                                      middle_point, volumes)
             print(f'Optimal deform_array_X_Y: {optimal_deform_array_X_Y}')
 
             for cell in self.geo.Cells:
                 deform_array = np.array(
-                    [optimal_deform_array_X_Y[0], optimal_deform_array_X_Y[0], self.set.deform_array_Z])
+                    [optimal_deform_array_X_Y[0], optimal_deform_array_X_Y[0], self.set.resize_z])
+
+                cell.X = cell.X + (middle_point - cell.X) * deform_array
                 if cell.AliveStatus is not None:
-                    cell.X = cell.X + (middle_point - cell.X) * deform_array
                     cell.Y = cell.Y + (middle_point - cell.Y) * deform_array
                     for face in cell.Faces:
                         face.Centre = face.Centre + (middle_point - face.Centre) * deform_array
