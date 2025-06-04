@@ -24,7 +24,8 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
     vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
     if (combination == 'WT' or combination == 'Mbs' or combination == 'Rok' or
             combination == 'Talin' or combination == 'IntegrinDN' or
-            combination == 'ShibireTS' or combination == 'WT_substrate_gone_40_mins'):
+            combination == 'ShibireTS' or combination == 'WT_substrate_gone_40_mins' or
+            combination == 'Talin_with_substrate' or combination == 'IntegrinDN_with_substrate'):
         output_folder = os.path.join(PROJECT_DIRECTORY, output_results_dir, length + '_{}'.format(combination))
     else:
         output_folder = os.path.join(PROJECT_DIRECTORY, output_results_dir, length + '_no_{}'.format('_no_'.join(combination)))
@@ -75,8 +76,12 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
         elif combination == 'Talin':
             vModel.set.kSubstrate = vModel.set.kSubstrate * 0
             vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength * 4.3/3.1
+        elif combination == 'Talin_with_substrate':
+            vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength * 4.3/3.1
         elif combination == 'IntegrinDN':
             vModel.set.kSubstrate = vModel.set.kSubstrate * 0
+            vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength * 2.1/3.1
+        elif combination == 'IntegrinDN_with_substrate':
             vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength * 2.1/3.1
         else:
             for variable in combination:
