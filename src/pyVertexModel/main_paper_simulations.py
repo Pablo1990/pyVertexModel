@@ -133,11 +133,11 @@ combinations_of_variables = []
 for i in range(1, len(variables_to_change) + 1):
     combinations_of_variables.extend(itertools.combinations(variables_to_change, i))
 
-
+combinations_of_variables.insert(0, 'IntegrinDN_with_substrate')
+combinations_of_variables.insert(0, 'Talin_with_substrate')
 combinations_of_variables.insert(0, 'ShibireTS')
 combinations_of_variables.insert(0, 'Talin')
 combinations_of_variables.insert(0, 'IntegrinDN')
-#combinations_of_variables.insert(0, 'WT_substrate_gone_40_mins')
 combinations_of_variables.insert(0, 'Mbs')
 combinations_of_variables.insert(0, 'Rok')
 combinations_of_variables.insert(0, 'WT')
