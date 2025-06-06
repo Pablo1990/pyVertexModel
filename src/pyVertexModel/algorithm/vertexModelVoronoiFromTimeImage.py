@@ -8,6 +8,7 @@ from itertools import combinations
 import numpy as np
 import scipy
 from numpy import arange
+from scipy.ndimage import label
 from scipy.spatial.distance import squareform, pdist, cdist
 from skimage import io
 from skimage.measure import regionprops_table
@@ -211,13 +212,22 @@ def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence
                 imgStackLabelled = pickle.load(lzma.open(img_filename.replace('.tif', '.xz'), "rb"))
 
                 imgStackLabelled = imgStackLabelled['imgStackLabelled']
-                img2DLabelled = imgStackLabelled[0, :, :]
+                if imgStackLabelled.ndim == 3:
+                    img2DLabelled = imgStackLabelled[0, :, :]
+                else:
+                    img2DLabelled = imgStackLabelled
             else:
                 imgStackLabelled = io.imread(img_filename)
 
                 # Reordering cells based on the centre of the image
-                img2DLabelled = imgStackLabelled[0, :, :]
-                props = regionprops_table(img2DLabelled, properties=('centroid', 'label',), )
+                if imgStackLabelled.ndim == 3:
+                    img2DLabelled = imgStackLabelled[0, :, :]
+                else:
+                    img2DLabelled = imgStackLabelled
+
+                imgStackLabelled, num_features = label(imgStackLabelled == 0,
+                                                       structure=[[0, 1, 0], [1, 1, 1], [0, 1, 0]])
+                props = regionprops_table(imgStackLabelled, properties=('centroid', 'label',), )
 
                 # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
                 centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
@@ -242,15 +252,25 @@ def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence
                     imgStackLabelled[oldImgStackLabelled == numCell] = newCont
                     newCont += 1
 
-                img2DLabelled = imgStackLabelled[0, :, :]
+                if imgStackLabelled.ndim == 3:
+                    img2DLabelled = imgStackLabelled[0, :, :]
+                else:
+                    img2DLabelled = imgStackLabelled
+
+                # Save the labeled image stack as tif
+                io.imsave(img_filename.replace('.tif', '_labelled.tif'), imgStackLabelled.astype(np.uint16))
 
                 save_variables({'imgStackLabelled': imgStackLabelled},
                                img_filename.replace('.tif', '.xz'))
-
-            imgStackLabelled = np.transpose(imgStackLabelled, (2, 0, 1))
+            if imgStackLabelled.ndim == 3:
+                # Transpose the image stack to have the shape (Z, Y, X)
+                imgStackLabelled = np.transpose(imgStackLabelled, (2, 0, 1))
         elif img_filename.endswith('.mat'):
             imgStackLabelled = scipy.io.loadmat(img_filename)['imgStackLabelled']
-            img2DLabelled = imgStackLabelled[:, :, 0]
+            if imgStackLabelled.ndim == 3:
+                img2DLabelled = imgStackLabelled[:, :, 0]
+            else:
+                img2DLabelled = imgStackLabelled
     else:
         raise ValueError('Image file not found %s' % img_filename)
 
@@ -314,7 +334,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
             # Save state with filename using the number of cells
             filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
-            # save_state(self.geo, 'voronoi_40cells.pkl')
+            save_state(self.geo, filename)
 
         # Resize the geometry to a given cell volume average
         self.resize_tissue()
@@ -715,7 +735,12 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         cell_centroids = {}
         main_cells = self.set.TotalCells
         for numPlane in selectedPlanes:
-            current_img = imgStackLabelled[:, numPlane, :]
+            if imgStackLabelled.ndim == 3:
+                # Select the current plane from the image stack
+                current_img = imgStackLabelled[:, numPlane, :]
+            else:
+                # If the image is 2D, use it directly
+                current_img = imgStackLabelled
             (triangles_connectivity, neighbours_network,
              cell_edges, vertices_location, border_cells,
              border_of_border_cells_and_main_cells,
