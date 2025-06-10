@@ -517,13 +517,12 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         edge_mask = labelled_img == 0
 
         # Get the closest labeled polygon for each edge pixel
-        closest_id = dilation(labelled_img, square(5))
+        closest_id = dilation(labelled_img, square(ratio))
 
         filled_image = closest_id
         filled_image[~edge_mask] = labelled_img[~edge_mask]
 
         labelled_img = copy.deepcopy(filled_image)
-
         img_neighbours = self.calculate_neighbours(labelled_img, ratio)
 
         # Calculate the network of neighbours from the cell with ID 1
@@ -539,8 +538,9 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                             main_cells = np.append(main_cells, c_neighbour)
 
             main_cells = np.sort(main_cells)
+            #main_cells = np.arange(1, total_cells + 1)
         else:
-            main_cells = total_cells
+            main_cells = copy.deepcopy(total_cells)
 
         # Calculate the border cells from main_cells
         border_cells_and_main_cells = np.unique(np.block([img_neighbours[i] for i in main_cells]))
@@ -549,6 +549,10 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
         border_of_border_cells_and_main_cells = np.unique(
             np.concatenate([img_neighbours[i] for i in border_cells_and_main_cells]))
+
+        # Keep only the main cells in the labelled image and update the neighbours
+        labelled_img = np.isin(labelled_img, border_of_border_cells_and_main_cells).astype(int) * labelled_img
+        img_neighbours = self.calculate_neighbours(labelled_img, ratio)
 
         quartets, _ = get_four_fold_vertices(img_neighbours)
         if quartets is not None:
@@ -580,7 +584,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         :param ratio:
         :return:
         """
-        vertices_info = self.calculate_vertices(labelled_img, img_neighbours_all, ratio)
+        vertices_info = self.calculate_vertices(labelled_img, img_neighbours_all)
         total_cells = np.max(border_cells_and_main_cells) + 1
         vertices_info['PerCell'] = [None] * total_cells
         vertices_info['edges'] = [None] * total_cells
@@ -669,13 +673,12 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
         return img_neighbours
 
-    def calculate_vertices(self, labelled_img, neighbours, ratio):
+    def calculate_vertices(self, labelled_img, neighbours):
         """
         Calculate the vertices for each cell in a labeled image.
 
         :param labelled_img: A 2D array representing a labeled image.
         :param neighbours: A list of lists where each sublist represents the neighbors of a cell.
-        :param ratio: The radius of the disk used for morphological dilation.
         :return: A dictionary containing the location of each vertex and the cells connected to each vertex.
         """
         neighbours_vertices = build_triplets_of_neighs(neighbours)
@@ -741,6 +744,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             else:
                 # If the image is 2D, use it directly
                 current_img = imgStackLabelled
+
             (triangles_connectivity, neighbours_network,
              cell_edges, vertices_location, border_cells,
              border_of_border_cells_and_main_cells,
@@ -757,7 +761,6 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             zeros_column = np.zeros((props['centroid-1'].shape[0], 1))
             cell_centroids[numPlane] = np.column_stack([props['label'], props['centroid-0'], props['centroid-1'],
                                                         zeros_column])
-
         # Select nodes from images
         all_main_cells = np.unique(
             np.concatenate([borderOfborderCellsAndMainCells[numPlane] for numPlane in selectedPlanes]))
