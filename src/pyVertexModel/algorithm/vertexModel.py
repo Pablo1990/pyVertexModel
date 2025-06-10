@@ -78,9 +78,9 @@ def add_faces_and_vertices_to_x(X, Xg_faceCentres2D, Xg_vertices2D):
     :return:
     """
     Xg_nodes = np.vstack((Xg_faceCentres2D, Xg_vertices2D))
-    Xg_ids = np.arange(X.shape[0] + 1, X.shape[0] + Xg_nodes.shape[0] + 1)
-    Xg_faceIds = Xg_ids[0:Xg_faceCentres2D.shape[0]]
-    Xg_verticesIds = Xg_ids[Xg_faceCentres2D.shape[0]:]
+    Xg_ids = np.arange(X.shape[0], X.shape[0] + Xg_nodes.shape[0] - 1, dtype=int)
+    Xg_faceIds = Xg_ids[:Xg_faceCentres2D.shape[0]-1]
+    Xg_verticesIds = Xg_ids[Xg_faceCentres2D.shape[0]-1:]
     X = np.vstack((X, Xg_nodes))
     return X, Xg_faceIds, Xg_ids, Xg_verticesIds
 

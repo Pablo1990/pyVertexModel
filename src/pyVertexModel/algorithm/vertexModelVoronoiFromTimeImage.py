@@ -527,7 +527,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
         # Calculate the network of neighbours from the cell with ID 1
         if not isinstance(total_cells, np.ndarray):
-            main_cells = img_neighbours[1]
+            main_cells = np.array([1])
             while len(main_cells) < total_cells:
                 for c_cell in main_cells:
                     for c_neighbour in img_neighbours[c_cell]:
@@ -766,7 +766,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             np.concatenate([borderOfborderCellsAndMainCells[numPlane] for numPlane in selectedPlanes]))
 
         # Obtain the average centroid between the selected planes
-        max_label = int(np.max([np.max(cell_centroids[numPlane][:, 0]) for numPlane in selectedPlanes]))
+        max_label = int(np.max([np.max(borderOfborderCellsAndMainCells[numPlane]) for numPlane in selectedPlanes]))
         X = np.zeros((max_label + 1, 3))
         for label in arange(1, max_label + 1):
             list_centroids = []
