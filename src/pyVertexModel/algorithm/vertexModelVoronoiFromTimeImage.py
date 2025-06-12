@@ -526,7 +526,6 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         :param total_cells:
         :return:
         """
-
         ratio = 2
 
         labelled_img[watershed_img == 0] = 0
@@ -535,7 +534,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         edge_mask = labelled_img == 0
 
         # Get the closest labeled polygon for each edge pixel
-        closest_id = dilation(labelled_img, square(ratio))
+        closest_id = dilation(labelled_img, np.ones((ratio, ratio)) == 1)
 
         filled_image = closest_id
         filled_image[~edge_mask] = labelled_img[~edge_mask]
@@ -556,7 +555,6 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                             main_cells = np.append(main_cells, c_neighbour)
 
             main_cells = np.sort(main_cells)
-            #main_cells = np.arange(1, total_cells + 1)
         else:
             main_cells = copy.deepcopy(total_cells)
 
@@ -588,8 +586,13 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         # Remove Nones from the vertices location
         cell_edges = [cell_edges[i] for i in range(len(cell_edges)) if cell_edges[i] is not None]
 
+        props = regionprops_table(labelled_img, properties=('centroid', 'label',))
+        zeros_column = np.zeros((props['centroid-1'].shape[0], 1))
+        cell_centroids_current = np.column_stack([props['label'], props['centroid-0'], props['centroid-1'],
+                                                    zeros_column])
+
         return (triangles_connectivity, neighbours_network, cell_edges, vertices_location, border_cells,
-                border_of_border_cells_and_main_cells, main_cells)
+                border_of_border_cells_and_main_cells, main_cells, cell_centroids_current)
 
     def populate_vertices_info(self, border_cells_and_main_cells, img_neighbours_all, labelled_img, main_cells,
                                ratio):
@@ -603,7 +606,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         :return:
         """
         vertices_info = self.calculate_vertices(labelled_img, img_neighbours_all)
-        total_cells = np.max(border_cells_and_main_cells) + 1
+        total_cells = np.max(main_cells) + 1
         vertices_info['PerCell'] = [None] * total_cells
         vertices_info['edges'] = [None] * total_cells
         for idx, num_cell in enumerate(main_cells):
@@ -675,19 +678,29 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         :param ratio_strel:
         :return:
         """
-        se = disk(ratio_strel)
+        se = np.array([
+            [0, 0, 1, 0, 0],
+            [0, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1],
+            [0, 1, 1, 1, 0],
+            [0, 0, 1, 0, 0]
+        ])
         cells = np.unique(labelled_img)
         cells = cells[cells != 0]  # Remove cell 0 if it exists
 
         img_neighbours = [None] * (np.max(cells) + 1)
-        boundaries = find_boundaries(labelled_img, mode='inner') * labelled_img
+        #boundaries = find_boundaries(labelled_img, mode='inner') * labelled_img
 
         self.dilated_cells = [None] * (np.max(labelled_img) + 1)
 
-        for cell in cells:
-            self.dilated_cells[cell] = dilation(boundaries == cell, se)
-            neighs = np.unique(labelled_img[self.dilated_cells[cell]])
-            img_neighbours[cell] = neighs[(neighs != 0) & (neighs != cell)]
+        for cell_id in cells:
+            try:
+                self.dilated_cells[cell_id] = dilation(labelled_img == cell_id, se)
+            except IndexError:
+                continue
+
+            neighs = np.unique(labelled_img[self.dilated_cells[cell_id]])
+            img_neighbours[cell_id] = neighs[(neighs != 0) & (neighs != cell_id)]
 
         return img_neighbours
 
@@ -743,7 +756,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         if img_filename is None:
             img_filename = PROJECT_DIRECTORY + '/' + self.set.initial_filename_state
 
-        selectedPlanes = [1, 0]
+        selectedPlanes = [0, 0]
         img2DLabelled, imgStackLabelled = process_image(img_filename)
 
         # Building the topology of each plane
@@ -755,7 +768,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         borderOfborderCellsAndMainCells = {}
         cell_centroids = {}
         main_cells = self.set.TotalCells
-        for numPlane in selectedPlanes:
+        for id_plane, numPlane in enumerate(selectedPlanes):
             if imgStackLabelled.ndim == 3:
                 # Select the current plane from the image stack
                 current_img = imgStackLabelled[:, numPlane, :]
@@ -766,37 +779,33 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             (triangles_connectivity, neighbours_network,
              cell_edges, vertices_location, border_cells,
              border_of_border_cells_and_main_cells,
-             main_cells) = self.build_2d_voronoi_from_image(current_img, current_img, main_cells)
+             main_cells, cell_centroids_current) = self.build_2d_voronoi_from_image(current_img, current_img, main_cells)
 
-            trianglesConnectivity[numPlane] = triangles_connectivity
-            neighboursNetwork[numPlane] = neighbours_network
-            cellEdges[numPlane] = cell_edges
-            verticesOfCell_pos[numPlane] = vertices_location
-            borderCells[numPlane] = border_cells
-            borderOfborderCellsAndMainCells[numPlane] = border_of_border_cells_and_main_cells
+            trianglesConnectivity[id_plane] = triangles_connectivity
+            neighboursNetwork[id_plane] = neighbours_network
+            cellEdges[id_plane] = cell_edges
+            verticesOfCell_pos[id_plane] = vertices_location
+            borderCells[id_plane] = border_cells
+            borderOfborderCellsAndMainCells[id_plane] = border_of_border_cells_and_main_cells
+            cell_centroids[id_plane] = cell_centroids_current
 
-            props = regionprops_table(current_img, properties=('centroid', 'label',))
-            zeros_column = np.zeros((props['centroid-1'].shape[0], 1))
-            cell_centroids[numPlane] = np.column_stack([props['label'], props['centroid-0'], props['centroid-1'],
-                                                        zeros_column])
         # Select nodes from images
         all_main_cells = np.unique(
             np.concatenate([borderOfborderCellsAndMainCells[numPlane] for numPlane in selectedPlanes]))
 
         # Obtain the average centroid between the selected planes
-        max_label = int(np.max([np.max(borderOfborderCellsAndMainCells[numPlane]) for numPlane in selectedPlanes]))
-        X = np.zeros((max_label + 1, 3))
-        for label in arange(1, max_label + 1):
+        X = np.zeros((np.max(all_main_cells) + 1, 3))
+        for _, label_id in enumerate(all_main_cells):
             list_centroids = []
-            for numPlane in selectedPlanes:
-                found_centroid = np.where(cell_centroids[numPlane][:, 0] == label)[0]
+            for id_plane, numPlane in enumerate(selectedPlanes):
+                found_centroid = np.where(cell_centroids[id_plane][:, 0] == (label_id))[0]
                 if len(found_centroid) > 0:
-                    list_centroids.append(cell_centroids[numPlane][found_centroid, 1:3])
+                    list_centroids.append(cell_centroids[id_plane][found_centroid, 1:3])
 
             if len(list_centroids) > 0:
-                X[label, 0:2] = np.mean(list_centroids, axis=0)
+                X[label_id, 0:2] = np.mean(list_centroids, axis=0)
             else:
-                print(f'Cell {label} not found in all planes')
+                print(f'Cell {label_id} not found in all planes')
 
         # Basic features
         cell_height = calculate_cell_height_on_model(img2DLabelled, main_cells, self.set)
@@ -810,9 +819,9 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         self.geo.nCells = len(main_cells)
         self.geo.Main_cells = main_cells
         self.geo.XgLateral = np.setdiff1d(all_main_cells, main_cells)
-        self.geo.XgID = np.setdiff1d(np.arange(1, X.shape[0] + 1), main_cells)
+        self.geo.XgID = np.setdiff1d(np.arange(X.shape[0]), main_cells)
         # Define border cells
-        self.geo.BorderCells = np.unique(np.concatenate([borderCells[numPlane] for numPlane in selectedPlanes]))
+        self.geo.BorderCells = np.unique(np.concatenate([borderCells[numPlane] for numPlane, id_plane in enumerate(selectedPlanes)]))
         self.geo.BorderGhostNodes = self.geo.XgLateral
 
         # Create new tetrahedra based on intercalations
@@ -821,16 +830,19 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         # After removing ghost tetrahedras, some nodes become disconnected,
         # that is, not a part of any tetrahedra. Therefore, they should be
         # removed from X
-        Twg = Twg[~np.all(np.isin(Twg, self.geo.XgID), axis=1)]
+        #Twg = Twg[~np.all(np.isin(Twg, self.geo.XgID), axis=1)]
 
         # Remove tetrahedra with cells that are not in all_main_cells
-        # cells_to_remove = np.setdiff1d(range(1, np.max(all_main_cells) + 1), all_main_cells)
-        # Twg = Twg[~np.any(np.isin(Twg, cells_to_remove), axis=1)]
+        #cells_to_remove = np.setdiff1d(range(1, np.max(all_main_cells) + 1), all_main_cells)
+        #Twg = Twg[~np.any(np.isin(Twg, cells_to_remove), axis=1)]
 
         # Re-number the surviving tets
-        Twg, X = self.renumber_tets_xs(Twg, X)
+        #Twg, X = self.renumber_tets_xs(Twg, X)
         # Normalise Xs
-        X = X / img2DLabelled.shape[0]
+        X = X / np.max(X[:, 0:2])
+        #X[:, 0:2] = X[:, 0:2] - np.min(X[:, 0:2], axis=0)
+
+        # Until here, the first cell is 1.
 
         return Twg, X
 
@@ -854,7 +866,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         # Create a new array of indices
         newIds = np.arange(len(oldIds))
         # Update the coordinates array based on the old indices
-        X = X[oldIds - 1, :]
+        X = X[oldIds, :]
         # Reshape the inverse mapping to match the shape of the tetrahedra array
         Twg = oldTwgNewIds.reshape(Twg.shape)
         # Update the ghost node indices in the geometry object
