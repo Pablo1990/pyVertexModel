@@ -544,17 +544,18 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
         # Calculate the network of neighbours from the cell with ID 1
         if not isinstance(total_cells, np.ndarray):
-            main_cells = np.array([1])
-            while len(main_cells) < total_cells:
-                for c_cell in main_cells:
-                    for c_neighbour in img_neighbours[c_cell]:
-                        if len(main_cells) >= total_cells:
-                            break
-
-                        if c_neighbour not in main_cells:
-                            main_cells = np.append(main_cells, c_neighbour)
-
-            main_cells = np.sort(main_cells)
+            # TODO: FIX PROBLEM WITH BORDER CELLS
+            # main_cells = np.array([1])
+            # while len(main_cells) < total_cells:
+            #     for c_cell in main_cells:
+            #         for c_neighbour in img_neighbours[c_cell]:
+            #             if len(main_cells) >= total_cells:
+            #                 break
+            #
+            #             if c_neighbour not in main_cells:
+            #                 main_cells = np.append(main_cells, c_neighbour)
+            #
+            # main_cells = np.sort(main_cells)
             main_cells = np.arange(1, total_cells + 1)
         else:
             main_cells = copy.deepcopy(total_cells)
