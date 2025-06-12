@@ -725,7 +725,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             BW2_dilate = self.dilated_cells[neighbours_vertices[num_triplet][1]]
             BW3_dilate = self.dilated_cells[neighbours_vertices[num_triplet][2]]
 
-            row, col = np.where((BW1_dilate * BW2_dilate * BW3_dilate * border_img) == 1)
+            col, row = np.where((BW1_dilate * BW2_dilate * BW3_dilate * border_img) == 1)
 
             if len(row) > 1:
                 if round(np.mean(col)) not in col:
