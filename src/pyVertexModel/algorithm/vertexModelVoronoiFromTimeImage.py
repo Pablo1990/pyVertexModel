@@ -555,6 +555,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                             main_cells = np.append(main_cells, c_neighbour)
 
             main_cells = np.sort(main_cells)
+            main_cells = np.arange(1, total_cells + 1)
         else:
             main_cells = copy.deepcopy(total_cells)
 
