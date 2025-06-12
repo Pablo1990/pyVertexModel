@@ -5,6 +5,7 @@ from itertools import combinations
 
 import numpy as np
 import pandas as pd
+from numpy.ma.extras import setdiff1d
 from skimage.measure import regionprops
 
 from src.pyVertexModel.Kg.kg import add_noise_to_parameter
@@ -41,18 +42,16 @@ def generate_tetrahedra_from_information(X, cell_edges, cell_height, cell_centro
         z_coordinate = [-cell_height, cell_height]
     else:
         z_coordinate = [cell_height, -cell_height]
+
     Twg = []
+    all_ids = np.unique(triangles_connectivity[0])
     for idPlane, numPlane in enumerate(selected_planes):
+
+        Xg_faceCentres2D = np.hstack((cell_centroids[idPlane][:, 1:3], np.tile(z_coordinate[idPlane], (len(cell_centroids[idPlane][:, 1:3]), 1))))
+        Xg_vertices2D = np.hstack((np.fliplr(vertices_of_cell_pos[idPlane]), np.tile(z_coordinate[idPlane], (len(vertices_of_cell_pos[idPlane]), 1))))
+
         # Using the centroids and vertices of the cells of each 2D image as ghost nodes
-        X, Xg_faceIds, Xg_ids, Xg_verticesIds = (
-            add_faces_and_vertices_to_x(X,
-                                        np.hstack((cell_centroids[numPlane][:, 1:3], np.tile(z_coordinate[idPlane],
-                                                                                             (len(cell_centroids[
-                                                                                                      numPlane][:,
-                                                                                                  1:3]), 1)))),
-                                        np.hstack((np.fliplr(vertices_of_cell_pos[numPlane]),
-                                                   np.tile(z_coordinate[idPlane],
-                                                           (len(vertices_of_cell_pos[numPlane]), 1))))))
+        X, Xg_faceIds, Xg_ids, Xg_verticesIds = add_faces_and_vertices_to_x(X, Xg_faceCentres2D, Xg_vertices2D)
 
         # Fill Geo info
         if idPlane == bottom_plane:
@@ -61,10 +60,11 @@ def generate_tetrahedra_from_information(X, cell_edges, cell_height, cell_centro
             geo.XgTop = Xg_ids
 
         # Create tetrahedra
-        Twg_numPlane = create_tetrahedra(triangles_connectivity[numPlane], neighbours_network[numPlane],
-                                         cell_edges[numPlane], main_cells, Xg_faceIds, Xg_verticesIds)
+        Twg_numPlane = create_tetrahedra(triangles_connectivity[idPlane], neighbours_network[idPlane],
+                                         cell_edges[idPlane], main_cells, Xg_faceIds, Xg_verticesIds)
 
         Twg.append(Twg_numPlane)
+        all_ids = np.unique(np.block([all_ids, Xg_ids]))
     Twg = np.vstack(Twg)
     return Twg, X
 
