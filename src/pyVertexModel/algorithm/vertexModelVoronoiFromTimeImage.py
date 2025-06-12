@@ -151,6 +151,12 @@ def boundary_of_cell(vertices_of_cell, neighbours=None):
 
 
 def generate_neighbours_network(neighbours, main_cells):
+    """
+    Generate a network of neighbours for the main cells.
+    :param neighbours:
+    :param main_cells:
+    :return:
+    """
     neighbours_network = []
     for num_cell in main_cells:
         current_neighbours = np.array(neighbours[num_cell])
@@ -278,6 +284,15 @@ def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence
 
 
 def add_tetrahedral_intercalations(Twg, xInternal, XgBottom, XgTop, XgLateral):
+    """
+    Add tetrahedral intercalations to the tissue mesh based on the missing neighbours.
+    :param Twg:
+    :param xInternal:
+    :param XgBottom:
+    :param XgTop:
+    :param XgLateral:
+    :return:
+    """
     allCellIds = np.concatenate([xInternal, XgLateral])
     neighboursMissing = {}
 
@@ -301,6 +316,9 @@ def add_tetrahedral_intercalations(Twg, xInternal, XgBottom, XgTop, XgLateral):
 
 
 class VertexModelVoronoiFromTimeImage(VertexModel):
+    """
+    Vertex model from a time image.
+    """
     def __init__(self, set_option='wing_disc', set_test=None, update_derived_parameters=True, create_output_folder=True):
         super().__init__(set_option=set_option, c_set=set_test, update_derived_parameters=update_derived_parameters, create_output_folder=create_output_folder)
         self.dilated_cells = None
