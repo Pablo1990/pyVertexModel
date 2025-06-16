@@ -127,7 +127,7 @@ class Face:
         :param extrapolate_face_centre:
         :return:
         """
-        Centre = np.sum(Ys, axis=0) / len(Ys)
+        Centre = np.mean(Ys, axis=0)
         if sum(node in range(ncells) for node in ij) == 1 and extrapolate_face_centre:
             runit = (Centre - X)
             runit = runit / np.linalg.norm(runit)

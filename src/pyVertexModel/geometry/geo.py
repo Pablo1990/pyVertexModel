@@ -531,11 +531,8 @@ class Geo:
         # Obtain IDs from alive cells
         alive_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]
 
-        # Obtain cells that are not border cells or border ghost nodes
-        all_cells_to_update = [c.ID for c in self.Cells]
-
         # Update the centre X of the cells
-        for c in all_cells_to_update:
+        for c in [c.ID for c in self.Cells]:
             if self.Cells[c].T is not None:
                 if c in self.XgID:
                     dY = np.zeros((self.Cells[c].T.shape[0], 3))
@@ -1539,7 +1536,6 @@ class Geo:
         border_ghost_nodes = self.BorderGhostNodes
         border_and_ghost_nodes = np.concatenate([border_cells, border_ghost_nodes])
 
-        #
         list_of_opposite_cells = []
 
         # Remove opposite_cell attribute from all cells
