@@ -832,17 +832,16 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         # After removing ghost tetrahedras, some nodes become disconnected,
         # that is, not a part of any tetrahedra. Therefore, they should be
         # removed from X
-        #Twg = Twg[~np.all(np.isin(Twg, self.geo.XgID), axis=1)]
+        Twg = Twg[~np.all(np.isin(Twg, self.geo.XgID), axis=1)]
 
         # Remove tetrahedra with cells that are not in all_main_cells
         #cells_to_remove = np.setdiff1d(range(1, np.max(all_main_cells) + 1), all_main_cells)
         #Twg = Twg[~np.any(np.isin(Twg, cells_to_remove), axis=1)]
 
         # Re-number the surviving tets
-        #Twg, X = self.renumber_tets_xs(Twg, X)
+        Twg, X = self.renumber_tets_xs(Twg, X)
         # Normalise Xs
         X = X / np.max(X[:, 0:2])
-        #X[:, 0:2] = X[:, 0:2] - np.min(X[:, 0:2], axis=0)
 
         # Until here, the first cell is 1.
 
