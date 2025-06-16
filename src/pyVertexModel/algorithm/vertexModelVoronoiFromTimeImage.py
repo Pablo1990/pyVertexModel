@@ -473,25 +473,13 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                     cells_involved_intercalation = [cell.ID for cell in remodel_obj.Geo.Cells if cell.ID in all_tnew.flatten()
                                                     and cell.AliveStatus == 1]
 
-                    #remodel_obj.Geo.build_x_from_y_only_x_y()
-
-                    #for c, c_cell in enumerate(remodel_obj.Geo.Cells):
-                    #    if c_cell.ID in cells_involved_intercalation:
-                    #        remodel_obj.Geo.Cells[c].Y = remodel_obj.Geo.Cells[c].build_y_from_x(remodel_obj.Geo, remodel_obj.Set)
-
-                    #smoothing_tissue_mesh(remodel_obj.Geo, location='Bottom')
                     remodel_obj.Geo = smoothing_cell_surfaces_mesh(remodel_obj.Geo, cells_involved_intercalation, backup_vars, location='Bottom')
-
-                    #for cell in self.geo.Cells:
-                    #    if cell.AliveStatus is not None:
-                    #        face_centres_to_middle_of_neighbours_vertices(self.geo, cell.ID)
 
                     # Converge a single iteration
                     remodel_obj.Geo.update_measures()
 
                     remodel_obj.Set.currentT = self.t
                     remodel_obj.Dofs.get_dofs(remodel_obj.Geo, self.set)
-                    #has_converged = remodel_obj.check_if_will_converge(remodel_obj.Geo, n_iter_max=20)
 
                 if has_converged:
                     c_scutoids = remodel_obj.Geo.compute_percentage_of_scutoids() / 100
@@ -504,7 +492,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                                 self.set.OutputFolder + '/images')
 
                     self.geo = remodel_obj.Geo
-                    save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(round(c_scutoids, 2)) + '.pkl'))
+                    self.save_v_model_state(os.path.join(self.set.OutputFolder, 'data_step_' + str(round(c_scutoids, 2)) + '.pkl'))
                     break
                 else:
                     remodel_obj.Geo, _, _, _, remodel_obj.Geo.Dofs = load_backup_vars(backup_vars)
