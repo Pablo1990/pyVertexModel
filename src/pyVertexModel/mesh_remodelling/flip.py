@@ -312,13 +312,10 @@ def y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo,
 
     # Step 5: For each combination of edges to remove, check if it is valid
     logger.info(f"Number of possible combinations: {len(Tnew)}")
-    new_tets_tree, Geo_new = get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercalate_with,
-                                                           endNode,
+    new_tets_tree, Geo_new = get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, endNode,
                                                            ghost_nodes_without_debris, intercalation_flip, old_tets,
-                                                           parentNode,
-                                                           tets4_cells, ys_4_cells, treeOfPossibilities,
-                                                           xs_to_disconnect,
-                                                           cell_to_split_from)
+                                                           parentNode, tets4_cells, treeOfPossibilities,
+                                                           xs_to_disconnect, cell_to_split_from)
 
     # Get the last combination from new_tets_tree
     Tnew = new_tets_tree
@@ -344,9 +341,9 @@ def dfs(graph, start, end):
                 stack.append((next_node, path + [next_node]))
 
 
-def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercalate_with, endNode,
-                                  ghost_nodes_without_debris, intercalation_flip, old_tets, parentNode, tets4_cells,
-                                  ys_4_cells, treeOfPossibilities, xs_to_disconnect, cell_to_split_from):
+def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, endNode, ghost_nodes_without_debris, intercalation_flip,
+                                  old_tets, parentNode, tets4_cells, treeOfPossibilities, xs_to_disconnect,
+                                  cell_to_split_from):
     """
     Get the best combination of new tets
     :param Geo:
@@ -354,7 +351,6 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
     :param TRemoved:
     :param Tnew:
     :param Xs:
-    :param cell_to_intercalate_with:
     :param endNode:
     :param ghost_nodes_without_debris:
     :param intercalation_flip:
@@ -367,7 +363,6 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, cell_to_intercal
     Geo_final = Geo
     new_tets_tree = None
     valence_segment = np.inf
-    best_gr = np.inf
 
     xs_to_disconnect_cells = xs_to_disconnect[~np.isin(xs_to_disconnect, Geo.XgID)]
 
