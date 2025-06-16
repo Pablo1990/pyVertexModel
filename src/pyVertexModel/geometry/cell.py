@@ -555,6 +555,12 @@ class Cell:
             return self.compute_area(filter_location) / perimeter ** 2
 
     def build_y_from_x(self, geo, c_set):
+        """
+        Build the Y of the cell from the X and the geometry
+        :param geo:
+        :param c_set:
+        :return:
+        """
         Tets = self.T
         dim = self.X.shape[0]
         Y = np.zeros((len(Tets), dim))

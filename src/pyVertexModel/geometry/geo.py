@@ -929,6 +929,23 @@ class Geo:
         :param Set:
         :return:
         """
+
+        if Set.contributionOldYs == 0:
+            new_tets = np.array([cell.compute_y(self, Tnew[numTet, :], self.Cells[mainNodesToConnect].X, Set)
+                                 for numTet in range(Tnew.shape[0])])
+            for new_tet_id, new_tet in enumerate(new_tets):
+                # Adjust Z of the new_tets
+                if any(np.isin(Tnew[new_tet_id], self.XgTop)):
+                    tets_to_use = np.any(np.isin(self.Cells[mainNodesToConnect].T, self.XgTop), axis=1)
+                elif any(np.isin(Tnew[new_tet_id], self.XgBottom)):
+                    tets_to_use = np.any(np.isin(self.Cells[mainNodesToConnect].T, self.XgBottom), axis=1)
+                else:
+                    return new_tets
+
+                new_tet[2] = np.mean(self.Cells[mainNodesToConnect].Y[tets_to_use], axis=0)[2]
+
+            return new_tets
+
         allYs = np.vstack([
             c_cell.Y for c_cell in self.Cells
             if c_cell.AliveStatus is not None and c_cell.T.size > 0

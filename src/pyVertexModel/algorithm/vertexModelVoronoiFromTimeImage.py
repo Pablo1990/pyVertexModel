@@ -473,25 +473,13 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                     cells_involved_intercalation = [cell.ID for cell in remodel_obj.Geo.Cells if cell.ID in all_tnew.flatten()
                                                     and cell.AliveStatus == 1]
 
-                    #remodel_obj.Geo.build_x_from_y_only_x_y()
-
-                    #for c, c_cell in enumerate(remodel_obj.Geo.Cells):
-                    #    if c_cell.ID in cells_involved_intercalation:
-                    #        remodel_obj.Geo.Cells[c].Y = remodel_obj.Geo.Cells[c].build_y_from_x(remodel_obj.Geo, remodel_obj.Set)
-
-                    #smoothing_tissue_mesh(remodel_obj.Geo, location='Bottom')
                     remodel_obj.Geo = smoothing_cell_surfaces_mesh(remodel_obj.Geo, cells_involved_intercalation, backup_vars, location='Bottom')
-
-                    #for cell in self.geo.Cells:
-                    #    if cell.AliveStatus is not None:
-                    #        face_centres_to_middle_of_neighbours_vertices(self.geo, cell.ID)
 
                     # Converge a single iteration
                     remodel_obj.Geo.update_measures()
 
                     remodel_obj.Set.currentT = self.t
                     remodel_obj.Dofs.get_dofs(remodel_obj.Geo, self.set)
-                    #has_converged = remodel_obj.check_if_will_converge(remodel_obj.Geo, n_iter_max=20)
 
                 if has_converged:
                     c_scutoids = remodel_obj.Geo.compute_percentage_of_scutoids() / 100
@@ -504,7 +492,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                                 self.set.OutputFolder + '/images')
 
                     self.geo = remodel_obj.Geo
-                    save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(round(c_scutoids, 2)) + '.pkl'))
+                    self.save_v_model_state(os.path.join(self.set.OutputFolder, 'data_step_' + str(round(c_scutoids, 2)) + '.pkl'))
                     break
                 else:
                     remodel_obj.Geo, _, _, _, remodel_obj.Geo.Dofs = load_backup_vars(backup_vars)
@@ -656,13 +644,13 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         self.geo.update_measures()
         # Calculate the current average volume of the cells
         current_average_volume = np.mean([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
-        middle_point = np.mean([cell.X for cell in self.geo.Cells if cell.AliveStatus is not None], axis=0)
+        middle_point = np.mean([cell.X for cell in self.geo.Cells], axis=0)
         # Calculate the scaling factor
         scaling_factor = (average_volume / current_average_volume) ** (1 / 3)
         # Resize the cells
         for cell in self.geo.Cells:
+            cell.X = middle_point + (cell.X - middle_point) * scaling_factor
             if cell.AliveStatus is not None:
-                cell.X = middle_point + (cell.X - middle_point) * scaling_factor
                 cell.Y = middle_point + (cell.Y - middle_point) * scaling_factor
                 for face in cell.Faces:
                     face.Centre = middle_point + (face.Centre - middle_point) * scaling_factor
@@ -840,10 +828,9 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
         # Re-number the surviving tets
         Twg, X = self.renumber_tets_xs(Twg, X)
-        # Normalise Xs
-        X = X / np.max(X[:, 0:2])
-
-        # Until here, the first cell is 1.
+        # Normalise Xs regarding density of cells within the image
+        density_image = img2DLabelled.shape[0] * img2DLabelled.shape[1] / len(main_cells)
+        X = X / density_image
 
         return Twg, X
 
@@ -875,6 +862,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         self.geo.XgTop = newIds[np.isin(oldIds, self.geo.XgTop)]
         self.geo.XgLateral = newIds[np.isin(oldIds, self.geo.XgLateral)]
         self.geo.XgID = newIds[np.isin(oldIds, self.geo.XgID)]
+        self.geo.BorderCells = newIds[np.isin(oldIds, self.geo.BorderCells)]
         self.geo.BorderGhostNodes = self.geo.XgLateral
         self.geo.Main_cells = newIds[np.isin(oldIds, self.geo.Main_cells)]
         # Return the renumbered tetrahedra and coordinates arrays
