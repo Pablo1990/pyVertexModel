@@ -863,6 +863,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         self.geo.XgTop = newIds[np.isin(oldIds, self.geo.XgTop)]
         self.geo.XgLateral = newIds[np.isin(oldIds, self.geo.XgLateral)]
         self.geo.XgID = newIds[np.isin(oldIds, self.geo.XgID)]
+        self.geo.BorderCells = newIds[np.isin(oldIds, self.geo.BorderCells)]
         self.geo.BorderGhostNodes = self.geo.XgLateral
         self.geo.Main_cells = newIds[np.isin(oldIds, self.geo.Main_cells)]
         # Return the renumbered tetrahedra and coordinates arrays
