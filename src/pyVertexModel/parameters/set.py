@@ -122,7 +122,7 @@ class Set:
             self.LocalViscosityOption = 2
             # =========================== remodelling ============================
             self.Remodelling = True
-            self.contributionOldYs = 1
+            self.contributionOldYs = 0 #0.8
             self.RemodelStiffness = None
             # ============================ Solution ==============================
             self.tol = 1e-08
@@ -175,7 +175,6 @@ class Set:
             self.tol = self.nu
             self.tol0 = self.nu/20
 
-        if self.RemodelStiffness is None:
         if self.Remodelling:
             self.RemodelStiffness = 0.7
         else:
@@ -288,9 +287,10 @@ class Set:
         self.check_for_non_used_parameters()
 
     def wing_disc_equilibrium(self):
+        self.contributionOldYs = 0.8
         self.nu_bottom = self.nu
-        self.model_name = 'wing_disc_real_top_right'
-        self.initial_filename_state = 'Input/' + self.model_name + '.mat'
+        self.model_name = 'dWL1'
+        self.initial_filename_state = 'Input/images/' + self.model_name + '.tif'
         self.percentage_scutoids = 0.45
         self.Nincr = self.tend * 100
 
