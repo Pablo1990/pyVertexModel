@@ -8,7 +8,7 @@ from src.pyVertexModel.util.utils import load_state
 
 start_new = True
 if start_new == True:
-    hpc = True
+    hpc = False
     if hpc == True:
         vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
         vModel.set.OutputFolder = sys.argv[2] + vModel.set.OutputFolder.split('/')[-1]
@@ -17,7 +17,7 @@ if start_new == True:
         vModel.iterate_over_time()
         analyse_simulation(vModel.set.OutputFolder)
     else:
-        vModel = VertexModelVoronoiFromTimeImage()
+        vModel = VertexModelVoronoiFromTimeImage(set_option='wing_disc_equilibrium')
         vModel.initialize()
         vModel.iterate_over_time()
         analyse_simulation(vModel.set.OutputFolder)
