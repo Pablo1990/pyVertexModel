@@ -152,6 +152,18 @@ class Cell:
 
         return total_area
 
+    def count_small_volume_fraction_per_cell(self, threshold=0.01):
+        """
+        Count the number of faces with small volume fraction per cell.
+        :param threshold: The threshold for small volume fraction.
+        :return: The count of faces with small volume fraction.
+        """
+        count = 0
+        for face in self.Faces:
+            volumes = self.compute_volume_fraction(face)
+            count += np.sum(volumes < threshold)
+        return count
+
     def compute_volume(self):
         """
         Compute the volume of the cell
@@ -159,26 +171,36 @@ class Cell:
         """
         v = 0.0
         for f in range(len(self.Faces)):
-            c_face = self.Faces[f]
-            for t in range(len(c_face.Tris)):
-                y1 = self.Y[c_face.Tris[t].Edge[0], :] - self.X
-                y2 = self.Y[c_face.Tris[t].Edge[1], :] - self.X
-                y3 = c_face.Centre - self.X
-                ytri = np.array([y1, y2, y3])
-
-                current_v = np.linalg.det(ytri) / 6
-                # If the volume is negative, switch two the other option
-                if current_v < 0:
-                    ytri = np.array([y2, y1, y3])
-                    current_v = np.linalg.det(ytri) / 6
-                    # If the volume is negative, switch two the other option
-                    if current_v < 0:
-                        raise "Negative volume detected. Check the cell geometry."
-
-                v += current_v
+            volumes = self.compute_volume_fraction(self.Faces[f])
+            v += np.sum(volumes)
 
         self.Vol = v
         return v
+
+    def compute_volume_fraction(self, c_face):
+        """
+        Compute the volume fraction of a face and add it to the total volume.
+        :param c_face:
+        :return:
+        """
+        volumes = np.zeros(len(c_face.Tris))
+        for t in range(len(c_face.Tris)):
+            y1 = self.Y[c_face.Tris[t].Edge[0], :] - self.X
+            y2 = self.Y[c_face.Tris[t].Edge[1], :] - self.X
+            y3 = c_face.Centre - self.X
+            ytri = np.array([y1, y2, y3])
+
+            current_v = np.linalg.det(ytri) / 6
+            # If the volume is negative, switch two the other option
+            if current_v < 0:
+                ytri = np.array([y2, y1, y3])
+                current_v = np.linalg.det(ytri) / 6
+                # If the volume is negative, switch two the other option
+                if current_v < 0:
+                    raise "Negative volume detected. Check the cell geometry."
+
+            volumes[t] = current_v
+        return volumes
 
     def create_vtk(self):
         """
