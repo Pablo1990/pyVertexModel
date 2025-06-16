@@ -644,13 +644,13 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         self.geo.update_measures()
         # Calculate the current average volume of the cells
         current_average_volume = np.mean([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
-        middle_point = np.mean([cell.X for cell in self.geo.Cells if cell.AliveStatus is not None], axis=0)
+        middle_point = np.mean([cell.X for cell in self.geo.Cells], axis=0)
         # Calculate the scaling factor
         scaling_factor = (average_volume / current_average_volume) ** (1 / 3)
         # Resize the cells
         for cell in self.geo.Cells:
+            cell.X = middle_point + (cell.X - middle_point) * scaling_factor
             if cell.AliveStatus is not None:
-                cell.X = middle_point + (cell.X - middle_point) * scaling_factor
                 cell.Y = middle_point + (cell.Y - middle_point) * scaling_factor
                 for face in cell.Faces:
                     face.Centre = middle_point + (face.Centre - middle_point) * scaling_factor
@@ -828,10 +828,9 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
         # Re-number the surviving tets
         Twg, X = self.renumber_tets_xs(Twg, X)
-        # Normalise Xs
-        X = X / np.max(X[:, 0:2])
-
-        # Until here, the first cell is 1.
+        # Normalise Xs regarding density of cells within the image
+        density_image = img2DLabelled.shape[0] * img2DLabelled.shape[1] / len(main_cells)
+        X = X / density_image
 
         return Twg, X
 
