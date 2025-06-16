@@ -180,6 +180,8 @@ def move_scutoid_vertex(Geo, cell_nodes_shared, close_to_new_point, ref_point_cl
 def smoothing_cell_surfaces_mesh(Geo, cells_intercalated, backup_vars, location='Top'):
     """
     Smoothing the cell surfaces mesh.
+    :param location:
+    :param backup_vars:
     :param Geo:
     :param cells_intercalated:
     :return:
