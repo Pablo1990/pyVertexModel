@@ -122,7 +122,7 @@ class Set:
             self.LocalViscosityOption = 2
             # =========================== remodelling ============================
             self.Remodelling = True
-            self.contributionOldYs = 0
+            self.contributionOldYs = 1
             self.RemodelStiffness = None
             # ============================ Solution ==============================
             self.tol = 1e-08
