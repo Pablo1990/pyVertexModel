@@ -374,6 +374,8 @@ class Remodelling:
     def remodel_mesh(self, num_step, how_close_to_vertex=0.01):
         """
         Remodel the mesh.
+        :param num_step:
+        :param how_close_to_vertex: How close to the vertex the new vertices should be.
         :return:
         """
         checkedYgIds = []
@@ -444,6 +446,18 @@ class Remodelling:
 
     def post_intercalation(self, num_cell, how_close_to_vertex, allTnew, backup_vars, cellToSplitFrom, ghostNode,
                            ghost_nodes_tried, has_converged):
+        """
+        Post intercalation process to remodel the mesh.
+        :param num_cell:
+        :param how_close_to_vertex:
+        :param allTnew:
+        :param backup_vars:
+        :param cellToSplitFrom:
+        :param ghostNode:
+        :param ghost_nodes_tried:
+        :param has_converged:
+        :return:
+        """
         # Get the degrees of freedom for the remodelling
         self.Dofs.get_dofs(self.Geo, self.Set)
         self.Geo = self.Dofs.get_remodel_dofs(allTnew, self.Geo, cellToSplitFrom)
@@ -485,6 +499,12 @@ class Remodelling:
         return has_converged
 
     def reset_preferred_values(self, backup_vars, cells_involved_intercalation):
+        """
+        Reset the preferred values of the cells involved in the intercalation.
+        :param backup_vars:
+        :param cells_involved_intercalation:
+        :return:
+        """
         # Get the relation between Vol0 and Vol from the backup_vars
         for cell in backup_vars['Geo_b'].Cells:
             if cell.ID in cells_involved_intercalation:
@@ -494,6 +514,12 @@ class Remodelling:
                     self.Geo.Cells[cell.ID].Faces[f].Area0 = self.Geo.Cells[cell.ID].Faces[f].Area * self.Set.ref_A0
 
     def check_if_will_converge(self, best_geo, n_iter_max=20):
+        """
+        Check if the remodelling will converge.
+        :param best_geo:
+        :param n_iter_max:
+        :return:
+        """
         dy = np.zeros(((best_geo.numY + best_geo.numF + best_geo.nCells) * 3, 1), dtype=np.float64)
         g, energies = gGlobal(best_geo, best_geo, best_geo, self.Set, self.Set.implicit_method)
         previous_gr = np.linalg.norm(g[self.Dofs.Free])
@@ -696,6 +722,15 @@ class Remodelling:
         return segment_features
 
     def flip_nm(self, segment_to_change, cell_to_intercalate_with, old_tets, old_ys, cell_to_split_from):
+        """
+        Perform the flip operation for the specified segment.
+        :param segment_to_change:
+        :param cell_to_intercalate_with:
+        :param old_tets:
+        :param old_ys:
+        :param cell_to_split_from:
+        :return:
+        """
         hasConverged = False
         old_geo = self.Geo.copy()
         t_new, y_new, self.Geo = y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, segment_to_change, self.Geo,
