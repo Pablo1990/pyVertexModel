@@ -152,17 +152,23 @@ class Cell:
 
         return total_area
 
-    def count_small_volume_fraction_per_cell(self, threshold=0.01):
+    def count_small_volume_fraction_per_cell(self, threshold=0.01, location=None):
         """
         Count the number of faces with small volume fraction per cell.
+        :param location:
         :param threshold: The threshold for small volume fraction.
         :return: The count of faces with small volume fraction.
         """
         count = 0
-        for face in self.Faces:
-            volumes = self.compute_volume_fraction(face)
-            count += np.sum(volumes < threshold)
-        return count
+        for c_face in self.Faces:
+            if location is not None:
+                if get_interface(c_face.InterfaceType) == get_interface(location):
+                    volumes = self.compute_volume_fraction(c_face)
+                    count += np.sum(volumes < threshold)
+            else:
+                volumes = self.compute_volume_fraction(c_face)
+                count += np.sum(volumes < threshold)
+        return count, volumes
 
     def compute_volume(self):
         """

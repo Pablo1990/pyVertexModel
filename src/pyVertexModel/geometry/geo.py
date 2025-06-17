@@ -1617,13 +1617,18 @@ class Geo:
 
         return cell_ids, distances
 
-    def compute_percentage_of_scutoids(self):
+    def compute_percentage_of_scutoids(self, exclude_border_cells=False):
         """
         Compute the percentage of scutoids
         :return:
         """
-        scutoid_cells = [c_cell for c_cell in self.Cells if c_cell.is_scutoid()]
-        percentage_scutoids = len(scutoid_cells) / self.nCells * 100
+
+        if exclude_border_cells:
+            scutoid_cells = [c_cell for c_cell in self.Cells if c_cell.is_scutoid() and c_cell.ID not in self.BorderCells]
+            percentage_scutoids = len(scutoid_cells) / (self.nCells - len(self.BorderCells)) * 100
+        else:
+            scutoid_cells = [c_cell for c_cell in self.Cells if c_cell.is_scutoid()]
+            percentage_scutoids = len(scutoid_cells) / self.nCells * 100
 
         return percentage_scutoids
 

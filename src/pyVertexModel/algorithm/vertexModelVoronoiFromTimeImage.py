@@ -315,6 +315,47 @@ def add_tetrahedral_intercalations(Twg, xInternal, XgBottom, XgTop, XgLateral):
     return Twg
 
 
+def display_volume_fragments(geo, selected_cells=None):
+    """
+    Display the number of fragments on top, bottom and lateral of the cells.
+    :param selected_cells:
+    :param geo:
+    :return:
+    """
+    number_of_small_top = 0
+    number_of_small_bottom = 0
+    number_of_small_lateral = 0
+    volumes_sum_top = 0
+    volumes_sum_bottom = 0
+    volumes_sum_lateral = 0
+    for c_cell in geo.Cells:
+        if selected_cells is not None and c_cell.ID not in selected_cells:
+            continue
+        if c_cell.AliveStatus is None:
+            continue
+        c_number_of_small_top, c_volumes_top = c_cell.count_small_volume_fraction_per_cell(location='Top')
+        c_number_of_small_bottom, c_volumes_bottom = c_cell.count_small_volume_fraction_per_cell(location='Bottom')
+        c_number_of_small_lateral, c_volumes_lateral = c_cell.count_small_volume_fraction_per_cell(
+            location='CellCell')
+        number_of_small_top += c_number_of_small_top
+        number_of_small_bottom += c_number_of_small_bottom
+        number_of_small_lateral += c_number_of_small_lateral
+        volumes_sum_top += np.sum(c_volumes_top)
+        volumes_sum_bottom += np.sum(c_volumes_bottom)
+        volumes_sum_lateral += np.sum(c_volumes_lateral)
+    total_volume = volumes_sum_top + volumes_sum_bottom + volumes_sum_lateral
+    logger.info(f'Number of fragments on top: {number_of_small_top}'
+                f' with total volume {volumes_sum_top}'
+                f' with percentage {volumes_sum_top / total_volume}')
+    logger.info(f'Number of fragments on bottom: {number_of_small_bottom}'
+                f' with total volume {volumes_sum_bottom}'
+                f' with percentage {volumes_sum_bottom / total_volume}')
+    logger.info(f'Number of fragments on lateral: {number_of_small_lateral}'
+                f' with total volume {volumes_sum_lateral}'
+                f' with percentage {volumes_sum_lateral / total_volume}')
+    logger.info(f'Total volume: {volumes_sum_top + volumes_sum_bottom + volumes_sum_lateral}')
+
+
 class VertexModelVoronoiFromTimeImage(VertexModel):
     """
     Vertex model from a time image.
@@ -405,12 +446,14 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         Adjust the percentage of scutoids in the model.
         :return:
         """
-        c_scutoids = self.geo.compute_percentage_of_scutoids() / 100
+        c_scutoids = self.geo.compute_percentage_of_scutoids(exclude_border_cells=True) / 100
 
         # Print initial percentage of scutoids
         logger.info(f'Percentage of scutoids initially: {c_scutoids}')
 
         remodel_obj = Remodelling(self.geo, self.geo, self.geo, self.set, self.Dofs)
+
+        display_volume_fragments(remodel_obj.Geo)
 
         polygon_distribution = remodel_obj.Geo.compute_polygon_distribution('Bottom')
         print(f'Polygon distribution bottom: {polygon_distribution}')
@@ -482,17 +525,28 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                     remodel_obj.Dofs.get_dofs(remodel_obj.Geo, self.set)
 
                 if has_converged:
-                    c_scutoids = remodel_obj.Geo.compute_percentage_of_scutoids() / 100
-                    print(f'Percentage of scutoids: {c_scutoids}')
+                    c_scutoids = remodel_obj.Geo.compute_percentage_of_scutoids(exclude_border_cells=True) / 100
+                    logger.info(f'Percentage of scutoids: {c_scutoids}')
+
+                    # Count the number of small volume fraction
+                    logger.info('----Before')
+                    old_geo, _, _, _, _ = load_backup_vars(backup_vars)
+                    display_volume_fragments(old_geo, cells_involved_intercalation)
+                    logger.info(f'Other cells...')
+                    display_volume_fragments(old_geo, np.setdiff1d([cell.ID for cell in old_geo.Cells], cells_involved_intercalation))
+                    logger.info('----After')
+                    display_volume_fragments(remodel_obj.Geo, cells_involved_intercalation)
+                    logger.info(f'Other cells...')
+                    display_volume_fragments(remodel_obj.Geo, np.setdiff1d([cell.ID for cell in remodel_obj.Geo.Cells], cells_involved_intercalation))
 
                     polygon_distribution = remodel_obj.Geo.compute_polygon_distribution('Bottom')
-                    print(f'Polygon distribution bottom: {polygon_distribution}')
-
+                    logger.info(f'Polygon distribution bottom: {polygon_distribution}')
+                    #self.numStep += 1
                     screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
                                 self.set.OutputFolder + '/images')
 
                     self.geo = remodel_obj.Geo
-                    self.save_v_model_state(os.path.join(self.set.OutputFolder, 'data_step_' + str(round(c_scutoids, 2)) + '.pkl'))
+                    #self.save_v_model_state(os.path.join(self.set.OutputFolder, 'data_step_' + str(round(c_scutoids, 2))))
                     break
                 else:
                     remodel_obj.Geo, _, _, _, remodel_obj.Geo.Dofs = load_backup_vars(backup_vars)
@@ -504,7 +558,6 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
         self.geo.update_measures()
         self.geo.init_reference_cell_values(self.set)
-
 
     def build_2d_voronoi_from_image(self, labelled_img, watershed_img, total_cells):
         """
