@@ -78,9 +78,7 @@ class KgVolume(Kg):
 
             self.g += ge * fact / 6  # Volume contribution of each triangle is det(Y1,Y2,Y3)/6
             if calculate_K:
-                # Both give the same result
                 self.K = kg_functions.compute_finalK_Volume(ge, self.K, Cell.Vol, Cell.Vol0, n, lambdaV)
-                # self.K = self.compute_finalK_Volume(ge, self.K, Cell.Vol, Cell.Vol0, n)
 
             self.energy_per_cell[c] = lambdaV / n * ((Cell.Vol - Cell.Vol0) / Cell.Vol0) ** n
             Cell.energy_volume = self.energy_per_cell[c]
