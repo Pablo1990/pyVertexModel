@@ -487,16 +487,11 @@ class Remodelling:
     def reset_preferred_values(self, backup_vars, cells_involved_intercalation):
         # Get the relation between Vol0 and Vol from the backup_vars
         for cell in backup_vars['Geo_b'].Cells:
-            # if cell.ID == num_cell['num_cell']:
-            #     continue
             if cell.ID in cells_involved_intercalation:
                 self.Geo.Cells[cell.ID].Vol0 = self.Geo.Cells[cell.ID].Vol * cell.Vol0 / cell.Vol
                 self.Geo.Cells[cell.ID].Area0 = self.Geo.Cells[cell.ID].Area * cell.Area0 / cell.Area
                 for f in range(len(self.Geo.Cells[cell.ID].Faces)):
-                    if get_interface(self.Geo.Cells[cell.ID].Faces[f].InterfaceType) != get_interface('CellCell'):
-                        self.Geo.Cells[cell.ID].Faces[f].Area0 = self.Geo.Cells[cell.ID].Faces[f].Area * self.Set.ref_A0
-                    else:
-                        self.Geo.Cells[cell.ID].Faces[f].Area0 = self.Geo.Cells[cell.ID].Faces[f].Area
+                    self.Geo.Cells[cell.ID].Faces[f].Area0 = self.Geo.Cells[cell.ID].Faces[f].Area * self.Set.ref_A0
 
     def check_if_will_converge(self, best_geo, n_iter_max=20):
         dy = np.zeros(((best_geo.numY + best_geo.numF + best_geo.nCells) * 3, 1), dtype=np.float64)
