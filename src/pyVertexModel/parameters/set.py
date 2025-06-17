@@ -122,7 +122,7 @@ class Set:
             self.LocalViscosityOption = 2
             # =========================== remodelling ============================
             self.Remodelling = True
-            self.contributionOldYs = 0 #0.8
+            self.contributionOldYs = 0
             self.RemodelStiffness = None
             # ============================ Solution ==============================
             self.tol = 1e-08
@@ -176,7 +176,7 @@ class Set:
             self.tol0 = self.nu/20
 
         if self.Remodelling:
-            self.RemodelStiffness = 0.7
+            self.RemodelStiffness = 0.9
         else:
             self.RemodelStiffness = 2
 
@@ -233,7 +233,7 @@ class Set:
         current_datetime = datetime.now()
         new_outputFolder = ''.join([PROJECT_DIRECTORY, '/Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")),
                                     self.model_name,
-                                    '_noise_', '{:0.2e}'.format(self.noise_random),
+                                    '_scutoids_', str(self.percentage_scutoids),
                                     '_lVol_', '{:0.2e}'.format(self.lambdaV),
                                     '_kSubs_', '{:0.2e}'.format(self.kSubstrate),
                                     '_lt_', '{:0.2e}'.format(self.cLineTension),
@@ -287,7 +287,6 @@ class Set:
         self.check_for_non_used_parameters()
 
     def wing_disc_equilibrium(self):
-        self.contributionOldYs = 0.8
         self.nu_bottom = self.nu
         self.model_name = 'dWL1'
         self.initial_filename_state = 'Input/images/' + self.model_name + '.tif'
