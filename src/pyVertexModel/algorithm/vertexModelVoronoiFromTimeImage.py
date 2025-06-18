@@ -520,6 +520,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
                     # Converge a single iteration
                     remodel_obj.Geo.update_measures()
+                    remodel_obj.reset_preferred_values(backup_vars, cells_involved_intercalation)
 
                     remodel_obj.Set.currentT = self.t
                     remodel_obj.Dofs.get_dofs(remodel_obj.Geo, self.set)
