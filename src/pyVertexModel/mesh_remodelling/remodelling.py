@@ -511,7 +511,7 @@ class Remodelling:
                 self.Geo.Cells[cell.ID].Vol0 = self.Geo.Cells[cell.ID].Vol * cell.Vol0 / cell.Vol
                 self.Geo.Cells[cell.ID].Area0 = self.Geo.Cells[cell.ID].Area * cell.Area0 / cell.Area
                 for f in range(len(self.Geo.Cells[cell.ID].Faces)):
-                    self.Geo.Cells[cell.ID].Faces[f].Area0 = self.Geo.Cells[cell.ID].Faces[f].Area * self.Set.ref_A0
+                    self.Geo.Cells[cell.ID].Faces[f].Area0 = self.Geo.Cells[cell.ID].Faces[f].Area * cell.Area0 / cell.Area
 
     def check_if_will_converge(self, best_geo, n_iter_max=20):
         """
