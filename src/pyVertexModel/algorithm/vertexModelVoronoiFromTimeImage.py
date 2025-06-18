@@ -512,7 +512,6 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                 all_tnew, ghost_node, ghost_nodes_tried, has_converged, old_tets = remodel_obj.perform_flip(c_cell.ID, random_neighbour, cell_to_split_from[0], shared_nodes[0])
 
                 if has_converged:
-
                     cells_involved_intercalation = [cell.ID for cell in remodel_obj.Geo.Cells if cell.ID in all_tnew.flatten()
                                                     and cell.AliveStatus == 1]
 

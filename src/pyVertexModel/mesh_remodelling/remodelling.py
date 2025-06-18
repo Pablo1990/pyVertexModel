@@ -417,7 +417,7 @@ class Remodelling:
                 has_converged = self.post_intercalation(segmentFeatures['num_cell'], how_close_to_vertex, allTnew, backup_vars,
                                                         cellToSplitFrom, ghostNode, ghost_nodes_tried, has_converged)
 
-                if has_converged is False:
+                if not has_converged:
                     self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs = load_backup_vars(backup_vars)
                     logger.info(f'=>> Full-Flip rejected: did not converge1')
                 else:
@@ -430,10 +430,6 @@ class Remodelling:
                 # Go back to initial state
                 self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs = load_backup_vars(backup_vars)
                 logger.info('=>> Full-Flip rejected: did not converge2')
-
-            # Remove the segment feature that has been checked
-            # for node_tried in allTnew.flatten():
-            #     checkedYgIds.append(node_tried)
 
             for ghost_node_tried in ghost_nodes_tried:
                 checkedYgIds.append([segmentFeatures['num_cell'], ghost_node_tried])
@@ -476,6 +472,10 @@ class Remodelling:
                                             and cell.AliveStatus == 1]
 
             if how_close_to_vertex is not None:
+                if n_cells_wound == 0:
+                    # TODO: THIS SHOULD BE SOMEWHERE ELSE. MOVE IT
+                    how_close_to_vertex = 0.2
+
                 # Move the vertices closer to the reference point
                 geo_copy, reference_point = (
                     move_vertices_closer_to_ref_point(self.Geo.copy(), how_close_to_vertex,
@@ -487,6 +487,7 @@ class Remodelling:
                     correct_edge_vertices(all_tnew, cellNodesShared, geo_copy, num_cell)
                 else:
                     pass
+                    # TODO: FIX THIS, I AM GETTING A WEIRD SPACE WHEN 4 CELLS INTERCALATE
                     #correct_edge_vertices(all_tnew, cells_involved_intercalation, geo_copy, num_cell)
 
                 # Smoothing the cell surfaces mesh
@@ -576,7 +577,6 @@ class Remodelling:
                                                                                              ghost_node)
 
         # Check if the remodelling has improved the gr and the energy
-
         # Compute the new energy
         g, energies = gGlobal(self.Geo, self.Geo, self.Geo, self.Set, self.Set.implicit_method)
         self.Dofs.get_dofs(self.Geo, self.Set)
