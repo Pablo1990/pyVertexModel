@@ -351,7 +351,8 @@ class VertexModel:
             logger.info(f"STEP {str(self.set.i_incr)} has converged ...")
 
             # Build X From Y
-            self.geo.build_x_from_y(self.geo_n)
+            if self.set.implicit_method:
+                self.geo.build_x_from_y(self.geo)
 
             # Remodelling
             if abs(self.t - self.tr) >= self.set.RemodelingFrequency:
