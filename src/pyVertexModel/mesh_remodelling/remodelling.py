@@ -449,13 +449,13 @@ class Remodelling:
 
         return self.Geo, self.Geo_n
 
-    def post_intercalation(self, num_cell, how_close_to_vertex, allTnew, backup_vars, cellToSplitFrom, ghostNode,
+    def post_intercalation(self, num_cell, how_close_to_vertex, all_tnew, backup_vars, cellToSplitFrom, ghostNode,
                            ghost_nodes_tried, has_converged):
         """
         Post intercalation process to remodel the mesh.
         :param num_cell:
         :param how_close_to_vertex:
-        :param allTnew:
+        :param all_tnew:
         :param backup_vars:
         :param cellToSplitFrom:
         :param ghostNode:
@@ -465,29 +465,34 @@ class Remodelling:
         """
         # Get the degrees of freedom for the remodelling
         self.Dofs.get_dofs(self.Geo, self.Set)
-        self.Geo = self.Dofs.get_remodel_dofs(allTnew, self.Geo, cellToSplitFrom)
+        self.Geo = self.Dofs.get_remodel_dofs(all_tnew, self.Geo, cellToSplitFrom)
         gNodeNeighbours = [get_node_neighbours(self.Geo, ghost_node_tried) for ghost_node_tried in
                            ghost_nodes_tried]
         gNodes_NeighboursShared = np.unique(np.concatenate(gNodeNeighbours))
         cellNodesShared = gNodes_NeighboursShared[~np.isin(gNodes_NeighboursShared, self.Geo.XgID)]
         if len(np.concatenate([[num_cell], cellNodesShared])) > 3:
             n_cells_wound = np.sum([cell.AliveStatus == 0 for cell in self.Geo.Cells if cell.ID in cellNodesShared])
-            cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in allTnew.flatten()
+            cells_involved_intercalation = [cell.ID for cell in self.Geo.Cells if cell.ID in all_tnew.flatten()
                                             and cell.AliveStatus == 1]
-            if how_close_to_vertex is not None and n_cells_wound > 0:
+
+            if how_close_to_vertex is not None:
+                # Move the vertices closer to the reference point
                 geo_copy, reference_point = (
                     move_vertices_closer_to_ref_point(self.Geo.copy(), how_close_to_vertex,
                                                       np.concatenate([[num_cell], cellNodesShared]),
-                                                      cellToSplitFrom, ghostNode, allTnew, self.Set))
+                                                      cellToSplitFrom, ghostNode, all_tnew, self.Set))
+
                 # Equidistant vertices on the edges of the three cells
-                try:
-                    correct_edge_vertices(allTnew, cellNodesShared, geo_copy, num_cell)
-                except Exception as e:
-                    logger.error(f'Error in correct_edge_vertices: {e}')
+                if n_cells_wound > 0:
+                    correct_edge_vertices(all_tnew, cellNodesShared, geo_copy, num_cell)
+                else:
+                    pass
+                    #correct_edge_vertices(all_tnew, cells_involved_intercalation, geo_copy, num_cell)
 
                 # Smoothing the cell surfaces mesh
-                geo_copy = smoothing_cell_surfaces_mesh(geo_copy, cells_involved_intercalation, backup_vars)
-                screenshot_(geo_copy, self.Set, 0, 'after_remodelling_', self.Set.OutputFolder + '/images')
+                location_intercalation = 'Top' if ghostNode in geo_copy.XgTop else 'Bottom'
+                geo_copy = smoothing_cell_surfaces_mesh(geo_copy, cells_involved_intercalation, backup_vars, location=location_intercalation)
+                #screenshot_(geo_copy, self.Set, 0, 'after_remodelling_2_', self.Set.OutputFolder + '/images')
 
                 self.Geo = geo_copy
                 self.Geo.update_measures()
