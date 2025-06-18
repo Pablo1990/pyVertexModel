@@ -310,12 +310,19 @@ def correct_edge_vertices(allTnew, cellNodesShared, geo_copy, num_cell):
         # Obtain the vertices with 3 neighbours that should be in the extremes of the edge
         extreme_of_edge = all_tets_cell[np.sum(np.isin(all_tets_cell, geo_copy.XgID), axis=1) == 1]
         extreme_of_edge_ys = all_ys_cell[np.sum(np.isin(all_tets_cell, geo_copy.XgID), axis=1) == 1]
-        extreme_of_edge_ys = extreme_of_edge_ys[
-            np.sum(np.isin(extreme_of_edge, [num_cell, cell]), axis=1) == 2]
 
-        tets_sharing_two_cells = (np.sum(np.isin(all_tets_cell, [num_cell, cell]),
-                                         axis=1) == 2) & (
-                                             np.sum(np.isin(all_tets_cell, geo_copy.XgID), axis=1) == 2)
+        shared_tets = np.sum(np.isin(all_tets_cell, [num_cell, cell]), axis=1) == 2
+        tets_sharing_two_cells = shared_tets & (np.sum(np.isin(all_tets_cell, geo_copy.XgID), axis=1) == 2)
+        if np.sum(tets_sharing_two_cells) == 0:
+            possible_shared_cells = setdiff1d(cellNodesShared, [num_cell, cell])
+            shared_tets = np.sum(np.isin(all_tets_cell, [possible_shared_cells[0], cell]), axis=1) == 2
+            tets_sharing_two_cells = shared_tets & (np.sum(np.isin(all_tets_cell, geo_copy.XgID), axis=1) == 2)
+            extreme_of_edge_ys = extreme_of_edge_ys[
+                np.sum(np.isin(extreme_of_edge, [possible_shared_cells[0], cell]), axis=1) == 2]
+        else:
+            extreme_of_edge_ys = extreme_of_edge_ys[
+                np.sum(np.isin(extreme_of_edge, [num_cell, cell]), axis=1) == 2]
+
         vertices_to_equidistant_move = all_ys_cell[tets_sharing_two_cells]
         ids_two_cells = ids[tets_sharing_two_cells]
 
@@ -347,8 +354,6 @@ def correct_edge_vertices(allTnew, cellNodesShared, geo_copy, num_cell):
             if not np.any(found_tet):
                 continue
             geo_copy.Cells[num_cell].Y[found_tet, :] = new_equidistant_vertices[id_tet]
-
-
 
 
 class Remodelling:
