@@ -194,13 +194,11 @@ class Cell:
             y1 = self.Y[c_face.Tris[t].Edge[0], :] - self.X
             y2 = self.Y[c_face.Tris[t].Edge[1], :] - self.X
             y3 = c_face.Centre - self.X
-            ytri = np.array([y1, y2, y3])
 
-            current_v = np.linalg.det(ytri) / 6
+            current_v = np.linalg.det(np.array([y1, y2, y3])) / 6
             # If the volume is negative, switch two the other option
             if current_v < 0:
-                ytri = np.array([y2, y1, y3])
-                current_v = np.linalg.det(ytri) / 6
+                current_v = np.linalg.det(np.array([y2, y1, y3])) / 6
                 # If the volume is negative, switch two the other option
                 if current_v < 0:
                     raise "Negative volume detected. Check the cell geometry."
