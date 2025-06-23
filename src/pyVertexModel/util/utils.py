@@ -8,6 +8,8 @@ import pickle
 import imageio
 import numpy as np
 import pyvista as pv
+from bqplot.pyplot import legend
+from matplotlib import pyplot as plt
 from scipy.optimize import fsolve, minimize
 
 
@@ -68,91 +70,115 @@ def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None, scalar_to_d
     if selected_cells is None:
         selected_cells = []
 
-    plotter = pv.Plotter(off_screen=True)
+    # Capture screenshots for different views
+    views = ['perspective', 'top', 'bottom', 'front']
+    images = []
 
-    for _, cell in enumerate(geo.Cells):
-        if cell.AliveStatus == 1 and (cell.ID in selected_cells or len(selected_cells) == 0):
-            # Load the VTK file as a pyvista mesh
-            mesh = cell.create_pyvista_mesh()
+    for view in views:
+        plotter = pv.Plotter(off_screen=True)
 
-            # Add the mesh to the plotter
-            # Cmaps that I like: 'tab20b', 'BuPu', 'Blues'
-            # Cmaps that I don't like: 'prism', 'bone'
-            plotter.add_mesh(mesh, name=f'cell_{cell.ID}', scalars=scalar_to_display, lighting=True, cmap="pink",
-                             clim=colormap_lim, show_edges=True, edge_color='white', edge_opacity=0.3)
+        for _, cell in enumerate(geo.Cells):
+            if cell.AliveStatus == 1 and (cell.ID in selected_cells or len(selected_cells) == 0):
+                # Load the VTK file as a pyvista mesh
+                mesh = cell.create_pyvista_mesh()
 
+                # Add the mesh to the plotter
+                # Cmaps that I like: 'tab20b', 'BuPu', 'Blues'
+                # Cmaps that I don't like: 'prism', 'bone'
+                plotter.add_mesh(mesh, name=f'cell_{cell.ID}', scalars=scalar_to_display, lighting=True, cmap="pink",
+                                 clim=colormap_lim, show_edges=True, edge_color='white', edge_opacity=0.3)
 
-    for _, cell in enumerate(geo.Cells):
-        if cell.AliveStatus == 1 and (cell.ID in selected_cells or len(selected_cells) == 0):
-            edge_mesh = cell.create_pyvista_edges()
-            plotter.add_mesh(edge_mesh, name=f'edge_{cell.ID}', color='black', line_width=3, render_lines_as_tubes=True)
+        for _, cell in enumerate(geo.Cells):
+            if cell.AliveStatus == 1 and (cell.ID in selected_cells or len(selected_cells) == 0):
+                edge_mesh = cell.create_pyvista_edges()
+                plotter.add_mesh(edge_mesh, name=f'edge_{cell.ID}', color='black', line_width=3,
+                                 render_lines_as_tubes=True)
 
-    # Set a fixed camera zoom level
-    fixed_zoom_level = 1
-    plotter.camera.zoom(fixed_zoom_level)
+        # Add text to the plotter
+        if set.ablation:
+            timeAfterAblation = float(t) - float(set.TInitAblation)
+            text_content = f"Ablation time: {timeAfterAblation:.2f}"
+            plotter.add_text(text_content, position='upper_left', font_size=25, color='black')
+        else:
+            text_content = f"Time: {t:.2f}"
+            plotter.add_text(text_content, position='upper_left', font_size=25, color='black')
 
-    # Add text to the plotter
-    if set.ablation:
-        timeAfterAblation = float(t) - float(set.TInitAblation)
-        text_content = f"Ablation time: {timeAfterAblation:.2f}"
-        plotter.add_text(text_content, position='upper_right', font_size=12, color='black')
-    else:
-        text_content = f"Time: {t:.2f}"
-        plotter.add_text(text_content, position='upper_right', font_size=12, color='black')
+        if view == 'perspective':
+            plotter.camera.zoom(1.1)
+        elif view == 'top':
+            plotter.enable_parallel_projection()
+            plotter.enable_image_style()
+            plotter.view_xy()
+            plotter.camera.zoom(1.5)
+            # Adjust the camera position and focal point
+            plotter.camera.position = (
+                plotter.camera.position[0],  # Keep the x-coordinate unchanged
+                plotter.camera.position[1] - 0.03,  # Move the y-coordinate up
+                plotter.camera.position[2]  # Keep the z-coordinate unchanged
+            )
+            plotter.camera.focal_point = (
+                plotter.camera.focal_point[0],  # Keep the x-coordinate unchanged
+                plotter.camera.focal_point[1] - 0.03,  # Move the y-coordinate up
+                plotter.camera.focal_point[2]  # Keep the z-coordinate unchanged
+            )
+        elif view == 'bottom':
+            plotter.enable_parallel_projection()
+            plotter.enable_image_style()
+            plotter.view_xy(negative=True)
+            plotter.camera.zoom(1.5)
+            # Adjust the camera position and focal point
+            plotter.camera.position = (
+                plotter.camera.position[0],  # Keep the x-coordinate unchanged
+                plotter.camera.position[1] - 0.03,  # Move the y-coordinate up
+                plotter.camera.position[2]  # Keep the z-coordinate unchanged
+            )
+            plotter.camera.focal_point = (
+                plotter.camera.focal_point[0],  # Keep the x-coordinate unchanged
+                plotter.camera.focal_point[1] - 0.03,  # Move the y-coordinate up
+                plotter.camera.focal_point[2]  # Keep the z-coordinate unchanged
+            )
+        elif view == 'front':
+            plotter.enable_parallel_projection()
+            plotter.enable_image_style()
+            plotter.view_xz()
 
+            # Adjust camera position and focal point for lateral view
+            plotter.camera.position = (geo.Cells[0].X[0] + 1, geo.Cells[0].X[1], geo.Cells[0].X[2])  # Offset for lateral view
+            plotter.camera.focal_point = (geo.Cells[0].X[0], geo.Cells[0].X[1], geo.Cells[0].X[2])
+            plotter.camera.zoom(1)# Focus on the first cell
 
+            # Hide unwanted cells
+            centre_of_wound = geo.compute_wound_centre()
+            cells_to_hide = np.array([cell.ID for cell in geo.Cells if ((cell.AliveStatus == 0 or cell.AliveStatus == 1) and cell.X[0] > geo.Cells[0].X[0])])
+            for cell in cells_to_hide:
+                plotter.remove_actor(f'cell_{cell}')
+                plotter.remove_actor(f'edge_{cell}')
+            for _, cell in enumerate(geo.Cells):
+                if cell.AliveStatus == 0 and cell.ID not in cells_to_hide:
+                    # Load the VTK file as a pyvista mesh
+                    mesh = cell.create_pyvista_mesh()
+                    plotter.add_mesh(mesh, color='white', lighting=True, opacity=0.5)
 
-    # Render the scene and capture a screenshot
-    img = plotter.screenshot(transparent_background=True, scale=3)
-    # Save the image to a temporary file
-    temp_file = os.path.join(temp_dir, f'vModel_perspective_{numStep}.png')
-    imageio.imwrite(temp_file, img)
+        img = plotter.screenshot(scale=3)
+        images.append(img)
+        plotter.close()
 
-    # True 2D
-    plotter.enable_parallel_projection()
-    plotter.enable_image_style()
+    # Reorder the images to match the views
+    images = [images[views.index(view)] for view in ['top', 'bottom', 'perspective', 'front']]
 
-    # Set the camera to the top view
-    plotter.view_xy()
+    # Combine screenshots into one figure
+    fig, axes = plt.subplots(2, 2, figsize=(10, 10), dpi=300)
+    for ax, img, title in zip(axes.flatten(), images, views):
+        ax.imshow(img)
+        #ax.set_title(title)
+        ax.axis('off')
 
-    img = plotter.screenshot(transparent_background=True, scale=3)
-    temp_file = os.path.join(temp_dir, f'vModel_top_{numStep}.png')
-    imageio.imwrite(temp_file, img)
+    plt.subplots_adjust(wspace=-0.01, hspace=-0.35)
 
-    # Set the camera to the bottom view
-    plotter.view_xy(negative=True)
-
-    img = plotter.screenshot(transparent_background=True, scale=3)
-    temp_file = os.path.join(temp_dir, f'vModel_bottom_{numStep}.png')
-    imageio.imwrite(temp_file, img)
-
-    # Set the camera to the front view and adjust the position to be inside the tissue
-    plotter.view_xz()
-    plotter.camera.position = (-0.6836302475532527, 0.49746550619602203, -0.0024260058999061584)
-    plotter.focal_point = (0.5723095089197159, 0.49746550619602203, -0.0024260058999061584)
-    # Do not show the following cells =
-    cells_to_hide = np.array([11, 12, 16, 19, 21, 22, 23, 31, 32, 35, 36, 37, 38, 39, 41, 44, 54, 55, 56, 58, 59, 60, 61, 65, 67, 68, 75, 76, 81, 82, 83, 86, 88, 89, 90, 91, 94, 96, 97, 102, 104, 106, 108, 112, 114, 116, 119, 120, 123, 124, 128, 129, 133, 135, 140, 141, 142, 143, 144, 145, 149])
-    for cell in cells_to_hide:
-        plotter.remove_actor(f'cell_{cell}')
-        plotter.remove_actor(f'edge_{cell}')
-
-    img = plotter.screenshot(transparent_background=True, scale=3)
-    temp_file = os.path.join(temp_dir, f'vModel_front_{numStep}.png')
-    imageio.imwrite(temp_file, img)
-
-    #Add debris cells
-    for _, cell in enumerate(geo.Cells):
-        if cell.AliveStatus == 0:
-            # Load the VTK file as a pyvista mesh
-            mesh = cell.create_pyvista_mesh()
-            plotter.add_mesh(mesh, color='white', lighting=True, opacity=0.5)
-
-    img = plotter.screenshot(scale=3)
-    temp_file = os.path.join(temp_dir, f'vModel_front_wound_{numStep}.png')
-    imageio.imwrite(temp_file, img)
-
-    # Close the plotter
-    plotter.close()
+    # Save the combined figure
+    combined_file = os.path.join(temp_dir, f'vModel_combined_{numStep}.png')
+    plt.savefig(combined_file, bbox_inches='tight')
+    plt.close(fig)
 
 def screenshot(v_model, temp_dir, selected_cells=None, scalar_to_display='Volume'):
     """
