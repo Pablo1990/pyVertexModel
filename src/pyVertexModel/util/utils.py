@@ -151,7 +151,7 @@ def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None, scalar_to_d
             # Hide unwanted cells
             centre_of_wound = geo.compute_wound_centre()
             cells_to_hide = np.array([cell.ID for cell in geo.Cells if ((cell.AliveStatus == 0 or cell.AliveStatus == 1) and cell.X[0] > geo.Cells[0].X[0])])
-                    for cell in cells_to_hide:
+            for cell in cells_to_hide:
                 plotter.remove_actor(f'cell_{cell}')
                 plotter.remove_actor(f'edge_{cell}')
             for _, cell in enumerate(geo.Cells):
