@@ -71,15 +71,7 @@ class KgVolume(Kg):
                     if Geo.remodelling and not np.any(np.isin(nY, Cell.vertices_and_faces_to_remodel)):
                         continue
 
-                    current_v = np.linalg.det(np.array([y1, y2, y3])) / 6
-                    # If the volume is negative, switch two the other option
-                    if current_v < 0:
-                        #print(f"Negative volume detected for cell {Cell.ID} with vertices {nY}. Switching edges.")
-                        nY = [Cell.globalIds[tri.Edge[1]], Cell.globalIds[tri.Edge[0]], n3]
-                        gs, Ks = kg_functions.gKDet(y2, y1, y3)
-                    else:
-                        gs, Ks = kg_functions.gKDet(y1, y2, y3)
-
+                    gs, Ks = kg_functions.gKDet(y1, y2, y3)
                     ge = self.assemble_g(ge, gs, np.array(nY, dtype='int'))
                     if calculate_K:
                         self.assemble_k(Ks * fact / 6, np.array(nY, dtype='int'))
