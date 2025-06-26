@@ -1647,11 +1647,17 @@ class Geo:
         :return:
         """
         # Create the new substrate cells
+        num_cells = 0
         for c, c_cell in enumerate(self.Cells):
             if c_cell.AliveStatus is not None:
-                if c_cell.AliveStatus == 2:
-                    continue
-                self.divide_cell(c_cell.ID, c_set, num_pieces=3, axis=[0, 0, 1])
+                if c_cell.AliveStatus == 1 or c_cell.AliveStatus == 0:
+                    logger.info(' ---- Dividing cell: ' + str(c_cell.ID))
+                    # Create the new substrate cell
+                    self.divide_cell(c_cell.ID, c_set, num_pieces=3, axis=[0, 0, 1])
+                    num_cells += 1
+
+            if num_cells > 0:
+                break
 
     def divide_cell(self, cell_id, c_set, num_pieces=2, axis=None):
         """
@@ -1741,6 +1747,7 @@ class Geo:
                 else:
                     # Create a triangulation mesh based on neighbours
                     new_tets = []
+                    y_new = []
                     for neighbour in cell_neighbours:
                         list_of_neighbours = get_node_neighbours_per_domain(old_geo, neighbour, neighbours_xg, [cell_id])
                         list_of_neighbours_cell = [n_cell for n_cell in list_of_neighbours if n_cell != cell_id and self.Cells[n_cell].AliveStatus is not None]
@@ -1748,9 +1755,19 @@ class Geo:
                         # Make pairs of list of neighbours
                         if len(list_of_neighbours_cell) > 0:
                             for neighbour_of_neighbour in list_of_neighbours_cell:
-                                new_tets.append(np.sort([neighbour_of_neighbour, cell_id, c_cell.ID, neighbour]))
+                                new_tet = np.sort([neighbour_of_neighbour, cell_id, c_cell.ID, neighbour])
+                                # Check if the neighbour is not already in the new tetrahedra
+                                if np.any(ismember_rows(new_tet, np.array(new_tets))[0]):
+                                    continue
+                                new_tets.append(new_tet)
+                                # Create new y based on neighbours
+                                new_y = old_geo.Cells[cell_id].Y[(np.sum(np.isin(old_geo.Cells[cell_id].T, new_tet), axis=1) > 2) & (np.any(np.isin(old_geo.Cells[cell_id].T, neighbours_xg), axis=1))]
+                                if len(new_y) > 0:
+                                    y_new.append(new_y)
+                                else:
+                                    raise ValueError('No new y found')
 
-                self.add_tetrahedra(self, unique_rows(np.array(new_tets)), y_new=[], c_set=c_set)
+                self.add_tetrahedra(self, np.array(new_tets), y_new=y_new, c_set=c_set)
                 all_new_tets.extend(new_tets)
 
             # Check tetrahedra validity at the end otherwise there will be missing tetrahedra
