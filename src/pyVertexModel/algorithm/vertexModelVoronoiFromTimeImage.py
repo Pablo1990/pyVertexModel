@@ -1,5 +1,4 @@
 import copy
-import logging
 import lzma
 import os
 import pickle
@@ -16,9 +15,7 @@ from skimage.morphology import dilation
 from src import PROJECT_DIRECTORY, logger
 from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrahedra_from_information, \
     calculate_cell_height_on_model
-from src.pyVertexModel.geometry.geo import Geo
-from src.pyVertexModel.util.utils import ismember_rows, save_variables, load_state, find_optimal_deform_array_X_Y, \
-    save_state
+from src.pyVertexModel.util.utils import ismember_rows, save_variables, save_state
 
 
 def build_quartets_of_neighs_2d(neighbours):
@@ -361,82 +358,14 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                          create_output_folder=create_output_folder)
         self.dilated_cells = None
 
-    def initialize(self):
-        """
-        Initialize the geometry and the topology of the model.
-        """
-        filename = os.path.join(PROJECT_DIRECTORY, self.set.initial_filename_state)
-
-        if not os.path.exists(filename):
-            logging.error(f'File {filename} not found')
-
-        if filename.endswith('.pkl'):
-            output_folder = self.set.OutputFolder
-            load_state(self, filename, ['geo', 'geo_0', 'geo_n'])
-            self.set.OutputFolder = output_folder
-            self.geo.update_measures()
-            for cell in self.geo.Cells:
-                self.geo.Cells[cell.ID].Vol0 = self.geo.Cells[cell.ID].Vol
-                self.geo.Cells[cell.ID].Area0 = self.geo.Cells[cell.ID].Area
-        elif filename.endswith('.mat'):
-            mat_info = scipy.io.loadmat(filename)
-            self.geo = Geo(mat_info['Geo'])
-            self.geo.update_measures()
-        else:
-            # Load the image and obtain the initial X and tetrahedra
-            Twg, X = self.obtain_initial_x_and_tetrahedra()
-            # Build cells
-            self.geo.build_cells(self.set, X, Twg)
-
-            # Save state with filename using the number of cells
-            filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
-            save_state(self.geo, filename)
-
-        # Resize the geometry to a given cell volume average
-        self.resize_tissue()
-
-        # Deform the tissue if required
-        self.deform_tissue()
-
-        # Create substrate(s)
-        if self.set.Substrate == 3:
-            # Create a substrate cell for each cell
-            self.geo.create_substrate_cells(self.set, domain='Top')
-
-        # Add border cells to the shared cells
-        for cell in self.geo.Cells:
-            if cell.ID in self.geo.BorderCells:
-                for face in cell.Faces:
-                    for tris in face.Tris:
-                        tets_1 = cell.T[tris.Edge[0]]
-                        tets_2 = cell.T[tris.Edge[1]]
-                        shared_cells = np.intersect1d(tets_1, tets_2)
-                        if np.any(np.isin(self.geo.BorderGhostNodes, shared_cells)):
-                            shared_cells_list = list(tris.SharedByCells)
-                            shared_cells_list.append(shared_cells[np.isin(shared_cells, self.geo.BorderGhostNodes)][0])
-                            tris.SharedByCells = np.array(shared_cells_list)
-
-        # Create periodic boundary conditions
-        self.geo.apply_periodic_boundary_conditions(self.set)
-
-        if self.set.ablation:
-            self.geo.cellsToAblate = self.set.cellsToAblate
-
-        self.geo.init_reference_cell_values(self.set)
-
-        if self.set.Substrate == 1:
-            self.Dofs.GetDOFsSubstrate(self.geo, self.set)
-        else:
-            self.Dofs.get_dofs(self.geo, self.set)
-
-        if self.geo_0 is None:
-            self.geo_0 = self.geo.copy(update_measurements=False)
-
-        if self.geo_n is None:
-            self.geo_n = self.geo.copy(update_measurements=False)
-
-        # Adjust percentage of scutoids
-        self.adjust_percentage_of_scutoids()
+    def initialize_cells(self, filename):
+        # Load the image and obtain the initial X and tetrahedra
+        Twg, X = self.obtain_initial_x_and_tetrahedra()
+        # Build cells
+        self.geo.build_cells(self.set, X, Twg)
+        # Save state with filename using the number of cells
+        filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
+        save_state(self.geo, filename)
 
     def build_2d_voronoi_from_image(self, labelled_img, watershed_img, total_cells):
         """
@@ -545,28 +474,6 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             assert (len(vertices_info['edges'][idx]) ==
                     len(img_neighbours_all[num_cell])), 'Error missing vertices of neighbours'
         return vertices_info
-
-    def deform_tissue(self):
-        if self.set.resize_z is not None:
-            middle_point = np.mean([cell.X for cell in self.geo.Cells if cell.AliveStatus is not None], axis=0)
-            volumes = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
-            optimal_deform_array_X_Y = find_optimal_deform_array_X_Y(self.geo.copy(), self.set.resize_z,
-                                                                     middle_point, volumes)
-            print(f'Optimal deform_array_X_Y: {optimal_deform_array_X_Y}')
-
-            for cell in self.geo.Cells:
-                deform_array = np.array(
-                    [optimal_deform_array_X_Y[0], optimal_deform_array_X_Y[0], self.set.resize_z])
-
-                cell.X = cell.X + (middle_point - cell.X) * deform_array
-                if cell.AliveStatus is not None:
-                    cell.Y = cell.Y + (middle_point - cell.Y) * deform_array
-                    for face in cell.Faces:
-                        face.Centre = face.Centre + (middle_point - face.Centre) * deform_array
-
-            self.geo.update_measures()
-            volumes_after_deformation = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
-            logger.info(f'Volume difference: {np.mean(volumes) - np.mean(volumes_after_deformation)}')
 
     def calculate_neighbours(self, labelled_img, ratio_strel):
         """
