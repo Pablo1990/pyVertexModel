@@ -8,14 +8,16 @@ import pandas as pd
 from numpy.ma.extras import setdiff1d
 from skimage.measure import regionprops
 
+from src import logger
 from src.pyVertexModel.Kg.kg import add_noise_to_parameter
 from src.pyVertexModel.algorithm import newtonRaphson
+from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import display_volume_fragments
 from src.pyVertexModel.geometry import degreesOfFreedom
-from src.pyVertexModel.geometry.geo import Geo
-from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
+from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain, edge_valence
+from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling, smoothing_cell_surfaces_mesh
 from src.pyVertexModel.parameters.set import Set
 from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars, copy_non_mutable_attributes, \
-    screenshot
+    screenshot, screenshot_
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -620,3 +622,146 @@ class VertexModel:
                 error += np.abs(initial_recoil - correct_initial_recoil) * 100
 
         return error
+
+    def adjust_percentage_of_scutoids(self):
+        """
+        Adjust the percentage of scutoids in the model.
+        :return:
+        """
+        c_scutoids = self.geo.compute_percentage_of_scutoids(exclude_border_cells=True) / 100
+
+        # Print initial percentage of scutoids
+        logger.info(f'Percentage of scutoids initially: {c_scutoids}')
+
+        remodel_obj = Remodelling(self.geo, self.geo, self.geo, self.set, self.Dofs)
+
+        display_volume_fragments(remodel_obj.Geo)
+
+        polygon_distribution = remodel_obj.Geo.compute_polygon_distribution('Bottom')
+        print(f'Polygon distribution bottom: {polygon_distribution}')
+
+        screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
+                    self.set.OutputFolder + '/images')
+
+
+        # Check if the number of scutoids is approximately the desired one
+        while c_scutoids < self.set.percentage_scutoids:
+            backup_vars = save_backup_vars(remodel_obj.Geo, remodel_obj.Geo_n, remodel_obj.Geo_0, 0, remodel_obj.Dofs)
+            non_scutoids = remodel_obj.Geo.obtain_non_scutoid_cells()
+            non_scutoids = [cell for cell in non_scutoids if cell.AliveStatus is not None]
+            # Order by volume with higher volume first
+            non_scutoids = sorted(non_scutoids, key=lambda x: x.Vol, reverse=True)
+            for c_cell in non_scutoids:
+                if c_cell.ID in remodel_obj.Geo.BorderCells:
+                    continue
+                # Get the neighbours of the cell
+                neighbours = c_cell.compute_neighbours(location_filter='Bottom')
+                # Remove border cells from neighbours
+                neighbours = np.setdiff1d(neighbours, self.geo.BorderCells)
+                if len(neighbours) == 0:
+                    continue
+
+                # Compute cell volume and pick the neighbour with the higher volume.
+                # These cells will be the ones that will lose neighbours
+                neighbours_vol = [cell.Vol for cell in remodel_obj.Geo.Cells if cell.ID in neighbours]
+
+                # Pick the neighbour with the lowest volume
+                random_neighbour = neighbours[np.argmin(neighbours_vol)]
+                shared_nodes = get_node_neighbours_per_domain(remodel_obj.Geo, c_cell.ID, remodel_obj.Geo.XgBottom,
+                                                              random_neighbour)
+
+                # Filter the shared nodes that are ghost nodes
+                shared_nodes = shared_nodes[np.isin(shared_nodes, remodel_obj.Geo.XgID)]
+                valence_segment, old_tets, old_ys = edge_valence(remodel_obj.Geo, [c_cell.ID, shared_nodes[0]])
+
+                cell_to_split_from_all = np.unique(old_tets)
+                cell_to_split_from_all = cell_to_split_from_all[~np.isin(cell_to_split_from_all, remodel_obj.Geo.XgID)]
+
+                if np.sum(np.isin(shared_nodes, remodel_obj.Geo.BorderCells)) > 0:
+                    print('More than 0 border cell')
+                    continue
+
+                cell_to_split_from = cell_to_split_from_all[
+                    ~np.isin(cell_to_split_from_all, [c_cell.ID, random_neighbour])]
+
+                if len(cell_to_split_from) == 0:
+                    continue
+
+                # Display information about the cells in the flip
+                logger.info(f'Cell {c_cell.ID} will win neighbour {random_neighbour} and lose neighbour {cell_to_split_from[0]}')
+
+                # Perform flip
+                all_tnew, ghost_node, ghost_nodes_tried, has_converged, old_tets = remodel_obj.perform_flip(c_cell.ID, random_neighbour, cell_to_split_from[0], shared_nodes[0])
+
+                if has_converged:
+                    cells_involved_intercalation = [cell.ID for cell in remodel_obj.Geo.Cells if cell.ID in all_tnew.flatten()
+                                                    and cell.AliveStatus == 1]
+
+                    remodel_obj.Geo = smoothing_cell_surfaces_mesh(remodel_obj.Geo, cells_involved_intercalation, backup_vars, location='Bottom')
+
+                    # Converge a single iteration
+                    remodel_obj.Geo.update_measures()
+                    remodel_obj.reset_preferred_values(backup_vars, cells_involved_intercalation)
+
+                    remodel_obj.Set.currentT = self.t
+                    remodel_obj.Dofs.get_dofs(remodel_obj.Geo, self.set)
+
+                if has_converged:
+                    c_scutoids = remodel_obj.Geo.compute_percentage_of_scutoids(exclude_border_cells=True) / 100
+                    logger.info(f'Percentage of scutoids: {c_scutoids}')
+
+                    # Count the number of small volume fraction
+                    logger.info('----Before')
+                    old_geo, _, _, _, _ = load_backup_vars(backup_vars)
+                    display_volume_fragments(old_geo, cells_involved_intercalation)
+                    logger.info(f'Other cells...')
+                    display_volume_fragments(old_geo, np.setdiff1d([cell.ID for cell in old_geo.Cells], cells_involved_intercalation))
+                    logger.info('----After')
+                    display_volume_fragments(remodel_obj.Geo, cells_involved_intercalation)
+                    logger.info(f'Other cells...')
+                    display_volume_fragments(remodel_obj.Geo, np.setdiff1d([cell.ID for cell in remodel_obj.Geo.Cells], cells_involved_intercalation))
+
+                    polygon_distribution = remodel_obj.Geo.compute_polygon_distribution('Bottom')
+                    logger.info(f'Polygon distribution bottom: {polygon_distribution}')
+                    #self.numStep += 1
+                    screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
+                                self.set.OutputFolder + '/images')
+
+                    self.geo = remodel_obj.Geo
+                    #self.save_v_model_state(os.path.join(self.set.OutputFolder, 'data_step_' + str(round(c_scutoids, 2))))
+                    break
+                else:
+                    remodel_obj.Geo, _, _, _, remodel_obj.Geo.Dofs = load_backup_vars(backup_vars)
+
+            # If the last cell is reached, break the loop
+            if c_cell == non_scutoids[-1]:
+                break
+
+
+        self.geo.update_measures()
+        self.geo.init_reference_cell_values(self.set)
+
+    def resize_tissue(self, average_volume=0.0003168604676977124):
+        """
+        Resize the tissue to a specific average volume.
+        :param average_volume: The target average volume for the cells.
+        """
+        self.geo.update_measures()
+        # Calculate the current average volume of the cells
+        current_average_volume = np.mean([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
+        middle_point = np.mean([cell.X for cell in self.geo.Cells], axis=0)
+        # Calculate the scaling factor
+        scaling_factor = (average_volume / current_average_volume) ** (1 / 3)
+        # Resize the cells
+        for cell in self.geo.Cells:
+            cell.X = middle_point + (cell.X - middle_point) * scaling_factor
+            if cell.AliveStatus is not None:
+                cell.Y = middle_point + (cell.Y - middle_point) * scaling_factor
+                for face in cell.Faces:
+                    face.Centre = middle_point + (face.Centre - middle_point) * scaling_factor
+
+        # Update the geometry
+        self.geo.update_measures()
+
+        volumes_after_deformation = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
+        logger.info(f'Volume difference: {np.mean(volumes_after_deformation) - average_volume}')

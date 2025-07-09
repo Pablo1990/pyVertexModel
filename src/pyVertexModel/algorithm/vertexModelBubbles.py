@@ -378,8 +378,8 @@ def extrapolate_points_to_ellipsoid(points, ellipsoid_axis_normalised1, ellipsoi
 
 
 class VertexModelBubbles(VertexModel):
-    def __init__(self, set_test=None):
-        super().__init__(set_test)
+    def __init__(self, set_option=None):
+        super().__init__(set_option)
 
     def initialize(self):
         """
