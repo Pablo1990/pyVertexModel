@@ -171,9 +171,9 @@ def get_contractility_based_on_location(current_face, current_tri, geo, c_set):
             if any([geo.Cells[cell].AliveStatus == 0 for cell in current_tri.SharedByCells]):
                 pass
             else:
-                contractilityValue = c_set.cLineTension / 10
+                contractilityValue = c_set.cLineTension
         elif get_interface(current_face.InterfaceType) == get_interface('Bottom'):
-            contractilityValue = c_set.cLineTension / 10
+            contractilityValue = c_set.cLineTension
         else:
             contractilityValue = c_set.cLineTension
 

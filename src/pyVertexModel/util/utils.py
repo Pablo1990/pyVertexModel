@@ -168,7 +168,7 @@ def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None, scalar_to_d
     images = [images[views.index(view)] for view in ['top', 'bottom', 'perspective', 'front']]
 
     # Combine screenshots into one figure
-    fig, axes = plt.subplots(2, 2, figsize=(10, 10), dpi=300)
+    fig, axes = plt.subplots(2, 2, figsize=(10, 10), dpi=600)
     for ax, img, title in zip(axes.flatten(), images, views):
         ax.imshow(img)
         #ax.set_title(title)
