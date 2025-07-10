@@ -18,6 +18,8 @@ from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrah
 from src.pyVertexModel.util.utils import ismember_rows, save_variables, save_state
 
 
+
+
 def build_quartets_of_neighs_2d(neighbours):
     """
     Build quartets of neighboring cells.
@@ -304,47 +306,6 @@ def add_tetrahedral_intercalations(Twg, xInternal, XgBottom, XgTop, XgLateral):
             if not np.any(np.all(tetsToAdd == Twg, axis=1)):
                 Twg = np.vstack((Twg, tetsToAdd))
     return Twg
-
-
-def display_volume_fragments(geo, selected_cells=None):
-    """
-    Display the number of fragments on top, bottom and lateral of the cells.
-    :param selected_cells:
-    :param geo:
-    :return:
-    """
-    number_of_small_top = 0
-    number_of_small_bottom = 0
-    number_of_small_lateral = 0
-    volumes_sum_top = 0
-    volumes_sum_bottom = 0
-    volumes_sum_lateral = 0
-    for c_cell in geo.Cells:
-        if selected_cells is not None and c_cell.ID not in selected_cells:
-            continue
-        if c_cell.AliveStatus is None:
-            continue
-        c_number_of_small_top, c_volumes_top = c_cell.count_small_volume_fraction_per_cell(location='Top')
-        c_number_of_small_bottom, c_volumes_bottom = c_cell.count_small_volume_fraction_per_cell(location='Bottom')
-        c_number_of_small_lateral, c_volumes_lateral = c_cell.count_small_volume_fraction_per_cell(
-            location='CellCell')
-        number_of_small_top += c_number_of_small_top
-        number_of_small_bottom += c_number_of_small_bottom
-        number_of_small_lateral += c_number_of_small_lateral
-        volumes_sum_top += np.sum(c_volumes_top)
-        volumes_sum_bottom += np.sum(c_volumes_bottom)
-        volumes_sum_lateral += np.sum(c_volumes_lateral)
-    total_volume = volumes_sum_top + volumes_sum_bottom + volumes_sum_lateral
-    logger.info(f'Number of fragments on top: {number_of_small_top}'
-                f' with total volume {volumes_sum_top}'
-                f' with percentage {volumes_sum_top / total_volume}')
-    logger.info(f'Number of fragments on bottom: {number_of_small_bottom}'
-                f' with total volume {volumes_sum_bottom}'
-                f' with percentage {volumes_sum_bottom / total_volume}')
-    logger.info(f'Number of fragments on lateral: {number_of_small_lateral}'
-                f' with total volume {volumes_sum_lateral}'
-                f' with percentage {volumes_sum_lateral / total_volume}')
-    logger.info(f'Total volume: {volumes_sum_top + volumes_sum_bottom + volumes_sum_lateral}')
 
 
 class VertexModelVoronoiFromTimeImage(VertexModel):

@@ -6,20 +6,61 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 import scipy
+from scipy import stats
 from skimage.measure import regionprops
 
 from src import logger, PROJECT_DIRECTORY
 from src.pyVertexModel.Kg.kg import add_noise_to_parameter
 from src.pyVertexModel.algorithm import newtonRaphson
-from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import display_volume_fragments
 from src.pyVertexModel.geometry import degreesOfFreedom
-from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain, edge_valence
+from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain, edge_valence, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling, smoothing_cell_surfaces_mesh
 from src.pyVertexModel.parameters.set import Set
 from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars, copy_non_mutable_attributes, \
     screenshot, screenshot_, load_state, find_optimal_deform_array_X_Y
 
 logger = logging.getLogger("pyVertexModel")
+
+
+def display_volume_fragments(geo, selected_cells=None):
+    """
+    Display the number of fragments on top, bottom and lateral of the cells.
+    :param selected_cells:
+    :param geo:
+    :return:
+    """
+    number_of_small_top = 0
+    number_of_small_bottom = 0
+    number_of_small_lateral = 0
+    volumes_sum_top = 0
+    volumes_sum_bottom = 0
+    volumes_sum_lateral = 0
+    for c_cell in geo.Cells:
+        if selected_cells is not None and c_cell.ID not in selected_cells:
+            continue
+        if c_cell.AliveStatus is None:
+            continue
+        c_number_of_small_top, c_volumes_top = c_cell.count_small_volume_fraction_per_cell(location='Top')
+        c_number_of_small_bottom, c_volumes_bottom = c_cell.count_small_volume_fraction_per_cell(location='Bottom')
+        c_number_of_small_lateral, c_volumes_lateral = c_cell.count_small_volume_fraction_per_cell(
+            location='CellCell')
+        number_of_small_top += c_number_of_small_top
+        number_of_small_bottom += c_number_of_small_bottom
+        number_of_small_lateral += c_number_of_small_lateral
+        volumes_sum_top += np.sum(c_volumes_top)
+        volumes_sum_bottom += np.sum(c_volumes_bottom)
+        volumes_sum_lateral += np.sum(c_volumes_lateral)
+    total_volume = volumes_sum_top + volumes_sum_bottom + volumes_sum_lateral
+    logger.info(f'Number of fragments on top: {number_of_small_top}'
+                f' with total volume {volumes_sum_top}'
+                f' with percentage {volumes_sum_top / total_volume}')
+    logger.info(f'Number of fragments on bottom: {number_of_small_bottom}'
+                f' with total volume {volumes_sum_bottom}'
+                f' with percentage {volumes_sum_bottom / total_volume}')
+    logger.info(f'Number of fragments on lateral: {number_of_small_lateral}'
+                f' with total volume {volumes_sum_lateral}'
+                f' with percentage {volumes_sum_lateral / total_volume}')
+    logger.info(f'Total volume: {volumes_sum_top + volumes_sum_bottom + volumes_sum_lateral}')
 
 def generate_tetrahedra_from_information(X, cell_edges, cell_height, cell_centroids, main_cells,
                                          neighbours_network, selected_planes, triangles_connectivity,
@@ -149,7 +190,7 @@ def calculate_cell_height_on_model(img2DLabelled, main_cells, c_set):
     return cell_height
 
 
-class VertexModel(metaclass=ABCMeta):
+class VertexModel:
     """
     The main class for the vertex model simulation. It contains the methods for initializing the model,
     iterating over time, applying Brownian motion, and checking the integrity of the model.
@@ -233,8 +274,33 @@ class VertexModel(metaclass=ABCMeta):
 
         # Create substrate(s)
         if self.set.Substrate == 3:
-            # Create a substrate cell for each cell
-            self.geo.create_substrate_cells(self.set, domain='Top')
+            # Check if there are 3 layers of cells
+            if self.set.InputGeo.__contains__('Bubbles'):
+                # Get middle cells by dropping the cells that have XgBottom and XgTop neighbours in T
+                middle_cells = [c for c in self.geo.Cells if not np.any(np.isin(self.geo.XgBottom, c.T)) and
+                               not np.any(np.isin(self.geo.XgTop, c.T))]
+                middle_cells_ids = [mc.ID for mc in middle_cells]
+                z_middle_cells = stats.mode([c.X[2] for c in middle_cells])
+                # Add other middle_cells that are not in the top or bottom layers and have the same Z
+                middle_cells.extend([c for c in self.geo.Cells if c.X[2] == z_middle_cells[0] and c.AliveStatus is not None
+                                     and c.ID not in middle_cells_ids])
+                middle_cells_ids = [mc.ID for mc in middle_cells]
+
+                # Get top and bottom cells
+                top_cells = [c for c in self.geo.Cells if np.any(np.isin(self.geo.XgTop, c.T)) and c.AliveStatus is not None and c.ID not in middle_cells_ids]
+                bottom_cells = [c for c in self.geo.Cells if np.any(np.isin(self.geo.XgBottom, c.T)) and c.AliveStatus is not None and c.ID not in middle_cells_ids]
+
+                # Identify the substrate cells for the middle cells
+                for middle_cell in middle_cells:
+                    # Top substrate cell
+                    node_neighbours = np.unique(get_node_neighbours(self.geo, middle_cell.ID))
+                    middle_cell.substrate_cell_top = self.connect_substrate_cell(middle_cell, node_neighbours, top_cells)
+                    self.geo.Cells[middle_cell.substrate_cell_top].AliveStatus = 2
+                    middle_cell.substrate_cell_bottom = self.connect_substrate_cell(middle_cell, node_neighbours, bottom_cells)
+                    self.geo.Cells[middle_cell.substrate_cell_bottom].AliveStatus = 2
+            else:
+                # Create a substrate cell for each cell
+                self.geo.create_substrate_cells(self.set, domain='Top')
 
         # Add border cells to the shared cells
         for cell in self.geo.Cells:
@@ -270,6 +336,29 @@ class VertexModel(metaclass=ABCMeta):
 
         # Adjust percentage of scutoids
         self.adjust_percentage_of_scutoids()
+
+    def connect_substrate_cell(self, middle_cell, node_neighbours, domain_cells):
+        """
+        Connects a substrate cell to the closest top or bottom neighbour of a middle cell.
+        :param middle_cell:
+        :param node_neighbours:
+        :param domain_cells:
+        :return:
+        """
+        domain_neighbours = np.intersect1d(node_neighbours, [c.ID for c in domain_cells])
+        # Get the closest top neighbour in X-Y plane
+        if len(domain_neighbours) > 0:
+            closest_domain_neighbour = domain_neighbours[
+                np.argmin(
+                    np.linalg.norm(
+                        np.array([self.geo.Cells[n].X[0:2] for n in domain_neighbours]) - middle_cell.X[0:2],
+                        axis=1
+                    )
+                )
+            ]
+            return closest_domain_neighbour
+
+        return None
 
     def brownian_motion(self, scale):
         """

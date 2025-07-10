@@ -15,14 +15,24 @@ def get_lambda(c_cell, face, Set):
     :param face:
     :return:
     """
-    if get_interface(face.InterfaceType) == get_interface('Top'):
-        Lambda = c_cell.lambda_s1_perc * Set.lambdaS1
-    elif get_interface(face.InterfaceType) == get_interface('CellCell'):
-        Lambda = c_cell.lambda_s2_perc * Set.lambdaS2
-    elif get_interface(face.InterfaceType) == get_interface('Bottom'):
-        Lambda = c_cell.lambda_s3_perc * Set.lambdaS3
-    else:
-        raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
+    if c_cell.Alivestatus == 1:
+        if get_interface(face.InterfaceType) == get_interface('Top'):
+            Lambda = c_cell.lambda_s1_perc * Set.lambdaS1
+        elif get_interface(face.InterfaceType) == get_interface('CellCell'):
+            Lambda = c_cell.lambda_s2_perc * Set.lambdaS2
+        elif get_interface(face.InterfaceType) == get_interface('Bottom'):
+            Lambda = c_cell.lambda_s3_perc * Set.lambdaS3
+        else:
+            raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
+    elif c_cell.AliveStatus == 2:
+        if get_interface(face.InterfaceType) == get_interface('Top'):
+            Lambda = c_cell.lambda_s1_perc * Set.lambdaS1
+        elif get_interface(face.InterfaceType) == get_interface('CellCell'):
+            Lambda = c_cell.lambda_s2_perc * Set.lambdaS2
+        elif get_interface(face.InterfaceType) == get_interface('Bottom'):
+            Lambda = c_cell.lambda_s3_perc * Set.lambdaS3
+        else:
+            raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
     return Lambda
 
 
@@ -31,11 +41,18 @@ class KgSurfaceCellBasedAdhesion(Kg):
     Class to compute the work and Jacobian for the SurfaceCellBasedAdhesion energy.
     """
     def compute_work(self, Geo, Set, Geo_n=None, calculate_K=True):
+        """
+        Compute the work done by the SurfaceCellBasedAdhesion energy.
+        :param Geo:
+        :param Set:
+        :param Geo_n:
+        :param calculate_K:
+        :return:
+        """
         Energy = {}
         start = time.time()
 
-        for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1]:
-
+        for c in [cell.ID for cell in Geo.Cells if cell.AliveStatus == 1 or cell.AliveStatus == 2]:
             if Geo.remodelling and not np.isin(c, Geo.AssembleNodes):
                 continue
 
@@ -53,6 +70,14 @@ class KgSurfaceCellBasedAdhesion(Kg):
         self.timeInSeconds = f"Time at SurfaceCell: {end - start} seconds"
 
     def work_per_cell(self, Cell, Geo, Set, calculate_K=True):
+        """
+        Compute the work done by the SurfaceCellBasedAdhesion energy for a single cell.
+        :param Cell:
+        :param Geo:
+        :param Set:
+        :param calculate_K:
+        :return:
+        """
         Cell.energy_surface_area = 0
         Ys = Cell.Y
         ge = np.zeros(self.g.shape, dtype=self.precision_type)
@@ -94,10 +119,22 @@ class KgSurfaceCellBasedAdhesion(Kg):
         Cell.lambda_s1_noise = None
         Cell.lambda_s2_noise = None
         Cell.lambda_s3_noise = None
+        Cell.lambda_s4_noise = None
 
         return Cell.energy_surface_area
 
     def calculate_kg(self, Lambda, fact, ge, nY, y1, y2, y3):
+        """
+        Helper function to calculate the kg for the SurfaceCellBasedAdhesion energy.
+        :param Lambda:
+        :param fact:
+        :param ge:
+        :param nY:
+        :param y1:
+        :param y2:
+        :param y3:
+        :return:
+        """
         gs, Ks, Kss = kg_functions.gKSArea(y1, y2, y3)
         gs = Lambda * gs
         ge = self.assemble_g(ge, gs, np.array(nY, dtype='int'))
@@ -107,6 +144,16 @@ class KgSurfaceCellBasedAdhesion(Kg):
         return ge
 
     def calculate_g(self, Lambda, ge, nY, y1, y2, y3):
+        """
+        Helper function to calculate the g for the SurfaceCellBasedAdhesion energy.
+        :param Lambda:
+        :param ge:
+        :param nY:
+        :param y1:
+        :param y2:
+        :param y3:
+        :return:
+        """
         gs, _, _ = self.gKSArea(y1, y2, y3)
         gs = Lambda * gs
         ge = self.assemble_g(ge, gs, np.array(nY, dtype='int'))

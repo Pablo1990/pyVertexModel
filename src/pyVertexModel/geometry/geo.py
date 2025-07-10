@@ -205,9 +205,6 @@ class Geo:
             self.XgTop = None
             self.XgLateral = None
             self.XgID = None
-            self.nz = 1
-            self.ny = 3
-            self.nx = 3
             self.nCells = 0
         else:  # coming from mat_file
             if 'numF' in mat_file.dtype.names:
@@ -223,9 +220,6 @@ class Geo:
             else:
                 self.XgLateral = []
             self.XgID = mat_file['XgID'][0][0][0] - 1
-            self.nz = 1
-            self.ny = 3
-            self.nx = 3
             self.nCells = mat_file['nCells'][0][0][0][0]
             if 'BorderGhostNodes' in mat_file.dtype.names and mat_file['BorderCells'][0][0].size > 0:
                 self.BorderGhostNodes = np.concatenate(mat_file['BorderGhostNodes'][0][0]) - 1
