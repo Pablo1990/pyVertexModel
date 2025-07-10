@@ -72,6 +72,8 @@ class Cell:
         self.lambda_s1_perc = 1
         self.lambda_s2_perc = 1
         self.lambda_s3_perc = 1
+        self.lambda_s4_top_perc = 1
+        self.lambda_s4_bottom_perc = 1
         # Volume
         self.lambda_v_perc = 1
         # Aspect ratio/elongation
@@ -160,6 +162,7 @@ class Cell:
         :return: The count of faces with small volume fraction.
         """
         count = 0
+        volumes = np.zeros(0)
         for c_face in self.Faces:
             if location is not None:
                 if get_interface(c_face.InterfaceType) == get_interface(location):

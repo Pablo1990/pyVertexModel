@@ -295,9 +295,9 @@ class VertexModel:
                     # Top substrate cell
                     node_neighbours = np.unique(get_node_neighbours(self.geo, middle_cell.ID))
                     middle_cell.substrate_cell_top = self.connect_substrate_cell(middle_cell, node_neighbours, top_cells)
-                    self.geo.Cells[middle_cell.substrate_cell_top].AliveStatus = 2
+                    #self.geo.Cells[middle_cell.substrate_cell_top].AliveStatus = 2
                     middle_cell.substrate_cell_bottom = self.connect_substrate_cell(middle_cell, node_neighbours, bottom_cells)
-                    self.geo.Cells[middle_cell.substrate_cell_bottom].AliveStatus = 2
+                    #self.geo.Cells[middle_cell.substrate_cell_bottom].AliveStatus = 2
             else:
                 # Create a substrate cell for each cell
                 self.geo.create_substrate_cells(self.set, domain='Top')

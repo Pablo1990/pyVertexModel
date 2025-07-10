@@ -7,7 +7,7 @@ from src.pyVertexModel.Kg.kg import Kg
 from src.pyVertexModel.util.utils import get_interface
 
 
-def get_lambda(c_cell, face, Set):
+def get_lambda(c_cell, face, Set, Geo):
     """
     Helper function to get the lambda for the SurfaceCellBasedAdhesion energy.
     :param Set:
@@ -15,24 +15,42 @@ def get_lambda(c_cell, face, Set):
     :param face:
     :return:
     """
-    if c_cell.Alivestatus == 1:
-        if get_interface(face.InterfaceType) == get_interface('Top'):
-            Lambda = c_cell.lambda_s1_perc * Set.lambdaS1
-        elif get_interface(face.InterfaceType) == get_interface('CellCell'):
-            Lambda = c_cell.lambda_s2_perc * Set.lambdaS2
-        elif get_interface(face.InterfaceType) == get_interface('Bottom'):
-            Lambda = c_cell.lambda_s3_perc * Set.lambdaS3
+    if c_cell.AliveStatus == 1:
+        if Set.Substrate != 3:
+            if get_interface(face.InterfaceType) == get_interface('Top'):
+                Lambda = c_cell.lambda_s1_perc * Set.lambdaS1
+            elif get_interface(face.InterfaceType) == get_interface('CellCell'):
+                Lambda = c_cell.lambda_s2_perc * Set.lambdaS2
+            elif get_interface(face.InterfaceType) == get_interface('Bottom'):
+                Lambda = c_cell.lambda_s3_perc * Set.lambdaS3
+            else:
+                raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
         else:
-            raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
-    elif c_cell.AliveStatus == 2:
-        if get_interface(face.InterfaceType) == get_interface('Top'):
-            Lambda = c_cell.lambda_s1_perc * Set.lambdaS1
-        elif get_interface(face.InterfaceType) == get_interface('CellCell'):
-            Lambda = c_cell.lambda_s2_perc * Set.lambdaS2
-        elif get_interface(face.InterfaceType) == get_interface('Bottom'):
-            Lambda = c_cell.lambda_s3_perc * Set.lambdaS3
-        else:
-            raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
+            face_neighbour = np.setdiff1d(face.ij, c_cell.ID)[0]
+            # Substrate cell either on top or bottom
+            if c_cell.substrate_cell_top is None and c_cell.substrate_cell_bottom is None:
+                if np.any(np.isin(Geo.XgTop, c_cell.T)):
+                    # Top substrate cell
+                    Lambda = c_cell.lambda_s4_top_perc * Set.lambdaS4_top
+                elif np.any(np.isin(Geo.XgBottom, c_cell.T)):
+                    # Bottom substrate cell
+                    Lambda = c_cell.lambda_s4_bottom_perc * Set.lambdaS4_bottom
+                else:
+                    raise ValueError(f"InterfaceType {face.InterfaceType} not recognized")
+            else:
+                if get_interface(face.InterfaceType) == get_interface('CellCell'):
+                    # Middle 'real' cell
+                    if face_neighbour == c_cell.substrate_cell_top:
+                        Lambda = c_cell.lambda_s1_perc * Set.lambdaS1
+                    elif face_neighbour == c_cell.substrate_cell_bottom:
+                        Lambda = c_cell.lambda_s3_perc * Set.lambdaS3
+                    else:
+                        Lambda = c_cell.lambda_s2_perc * Set.lambdaS2
+                else:
+                    # Border cell laterally
+                    #TODO: HAVE THIS AS A CELL-CELL
+                    Lambda = c_cell.lambda_s2_perc * Set.lambdaS2
+
     return Lambda
 
 
@@ -85,14 +103,14 @@ class KgSurfaceCellBasedAdhesion(Kg):
 
         # Calculate the fact0 for each type of interface
         for face in Cell.Faces:
-            Lambda = get_lambda(Cell, face, Set)
+            Lambda = get_lambda(Cell, face, Set, Geo)
 
             fact0 += (Lambda * (face.Area - face.Area0))
 
         fact = fact0 / Cell.Area0 ** 2
 
         for face in Cell.Faces:
-            Lambda = get_lambda(Cell, face, Set)
+            Lambda = get_lambda(Cell, face, Set, Geo)
 
             for t in face.Tris:
                 if not np.all(np.isin(Cell.globalIds[t.Edge], Geo.y_ablated)):

@@ -87,7 +87,8 @@ class Set:
             # Bottom
             self.lambdaS3 = self.lambdaS1 / 100
             # Substrate - c_cell
-            self.lambdaS4 = self.lambdaS2
+            self.lambdaS4_top = self.lambdaS2
+            self.lambdaS4_bottom = self.lambdaS2
             self.ref_A0 = 0.92
             # Tri energy Area
             self.EnergyBarrierA = False
@@ -106,7 +107,7 @@ class Set:
             self.Confinement = False
             # Contractility
             self.Contractility = False
-            self.cLineTension = 0.0001
+            self.cLineTension = 0
             self.noise_random = 0
             # In plane elasticity
             self.InPlaneElasticity = False
@@ -219,7 +220,8 @@ class Set:
         self.define_if_not_defined("RemodelingFrequency", 0.1)
         self.define_if_not_defined("lambdaS2", self.lambdaS1 * 0.1)
         self.define_if_not_defined("lambdaS3", self.lambdaS1 / 10)
-        self.define_if_not_defined("lambdaS4", self.lambdaS1 / 10)
+        self.define_if_not_defined("lambdaS4_top", self.lambdaS1 / 10)
+        self.define_if_not_defined("lambdaS4_bottom", self.lambdaS1 / 10)
         self.define_if_not_defined("SubstrateZ", - self.CellHeight / 2)
         self.define_if_not_defined("f", self.s / 2)
         self.define_if_not_defined("nu_LP_Initial", self.nu)
@@ -258,6 +260,37 @@ class Set:
         self.InputGeo = 'Bubbles'
         self.VTK = False
 
+    def bubbles(self):
+        self.InputGeo = 'Bubbles'
+        self.model_name = 'Bubbles_with_substrate'
+        self.initial_filename_state = 'Input/Bubbles_with_substrate.mat'
+        self.Substrate = 3
+
+        self.lambdaS1 = 1
+        self.lambdaS2 = self.lambdaS1 / 100
+        self.lambdaS3 = self.lambdaS1
+        self.lambdaS4_top = 0.1
+        self.lambdaS4_bottom = 0.1
+
+        self.Nincr = self.tend * 100
+
+        self.EnergyBarrierAR = True
+        if self.EnergyBarrierAR:
+            self.lambdaR = 8e-7
+        else:
+            self.lambdaR = 0
+
+        # Volume
+        self.lambdaV = 1
+
+        # Substrate
+        self.kSubstrate = 0.1
+
+        # Surface Area
+        self.ref_A0 = 1
+
+        self.VTK = True
+
     def cyst(self):
         mat_info = scipy.io.loadmat(os.path.join(PROJECT_DIRECTORY, 'Tests/data/Geo_var_cyst.mat'))
         self.read_mat_file(mat_info['Set'])
@@ -288,9 +321,9 @@ class Set:
 
     def wing_disc_equilibrium(self):
         self.nu_bottom = self.nu
-        self.model_name = 'dWL1'
+        self.model_name = 'dWL6'
         self.initial_filename_state = 'Input/images/' + self.model_name + '.tif'
-        self.percentage_scutoids = 0.45
+        self.percentage_scutoids = 0.99
         self.Nincr = self.tend * 100
 
         self.EnergyBarrierAR = True
@@ -314,9 +347,12 @@ class Set:
         # Bottom
         self.lambdaS3 = self.lambdaS1
         # Substrate - c_cell
-        self.lambdaS4 = self.lambdaS2
+        self.lambdaS4_top = self.lambdaS2
+        self.lambdaS4_bottom = self.lambdaS2
 
         self.VTK = False
+
+        self.Remodelling = False
 
         self.check_for_non_used_parameters()
 
@@ -354,7 +390,8 @@ class Set:
         # Bottom
         self.lambdaS3 = self.lambdaS1 / 10
         # Substrate - c_cell
-        self.lambdaS4 = self.lambdaS2
+        self.lambdaS4_top = self.lambdaS2
+        self.lambdaS4_bottom = self.lambdaS2
 
         self.VTK = False
 
