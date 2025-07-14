@@ -253,7 +253,7 @@ class Cell:
             # Add the property array to the cell data
             vpoly.GetCellData().AddArray(property_array)
 
-            if key == 'ID':
+            if key == 'Volume':
                 # Default parameter
                 vpoly.GetCellData().SetScalars(property_array)
 

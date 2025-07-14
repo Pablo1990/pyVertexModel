@@ -1540,30 +1540,31 @@ class Geo:
         Apply periodic boundary conditions.
         :return:
         """
-        centre_of_tissue = self.compute_centre_of_tissue()
+        if c_set.periodic_boundaries:
+            centre_of_tissue = self.compute_centre_of_tissue()
 
-        # Identify boundary vertices
-        border_cells = self.BorderCells
-        border_ghost_nodes = self.BorderGhostNodes
-        border_and_ghost_nodes = np.concatenate([border_cells, border_ghost_nodes])
+            # Identify boundary vertices
+            border_cells = self.BorderCells
+            border_ghost_nodes = self.BorderGhostNodes
+            border_and_ghost_nodes = np.concatenate([border_cells, border_ghost_nodes])
 
-        list_of_opposite_cells = []
+            list_of_opposite_cells = []
 
-        # Remove opposite_cell attribute from all cells
-        for cell in self.Cells:
-            cell.opposite_cell = None
+            # Remove opposite_cell attribute from all cells
+            for cell in self.Cells:
+                cell.opposite_cell = None
 
-        for border_cell in border_and_ghost_nodes:
-            cell = self.Cells[border_cell]
-            cell_ids_by_distance, distances = self.get_opposite_border_cell(cell, border_cells,
-                                                                            centre_of_tissue)
-            cell.opposite_cell = cell_ids_by_distance[0]
-            list_of_opposite_cells.append(cell.opposite_cell)
-            list_of_opposite_cells.append(cell.ID)
-            #print(f'Cell {cell.ID} is opposite to {cell.opposite_cell} with a distance of {distances[0]}')
+            for border_cell in border_and_ghost_nodes:
+                cell = self.Cells[border_cell]
+                cell_ids_by_distance, distances = self.get_opposite_border_cell(cell, border_cells,
+                                                                                centre_of_tissue)
+                cell.opposite_cell = cell_ids_by_distance[0]
+                list_of_opposite_cells.append(cell.opposite_cell)
+                list_of_opposite_cells.append(cell.ID)
+                #print(f'Cell {cell.ID} is opposite to {cell.opposite_cell} with a distance of {distances[0]}')
 
 
-        # Check if there are any cells that are not opposite to any other cell
+            # Check if there are any cells that are not opposite to any other cell
 
     def update_cells_for_periodic_boundary(self, boundary_mapping):
         """
