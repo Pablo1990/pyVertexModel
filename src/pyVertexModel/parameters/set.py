@@ -13,6 +13,7 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.periodic_boundaries = True
         self.frozen_face_centres = False
         self.model_name = ''
         self.percentage_scutoids = 0
@@ -265,6 +266,8 @@ class Set:
         self.model_name = 'Bubbles_with_substrate'
         self.initial_filename_state = 'Input/Bubbles_with_substrate.mat'
         self.Substrate = 3
+        self.periodic_boundaries = False
+        self.resize_z = None
 
         self.lambdaS1 = 1
         self.lambdaS2 = self.lambdaS1 / 100
@@ -274,7 +277,7 @@ class Set:
 
         self.Nincr = self.tend * 100
 
-        self.EnergyBarrierAR = True
+        self.EnergyBarrierAR = False
         if self.EnergyBarrierAR:
             self.lambdaR = 8e-7
         else:
@@ -282,14 +285,19 @@ class Set:
 
         # Volume
         self.lambdaV = 1
+        self.ref_V0 = 1.1
 
         # Substrate
         self.kSubstrate = 0.1
 
         # Surface Area
-        self.ref_A0 = 1
+        self.ref_A0 = 0.99
 
-        self.VTK = True
+        self.Remodelling = False
+
+        self.VTK = False
+
+        self.check_for_non_used_parameters()
 
     def cyst(self):
         mat_info = scipy.io.loadmat(os.path.join(PROJECT_DIRECTORY, 'Tests/data/Geo_var_cyst.mat'))
