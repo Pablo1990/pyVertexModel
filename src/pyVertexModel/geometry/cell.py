@@ -201,10 +201,7 @@ class Cell:
             current_v = np.linalg.det(np.array([y1, y2, y3])) / 6
             # If the volume is negative, switch two the other option
             if current_v < 0:
-                current_v = np.linalg.det(np.array([y2, y1, y3])) / 6
-                # If the volume is negative, switch two the other option
-                if current_v < 0:
-                    raise "Negative volume detected. Check the cell geometry."
+                raise Exception("Negative volume detected. Check the cell geometry." + str(c_face.Tris[t].Edge[0]) + ", " + str(c_face.Tris[t].Edge[1]) + ", " + str(c_face.globalIds) + ", " + str(self.ID))
 
             volumes[t] = current_v
         return volumes

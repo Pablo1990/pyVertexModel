@@ -605,7 +605,7 @@ class Remodelling:
         while has_converged:
             nodes_pair = np.array([cell_node, ghost_node])
             ghost_nodes_tried.append(ghost_node)
-            logger.info(f"Remodeling: {cell_node} - {ghost_node}")
+            logger.info(f"Remodelling: {cell_node} - {ghost_node}")
 
             valence_segment, old_tets, old_ys = edge_valence(self.Geo, nodes_pair)
             has_converged, Tnew = self.flip_nm(nodes_pair, cell_to_intercalate_with, old_tets, old_ys,

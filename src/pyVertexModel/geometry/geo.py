@@ -827,9 +827,23 @@ class Geo:
         # Check if the ys and faces have not changed
         self.check_ys_and_faces_have_not_changed(new_tets, old_tets, old_geo)
 
+        # Ensure Consistent Order in Triangles
+        self.ensure_consistent_tris_order()
+
         # if update_measurements
         if update_measurements:
             self.update_measures()
+
+    def ensure_consistent_tris_order(self):
+        """
+        Ensure that the triangles in the cells have a consistent order
+        :return:
+        """
+        for c_cell in self.Cells:
+            if c_cell.AliveStatus is not None:
+                for c_face in c_cell.Faces:
+                    for tri in c_face.Tris:
+                        tri.ensure_consistent_order(c_face.Centre, c_cell.Y, c_cell.X)
 
     def remove_tetrahedra(self, removing_tets):
         """

@@ -86,3 +86,23 @@ class Tris:
         copied_tris = Tris()
         copy_non_mutable_attributes(self, '', copied_tris)
         return copied_tris
+
+    def ensure_consistent_order(self, face_centre, y, x):
+        """
+        For each triangle in a face, enforce winding to match the face normal.
+        :param face_centre: The centre of the face.
+        :param x: X coordinates of the centre of the cell.
+        :param y: Y coordinates of the vertices of the triangle.
+        """
+        # Calculate the current volume of the triangle
+        y1 = y[self.Edge[0], :] - x
+        y2 = y[self.Edge[1], :] - x
+        y3 = face_centre - x
+
+        current_v = np.linalg.det(np.array([y1, y2, y3])) / 6
+
+        # Check the orientation of the triangle vertices
+        if current_v < 0:
+            # If the orientation is not consistent, reverse the order of edges
+            self.Edge = [self.Edge[1], self.Edge[0]]
+

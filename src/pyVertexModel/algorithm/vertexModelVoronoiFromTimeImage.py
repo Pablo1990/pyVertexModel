@@ -15,6 +15,7 @@ from skimage.morphology import dilation
 from src import PROJECT_DIRECTORY, logger
 from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrahedra_from_information, \
     calculate_cell_height_on_model
+from src.pyVertexModel.geometry.geo import Geo
 from src.pyVertexModel.util.utils import ismember_rows, save_variables, save_state
 
 
@@ -518,6 +519,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         Obtain the initial X and tetrahedra for the model.
         :return:
         """
+        self.geo = Geo()
         if img_filename is None:
             img_filename = PROJECT_DIRECTORY + '/' + self.set.initial_filename_state
 
