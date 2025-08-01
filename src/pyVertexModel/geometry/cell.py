@@ -1,3 +1,5 @@
+import itertools
+
 import numpy as np
 import pyvista as pv
 import vtk
@@ -206,6 +208,53 @@ class Cell:
             volumes[t] = current_v
         return volumes
 
+    def compute_overlapping_volume_fraction(self):
+        """
+        Compute the overlapping volume fraction of the cell.
+        :return: The overlapping volume fraction.
+        """
+        total_volume = 0.0
+        for f in range(len(self.Faces)):
+            volumes = self.compute_volume_fraction(self.Faces[f])
+            total_volume += np.sum(volumes)
+
+        return total_volume / self.Vol if self.Vol > 0 else 0.0
+
+    def create_vtk_parts(self):
+        """
+        Create a vtk cell with the parts of the cell
+        :return:
+        """
+        parts_of_cell = []
+
+        # Go through all the faces and create the triangles for the VTK cell
+        for c_face in self.Faces:
+            for t in range(len(c_face.Tris)):
+                points = vtk.vtkPoints()
+                points.SetNumberOfPoints(4)
+                # Centre of cell
+                points.SetPoint(0, self.X[0], self.X[1], self.X[2])
+                # Face centre
+                points.SetPoint(1, c_face.Centre[0], c_face.Centre[1], c_face.Centre[2])
+                # Edge points
+                points.SetPoint(2, self.Y[c_face.Tris[t].Edge[0], 0], self.Y[c_face.Tris[t].Edge[0], 1], self.Y[c_face.Tris[t].Edge[0], 2])
+                points.SetPoint(3, self.Y[c_face.Tris[t].Edge[1], 0], self.Y[c_face.Tris[t].Edge[1], 1], self.Y[c_face.Tris[t].Edge[1], 2])
+
+                # Create the cell with the points
+                cell = vtk.vtkCellArray()
+                combinations = itertools.combinations([0, 1, 2, 3], 3)
+                for subset in combinations:
+                    cell.InsertNextCell(3)
+                    for point_index in subset:
+                        cell.InsertCellPoint(point_index)
+
+                vpoly = vtk.vtkPolyData()
+                vpoly.SetPoints(points)
+                vpoly.SetPolys(cell)
+                parts_of_cell.append(vpoly)
+
+        return parts_of_cell
+
     def create_vtk(self):
         """
         Create a vtk cell
@@ -289,10 +338,12 @@ class Cell:
         # Compute the features of the cell
         features = {'ID': self.ID,
                     'Area': self.compute_area(),
+                    'Area0': self.Area0,
                     'Area_top': self.compute_area(location_filter=0),
                     'Area_bottom': self.compute_area(location_filter=2),
                     'Area_cellcell': self.compute_area(location_filter=1),
                     'Volume': self.compute_volume(),
+                    'Volume0': self.Vol0,
                     'Height': self.compute_height(),
                     'Width': self.compute_width(),
                     'Length': self.compute_length(),

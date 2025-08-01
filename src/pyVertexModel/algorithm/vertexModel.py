@@ -269,9 +269,6 @@ class VertexModel:
         # Resize the geometry to a given cell volume average
         self.resize_tissue()
 
-        # Deform the tissue if required
-        self.deform_tissue()
-
         # Create substrate(s)
         if self.set.Substrate == 3:
             # Check if there are 3 layers of cells
@@ -301,6 +298,9 @@ class VertexModel:
             else:
                 # Create a substrate cell for each cell
                 self.geo.create_substrate_cells(self.set, domain='Top')
+
+        # Deform the tissue if required
+        self.deform_tissue()
 
         # Add border cells to the shared cells
         for cell in self.geo.Cells:
@@ -356,6 +356,19 @@ class VertexModel:
                     )
                 )
             ]
+            # Shared Ys should have the same Z coordinate
+            tets_to_change = np.any(np.isin(middle_cell.T, closest_domain_neighbour), axis=1)
+            new_z = np.mean(middle_cell.Y[tets_to_change, 2])
+            middle_cell.Y[tets_to_change, 2] = new_z
+            tets_to_change = np.any(np.isin(self.geo.Cells[closest_domain_neighbour].T, middle_cell.ID), axis=1)
+            self.geo.Cells[closest_domain_neighbour].Y[tets_to_change, 2] = new_z
+
+            # Update face centre
+            for cell in [c for c in self.geo.Cells if c.ID == closest_domain_neighbour or c.ID == middle_cell.ID]:
+                for faces in cell.Faces:
+                    if np.isin(faces.ij, np.sort([closest_domain_neighbour, cell.ID])).all():
+                        faces.Centre[2] = new_z
+
             return closest_domain_neighbour
 
         return None
@@ -853,6 +866,7 @@ class VertexModel:
                                                     and cell.AliveStatus == 1]
 
                     remodel_obj.Geo = smoothing_cell_surfaces_mesh(remodel_obj.Geo, cells_involved_intercalation, backup_vars, location='Bottom')
+                    remodel_obj.Geo.ensure_consistent_tris_order()
 
                     # Converge a single iteration
                     remodel_obj.Geo.update_measures()
@@ -926,6 +940,10 @@ class VertexModel:
         pass
 
     def deform_tissue(self):
+        """
+        Deform the tissue based on the set parameters.
+        :return:
+        """
         if self.set.resize_z is not None:
             middle_point = np.mean([cell.X for cell in self.geo.Cells if cell.AliveStatus is not None], axis=0)
             volumes = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
@@ -937,12 +955,31 @@ class VertexModel:
                 deform_array = np.array(
                     [optimal_deform_array_X_Y[0], optimal_deform_array_X_Y[0], self.set.resize_z])
 
-                cell.X = cell.X + (middle_point - cell.X) * deform_array
-                if cell.AliveStatus is not None:
-                    cell.Y = cell.Y + (middle_point - cell.Y) * deform_array
-                    for face in cell.Faces:
-                        face.Centre = face.Centre + (middle_point - face.Centre) * deform_array
+                if cell.substrate_cell_top is not None and cell.substrate_cell_bottom is not None:
+                    cell.X = cell.X + (cell.X - middle_point) * deform_array
+                    if cell.AliveStatus is not None:
+                        cell.Y = cell.Y + (cell.Y - middle_point) * deform_array
+                        for face in cell.Faces:
+                            face.Centre = face.Centre + (face.Centre - middle_point) * deform_array
+
+                    #self.move_cell(self.geo.Cells[cell.substrate_cell_top], deform_array, cell.X, middle_point)
+                    #self.move_cell(self.geo.Cells[cell.substrate_cell_bottom], deform_array, cell.X, middle_point)
 
             self.geo.update_measures()
             volumes_after_deformation = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
             logger.info(f'Volume difference: {np.mean(volumes) - np.mean(volumes_after_deformation)}')
+
+    def move_cell(self, cell, deform_array, location, middle_point):
+        """
+        Move a cell by translating its position based on the deform_array and the location relative to the middle point.
+        :param cell:
+        :param deform_array:
+        :param location:
+        :param middle_point:
+        :return:
+        """
+        cell.X = cell.X + (location - middle_point) * deform_array
+        if cell.AliveStatus is not None:
+            cell.Y = cell.Y + (location - middle_point) * deform_array
+            for face in cell.Faces:
+                face.Centre = face.Centre + (location - middle_point) * deform_array

@@ -1039,10 +1039,19 @@ class Geo:
             if not os.path.exists(cell_sub_folder):
                 os.makedirs(cell_sub_folder)
 
-            for c in [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]:
+            for c in [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None and c_cell.ID == 4]:
                 writer = vtk.vtkPolyDataWriter()
                 if folder_name.startswith('Cells'):
                     vtk_cells.append(self.Cells[c].create_vtk())
+                elif folder_name.startswith('Single_Cells'):
+                    all_parts = self.Cells[c].create_vtk_parts()
+                    vtk_cells.extend(all_parts)
+                    for num_part, part  in enumerate(all_parts):
+                        name_out = os.path.join(cell_sub_folder, f'{folder_name}.{c:04d}_{num_part:04d}.{step:04d}{file_extension}')
+                        writer.SetFileName(name_out)
+                        # Write to a VTK file
+                        writer.SetInputData(part)
+                        writer.Write()
                 elif folder_name.startswith('Edges'):
                     vtk_cells.append(self.Cells[c].create_vtk_edges())
                 elif folder_name.startswith('Arrows'):

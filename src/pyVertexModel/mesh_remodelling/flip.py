@@ -289,10 +289,10 @@ def y_flip_nm(old_tets, cell_to_intercalate_with, old_ys, xs_to_disconnect, Geo,
     # Step 3: Select the edge to add
     edgeToConnect = np.block([np.array(cell_to_intercalate_with), Xs_gToDisconnect])
     possibleEdges = possibleEdges[~np.all(np.isin(possibleEdges, edgeToConnect), axis=1)]
+    logger.info(f"Number of possible edges: {len(possibleEdges)}")
 
     # Step 4: Propagate the change to get the remaining tets
     # Based on https://dl.acm.org/doi/pdf/10.1145/2629697
-
     treeOfPossibilities = nx.DiGraph()
     treeOfPossibilities.add_node(2)
     TRemoved = [None, None]
@@ -363,6 +363,7 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, endNode, ghost_n
     Geo_final = Geo
     new_tets_tree = None
     valence_segment = np.inf
+    old_volume = np.sum([cell.Vol for cell in Geo.Cells if cell.AliveStatus is not None])
 
     xs_to_disconnect_cells = xs_to_disconnect[~np.isin(xs_to_disconnect, Geo.XgID)]
 
@@ -390,14 +391,19 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, endNode, ghost_n
                 try:
                     Geo_new = Geo.copy()
                     Geo_new.remove_tetrahedra(old_tets)
+                    #TODO: THE PROBLEM IS HERE. IT CHANGES THE VOLUME OF THE CELLS
                     Geo_new.add_tetrahedra(Geo, new_tets, None, Set)
                     Geo_new.rebuild(Geo, Set, cells_to_rebuild=np.unique(new_tets))
                     Geo_new.build_global_ids()
+                    Geo_new.ensure_consistent_tris_order()
+                    Geo_new.update_measures()
 
                     new_tets_tree = new_tets
                     Geo_final = Geo_new
                     valence_segment = current_valence_segment
-                    logger.info(f"New combination found with valence segment: {valence_segment}")
+                    vol_difference = np.sum([cell.Vol for cell in Geo_final.Cells if cell.AliveStatus is not None]) - old_volume
+                    logger.info(f"New combination found with valence segment: {valence_segment} with "
+                                f"volume difference: {vol_difference} ")
                 except Exception as ex:
                     logger.warning(f"Exception on flip remodelling: {ex}")
     return new_tets_tree, Geo_final
