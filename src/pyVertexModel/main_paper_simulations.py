@@ -19,9 +19,9 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
     :param output_results_dir: 
     :param combination:
     :return:
-    """  # output directory
-
-    vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
+    """
+    # output directory
+    vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False, set_option='wing_disc_equilibrium')
     if (combination == 'WT' or combination == 'Mbs' or combination == 'Rok' or
             combination == 'Talin' or combination == 'IntegrinDN' or
             combination == 'ShibireTS' or combination == 'WT_substrate_gone_40_mins' or
@@ -121,6 +121,7 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
             return
 
     #try:
+    vModel.geo.update_measures()
     vModel.iterate_over_time()
     analyse_simulation(vModel.set.OutputFolder)
     #except Exception as e:
