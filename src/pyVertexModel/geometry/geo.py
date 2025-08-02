@@ -449,6 +449,10 @@ class Geo:
             self.CeilingZ = max_zs * 2
 
     def update_barrier_tri0_based_on_number_of_faces(self):
+        """
+        Update the BarrierTri0 based on the number of faces per cell.
+        :return:
+        """
         number_of_faces_per_cell_only_top_and_bottom = []
         for cell in self.Cells:
             if cell.AliveStatus is not None:
@@ -494,6 +498,7 @@ class Geo:
         Update the measures of the geometry.
         :return:
         """
+        self.ensure_consistent_tris_order()
         ids = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]
 
         if self.Cells[ids[-1]].Vol is None:
@@ -696,6 +701,8 @@ class Geo:
         # Rebuild the cells
         for cc in cells_to_rebuild:
             self.rebuild_cell(self.Cells[cc], Set, cc, old_geo)
+
+        self.ensure_consistent_tris_order()
 
     def rebuild_cell(self, c_cell, Set, cc, old_geo):
         """
