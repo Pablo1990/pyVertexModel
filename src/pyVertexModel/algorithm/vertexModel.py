@@ -201,6 +201,7 @@ class VertexModel:
         Vertex Model class.
         :param c_set:
         """
+        self.remodelled_cells = None
         self.colormap_lim = None
         self.OutputFolder = None
         self.numStep = None
@@ -533,8 +534,14 @@ class VertexModel:
 
                     # Remodelling
                     remodel_obj = Remodelling(self.geo, self.geo_n, self.geo_0, self.set, self.Dofs)
-                    self.geo, self.geo_n = remodel_obj.remodel_mesh(self.numStep)
+                    if getattr(self, 'remodelled_cells', None) is None:
+                        self.remodelled_cells = []
+                    self.geo, self.geo_n, all_t_new = remodel_obj.remodel_mesh(self.numStep, self.remodelled_cells)
                     self.Dofs.get_dofs(self.geo, self.set)
+
+                    # Save info from changed tetrahedra to
+                    self.remodelled_cells.append(np.unique(all_t_new))
+
 
             # Update last time converged
             self.set.last_t_converged = self.t
@@ -905,7 +912,6 @@ class VertexModel:
             # If the last cell is reached, break the loop
             if c_cell == non_scutoids[-1]:
                 break
-
 
         self.geo.update_measures()
         self.geo.init_reference_cell_values(self.set)

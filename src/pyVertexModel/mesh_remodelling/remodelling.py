@@ -376,10 +376,11 @@ class Remodelling:
         self.Geo_n = Geo_n.copy()
         self.Geo_0 = Geo_0.copy()
 
-    def remodel_mesh(self, num_step, how_close_to_vertex=0.01):
+    def remodel_mesh(self, num_step, remodelled_cells, how_close_to_vertex=0.01):
         """
         Remodel the mesh.
         :param num_step:
+        :param remodelled_cells: Cells that has been already remodelled.
         :param how_close_to_vertex: How close to the vertex the new vertices should be.
         :return:
         """
@@ -402,7 +403,8 @@ class Remodelling:
             # Get the first segment feature
             segmentFeatures = segmentFeatures_all.iloc[0]
 
-            if segmentFeatures['num_cell'] in self.Geo.BorderCells or np.any(np.isin(self.Geo.BorderCells, segmentFeatures['shared_neighbours'])):
+            if segmentFeatures['num_cell'] in self.Geo.BorderCells or np.any(np.isin(self.Geo.BorderCells, segmentFeatures['shared_neighbours'])) or \
+                    np.any([np.all(np.isin([segmentFeatures['node_pair_g'], segmentFeatures['num_cell']], remodelled_cell)) for remodelled_cell in remodelled_cells]):
             #if self.Geo.Cells[segmentFeatures['cell_to_split_from']].AliveStatus == 1 or \
             #        segmentFeatures['node_pair_g'] not in self.Geo.XgTop:
                 # Drop the first element of the segment features
@@ -424,8 +426,7 @@ class Remodelling:
                     self.Geo.update_measures()
                     logger.info(f'=>> Full-Flip accepted')
                     self.Geo_n = self.Geo.copy(update_measurements=False)
-                    backup_vars = save_backup_vars(self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs)
-                    break
+                    return self.Geo, self.Geo_n, allTnew
             else:
                 # Go back to initial state
                 self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs = load_backup_vars(backup_vars)
@@ -443,7 +444,7 @@ class Remodelling:
             # Remove the rows that have been checked from segmentFeatures_all
             segmentFeatures_all = segmentFeatures_all.drop(rowsToRemove)
 
-        return self.Geo, self.Geo_n
+        return self.Geo, self.Geo_n, np.array([])
 
     def post_intercalation(self, num_cell, how_close_to_vertex, all_tnew, backup_vars, cellToSplitFrom, ghostNode,
                            ghost_nodes_tried, has_converged):
