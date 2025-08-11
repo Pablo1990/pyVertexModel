@@ -961,7 +961,7 @@ class VertexModel:
                 deform_array = np.array(
                     [optimal_deform_array_X_Y[0], optimal_deform_array_X_Y[0], self.set.resize_z])
 
-                if cell.substrate_cell_top is not None and cell.substrate_cell_bottom is not None:
+                if getattr(cell, 'substrate_cell_top', None) is None and getattr(cell, 'substrate_cell_bottom', None) is None:
                     cell.X = cell.X + (cell.X - middle_point) * deform_array
                     if cell.AliveStatus is not None:
                         cell.Y = cell.Y + (cell.Y - middle_point) * deform_array
@@ -970,8 +970,36 @@ class VertexModel:
 
                     #self.move_cell(self.geo.Cells[cell.substrate_cell_top], deform_array, cell.X, middle_point)
                     #self.move_cell(self.geo.Cells[cell.substrate_cell_bottom], deform_array, cell.X, middle_point)
+            # Make a copy of the geometry before deformation
+            geo_copy = self.geo.copy()
+            self.resize_tissue()
 
+            # Update the geometry
             self.geo.update_measures()
+            # Scale the reference values
+            new_lmin = []
+            old_lmin = []
+            for cell, cell_copy in zip(self.geo.Cells, geo_copy.Cells):
+                if cell.AliveStatus is not None:
+                    cell.Vol0 = cell_copy.Vol0 * cell.Vol / cell_copy.Vol
+                    cell.Area0 = cell_copy.Area0 * cell.Area / cell_copy.Area
+                    for face, face_copy in zip(cell.Faces, cell_copy.Faces):
+                        face.Area0 = face_copy.Area0 * face.Area / face_copy.Area
+                        for tri, tri_copy in zip(face.Tris, face_copy.Tris):
+                            # Append the minimum length to the centre and the edge length of the current tri to lmin_values
+                            new_lmin.append(min(tri.LengthsToCentre))
+                            new_lmin.append(tri.EdgeLength)
+
+                            old_lmin.append(min(tri_copy.LengthsToCentre))
+                            old_lmin.append(tri_copy.EdgeLength)
+
+            # TODO: Update the lmin values? I THINK IT IS NOT NEEDED SINCE IT WILL CHANGE PURSE STRING BEHAVIOURS
+            # self.geo.lmin0 = geo_copy.lmin0 * np.min(new_lmin) / np.min(old_lmin)
+            # TODO: UPDATE BarrierTri0??
+
+            # Update the substrate z value
+            self.geo.get_substrate_z()
+
             volumes_after_deformation = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
             logger.info(f'Volume difference: {np.mean(volumes) - np.mean(volumes_after_deformation)}')
 
