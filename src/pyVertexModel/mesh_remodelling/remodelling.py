@@ -403,8 +403,7 @@ class Remodelling:
             # Get the first segment feature
             segmentFeatures = segmentFeatures_all.iloc[0]
 
-            if segmentFeatures['num_cell'] in self.Geo.BorderCells or np.any(np.isin(self.Geo.BorderCells, segmentFeatures['shared_neighbours'])) or \
-                    np.any([np.all(np.isin([segmentFeatures['node_pair_g'], segmentFeatures['num_cell']], remodelled_cell)) for remodelled_cell in remodelled_cells]):
+            if not self.check_if_intercalation_is_possible(remodelled_cells, segmentFeatures):
             #if self.Geo.Cells[segmentFeatures['cell_to_split_from']].AliveStatus == 1 or \
             #        segmentFeatures['node_pair_g'] not in self.Geo.XgTop:
                 # Drop the first element of the segment features
@@ -445,6 +444,41 @@ class Remodelling:
             segmentFeatures_all = segmentFeatures_all.drop(rowsToRemove)
 
         return self.Geo, self.Geo_n, np.array([])
+
+    def check_if_intercalation_is_possible(self, remodelled_cells, segmentFeatures):
+        """
+        Check if the intercalation is possible.
+        :param remodelled_cells:
+        :param segmentFeatures:
+        :return:
+        """
+        # Check if the cell is in the border of the tissue
+        if segmentFeatures['num_cell'] in self.Geo.BorderCells:
+            return False
+
+        # Check if any of the neighbouring cells is in the border of the tissue
+        if np.any(np.isin(self.Geo.BorderCells, segmentFeatures['shared_neighbours'])):
+            return False
+
+        # Check if the pair cell-ghost node has already been involved in an intercalation
+        if np.any([np.all(np.isin([segmentFeatures['node_pair_g'], segmentFeatures['num_cell']], remodelled_cell)) for remodelled_cell in remodelled_cells]):
+            return False
+
+        # Check if the cells involved have a big enough surface area in that domain
+        # cells_involved = [segmentFeatures['num_cell']] + segmentFeatures['shared_neighbours']
+        # only_cells_involved = [cell for cell in cells_involved if cell not in self.Geo.XgID]
+        # for c_cell in only_cells_involved:
+        #     if self.Geo.Cells[c_cell].AliveStatus == 0:
+        #         continue
+        #     # Check if the cell has a big enough surface area on Top
+        #     if segmentFeatures['node_pair_g'] in self.Geo.XgTop and np.any(self.Geo.Cells[c_cell].compute_areas_from_tris('Top') < self.Set.MinSurfaceArea):
+        #         return False
+        #
+        #     # Check if the cell has a big enough surface area on Bottom
+        #     if segmentFeatures['node_pair_g'] in self.Geo.XgBottom and np.any(self.Geo.Cells[c_cell].compute_areas_from_tris('Bottom') < self.Set.MinSurfaceArea):
+        #         return False
+
+        return True
 
     def post_intercalation(self, num_cell, how_close_to_vertex, all_tnew, backup_vars, cellToSplitFrom, ghostNode,
                            ghost_nodes_tried, has_converged):
@@ -517,13 +551,14 @@ class Remodelling:
         :param cells_involved_intercalation:
         :return:
         """
-        # Get the relation between Vol0 and Vol from the backup_vars
-        for cell in backup_vars['Geo_b'].Cells:
-            if cell.ID in cells_involved_intercalation:
-                self.Geo.Cells[cell.ID].Vol0 = self.Geo.Cells[cell.ID].Vol * cell.Vol0 / cell.Vol
-                self.Geo.Cells[cell.ID].Area0 = self.Geo.Cells[cell.ID].Area * cell.Area0 / cell.Area
-                for f in range(len(self.Geo.Cells[cell.ID].Faces)):
-                    self.Geo.Cells[cell.ID].Faces[f].Area0 = self.Geo.Cells[cell.ID].Faces[f].Area * cell.Area0 / cell.Area
+        pass
+        # # Get the relation between Vol0 and Vol from the backup_vars
+        # for cell in backup_vars['Geo_b'].Cells:
+        #     if cell.ID in cells_involved_intercalation:
+        #         self.Geo.Cells[cell.ID].Vol0 = self.Geo.Cells[cell.ID].Vol * cell.Vol0 / cell.Vol
+        #         self.Geo.Cells[cell.ID].Area0 = self.Geo.Cells[cell.ID].Area * cell.Area0 / cell.Area
+        #         for f in range(len(self.Geo.Cells[cell.ID].Faces)):
+        #             self.Geo.Cells[cell.ID].Faces[f].Area0 = self.Geo.Cells[cell.ID].Faces[f].Area * cell.Area0 / cell.Area
 
     def check_if_will_converge(self, best_geo, n_iter_max=20):
         """
