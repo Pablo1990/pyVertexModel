@@ -156,6 +156,24 @@ class Cell:
 
         return total_area
 
+    def compute_areas_from_tris(self, location_filter=None):
+        """
+        Compute the area of the cell
+        :param location_filter:
+        :return: all areas of the triangles cell
+        """
+        all_areas = []
+        for f in range(len(self.Faces)):
+            if location_filter is not None:
+                if get_interface(self.Faces[f].InterfaceType) == get_interface(location_filter):
+                    for t in range(len(self.Faces[f].Tris)):
+                        all_areas.append(self.Faces[f].Tris[t].Area)
+            else:
+                for t in range(len(self.Faces[f].Tris)):
+                    all_areas.append(self.Faces[f].Tris[t].Area)
+
+        return all_areas
+
     def count_small_volume_fraction_per_cell(self, threshold=0.01, location=None):
         """
         Count the number of faces with small volume fraction per cell.
