@@ -673,8 +673,8 @@ class Remodelling:
                 edge_lengths_top = np.zeros(len(self.Geo.Cells))
                 edge_lengths_bottom = np.zeros(len(self.Geo.Cells))
 
-                top_area = c_cell.compute_area(0)
-                bottom_area = c_cell.compute_area(2)
+                top_area = c_cell.compute_area('Top')
+                bottom_area = c_cell.compute_area('Bottom')
                 for c_face in current_faces:
                     for current_tri in c_face.Tris:
                         if (len(current_tri.SharedByCells) > 1 and
@@ -760,6 +760,14 @@ class Remodelling:
             avg_edge_length = np.median(edge_lengths[edge_lengths > 0]) * 2
             edges_to_intercalate = (edge_lengths < avg_edge_length - (
                     self.Set.RemodelStiffness * avg_edge_length)) & (edge_lengths > 0)
+
+            debris_cells = [cell.ID for cell in self.Geo.Cells if cell.AliveStatus == 0]
+            edges_lengths_debris = edge_lengths[debris_cells]
+            if np.any(edges_lengths_debris > 0):
+                # Intercalate edges in debris cells
+                edges_to_intercalate[debris_cells] = (edges_lengths_debris < avg_edge_length - (
+                        self.Set.Remodel_stiffness_wound * avg_edge_length)) & (edges_lengths_debris > 0)
+
             if np.any(edges_to_intercalate):
                 segment_features = add_edge_to_intercalate(self.Geo, num_cell, segment_features, edge_lengths,
                                                            edges_to_intercalate,

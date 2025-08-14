@@ -126,6 +126,7 @@ class Set:
             self.Remodelling = True
             self.contributionOldYs = 0
             self.RemodelStiffness = None
+            self.Remodel_stiffness_wound = None
             # ============================ Solution ==============================
             self.tol = 1e-08
             self.MaxIter = 30
@@ -179,8 +180,10 @@ class Set:
 
         if self.Remodelling:
             self.RemodelStiffness = 0.9
+            self.Remodel_stiffness_wound = 0.7
         else:
             self.RemodelStiffness = 2
+            self.Remodel_stiffness_wound = 2
 
     def redirect_output(self):
         os.makedirs(self.OutputFolder, exist_ok=True)
