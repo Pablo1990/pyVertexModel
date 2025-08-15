@@ -435,6 +435,13 @@ class Geo:
         self.non_dead_cells = [cell.ID for cell in self.Cells if cell.AliveStatus is not None]
 
         # Obtain the original cell height
+        self.get_substrate_z()
+
+    def get_substrate_z(self):
+        """
+        Get the minimum and maximum z values of the cells to set the substrate and ceiling heights.
+        :return:
+        """
         min_zs = np.min([np.min(cell.Y[:, 2]) for cell in self.Cells if cell.Y is not None])
         max_zs = np.max([np.max(cell.Y[:, 2]) for cell in self.Cells if cell.Y is not None])
         self.CellHeightOriginal = np.abs(min_zs)
@@ -442,7 +449,6 @@ class Geo:
             self.SubstrateZ = min_zs * 0.99
         else:
             self.SubstrateZ = min_zs * 1.01
-
         if max_zs < 0:
             self.CeilingZ = max_zs * 0.5
         else:
