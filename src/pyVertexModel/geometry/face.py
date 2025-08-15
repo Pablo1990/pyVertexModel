@@ -73,13 +73,27 @@ class Face:
         get_interface(self.InterfaceType)
 
     def build_face(self, ci, cj, face_ids, nCells, Cell, XgID, Set, XgTop, XgBottom, oldFace=None):
+        """
+        Build the face based on the given parameters.
+        :param ci:
+        :param cj:
+        :param face_ids:
+        :param nCells:
+        :param Cell:
+        :param XgID:
+        :param Set:
+        :param XgTop:
+        :param XgBottom:
+        :param oldFace:
+        :return:
+        """
         self.InterfaceType = None
         ij = [ci, cj]
         self.ij = ij
         self.globalIds = None
         self.build_interface_type(ij, XgID, XgTop, XgBottom)
 
-        if oldFace is not None:
+        if oldFace.ij is not None:
             self.Centre = oldFace.Centre
         else:
             self.build_face_centre(ij, nCells, Cell.X, Cell.Y[face_ids, :], Set.f,
@@ -88,11 +102,10 @@ class Face:
         self.build_edges(Cell.T, face_ids, self.Centre, self.InterfaceType, Cell.X, Cell.Y,
                          list(range(nCells)))
 
-        if oldFace is not None:
-            self.Area = oldFace.Area
+        self.Area, _ = self.compute_face_area(Cell.Y)
+        if oldFace.ij is not None:
             self.Area0 = oldFace.Area0
         else:
-            self.Area, _ = self.compute_face_area(Cell.Y)
             self.Area0 = self.Area * Set.ref_A0
 
 

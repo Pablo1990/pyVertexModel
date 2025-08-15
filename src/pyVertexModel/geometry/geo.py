@@ -720,45 +720,26 @@ class Geo:
             ij = [cc, cj]
             face_ids = np.sum(np.isin(c_cell.T, ij), axis=1) == 2
 
+            old_face = face.Face()
+            old_face.ij = None
+
             if old_geo is not None:
                 old_face_exists = any([np.all(c_face.ij == ij) for c_face in old_geo.Cells[cc].Faces])
-            else:
-                old_face_exists = False
-
-            if old_face_exists:
-                old_face = [c_face for c_face in old_geo.Cells[cc].Faces if np.all(c_face.ij == ij)][0]
-
-                # Check if the last of the old faces Tris' edge goes beyond the number of Ys
-                all_tris = [max(tri.Edge) for tri in old_face.Tris]
-                if max(all_tris) >= c_cell.Y.shape[0]:
-                    old_face = None
-            else:
-                old_face = None
+                if old_face_exists:
+                    old_face = [c_face for c_face in old_geo.Cells[cc].Faces if np.all(c_face.ij == ij)][0]
 
             if j >= len(c_cell.Faces):
                 c_cell.Faces.append(face.Face())
             else:
                 c_cell.Faces[j] = face.Face()
+
             c_cell.Faces[j].build_face(cc, cj, face_ids, self.nCells, c_cell, self.XgID, Set,
                                        self.XgTop, self.XgBottom, old_face)
         c_cell.Faces = c_cell.Faces[:len(neigh_nodes)]
-        if c_cell.AliveStatus is not None:
-            # Update the area0 of all the faces
-            # num_faces_bottom, num_faces_lateral, num_faces_top = self.get_num_faces(cc)
-            # old_faces_bottom, old_faces_lateral, old_faces_top = old_geo.get_num_faces(cc)
-            #
-            # old_area0_top = np.mean([c_face.Area0 for c_face in old_geo.Cells[cc].Faces if get_interface(c_face.InterfaceType) == get_interface('Top')])
-            # old_area0_bottom = np.mean([c_face.Area0 for c_face in old_geo.Cells[cc].Faces if get_interface(c_face.InterfaceType) == get_interface('Bottom')])
-            # old_area0_lateral = np.mean([c_face.Area0 for c_face in old_geo.Cells[cc].Faces if get_interface(c_face.InterfaceType) == get_interface('CellCell')])
 
+        if c_cell.AliveStatus is not None:
             # Iterate over all faces in the current cell
             for f in range(len(c_cell.Faces)):
-                # if get_interface(c_cell.Faces[f].InterfaceType) == get_interface('Top'):
-                #     c_cell.Faces[f].Area0 = old_area0_top * old_faces_top / num_faces_top
-                # elif get_interface(c_cell.Faces[f].InterfaceType) == get_interface('Bottom'):
-                #     c_cell.Faces[f].Area0 = old_area0_bottom * old_faces_bottom / num_faces_bottom
-                # else:
-                #     c_cell.Faces[f].Area0 = old_area0_lateral * old_faces_lateral / num_faces_lateral
                 c_cell.Faces[f].Area0 = c_cell.Faces[f].Area * Set.ref_A0
 
     def get_num_faces(self, num_cell):
@@ -945,21 +926,23 @@ class Geo:
         :return:
         """
 
-        if Set.contributionOldYs == 0:
-            new_tets = np.array([cell.compute_y(self, Tnew[numTet, :], self.Cells[mainNodesToConnect].X, Set)
-                                 for numTet in range(Tnew.shape[0])])
-            for new_tet_id, new_tet in enumerate(new_tets):
-                # Adjust Z of the new_tets
-                if any(np.isin(Tnew[new_tet_id], self.XgTop)):
-                    tets_to_use = np.any(np.isin(self.Cells[mainNodesToConnect].T, self.XgTop), axis=1)
-                elif any(np.isin(Tnew[new_tet_id], self.XgBottom)):
-                    tets_to_use = np.any(np.isin(self.Cells[mainNodesToConnect].T, self.XgBottom), axis=1)
-                else:
-                    return new_tets
-
-                new_tet[2] = np.mean(self.Cells[mainNodesToConnect].Y[tets_to_use], axis=0)[2]
-
-            return new_tets
+        # TODO: THIS WAS GIVING WORSE GEOMETRIES
+        #
+        # if Set.contributionOldYs == 0:
+        #     new_tets = np.array([cell.compute_y(self, Tnew[numTet, :], self.Cells[mainNodesToConnect].X, Set)
+        #                          for numTet in range(Tnew.shape[0])])
+        #     for new_tet_id, new_tet in enumerate(new_tets):
+        #         # Adjust Z of the new_tets
+        #         if any(np.isin(Tnew[new_tet_id], self.XgTop)):
+        #             tets_to_use = np.any(np.isin(self.Cells[mainNodesToConnect].T, self.XgTop), axis=1)
+        #         elif any(np.isin(Tnew[new_tet_id], self.XgBottom)):
+        #             tets_to_use = np.any(np.isin(self.Cells[mainNodesToConnect].T, self.XgBottom), axis=1)
+        #         else:
+        #             return new_tets
+        #
+        #         new_tet[2] = np.mean(self.Cells[mainNodesToConnect].Y[tets_to_use], axis=0)[2]
+        #
+        #     return new_tets
 
         allYs = np.vstack([
             c_cell.Y for c_cell in self.Cells
