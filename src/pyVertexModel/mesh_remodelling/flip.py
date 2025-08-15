@@ -391,7 +391,6 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, endNode, ghost_n
                 try:
                     Geo_new = Geo.copy()
                     Geo_new.remove_tetrahedra(old_tets)
-                    #TODO: THE PROBLEM IS HERE. IT CHANGES THE VOLUME OF THE CELLS
                     Geo_new.add_tetrahedra(Geo, new_tets, None, Set)
                     Geo_new.rebuild(Geo, Set, cells_to_rebuild=np.unique(new_tets))
                     Geo_new.build_global_ids()
