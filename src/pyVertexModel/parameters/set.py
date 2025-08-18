@@ -77,7 +77,7 @@ class Set:
             # Volumes
             self.lambdaV = 1
             self.lambdaV_Debris = 1e-8
-            self.ref_V0 = 1.0
+            self.ref_V0 = 0.9999
             # Surface area
             self.SurfaceType = 1
             self.A0eq0 = True
@@ -335,6 +335,7 @@ class Set:
         self.model_name = 'dWL6'
         self.initial_filename_state = 'Input/images/' + self.model_name + '.tif'
         self.percentage_scutoids = 0.99
+        self.tend = 20
         self.Nincr = self.tend * 100
 
         self.EnergyBarrierAR = True
@@ -368,11 +369,13 @@ class Set:
         self.check_for_non_used_parameters()
 
     def wing_disc(self):
+        self.frozen_face_centres = False
         #self.nu_bottom = self.nu
         #self.model_name = 'in_silico_movie_0'
         #self.initial_filename_state = 'Input/' + self.model_name + '.mat'
         #self.percentage_scutoids = 0
         self.Nincr = self.tend * 100
+        self.resize_z = None
 
         self.EnergyBarrierA = False
         # Energy Barrier Aspect Ratio
