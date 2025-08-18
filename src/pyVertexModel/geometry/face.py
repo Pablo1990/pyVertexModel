@@ -93,7 +93,7 @@ class Face:
         self.globalIds = None
         self.build_interface_type(ij, XgID, XgTop, XgBottom)
 
-        if oldFace.ij is not None:
+        if oldFace is not None and getattr(oldFace, 'ij', None) is not None:
             self.Centre = oldFace.Centre
         else:
             self.build_face_centre(ij, nCells, Cell.X, Cell.Y[face_ids, :], Set.f,
@@ -103,7 +103,7 @@ class Face:
                          list(range(nCells)))
 
         self.Area, _ = self.compute_face_area(Cell.Y)
-        if oldFace.ij is not None:
+        if oldFace is not None and getattr(oldFace, 'ij', None) is not None:
             self.Area0 = oldFace.Area0
         else:
             self.Area0 = self.Area * Set.ref_A0
@@ -127,7 +127,6 @@ class Face:
             ftype = self.InterfaceType_allValues[1]  # Border face
 
         self.InterfaceType = get_interface(ftype)
-        return self.InterfaceType
 
     def build_face_centre(self, ij, ncells, X, Ys, H, extrapolate_face_centre):
         """
@@ -229,7 +228,11 @@ class Face:
             y_tri = np.vstack([y[tri.Edge, :], y3])
 
             # Calculate the area of the triangle
-            tri_area = 0.5 * np.linalg.norm(np.cross(y_tri[1, :] - y_tri[0, :], y_tri[0, :] - y_tri[2, :]))
+            cross_product = np.cross(y_tri[1, :] - y_tri[0, :], y_tri[0, :] - y_tri[2, :])
+            tri_area = 0.5 * np.linalg.norm(cross_product)
+            if np.allclose(cross_product, 0):
+                tri_area = 0  # Handle collinear points
+
             tris_area[t] = tri_area
 
         area = np.sum(tris_area)

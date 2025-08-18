@@ -315,7 +315,7 @@ class Geo:
                 if c_cell.AliveStatus is not None:
                     for f in range(len(self.Cells[c].Faces)):
                         Face = self.Cells[c].Faces[f]
-                        Face.InterfaceType = Face.build_interface_type(Face.ij, self.XgID)
+                        Face.build_interface_type(Face.ij, self.XgID)
 
                         if Face.ij[1] == XgSub:
                             # update the position of the surface centers on the substrate
