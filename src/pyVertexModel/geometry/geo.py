@@ -344,26 +344,51 @@ class Geo:
             self.lmin0 = np.finfo(float).max
 
         ## Average values
-        #avg_vol = np.mean([c_cell.Vol for c_cell in self.Cells if c_cell.AliveStatus is not None])
+        avg_vol = np.mean([c_cell.Vol for c_cell in self.Cells if c_cell.AliveStatus is not None])
 
         ## Average area per domain
-        # avg_area_top = np.mean([c_cell.compute_area(location_filter=0) for c_cell in self.Cells
-        #                         if c_cell.AliveStatus is not None])
-        # avg_area_bottom = np.mean([c_cell.compute_area(location_filter=2) for c_cell in self.Cells
-        #                            if c_cell.AliveStatus is not None])
-        # avg_area_lateral = np.mean([c_cell.compute_area(location_filter=1) for c_cell in self.Cells
-        #                             if c_cell.AliveStatus is not None])
-        # avg_area = np.mean([c_cell.Area for c_cell in self.Cells if c_cell.AliveStatus is not None])
+        avg_area_top = np.mean([c_cell.compute_area(location_filter=0) for c_cell in self.Cells
+                                if c_cell.AliveStatus is not None])
+        avg_area_bottom = np.mean([c_cell.compute_area(location_filter=2) for c_cell in self.Cells
+                                   if c_cell.AliveStatus is not None])
+        avg_area_lateral = np.mean([c_cell.compute_area(location_filter=1) for c_cell in self.Cells
+                                    if c_cell.AliveStatus is not None])
+        avg_area = np.mean([c_cell.Area for c_cell in self.Cells if c_cell.AliveStatus is not None])
 
         # Initialize list for storing minimum lengths to the centre and edge lengths of tris
         lmin_values = []
+        avg_weight = 0.2
 
         # Iterate over all cells in the Geo structure
         for c, c_cell in enumerate(self.Cells):
             if c_cell.AliveStatus is not None:
                 # Adjust the Vol0
-                self.Cells[c].Vol0 = self.Cells[c].Vol * c_set.ref_V0
-                self.Cells[c].Area0 = self.Cells[c].Area * c_set.ref_A0
+                self.Cells[c].Vol0 = (self.Cells[c].Vol * (1-avg_weight) + avg_vol * avg_weight) * c_set.ref_V0
+                self.Cells[c].Area0 = (self.Cells[c].Area * (1-avg_weight) + avg_area * avg_weight) * c_set.ref_A0
+
+                ## Compute number of faces per domain
+                #num_faces_bottom, num_faces_lateral, num_faces_top = self.get_num_faces(c)
+
+                # Iterate over all faces in the current cell
+                for f in range(len(self.Cells[c].Faces)):
+                    if get_interface(self.Cells[c].Faces[f].InterfaceType) == get_interface('CellCell'):
+                        self.Cells[c].Faces[f].Area0 = (self.Cells[c].Faces[f].Area * (1-avg_weight) + avg_area_lateral * avg_weight) * c_set.ref_A0
+                    elif get_interface(self.Cells[c].Faces[f].InterfaceType) == get_interface('Top'):
+                        self.Cells[c].Faces[f].Area0 = (self.Cells[c].Faces[f].Area * (1-avg_weight) + avg_area_top * avg_weight) * c_set.ref_A0
+                    elif get_interface(self.Cells[c].Faces[f].InterfaceType) == get_interface('Bottom'):
+                        self.Cells[c].Faces[f].Area0 = (self.Cells[c].Faces[f].Area * (1-avg_weight) + avg_area_bottom * avg_weight) * c_set.ref_A0
+
+                    Face = self.Cells[c].Faces[f]
+
+                    # Update BarrierTri0 with the minimum area of all tris in the current face
+                    self.BarrierTri0 = min([min([tri.Area for tri in Face.Tris]), self.BarrierTri0])
+
+                    # Iterate over all tris in the current face
+                    for nTris in range(len(self.Cells[c].Faces[f].Tris)):
+                        tri = self.Cells[c].Faces[f].Tris[nTris]
+                        # Append the minimum length to the centre and the edge length of the current tri to lmin_values
+                        lmin_values.append(min(tri.LengthsToCentre))
+                        lmin_values.append(tri.EdgeLength)
 
                 # Compute the mechanical parameter with noise
                 # Surface area
@@ -380,28 +405,6 @@ class Geo:
                 self.Cells[c].k_substrate_perc = add_noise_to_parameter(1, c_set.noise_random)
                 # Area Energy Barrier
                 self.Cells[c].lambda_b_perc = add_noise_to_parameter(1, c_set.noise_random)
-
-                ## Compute number of faces per domain
-                #num_faces_bottom, num_faces_lateral, num_faces_top = self.get_num_faces(c)
-
-                # Iterate over all faces in the current cell
-                for f in range(len(self.Cells[c].Faces)):
-                    if get_interface(self.Cells[c].Faces[f].InterfaceType) != get_interface('CellCell'):
-                        self.Cells[c].Faces[f].Area0 = self.Cells[c].Faces[f].Area * c_set.ref_A0
-                    else:
-                        self.Cells[c].Faces[f].Area0 = self.Cells[c].Faces[f].Area
-
-                    Face = self.Cells[c].Faces[f]
-
-                    # Update BarrierTri0 with the minimum area of all tris in the current face
-                    self.BarrierTri0 = min([min([tri.Area for tri in Face.Tris]), self.BarrierTri0])
-
-                    # Iterate over all tris in the current face
-                    for nTris in range(len(self.Cells[c].Faces[f].Tris)):
-                        tri = self.Cells[c].Faces[f].Tris[nTris]
-                        # Append the minimum length to the centre and the edge length of the current tri to lmin_values
-                        lmin_values.append(min(tri.LengthsToCentre))
-                        lmin_values.append(tri.EdgeLength)
 
         # Update lmin0 with the minimum value in lmin_values
         if self.lmin0 is None:
