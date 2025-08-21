@@ -220,7 +220,7 @@ class Cell:
             y2 = self.Y[idx1, :] - self.X
             y3 = c_face.Centre - self.X
 
-            if idx0 == idx1 or np.all(y1 == y2):
+            if c_face.Tris[t].is_degenerated(self.Y):
                 print(
                     f"Warning: Degenerate triangle with identical edge indices ({idx0}) in cell {self.ID}, face {c_face.globalIds}")
                 continue  # Skip this triangle

@@ -106,3 +106,19 @@ class Tris:
             # If the orientation is not consistent, reverse the order of edges
             self.Edge = [self.Edge[1], self.Edge[0]]
 
+    def is_degenerated(self, Ys):
+        """
+        Check if the triangle is degenerated (i.e., has zero area).
+        :param Ys: Array of points.
+        :return: True if the triangle is degenerated, False otherwise.
+        """
+        y1 = Ys[self.Edge[0], :]
+        y2 = Ys[self.Edge[1], :]
+
+        # Calculate the area using the determinant method
+        if self.Edge[0] == self.Edge[1] or np.all(y1 == y2):
+            return True
+
+        return False
+
+

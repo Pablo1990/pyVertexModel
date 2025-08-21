@@ -396,6 +396,11 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, endNode, ghost_n
                     Geo_new.build_global_ids()
                     Geo_new.update_measures()
 
+                # Check number of degenerate triangles
+                if Geo_new.has_degenerate_triangles():
+                    logger.warning("Degenerate triangles found after flip remodelling. Skipping this combination.")
+                    continue
+
                     new_tets_tree = new_tets
                     Geo_final = Geo_new
                     valence_segment = current_valence_segment
