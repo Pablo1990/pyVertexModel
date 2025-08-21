@@ -643,6 +643,10 @@ class Remodelling:
             ghost_nodes_tried.append(ghost_node)
             logger.info(f"Remodelling: {cell_node} - {ghost_node}")
 
+            # Create a copy of the ghost node with the same location, but not the same ID
+            self.Geo.split_ghost_node(ghost_node, cell_node, cell_to_split_from, self.Set)
+
+            # Perform the edge valence check and flip
             valence_segment, old_tets, old_ys = edge_valence(self.Geo, nodes_pair)
             has_converged, Tnew = self.flip_nm(nodes_pair, cell_to_intercalate_with, old_tets, old_ys,
                                                cell_to_split_from)

@@ -1820,7 +1820,7 @@ class Geo:
             self.update_measures()
 
 
-    def add_new_cell(self, xs, alive_status=1):
+    def add_new_cell(self, xs, alive_status=None):
         """
         Add a new cell to the list of cells
         :param alive_status: 0: dead, 1: alive, 2: substrate
@@ -1835,6 +1835,10 @@ class Geo:
         new_cell.AliveStatus = alive_status
         new_cell.Vol = 0
         self.Cells.append(new_cell)
+
+        if alive_status is None:
+            # Add to the list of ghost nodes
+            self.XgID = np.append(self.XgID, new_cell.ID)
 
         return new_cell.ID
 
@@ -1863,3 +1867,74 @@ class Geo:
                             return False
 
         return True
+
+    def has_degenerate_triangles(self):
+        """
+        Check if there are any degenerate triangles in the geometry.
+        :return: True if there are degenerate triangles, False otherwise.
+        """
+        for c_cell in self.Cells:
+            if c_cell.AliveStatus is not None:
+                for c_face in c_cell.Faces:
+                    for c_tri in c_face.Tris:
+                        if c_tri.is_degenerated(c_cell.Y):
+                            logger.warning(f'Degenerate triangle found in cell {c_cell.ID} with edges {c_tri.Edge}')
+                            if c_tri.SharedByCells is not None:
+                                logger.warning(f'Shared by cells: {c_tri.SharedByCells}')
+                            return True
+        return False
+
+    def split_ghost_node(self, ghost_node_id, cell_node, cell_to_split_from, c_set):
+        """
+        Split a ghost node into two nodes.
+        :param ghost_node_id: ID of the ghost node to split.
+        :return: ID of the new node created.
+        """
+        if ghost_node_id not in self.XgID:
+            raise ValueError(f'Node {ghost_node_id} is not a ghost node.')
+
+        # Get the ghost node
+        ghost_node = self.Cells[ghost_node_id]
+
+        # Create a new cell
+        new_cell_id = self.add_new_cell(ghost_node.X)
+
+        # Add to top or bottom ghost node list
+        if ghost_node_id in self.XgTop:
+            self.XgTop = np.append(self.XgTop, new_cell_id)
+        elif ghost_node_id in self.XgBottom:
+            self.XgBottom = np.append(self.XgBottom, new_cell_id)
+
+        # Update the tetrahedra of the ghost node
+        tets_in_g_node = ghost_node.T
+
+        # Remove tets from the original ghost_node
+        self.remove_tetrahedra(tets_in_g_node)
+
+        # Split tets based on the flip to be performed
+        # The new ghost_node will be the one that is not being intercalated. Therefore, it should not connect with cell_to_split_from
+        new_tets = []
+        for tet in tets_in_g_node:
+            if cell_to_split_from not in tet:
+                # Replace the old ghost node with the new cell ID
+                new_tet = np.copy(tet)
+                new_tet[np.where(new_tet == ghost_node_id)[0][0]] = new_cell_id
+                # Add the new tetrahedron to the list
+                new_tets.append(new_tet)
+            else:
+                new_tets.append(tet)
+
+        # Get the cell nodes that are connected to the new ghost node
+        new_ghost_nodes_shared_nodes = np.unique(np.array([tet for tet in new_tets if new_cell_id in tet]))
+        cell_nodes = np.setdiff1d(new_ghost_nodes_shared_nodes, self.XgID)
+
+        # Get the other cell connected to the ghost node
+        other_connected_cell = np.setdiff1d(cell_nodes, cell_node)
+        if len(other_connected_cell) != 1:
+            raise ValueError(f'Expected one other connected cell, found {len(other_connected_cell)}: {other_connected_cell}')
+
+        # Add tetrahedra connecting the new ghost node and the old ghost node
+        new_tets.append(np.array([new_cell_id, ghost_node_id, cell_node, other_connected_cell]))
+        self.add_tetrahedra(Geo, new_tets, None, c_set)
+
+        return new_cell_id
