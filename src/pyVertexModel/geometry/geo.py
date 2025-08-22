@@ -1908,6 +1908,9 @@ class Geo:
         # Update the tetrahedra of the ghost node
         tets_in_g_node = ghost_node.T
 
+        # Create a copy of the old geometry
+        old_geo = self.copy()
+
         # Remove tets from the original ghost_node
         self.remove_tetrahedra(tets_in_g_node)
 
@@ -1920,7 +1923,7 @@ class Geo:
                 new_tet = np.copy(tet)
                 new_tet[np.where(new_tet == ghost_node_id)[0][0]] = new_cell_id
                 # Add the new tetrahedron to the list
-                new_tets.append(new_tet)
+                new_tets.append(np.sort(new_tet))
             else:
                 new_tets.append(tet)
 
@@ -1933,8 +1936,21 @@ class Geo:
         if len(other_connected_cell) != 1:
             raise ValueError(f'Expected one other connected cell, found {len(other_connected_cell)}: {other_connected_cell}')
 
+        # Find a ghost node connected to both cell_node and other_connected_cell
+        for nodes_to_check in [cell_node, other_connected_cell[0]]:
+            new_tets_arr = np.array(new_tets)  # Convert list to array
+            shared_tets = new_tets_arr[np.sum(np.isin(new_tets_arr, [ghost_node_id, nodes_to_check, cell_to_split_from]), axis=1) > 2]
+            ghost_nodes = np.intersect1d(np.unique(shared_tets), self.XgID)
+            ghost_node_1 = ghost_nodes[ghost_nodes != ghost_node_id][0]
+            new_tets.append(np.array(np.sort([new_cell_id, ghost_node_id, nodes_to_check, ghost_node_1])))
+
         # Add tetrahedra connecting the new ghost node and the old ghost node
-        new_tets.append(np.array([new_cell_id, ghost_node_id, cell_node, other_connected_cell]))
-        self.add_tetrahedra(Geo, new_tets, None, c_set)
+        new_tets.append(np.array(np.sort([new_cell_id, ghost_node_id, cell_node, other_connected_cell[0]])))
+
+        # Remove triangles with only ghost nodes
+        self.add_tetrahedra(old_geo, new_tets, None, c_set)
+        self.rebuild(old_geo, c_set, cells_to_rebuild=np.unique(new_tets))
+        self.build_global_ids()
+        self.update_measures()
 
         return new_cell_id
