@@ -1991,6 +1991,9 @@ class Geo:
         :param ghost_node_id: ID of the ghost node to split.
         :return: ID of the new node created.
         """
+        if cell_to_split_from is not 0:
+            return None
+
         if ghost_node_id not in self.XgID:
             raise ValueError(f'Node {ghost_node_id} is not a ghost node.')
 
@@ -2034,12 +2037,23 @@ class Geo:
         all_tets = np.unique(all_tets, axis=0)
 
         missing_tets = self.find_missing_tetrahedra(all_tets, [(ghost_node_id, ghost_node_id, new_cell_id)])
-        new_tets.extend(missing_tets)
+        new_tets.extend(np.array(missing_tets))
 
         # Remove triangles with only ghost nodes
         self.add_tetrahedra(old_geo, new_tets, None, c_set)
         self.rebuild(old_geo, c_set, cells_to_rebuild=np.unique(new_tets))
         self.build_global_ids()
+
+        # Correct the edge vertices of the cells sharing the edge
+        old_tet = np.sort([cell_node, cell_to_intercalate_with, new_cell_id, ghost_node_id])
+        tet_to_change = self.Cells[cell_node].T[np.sum(np.isin(self.Cells[cell_node].T, old_tet), axis=1) == len(old_tet)]
+        ys_to_change = self.Cells[cell_node].Y[np.sum(np.isin(self.Cells[cell_node].T, old_tet), axis=1) == len(old_tet)] * 0.95 + self.Cells[0].X * 0.05
+
+        for c_cell in tet_to_change[0]:
+            if self.Cells[c_cell].AliveStatus is not None:
+                self.Cells[c_cell].Y[np.sum(np.isin(self.Cells[c_cell].T, tet_to_change), axis=1) == 4, 0:2] = ys_to_change[:, 0:2]
+
+        # Update measures
         self.update_measures()
 
         return new_cell_id
