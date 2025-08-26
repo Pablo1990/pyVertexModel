@@ -1,9 +1,11 @@
 import logging
 import os
+from collections import defaultdict
 from itertools import combinations
 
 import numpy as np
 import vtk
+from numpy import setdiff1d
 from scipy.spatial import ConvexHull, Delaunay
 from skimage.util import unique_rows
 
@@ -12,7 +14,7 @@ from src.pyVertexModel.geometry import face, cell
 from src.pyVertexModel.geometry.cell import Cell, compute_y
 from src.pyVertexModel.geometry.face import build_edge_based_on_tetrahedra
 from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes, calculate_polygon_area, \
-    get_interface, screenshot
+    get_interface, screenshot, compute_distance_3d
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -1884,7 +1886,106 @@ class Geo:
                             return True
         return False
 
-    def split_ghost_node(self, ghost_node_id, cell_node, cell_to_split_from, c_set):
+    def find_missing_tetrahedra(self, tetrahedra, split_pairs):
+        """
+        Find missing tetrahedra in a mesh after node splitting.
+
+        Parameters:
+        tetrahedra: list of lists, each containing 4 vertex indices
+        split_pairs: list of tuples (original_node, new_node1, new_node2) representing splits
+
+        Returns:
+        list of missing tetrahedra needed to maintain mesh consistency
+        """
+        # Convert to numpy array for easier processing
+        tets = np.array(tetrahedra)
+
+        # Create a mapping of split nodes
+        split_map = {}
+        for original, new1, new2 in split_pairs:
+            split_map[new1] = original
+            split_map[new2] = original
+
+        # Find all unique faces (triangles) in the mesh
+        face_count = defaultdict(int)
+        face_to_tets = defaultdict(list)
+
+        for i, tet in enumerate(tets):
+            # Get all 4 faces of the tetrahedron
+            faces = [
+                tuple(sorted((tet[0], tet[1], tet[2]))),
+                tuple(sorted((tet[0], tet[1], tet[3]))),
+                tuple(sorted((tet[0], tet[2], tet[3]))),
+                tuple(sorted((tet[1], tet[2], tet[3])))
+            ]
+
+            for face in faces:
+                face_count[face] += 1
+                face_to_tets[face].append(i)
+
+        # Find boundary faces (faces that appear only once)
+        boundary_faces = [face for face, count in face_count.items() if count == 1]
+
+        # For each split pair, find missing tetrahedra
+        missing_tets = set()
+
+        for original, new1, new2 in split_pairs:
+            # Find all tetrahedra that contained the original node
+            original_tets = [i for i, tet in enumerate(tets) if original in tet]
+
+            # Find common neighbors of the split nodes
+            new1_neighbors = set()
+            new2_neighbors = set()
+
+            for tet in tets:
+                if new1 in tet:
+                    new1_neighbors.update([v for v in tet if v != new1])
+                if new2 in tet:
+                    new2_neighbors.update([v for v in tet if v != new2])
+
+            common_neighbors = new1_neighbors.intersection(new2_neighbors)
+
+            # Find boundary faces that contain one split node but not the other
+            split_boundary_faces = []
+            for face in boundary_faces:
+                if (new1 in face and new2 not in face) or (new2 in face and new1 not in face):
+                    split_boundary_faces.append(face)
+
+            # For each boundary face, create a tetrahedron connecting it to both split nodes
+            for face in split_boundary_faces:
+                face_vertices = list(face)
+                if new1 in face_vertices:
+                    # Face contains new1, connect to new2
+                    new_tet = tuple(sorted([new2] + face_vertices))
+                else:
+                    # Face contains new2, connect to new1
+                    new_tet = tuple(sorted([new1] + face_vertices))
+
+                # Only add if this tetrahedron doesn't already exist
+                if not any(np.array_equal(sorted(tet), sorted(new_tet)) for tet in tets):
+                    missing_tets.add(new_tet)
+
+            # Also create tetrahedra connecting common neighbors to both split nodes
+            for neighbor in common_neighbors:
+                # Find other neighbors that form a face with this neighbor
+                for other_neighbor in common_neighbors:
+                    if neighbor != other_neighbor:
+                        # Check if this face exists as a boundary face
+                        face = tuple(sorted([neighbor, other_neighbor, new1]))
+                        if face in boundary_faces:
+                            new_tet = tuple(sorted([new2] + list(face)))
+                            if not any(np.array_equal(sorted(tet), sorted(new_tet)) for tet in tets):
+                                missing_tets.add(new_tet)
+
+                        face = tuple(sorted([neighbor, other_neighbor, new2]))
+                        if face in boundary_faces:
+                            new_tet = tuple(sorted([new1] + list(face)))
+                            if not any(np.array_equal(sorted(tet), sorted(new_tet)) for tet in tets):
+                                missing_tets.add(new_tet)
+
+        return list(missing_tets)
+
+    def split_ghost_node(self, ghost_node_id, cell_node, cell_to_split_from, cell_to_intercalate_with, c_set):
         """
         Split a ghost node into two nodes.
         :param ghost_node_id: ID of the ghost node to split.
@@ -1927,25 +2028,13 @@ class Geo:
             else:
                 new_tets.append(tet)
 
-        # Get the cell nodes that are connected to the new ghost node
-        new_ghost_nodes_shared_nodes = np.unique(np.array([tet for tet in new_tets if new_cell_id in tet]))
-        cell_nodes = np.setdiff1d(new_ghost_nodes_shared_nodes, self.XgID)
+        # Get all the tetrahedra of all the cells
+        all_tets = np.array([tet for c_cell in self.Cells if c_cell.AliveStatus is not None for tet in c_cell.T])
+        all_tets = np.vstack((all_tets, np.array(new_tets)))
+        all_tets = np.unique(all_tets, axis=0)
 
-        # Get the other cell connected to the ghost node
-        other_connected_cell = np.setdiff1d(cell_nodes, cell_node)
-        if len(other_connected_cell) != 1:
-            raise ValueError(f'Expected one other connected cell, found {len(other_connected_cell)}: {other_connected_cell}')
-
-        # Find a ghost node connected to both cell_node and other_connected_cell
-        for nodes_to_check in [cell_node, other_connected_cell[0]]:
-            new_tets_arr = np.array(new_tets)  # Convert list to array
-            shared_tets = new_tets_arr[np.sum(np.isin(new_tets_arr, [ghost_node_id, nodes_to_check, cell_to_split_from]), axis=1) > 2]
-            ghost_nodes = np.intersect1d(np.unique(shared_tets), self.XgID)
-            ghost_node_1 = ghost_nodes[ghost_nodes != ghost_node_id][0]
-            new_tets.append(np.array(np.sort([new_cell_id, ghost_node_id, nodes_to_check, ghost_node_1])))
-
-        # Add tetrahedra connecting the new ghost node and the old ghost node
-        new_tets.append(np.array(np.sort([new_cell_id, ghost_node_id, cell_node, other_connected_cell[0]])))
+        missing_tets = self.find_missing_tetrahedra(all_tets, [(ghost_node_id, ghost_node_id, new_cell_id)])
+        new_tets.extend(missing_tets)
 
         # Remove triangles with only ghost nodes
         self.add_tetrahedra(old_geo, new_tets, None, c_set)
@@ -1954,3 +2043,85 @@ class Geo:
         self.update_measures()
 
         return new_cell_id
+
+
+    def correct_edge_vertices(self, allTnew, cellNodesShared, num_cell):
+        """
+        Correct the vertices of the edges.
+        :param allTnew:
+        :param cellNodesShared:
+        :param num_cell:
+        :return:
+        """
+        for cell in cellNodesShared:
+            if self.Cells[cell].AliveStatus == 0:
+                continue
+
+            if np.any(np.isin(self.XgTop, allTnew.flatten())):
+                cell_centroid = np.mean(self.Cells[cell].Y[np.any(np.isin(self.Cells[cell].T, self.XgTop), axis=1)],
+                                        axis=0)
+            else:
+                cell_centroid = np.mean(self.Cells[cell].Y[np.any(np.isin(self.Cells[cell].T, self.XgBottom), axis=1)],
+                                        axis=0)
+
+            all_tets_cell = self.Cells[cell].T
+            all_ys_cell = self.Cells[cell].Y
+            ids = []
+            if np.any(np.isin(self.XgTop, allTnew.flatten())):
+                all_ys_cell = all_ys_cell[np.any(np.isin(all_tets_cell, self.XgTop), axis=1)]
+                ids = np.where(np.any(np.isin(all_tets_cell, self.XgTop), axis=1))[0]
+                all_tets_cell = all_tets_cell[np.any(np.isin(all_tets_cell, self.XgTop), axis=1)]
+            elif np.any(np.isin(self.XgBottom, allTnew.flatten())):
+                ids = np.where(np.any(np.isin(all_tets_cell, self.XgBottom), axis=1))[0]
+                all_ys_cell = all_ys_cell[np.any(np.isin(all_tets_cell, self.XgBottom), axis=1)]
+                all_tets_cell = all_tets_cell[np.any(np.isin(all_tets_cell, self.XgBottom), axis=1)]
+
+            # Obtain the vertices with 3 neighbours that should be in the extremes of the edge
+            extreme_of_edge = all_tets_cell[np.sum(np.isin(all_tets_cell, self.XgID), axis=1) == 1]
+            extreme_of_edge_ys = all_ys_cell[np.sum(np.isin(all_tets_cell, self.XgID), axis=1) == 1]
+
+            shared_tets = np.sum(np.isin(all_tets_cell, [num_cell, cell]), axis=1) == 2
+            tets_sharing_two_cells = shared_tets & (np.sum(np.isin(all_tets_cell, self.XgID), axis=1) == 2)
+            if np.sum(tets_sharing_two_cells) == 0:
+                possible_shared_cells = setdiff1d(cellNodesShared, [num_cell, cell])
+                shared_tets = np.sum(np.isin(all_tets_cell, [possible_shared_cells[0], cell]), axis=1) == 2
+                tets_sharing_two_cells = shared_tets & (np.sum(np.isin(all_tets_cell, self.XgID), axis=1) == 2)
+                extreme_of_edge_ys = extreme_of_edge_ys[
+                    np.sum(np.isin(extreme_of_edge, [possible_shared_cells[0], cell]), axis=1) == 2]
+            else:
+                extreme_of_edge_ys = extreme_of_edge_ys[
+                    np.sum(np.isin(extreme_of_edge, [num_cell, cell]), axis=1) == 2]
+
+            vertices_to_equidistant_move = all_ys_cell[tets_sharing_two_cells]
+            ids_two_cells = ids[tets_sharing_two_cells]
+
+            # Create the number of vertices that are going to be equidistant
+            num_vertices = len(vertices_to_equidistant_move) + 1
+            new_equidistant_vertices = []
+            for vertex_id, vertex in enumerate(vertices_to_equidistant_move):
+                weight = 1 - (vertex_id + 1) / num_vertices
+                new_vertex = extreme_of_edge_ys[1] * weight + extreme_of_edge_ys[0] * (1 - weight)
+                new_equidistant_vertices.append(new_vertex)
+
+            # Order the vertices to be equidistant to one of the extreme vertices
+            distances = []
+            for vertex in vertices_to_equidistant_move:
+                distances.append(compute_distance_3d(extreme_of_edge_ys[1], vertex))
+
+            ids_sorted = np.argsort(distances)
+            ids_two_cells_sorted = ids_two_cells[ids_sorted]
+
+            # Correct X-Y coordinates with the cell centroid
+            new_equidistant_vertices = [0.8 * vertex + 0.2 * cell_centroid for vertex in new_equidistant_vertices]
+
+            self.Cells[cell].Y[ids_two_cells_sorted, :] = new_equidistant_vertices
+
+            # Update the vertices of the other cell
+            tets_to_replicate = self.Cells[cell].T[ids_two_cells_sorted]
+            for id_tet, tet_to_replicate in enumerate(tets_to_replicate):
+                found_tet = ismember_rows(self.Cells[num_cell].T, tet_to_replicate)[0]
+                if not np.any(found_tet):
+                    continue
+                self.Cells[num_cell].Y[found_tet, :] = new_equidistant_vertices[id_tet]
+
+        self.ensure_consistent_tris_order()

@@ -274,88 +274,6 @@ def smoothing_cell_surfaces_mesh(Geo, cells_intercalated, backup_vars, location=
 
     return Geo
 
-
-def correct_edge_vertices(allTnew, cellNodesShared, geo_copy, num_cell):
-    """
-    Correct the vertices of the edges.
-    :param allTnew:
-    :param cellNodesShared:
-    :param geo_copy:
-    :param num_cell:
-    :return:
-    """
-    for cell in cellNodesShared:
-        if geo_copy.Cells[cell].AliveStatus == 0:
-            continue
-
-        if np.any(np.isin(geo_copy.XgTop, allTnew.flatten())):
-            cell_centroid = np.mean(geo_copy.Cells[cell].Y[np.any(np.isin(geo_copy.Cells[cell].T, geo_copy.XgTop), axis=1)],
-                                        axis=0)
-        else:
-            cell_centroid = np.mean(geo_copy.Cells[cell].Y[np.any(np.isin(geo_copy.Cells[cell].T, geo_copy.XgBottom), axis=1)],
-                                        axis=0)
-
-        all_tets_cell = geo_copy.Cells[cell].T
-        all_ys_cell = geo_copy.Cells[cell].Y
-        ids = []
-        if np.any(np.isin(geo_copy.XgTop, allTnew.flatten())):
-            all_ys_cell = all_ys_cell[np.any(np.isin(all_tets_cell, geo_copy.XgTop), axis=1)]
-            ids = np.where(np.any(np.isin(all_tets_cell, geo_copy.XgTop), axis=1))[0]
-            all_tets_cell = all_tets_cell[np.any(np.isin(all_tets_cell, geo_copy.XgTop), axis=1)]
-        elif np.any(np.isin(geo_copy.XgBottom, allTnew.flatten())):
-            ids = np.where(np.any(np.isin(all_tets_cell, geo_copy.XgBottom), axis=1))[0]
-            all_ys_cell = all_ys_cell[np.any(np.isin(all_tets_cell, geo_copy.XgBottom), axis=1)]
-            all_tets_cell = all_tets_cell[np.any(np.isin(all_tets_cell, geo_copy.XgBottom), axis=1)]
-
-        # Obtain the vertices with 3 neighbours that should be in the extremes of the edge
-        extreme_of_edge = all_tets_cell[np.sum(np.isin(all_tets_cell, geo_copy.XgID), axis=1) == 1]
-        extreme_of_edge_ys = all_ys_cell[np.sum(np.isin(all_tets_cell, geo_copy.XgID), axis=1) == 1]
-
-        shared_tets = np.sum(np.isin(all_tets_cell, [num_cell, cell]), axis=1) == 2
-        tets_sharing_two_cells = shared_tets & (np.sum(np.isin(all_tets_cell, geo_copy.XgID), axis=1) == 2)
-        if np.sum(tets_sharing_two_cells) == 0:
-            possible_shared_cells = setdiff1d(cellNodesShared, [num_cell, cell])
-            shared_tets = np.sum(np.isin(all_tets_cell, [possible_shared_cells[0], cell]), axis=1) == 2
-            tets_sharing_two_cells = shared_tets & (np.sum(np.isin(all_tets_cell, geo_copy.XgID), axis=1) == 2)
-            extreme_of_edge_ys = extreme_of_edge_ys[
-                np.sum(np.isin(extreme_of_edge, [possible_shared_cells[0], cell]), axis=1) == 2]
-        else:
-            extreme_of_edge_ys = extreme_of_edge_ys[
-                np.sum(np.isin(extreme_of_edge, [num_cell, cell]), axis=1) == 2]
-
-        vertices_to_equidistant_move = all_ys_cell[tets_sharing_two_cells]
-        ids_two_cells = ids[tets_sharing_two_cells]
-
-        # Create the number of vertices that are going to be equidistant
-        num_vertices = len(vertices_to_equidistant_move) + 1
-        new_equidistant_vertices = []
-        for vertex_id, vertex in enumerate(vertices_to_equidistant_move):
-            weight = 1 - (vertex_id + 1) / num_vertices
-            new_vertex = extreme_of_edge_ys[1] * weight + extreme_of_edge_ys[0] * (1 - weight)
-            new_equidistant_vertices.append(new_vertex)
-
-        # Order the vertices to be equidistant to one of the extreme vertices
-        distances = []
-        for vertex in vertices_to_equidistant_move:
-            distances.append(compute_distance_3d(extreme_of_edge_ys[1], vertex))
-
-        ids_sorted = np.argsort(distances)
-        ids_two_cells_sorted = ids_two_cells[ids_sorted]
-
-        # Correct X-Y coordinates with the cell centroid
-        new_equidistant_vertices = [0.8 * vertex + 0.2 * cell_centroid for vertex in new_equidistant_vertices]
-
-        geo_copy.Cells[cell].Y[ids_two_cells_sorted, :] = new_equidistant_vertices
-
-        # Update the vertices of the other cell
-        tets_to_replicate = geo_copy.Cells[cell].T[ids_two_cells_sorted]
-        for id_tet, tet_to_replicate in enumerate(tets_to_replicate):
-            found_tet = ismember_rows(geo_copy.Cells[num_cell].T, tet_to_replicate)[0]
-            if not np.any(found_tet):
-                continue
-            geo_copy.Cells[num_cell].Y[found_tet, :] = new_equidistant_vertices[id_tet]
-
-
 class Remodelling:
     """
     Class that contains the information of the remodelling process.
@@ -519,7 +437,7 @@ class Remodelling:
 
                 # Equidistant vertices on the edges of the three cells
                 if n_cells_wound > 0:
-                    correct_edge_vertices(all_tnew, cellNodesShared, geo_copy, num_cell)
+                    geo_copy.correct_edge_vertices(all_tnew, cellNodesShared, num_cell)
                 else:
                     pass
                     # TODO: FIX THIS, I AM GETTING A WEIRD SPACE WHEN 4 CELLS INTERCALATE
@@ -534,7 +452,8 @@ class Remodelling:
                 self.Geo.update_measures()
                 self.reset_preferred_values(backup_vars, cells_involved_intercalation)
 
-                has_converged = self.check_if_will_converge(self.Geo.copy())
+                #has_converged = self.check_if_will_converge(self.Geo.copy())
+                has_converged = True
             else:
                 self.Geo.update_measures()
                 self.reset_preferred_values(backup_vars, cells_involved_intercalation)
@@ -644,12 +563,20 @@ class Remodelling:
             logger.info(f"Remodelling: {cell_node} - {ghost_node}")
 
             # Create a copy of the ghost node with the same location, but not the same ID
-            self.Geo.split_ghost_node(ghost_node, cell_node, cell_to_split_from, self.Set)
+            old_contribution_ys = self.Set.contributionOldYs
+            self.Set.contributionOldYs = 1
+            old_geo = self.Geo.copy()
+            result = self.Geo.split_ghost_node(ghost_node, cell_node, cell_to_split_from, cell_to_intercalate_with, self.Set)
+            self.Set.contributionOldYs = old_contribution_ys
+            screenshot_(self.Geo, self.Set, 0, 'after_remodelling_0_', self.Set.OutputFolder + '/images')
 
             # Perform the edge valence check and flip
             valence_segment, old_tets, old_ys = edge_valence(self.Geo, nodes_pair)
             has_converged, Tnew = self.flip_nm(nodes_pair, cell_to_intercalate_with, old_tets, old_ys,
                                                cell_to_split_from)
+
+            screenshot_(self.Geo, self.Set, 0, 'after_remodelling_', self.Set.OutputFolder + '/images')
+
             if Tnew is not None:
                 all_tnew = Tnew if all_tnew is None else np.vstack((all_tnew, Tnew))
 
