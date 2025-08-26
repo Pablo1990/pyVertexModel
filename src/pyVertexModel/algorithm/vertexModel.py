@@ -1,6 +1,6 @@
 import logging
 import os
-from abc import abstractmethod, ABCMeta
+from abc import abstractmethod
 from itertools import combinations
 
 import numpy as np

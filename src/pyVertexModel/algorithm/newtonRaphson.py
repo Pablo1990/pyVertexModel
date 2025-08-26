@@ -516,7 +516,7 @@ def gGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True, num_step=None):
         Geo.create_vtk_cell(Set, num_step, 'Arrows_volume', -kg_Vol.g)
         energies["Volume"] = kg_Vol.energy
 
-    if implicit_method is True:
+    if implicit_method:
         # Viscous Energy
         kg_Viscosity = KgViscosity(Geo)
         kg_Viscosity.compute_work(Geo, Set, Geo_n, False)
