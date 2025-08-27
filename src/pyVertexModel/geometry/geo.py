@@ -2102,8 +2102,12 @@ class Geo:
                 tets_sharing_two_cells = shared_tets & (np.sum(np.isin(all_tets_cell, self.XgID), axis=1) == 2)
                 extreme_of_edge_ys = extreme_of_edge_ys[
                     np.sum(np.isin(extreme_of_edge, [possible_shared_cells[0], cell]), axis=1) == 2]
+                extreme_of_edge = extreme_of_edge[
+                    np.sum(np.isin(extreme_of_edge, [possible_shared_cells[0], cell]), axis=1) == 2]
             else:
                 extreme_of_edge_ys = extreme_of_edge_ys[
+                    np.sum(np.isin(extreme_of_edge, [num_cell, cell]), axis=1) == 2]
+                extreme_of_edge = extreme_of_edge[
                     np.sum(np.isin(extreme_of_edge, [num_cell, cell]), axis=1) == 2]
 
             vertices_to_equidistant_move = all_ys_cell[tets_sharing_two_cells]
@@ -2117,13 +2121,26 @@ class Geo:
                 new_vertex = extreme_of_edge_ys[1] * weight + extreme_of_edge_ys[0] * (1 - weight)
                 new_equidistant_vertices.append(new_vertex)
 
-            # Order the vertices to be equidistant to one of the extreme vertices
-            distances = []
-            for vertex in vertices_to_equidistant_move:
-                distances.append(compute_distance_3d(extreme_of_edge_ys[1], vertex))
+            # Order the vertices to be equidistant to one of the extreme vertices based on tetrahedra ordering
+            #distances = []
+            #for vertex in vertices_to_equidistant_move:
+            #    distances.append(compute_distance_3d(extreme_of_edge_ys[1], vertex))
+            face_tets = self.Cells[cell].T[ids_two_cells, :]
+            tet_order = np.zeros(len(face_tets) + 1, dtype=int) - 1
+            first_tet = extreme_of_edge[1]
+            tet_order[0] = -1
+            prev_tet = first_tet
+            for yi in range(1, len(face_tets) + 1):
+                i = np.sum(np.isin(face_tets, prev_tet), axis=1) == 3
+                i = i & ~np.isin(np.arange(len(face_tets)), tet_order)
+                i = np.where(i)[0]
+                if len(i) == 0:
+                    break
+                tet_order[yi] = i[0]
+                prev_tet = face_tets[i[0], :]
 
-            ids_sorted = np.argsort(distances)
-            ids_two_cells_sorted = ids_two_cells[ids_sorted]
+            tet_order = tet_order[tet_order != -1]
+            ids_two_cells_sorted = ids_two_cells[tet_order]
 
             # Correct X-Y coordinates with the cell centroid
             new_equidistant_vertices = [0.8 * vertex + 0.2 * cell_centroid for vertex in new_equidistant_vertices]
