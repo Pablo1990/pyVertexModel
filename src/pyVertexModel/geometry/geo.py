@@ -1991,8 +1991,11 @@ class Geo:
         :param ghost_node_id: ID of the ghost node to split.
         :return: ID of the new node created.
         """
-        if cell_to_split_from is not 0:
+        if self.Cells[cell_to_split_from].AliveStatus != 0:
             return None
+
+        old_contribution_ys = c_set.contributionOldYs
+        c_set.contributionOldYs = 1
 
         if ghost_node_id not in self.XgID:
             raise ValueError(f'Node {ghost_node_id} is not a ghost node.')
@@ -2055,6 +2058,8 @@ class Geo:
 
         # Update measures
         self.update_measures()
+
+        c_set.contributionOldYs = old_contribution_ys
 
         return new_cell_id
 

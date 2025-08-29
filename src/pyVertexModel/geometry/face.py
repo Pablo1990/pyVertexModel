@@ -18,24 +18,29 @@ def build_edge_based_on_tetrahedra(face_tets):
     :return:
     """
     tet_order = np.zeros(len(face_tets), dtype=int) - 1
-    tet_order[0] = 0
-    prev_tet = face_tets[0, :]
-    if len(face_tets) > 3:
-        for yi in range(1, len(face_tets)):
-            i = np.sum(np.isin(face_tets, prev_tet), axis=1) == 3
-            i = i & ~np.isin(np.arange(len(face_tets)), tet_order)
-            i = np.where(i)[0]
-            if len(i) == 0:
-                raise Exception('BuildEdges:TetrahedraOrdering', 'Cannot create a face with these tetrahedra')
-            tet_order[yi] = i[0]
-            prev_tet = face_tets[i[0], :]
 
-        if np.sum(np.isin(face_tets[0, :], prev_tet)) != 3:
-            raise Exception('BuildEdges:TetrahedraOrdering', 'Cannot create a face with these tetrahedra')
-    else:
-        tet_order = np.array([0, 1, 2])
-    tet_order = np.array(tet_order, dtype=int)
-    return tet_order
+    for first_tet in range(len(face_tets)):
+        tet_order[0] = first_tet
+        prev_tet = face_tets[first_tet, :]
+        if len(face_tets) > 3:
+            for yi in range(1, len(face_tets)):
+                i = np.sum(np.isin(face_tets, prev_tet), axis=1) == 3
+                i = i & ~np.isin(np.arange(len(face_tets)), tet_order)
+                i = np.where(i)[0]
+                if len(i) == 0:
+                    break
+                tet_order[yi] = i[0]
+                prev_tet = face_tets[i[0], :]
+
+            if np.sum(np.isin(face_tets[first_tet, :], prev_tet)) != 3:
+                continue
+        else:
+            tet_order = np.array([0, 1, 2])
+
+        tet_order = np.array(tet_order, dtype=int)
+        return tet_order
+
+    raise Exception('BuildEdges:TetrahedraOrdering', 'Cannot create a face with these tetrahedra')
 
 
 class Face:

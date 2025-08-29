@@ -452,8 +452,8 @@ class Remodelling:
                 self.Geo.update_measures()
                 self.reset_preferred_values(backup_vars, cells_involved_intercalation)
 
-                #has_converged = self.check_if_will_converge(self.Geo.copy())
-                has_converged = True
+                has_converged = self.check_if_will_converge(self.Geo.copy())
+                #has_converged = True
             else:
                 self.Geo.update_measures()
                 self.reset_preferred_values(backup_vars, cells_involved_intercalation)
@@ -563,11 +563,7 @@ class Remodelling:
             logger.info(f"Remodelling: {cell_node} - {ghost_node}")
 
             # Create a copy of the ghost node with the same location, but not the same ID
-            old_contribution_ys = self.Set.contributionOldYs
-            self.Set.contributionOldYs = 1
-            old_geo = self.Geo.copy()
-            result = self.Geo.split_ghost_node(ghost_node, cell_node, cell_to_split_from, cell_to_intercalate_with, self.Set)
-            self.Set.contributionOldYs = old_contribution_ys
+            self.Geo.split_ghost_node(ghost_node, cell_node, cell_to_split_from, cell_to_intercalate_with, self.Set)
             screenshot_(self.Geo, self.Set, 0, 'after_remodelling_0_', self.Set.OutputFolder + '/images')
 
             # Perform the edge valence check and flip
