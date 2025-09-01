@@ -2,7 +2,9 @@ import copy
 import lzma
 import os
 import pickle
+import time
 from itertools import combinations
+from os.path import exists
 
 import numpy as np
 import scipy
@@ -16,9 +18,7 @@ from src import PROJECT_DIRECTORY, logger
 from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrahedra_from_information, \
     calculate_cell_height_on_model
 from src.pyVertexModel.geometry.geo import Geo
-from src.pyVertexModel.util.utils import ismember_rows, save_variables, save_state
-
-
+from src.pyVertexModel.util.utils import ismember_rows, save_variables, save_state, load_state
 
 
 def build_quartets_of_neighs_2d(neighbours):
@@ -321,13 +321,28 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         self.dilated_cells = None
 
     def initialize_cells(self, filename):
+        """
+        Initialize the cells from the image.
+        :param filename:
+        :return:
+        """
+        output_filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
+        if exists(output_filename):
+            # Check date of the output_filename and if it is older than 1 day from today, redo the file
+            if os.path.getmtime(output_filename) < (time.time() - 24 * 60 * 60):
+                logger.info(f'Redoing the file {output_filename} as it is older than 1 day')
+            else:
+                logger.info(f'Loading existing state from {output_filename}')
+                self.geo = Geo()
+                load_state(self.geo, output_filename)
+                return
+
         # Load the image and obtain the initial X and tetrahedra
         Twg, X = self.obtain_initial_x_and_tetrahedra()
         # Build cells
         self.geo.build_cells(self.set, X, Twg)
         # Save state with filename using the number of cells
-        filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
-        save_state(self.geo, filename)
+        save_state(self.geo, output_filename)
 
     def build_2d_voronoi_from_image(self, labelled_img, watershed_img, total_cells):
         """

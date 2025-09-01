@@ -368,9 +368,6 @@ class Geo:
                 self.Cells[c].Vol0 = (self.Cells[c].Vol * (1-avg_weight) + avg_vol * avg_weight) * c_set.ref_V0
                 self.Cells[c].Area0 = (self.Cells[c].Area * (1-avg_weight) + avg_area * avg_weight) * c_set.ref_A0
 
-                ## Compute number of faces per domain
-                #num_faces_bottom, num_faces_lateral, num_faces_top = self.get_num_faces(c)
-
                 # Iterate over all faces in the current cell
                 for f in range(len(self.Cells[c].Faces)):
                     if get_interface(self.Cells[c].Faces[f].InterfaceType) == get_interface('CellCell'):

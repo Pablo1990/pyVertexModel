@@ -256,10 +256,6 @@ class VertexModel:
             output_folder = self.set.OutputFolder
             load_state(self, filename, ['geo', 'geo_0', 'geo_n'])
             self.set.OutputFolder = output_folder
-            self.geo.update_measures()
-            for cell in self.geo.Cells:
-                self.geo.Cells[cell.ID].Vol0 = self.geo.Cells[cell.ID].Vol
-                self.geo.Cells[cell.ID].Area0 = self.geo.Cells[cell.ID].Area
         elif filename.endswith('.mat'):
             mat_info = scipy.io.loadmat(filename)
             self.geo = Geo(mat_info['Geo'])
@@ -815,8 +811,9 @@ class VertexModel:
         polygon_distribution = remodel_obj.Geo.compute_polygon_distribution('Bottom')
         print(f'Polygon distribution bottom: {polygon_distribution}')
 
-        screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
-                    self.set.OutputFolder + '/images')
+        if self.set.OutputFolder is not None:
+            screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
+                        self.set.OutputFolder + '/images')
 
 
         # Check if the number of scutoids is approximately the desired one
