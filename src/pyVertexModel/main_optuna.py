@@ -26,9 +26,12 @@ for input_file in all_files:
                                 load_if_exists=True)
 
     #load_simulations(study, error_type=error_type)
-    study.optimize(objective, n_trials=1000)
+    try:
+        study.optimize(objective, n_trials=700)
+        print("Best parameters:", study.best_params)
+        print("Best value:", study.best_value)
+        print("Best trial:", study.best_trial)
+        plot_optuna_all(os.path.join(PROJECT_DIRECTORY, 'Result'), study_name, study)
+    except Exception as e:
+        print(f"An exception occurred during optimization: {e}")
 
-    print("Best parameters:", study.best_params)
-    print("Best value:", study.best_value)
-    print("Best trial:", study.best_trial)
-    plot_optuna_all(os.path.join(PROJECT_DIRECTORY, 'Result'), study_name, study)
