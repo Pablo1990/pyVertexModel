@@ -20,37 +20,32 @@ def objective(trial):
     :return:
     """
     # Define the error type
-    error_type = '_wound_area_'
+    split_study_name = trial.study.study_name.split('_')
+    error_type = split_study_name[1]
 
     # Supress the output to the logger
-    if error_type == '_gr_':
+    if error_type == 'gr':
         logger = logging.getLogger("pyVertexModel")
         logger.propagate = False
         logger.setLevel(logging.CRITICAL)
 
     new_set = Set()
-    new_set.wing_disc()
-    new_set.wound_default()
+    new_set.wing_disc_equilibrium()
+
+    new_set.model_name = split_study_name[2]
+    new_set.initial_filename_state = 'Input/images/' + new_set.model_name + '.tif'
 
     # Set and define the parameters space
-    percentage_deviation = 0.1
+    # percentage_deviation = 0.1
     # new_set.lambdaV = trial.suggest_float('lambdaV', new_set.lambdaV - (new_set.lambdaV * percentage_deviation), new_set.lambdaV + (new_set.lambdaV * percentage_deviation))
-    # new_set.ref_V0 = trial.suggest_float('ref_V0', new_set.ref_V0 - (new_set.ref_V0 * percentage_deviation), new_set.ref_V0 + (new_set.ref_V0 * percentage_deviation))
-    # new_set.kSubstrate = trial.suggest_float('kSubstrate', new_set.kSubstrate - (new_set.kSubstrate * percentage_deviation), new_set.kSubstrate + (new_set.kSubstrate * percentage_deviation))
     # new_set.lambdaS2 = trial.suggest_float('lambdaS2', new_set.lambdaS2 - (new_set.lambdaS2 * percentage_deviation), new_set.lambdaS2 + (new_set.lambdaS2 * percentage_deviation))
-
-    new_set.ref_A0 = trial.suggest_float('ref_A0', 0.92, 1.1)
-    new_set.cLineTension = trial.suggest_float('cLineTension', 0, 1e-7)
-    new_set.lambdaS1 = trial.suggest_float('lambdaS1', 1e-2, 1.5)
-    new_set.lambdaS3 = new_set.lambdaS1 / 10
-    #new_set.lambdaR = trial.suggest_float('lambdaR', 0, 1)
-
-    #percentage_deviation = 0.9
-    #new_set.purseStringStrength = trial.suggest_float('purseStringStrength', new_set.purseStringStrength - (new_set.purseStringStrength * percentage_deviation), new_set.purseStringStrength + (new_set.purseStringStrength * percentage_deviation))
-    #new_set.lateralCablesStrength = trial.suggest_float('lateralCablesStrength', new_set.lateralCablesStrength - (new_set.lateralCablesStrength * percentage_deviation), new_set.lateralCablesStrength + (new_set.lateralCablesStrength * percentage_deviation))
+    new_set.lambdaV = trial.suggest_float('lambdaV', 1e-3, 10)
+    new_set.lambdaS1 = trial.suggest_float('lambdaS1', 1e-4, 1)
+    new_set.lambdaS2 = trial.suggest_float('lambdaS2', 1e-4, 1)
+    new_set.lambdaS3 = trial.suggest_float('lambdaS3', 1e-4, 1)
     new_set.update_derived_parameters()
 
-    if error_type == '_gr_':
+    if error_type == 'gr':
         new_set.OutputFolder = None
 
         # Initialize the model with the parameters
@@ -60,7 +55,7 @@ def objective(trial):
         vModel.initialize()
         gr = vModel.single_iteration(post_operations=False)
         return gr
-    elif error_type == '_K_InitialRecoil_' or error_type == '_wound_area_':
+    elif error_type == 'KInitialRecoil' or error_type == 'wound':
         # Initialize the model with the parameters
         vModel = VertexModelVoronoiFromTimeImage(set_test=new_set)
 
@@ -68,7 +63,7 @@ def objective(trial):
         vModel.initialize()
         vModel.iterate_over_time()
 
-        if error_type == '_K_InitialRecoil_':
+        if error_type == 'KInitialRecoil':
             # Analyse the edge recoil
             try:
                 file_name = os.path.join(vModel.set.OutputFolder, 'before_ablation.pkl')
@@ -85,7 +80,7 @@ def objective(trial):
 
             error = vModel.calculate_error(K=K, initial_recoil=initial_recoil, error_type=error_type)
             return error
-        elif error_type == '_wound_area_':
+        elif error_type == 'wound':
             features_per_time_df, post_wound_features, important_features, features_per_time_all_cells_df = (
                 analyse_simulation(vModel.set.OutputFolder))
 
