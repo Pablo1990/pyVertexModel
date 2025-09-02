@@ -212,6 +212,10 @@ def plot_optuna_all(output_directory, study_name, study):
     if not os.path.exists(output_dir_study):
         os.makedirs(output_dir_study)
 
+    if os.path.exists(output_dir_study + '/9_countour.png'):
+        print("All the plots already exist")
+        return
+
     # Create a dataframe from the study.
     df = study.trials_dataframe()
     df.to_excel(output_dir_study + '/df.xlsx')

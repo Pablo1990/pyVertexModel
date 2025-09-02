@@ -809,7 +809,7 @@ class VertexModel:
         display_volume_fragments(remodel_obj.Geo)
 
         polygon_distribution = remodel_obj.Geo.compute_polygon_distribution('Bottom')
-        print(f'Polygon distribution bottom: {polygon_distribution}')
+        logger.info(f'Polygon distribution bottom: {polygon_distribution}')
 
         if self.set.OutputFolder is not None:
             screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
