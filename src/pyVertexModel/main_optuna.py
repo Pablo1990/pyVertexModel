@@ -3,7 +3,7 @@ import os
 import optuna
 
 from src import PROJECT_DIRECTORY
-from src.pyVertexModel.util.space_exploration import objective, plot_optuna_all
+from src.pyVertexModel.util.space_exploration import objective, plot_optuna_all, load_simulations
 
 # Create a study object and optimize the objective function
 # Add stream handler of stdout to show the messages
@@ -26,8 +26,10 @@ for input_file in all_files:
                                 load_if_exists=True)
 
     #load_simulations(study, error_type=error_type)
+    num_trials = 700
     try:
-        study.optimize(objective, n_trials=700)
+        if len(study.trials) < num_trials:
+            study.optimize(objective, n_trials=num_trials, show_progress_bar=True)
         print("Best parameters:", study.best_params)
         print("Best value:", study.best_value)
         print("Best trial:", study.best_trial)
