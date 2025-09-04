@@ -1,31 +1,79 @@
 # Get stats from the space exploration study
 import os
 
+import numpy as np
 import optuna
-import plotly
+import pandas as pd
+from matplotlib import pyplot as plt
+import seaborn as sns
 
+from src import PROJECT_DIRECTORY
+from src.pyVertexModel.util.space_exploration import plot_optuna_all
 
-output_directory = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/'
-error_type = '_gr_'
-if error_type is not None:
-    study_name = "VertexModel" + error_type  # Unique identifier of the study.
-else:
-    study_name = "VertexModel"
-storage_name = "sqlite:///{}.db".format("VertexModel")
+## Create a study object and optimize the objective function
+original_wing_disc_height = 15 # in microns
+set_of_resize_z = np.array([0.0001, 0.001, 0.01, 0.1, 0.5, 1, 2.0]) * original_wing_disc_height
+type_of_search = '_gr_'  # '_KInitialRecoil_'
+num_trials = 500
 
-study = optuna.create_study(study_name=study_name, storage=storage_name, direction='minimize',
-                            load_if_exists=True)
+# Save all the correlations into a dataframe
+correlations_only_error_df = None
 
-output_dir_study = os.path.join(output_directory, study_name)
+# Get all the files from 'Input/images/' that end with '.tif' and do not contain 'labelled'
+all_files = [f.split('.')[0] for f in os.listdir(PROJECT_DIRECTORY + '/Input/images/') if f.endswith('.tif') and not f.endswith('labelled.tif')]
+#all_files.sort(reverse=True)
+for input_file in all_files:
+    for resize_z in set_of_resize_z:
+        if resize_z != original_wing_disc_height:
+            error_type = type_of_search + input_file + '_' + str(resize_z) + '_'
+            # Storage location should be in the Result folder
+            storage_name = "sqlite:///{}.db".format(
+                os.path.join(PROJECT_DIRECTORY, 'src', "VertexModel_" + str(resize_z)))
+        else:
+            error_type = type_of_search + input_file + '_'
+            # Storage location should be in the Result folder
+            storage_name = "sqlite:///{}.db".format(
+                os.path.join(PROJECT_DIRECTORY, 'src', "VertexModel"))
 
-# Create a dataframe from the study.
-df = study.trials_dataframe()
-df.to_excel(output_dir_study + '/df.xlsx')
+        if error_type is not None:
+            study_name = "VertexModel" + error_type  # Unique identifier of the study.
+        else:
+            study_name = "VertexModel"
 
-# Plot the contour of the study
-fig = optuna.visualization.plot_contour(study, params=["x", "y"])
-plotly.io.write_image(fig, output_dir_study + 'countour.png')
+        try:
+            study = optuna.load_study(study_name=study_name, storage=storage_name)
+            if len(study.trials) >= num_trials:
+                correlations_only_error = plot_optuna_all(os.path.join(PROJECT_DIRECTORY, 'Result'), study_name, study)
+                correlations_only_error['input_file'] = input_file
+                correlations_only_error['resize_z'] = resize_z
+                if correlations_only_error_df is None:
+                    correlations_only_error_df = correlations_only_error
+                else:
+                    correlations_only_error_df = pd.concat([correlations_only_error_df, correlations_only_error], ignore_index=True)
+        except Exception as e:
+            print(f"An exception occurred while loading the study: {e}")
 
-# Plot the parallel coordinates of the study
-fig = optuna.visualization.plot_parallel_coordinate(study)
-plotly.io.write_image(fig, output_dir_study + 'parallel_coordinate.png')
+if correlations_only_error_df is not None:
+    correlations_only_error_df.to_csv(os.path.join(PROJECT_DIRECTORY, 'Result', 'correlations_only_error.csv'))
+
+    # Plot boxplot of each parameter
+    all_params = correlations_only_error_df['parameter'].unique()
+    for param in all_params:
+        param_df = correlations_only_error_df[correlations_only_error_df['parameter'] == param]
+
+        # Create the boxplot with using as group the resize_z
+        plt.figure(figsize=(10, 6))
+        sns.boxplot(x='resize_z', y='correlation_with_value', data=param_df, whis=[0, 100], width=.6, palette="vlag")
+
+        # Add in points to show each observation
+        sns.stripplot(x="resize_z", y="correlation_with_value", data=param_df, size=4, color=".3")
+
+        # Tweak the visual presentation
+        plt.title(f'Boxplot of {param} correlations')
+        plt.xlabel('Cell shape')
+        plt.ylabel('Correlation')
+        plt.ylim(0, 1)
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.savefig(os.path.join(PROJECT_DIRECTORY, 'Result', f'boxplot_{param}_correlations.png'))
+        plt.close()
