@@ -18,7 +18,7 @@ from src import PROJECT_DIRECTORY, logger
 from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrahedra_from_information, \
     calculate_cell_height_on_model
 from src.pyVertexModel.geometry.geo import Geo
-from src.pyVertexModel.util.utils import ismember_rows, save_variables, save_state, load_state
+from src.pyVertexModel.util.utils import ismember_rows, save_variables, save_state, load_state, screenshot_, screenshot
 
 
 def build_quartets_of_neighs_2d(neighbours):
@@ -326,7 +326,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         :param filename:
         :return:
         """
-        output_filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
+        output_filename = filename.replace('.tif', f'_{self.set.TotalCells}cells_{self.set.CellHeight}.pkl')
         if exists(output_filename):
             # Check date of the output_filename and if it is older than 1 day from today, redo the file
             if os.path.getmtime(output_filename) < (time.time() - 24 * 60 * 60):
@@ -341,6 +341,10 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         Twg, X = self.obtain_initial_x_and_tetrahedra()
         # Build cells
         self.geo.build_cells(self.set, X, Twg)
+        # Save screenshot of the initial state
+        image_file = '/'+ os.path.join(*filename.split('/')[:-1])
+        screenshot_(self.geo, self.set, 0, output_filename.split('/')[-1], image_file)
+
         # Save state with filename using the number of cells
         save_state(self.geo, output_filename)
 

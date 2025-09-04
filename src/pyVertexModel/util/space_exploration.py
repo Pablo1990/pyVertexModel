@@ -34,6 +34,9 @@ def objective(trial):
 
     new_set.model_name = split_study_name[2]
     new_set.initial_filename_state = 'Input/images/' + new_set.model_name + '.tif'
+    if split_study_name[3] != '':
+        new_set.CellHeight = float(split_study_name[3])
+        new_set.SubstrateZ = None
 
     # Set and define the parameters space
     # percentage_deviation = 0.1
@@ -212,10 +215,6 @@ def plot_optuna_all(output_directory, study_name, study):
     if not os.path.exists(output_dir_study):
         os.makedirs(output_dir_study)
 
-    if os.path.exists(output_dir_study + '/9_countour.png'):
-        print("All the plots already exist")
-        return
-
     # Create a dataframe from the study.
     df = study.trials_dataframe()
     df.to_excel(output_dir_study + '/df.xlsx')
@@ -229,6 +228,14 @@ def plot_optuna_all(output_directory, study_name, study):
     # Remove the value column
     correlations_only_error = correlations_only_error.drop('value')
     correlations_only_error.columns = ['correlation_with_value']
+
+    # Export the correlations to an excel file
+    correlations_only_error.to_excel(output_dir_study + '/correlations.xlsx')
+
+    if os.path.exists(output_dir_study + '/8_terminator_improvement.png'):
+        print("All the plots already exist")
+        correlations_only_error['parameter'] = correlations_only_error.index.str.replace('params_', '')
+        return correlations_only_error
 
     # Plot the heatmap using plotly.graph_objects
     fig = plotly.graph_objects.Figure(data=plotly.graph_objects.Heatmap(
@@ -268,5 +275,7 @@ def plot_optuna_all(output_directory, study_name, study):
     fig.update_yaxes(type="log")
     plotly.io.write_image(fig, output_dir_study + '/8_terminator_improvement.png', scale=2)
     # Plot the contour of the study for each pair of parameters
-    fig = optuna.visualization.plot_contour(study)
-    plotly.io.write_image(fig, output_dir_study + '/9_countour.png', width=1920*2, height=1080*2, scale=2)
+    #fig = optuna.visualization.plot_contour(study)
+    #plotly.io.write_image(fig, output_dir_study + '/9_countour.png', width=1920*2, height=1080*2, scale=2)
+
+    return correlations_only_error
