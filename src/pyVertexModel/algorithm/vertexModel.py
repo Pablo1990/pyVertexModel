@@ -261,7 +261,9 @@ class VertexModel:
                 logger.info(f'Redoing the file {output_filename} as it is older than 1 day')
             else:
                 logger.info(f'Loading existing state from {output_filename}')
+                new_set = self.set.copy()
                 load_state(self, output_filename)
+                self.set = new_set
         else:
             if filename.endswith('.pkl'):
                 output_folder = self.set.OutputFolder
