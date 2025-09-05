@@ -34,6 +34,7 @@ for input_file in all_files:
                     correlations_only_error = plot_optuna_all(os.path.join(PROJECT_DIRECTORY, 'Result'), study_name, study)
                     correlations_only_error['input_file'] = input_file
                     correlations_only_error['resize_z'] = resize_z
+                    correlations_only_error['scutoids'] = scutoids
                     if correlations_only_error_df is None:
                         correlations_only_error_df = correlations_only_error
                     else:
@@ -47,21 +48,26 @@ if correlations_only_error_df is not None:
     # Plot boxplot of each parameter
     all_params = correlations_only_error_df['parameter'].unique()
     for param in all_params:
-        param_df = correlations_only_error_df[correlations_only_error_df['parameter'] == param]
+        for scutoids in scutoids_percentage:
+            param_df = correlations_only_error_df[correlations_only_error_df['parameter'] == param]
+            param_df = param_df[param_df['scutoids'] == scutoids]
 
-        # Create the boxplot with using as group the resize_z
-        plt.figure(figsize=(10, 6))
-        sns.boxplot(x='resize_z', y='correlation_with_value', data=param_df, whis=[0, 100], width=.6, palette="vlag")
+            if param_df.empty:
+                continue
 
-        # Add in points to show each observation
-        sns.stripplot(x="resize_z", y="correlation_with_value", data=param_df, size=4, color=".3")
+            # Create the boxplot with using as group the resize_z
+            plt.figure(figsize=(10, 6))
+            sns.boxplot(x='resize_z', y='correlation_with_value', data=param_df, whis=[0, 100], width=.6, palette="vlag")
 
-        # Tweak the visual presentation
-        plt.title(f'Boxplot of {param} correlations')
-        plt.xlabel('Cell shape')
-        plt.ylabel('Correlation')
-        plt.ylim(0, 1)
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.savefig(os.path.join(PROJECT_DIRECTORY, 'Result', f'boxplot_{param}_correlations.png'))
-        plt.close()
+            # Add in points to show each observation
+            sns.stripplot(x="resize_z", y="correlation_with_value", data=param_df, size=4, color=".3")
+
+            # Tweak the visual presentation
+            plt.title(f'Boxplot of {param} correlations with {scutoids}% scutoids')
+            plt.xlabel('Cell shape')
+            plt.ylabel('Correlation')
+            plt.ylim(0, 1)
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            plt.savefig(os.path.join(PROJECT_DIRECTORY, 'Result', f'boxplot_{param}_correlations_{scutoids}.png'))
+            plt.close()
