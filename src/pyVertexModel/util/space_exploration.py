@@ -6,6 +6,7 @@ import optuna
 import pandas as pd
 import plotly
 
+from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from src.pyVertexModel.analysis.analyse_simulation import analyse_edge_recoil, analyse_simulation
@@ -37,6 +38,9 @@ def objective(trial):
     if split_study_name[3] != '':
         new_set.CellHeight = float(split_study_name[3])
         new_set.SubstrateZ = None
+
+    if len(split_study_name) > 4 and split_study_name[4] != '':
+        new_set.percentage_scutoids = float(split_study_name[4])
 
     # Set and define the parameters space
     # percentage_deviation = 0.1
@@ -234,6 +238,8 @@ def plot_optuna_all(output_directory, study_name, study):
 
     if os.path.exists(output_dir_study + '/8_terminator_improvement.png'):
         print("All the plots already exist")
+        # Positive correlation only
+        correlations_only_error['correlation_with_value'] = correlations_only_error['correlation_with_value'].abs()
         correlations_only_error['parameter'] = correlations_only_error.index.str.replace('params_', '')
         return correlations_only_error
 
@@ -279,3 +285,34 @@ def plot_optuna_all(output_directory, study_name, study):
     #plotly.io.write_image(fig, output_dir_study + '/9_countour.png', width=1920*2, height=1080*2, scale=2)
 
     return correlations_only_error
+
+def create_study_name(resize_z, original_wing_disc_height, type_of_search, input_file, scutoids):
+    """
+    Create the study name
+    :param scutoids:
+    :param resize_z:
+    :param original_wing_disc_height:
+    :param type_of_search:
+    :param input_file:
+    :return:
+    """
+    if resize_z != original_wing_disc_height or scutoids > 0:
+        if scutoids > 0:
+            error_type = type_of_search + input_file + '_' + str(resize_z) + '_' + str(scutoids) + '_'
+        else:
+            error_type = type_of_search + input_file + '_' + str(resize_z) + '_'
+        # Storage location should be in the Result folder
+        storage_name = "sqlite:///{}.db".format(
+            os.path.join(PROJECT_DIRECTORY, 'src', "VertexModel_" + str(resize_z)))
+    else:
+        error_type = type_of_search + input_file + '_'
+        # Storage location should be in the Result folder
+        storage_name = "sqlite:///{}.db".format(
+            os.path.join(PROJECT_DIRECTORY, 'src', "VertexModel"))
+
+    if error_type is not None:
+        study_name = "VertexModel" + error_type  # Unique identifier of the study.
+    else:
+        study_name = "VertexModel"
+
+    return study_name, storage_name
