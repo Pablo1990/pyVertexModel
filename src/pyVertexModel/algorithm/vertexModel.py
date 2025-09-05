@@ -1,7 +1,9 @@
 import logging
 import os
+import time
 from abc import abstractmethod
 from itertools import combinations
+from os.path import exists
 
 import numpy as np
 import pandas as pd
@@ -252,87 +254,99 @@ class VertexModel:
         if not os.path.exists(filename):
             logging.error(f'File {filename} not found')
 
-        if filename.endswith('.pkl'):
-            output_folder = self.set.OutputFolder
-            load_state(self, filename, ['geo', 'geo_0', 'geo_n'])
-            self.set.OutputFolder = output_folder
-        elif filename.endswith('.mat'):
-            mat_info = scipy.io.loadmat(filename)
-            self.geo = Geo(mat_info['Geo'])
-            self.geo.update_measures()
-        else:
-            self.initialize_cells(filename)
-
-        # Resize the geometry to a given cell volume average
-        self.resize_tissue()
-
-        # Create substrate(s)
-        if self.set.Substrate == 3:
-            # Check if there are 3 layers of cells
-            if self.set.InputGeo.__contains__('Bubbles'):
-                # Get middle cells by dropping the cells that have XgBottom and XgTop neighbours in T
-                middle_cells = [c for c in self.geo.Cells if not np.any(np.isin(self.geo.XgBottom, c.T)) and
-                               not np.any(np.isin(self.geo.XgTop, c.T))]
-                middle_cells_ids = [mc.ID for mc in middle_cells]
-                z_middle_cells = stats.mode([c.X[2] for c in middle_cells])
-                # Add other middle_cells that are not in the top or bottom layers and have the same Z
-                middle_cells.extend([c for c in self.geo.Cells if c.X[2] == z_middle_cells[0] and c.AliveStatus is not None
-                                     and c.ID not in middle_cells_ids])
-                middle_cells_ids = [mc.ID for mc in middle_cells]
-
-                # Get top and bottom cells
-                top_cells = [c for c in self.geo.Cells if np.any(np.isin(self.geo.XgTop, c.T)) and c.AliveStatus is not None and c.ID not in middle_cells_ids]
-                bottom_cells = [c for c in self.geo.Cells if np.any(np.isin(self.geo.XgBottom, c.T)) and c.AliveStatus is not None and c.ID not in middle_cells_ids]
-
-                # Identify the substrate cells for the middle cells
-                for middle_cell in middle_cells:
-                    # Top substrate cell
-                    node_neighbours = np.unique(get_node_neighbours(self.geo, middle_cell.ID))
-                    middle_cell.substrate_cell_top = self.connect_substrate_cell(middle_cell, node_neighbours, top_cells)
-                    #self.geo.Cells[middle_cell.substrate_cell_top].AliveStatus = 2
-                    middle_cell.substrate_cell_bottom = self.connect_substrate_cell(middle_cell, node_neighbours, bottom_cells)
-                    #self.geo.Cells[middle_cell.substrate_cell_bottom].AliveStatus = 2
+        output_filename = filename.replace('.tif', f'_{self.set.TotalCells}cells_{self.set.CellHeight}_scutoids_{self.set.percentage_scutoids}.pkl')
+        if exists(output_filename):
+            # Check date of the output_filename and if it is older than 1 day from today, redo the file
+            if os.path.getmtime(output_filename) < (time.time() - 24 * 60 * 60):
+                logger.info(f'Redoing the file {output_filename} as it is older than 1 day')
             else:
-                # Create a substrate cell for each cell
-                self.geo.create_substrate_cells(self.set, domain='Top')
-
-        # Deform the tissue if required
-        self.deform_tissue()
-
-        # Add border cells to the shared cells
-        for cell in self.geo.Cells:
-            if cell.ID in self.geo.BorderCells:
-                for face in cell.Faces:
-                    for tris in face.Tris:
-                        tets_1 = cell.T[tris.Edge[0]]
-                        tets_2 = cell.T[tris.Edge[1]]
-                        shared_cells = np.intersect1d(tets_1, tets_2)
-                        if np.any(np.isin(self.geo.BorderGhostNodes, shared_cells)):
-                            shared_cells_list = list(tris.SharedByCells)
-                            shared_cells_list.append(shared_cells[np.isin(shared_cells, self.geo.BorderGhostNodes)][0])
-                            tris.SharedByCells = np.array(shared_cells_list)
-
-        # Create periodic boundary conditions
-        self.geo.apply_periodic_boundary_conditions(self.set)
-
-        if self.set.ablation:
-            self.geo.cellsToAblate = self.set.cellsToAblate
-
-        self.geo.init_reference_cell_values(self.set)
-
-        if self.set.Substrate == 1:
-            self.Dofs.GetDOFsSubstrate(self.geo, self.set)
+                logger.info(f'Loading existing state from {output_filename}')
+                load_state(self, output_filename)
         else:
-            self.Dofs.get_dofs(self.geo, self.set)
+            if filename.endswith('.pkl'):
+                output_folder = self.set.OutputFolder
+                load_state(self, filename, ['geo', 'geo_0', 'geo_n'])
+                self.set.OutputFolder = output_folder
+            elif filename.endswith('.mat'):
+                mat_info = scipy.io.loadmat(filename)
+                self.geo = Geo(mat_info['Geo'])
+                self.geo.update_measures()
+            else:
+                self.initialize_cells(filename)
 
-        if self.geo_0 is None:
-            self.geo_0 = self.geo.copy(update_measurements=False)
+            # Resize the geometry to a given cell volume average
+            self.resize_tissue()
 
-        if self.geo_n is None:
-            self.geo_n = self.geo.copy(update_measurements=False)
+            # Create substrate(s)
+            if self.set.Substrate == 3:
+                # Check if there are 3 layers of cells
+                if self.set.InputGeo.__contains__('Bubbles'):
+                    # Get middle cells by dropping the cells that have XgBottom and XgTop neighbours in T
+                    middle_cells = [c for c in self.geo.Cells if not np.any(np.isin(self.geo.XgBottom, c.T)) and
+                                   not np.any(np.isin(self.geo.XgTop, c.T))]
+                    middle_cells_ids = [mc.ID for mc in middle_cells]
+                    z_middle_cells = stats.mode([c.X[2] for c in middle_cells])
+                    # Add other middle_cells that are not in the top or bottom layers and have the same Z
+                    middle_cells.extend([c for c in self.geo.Cells if c.X[2] == z_middle_cells[0] and c.AliveStatus is not None
+                                         and c.ID not in middle_cells_ids])
+                    middle_cells_ids = [mc.ID for mc in middle_cells]
 
-        # Adjust percentage of scutoids
-        self.adjust_percentage_of_scutoids()
+                    # Get top and bottom cells
+                    top_cells = [c for c in self.geo.Cells if np.any(np.isin(self.geo.XgTop, c.T)) and c.AliveStatus is not None and c.ID not in middle_cells_ids]
+                    bottom_cells = [c for c in self.geo.Cells if np.any(np.isin(self.geo.XgBottom, c.T)) and c.AliveStatus is not None and c.ID not in middle_cells_ids]
+
+                    # Identify the substrate cells for the middle cells
+                    for middle_cell in middle_cells:
+                        # Top substrate cell
+                        node_neighbours = np.unique(get_node_neighbours(self.geo, middle_cell.ID))
+                        middle_cell.substrate_cell_top = self.connect_substrate_cell(middle_cell, node_neighbours, top_cells)
+                        #self.geo.Cells[middle_cell.substrate_cell_top].AliveStatus = 2
+                        middle_cell.substrate_cell_bottom = self.connect_substrate_cell(middle_cell, node_neighbours, bottom_cells)
+                        #self.geo.Cells[middle_cell.substrate_cell_bottom].AliveStatus = 2
+                else:
+                    # Create a substrate cell for each cell
+                    self.geo.create_substrate_cells(self.set, domain='Top')
+
+            # Deform the tissue if required
+            self.deform_tissue()
+
+            # Add border cells to the shared cells
+            for cell in self.geo.Cells:
+                if cell.ID in self.geo.BorderCells:
+                    for face in cell.Faces:
+                        for tris in face.Tris:
+                            tets_1 = cell.T[tris.Edge[0]]
+                            tets_2 = cell.T[tris.Edge[1]]
+                            shared_cells = np.intersect1d(tets_1, tets_2)
+                            if np.any(np.isin(self.geo.BorderGhostNodes, shared_cells)):
+                                shared_cells_list = list(tris.SharedByCells)
+                                shared_cells_list.append(shared_cells[np.isin(shared_cells, self.geo.BorderGhostNodes)][0])
+                                tris.SharedByCells = np.array(shared_cells_list)
+
+            # Create periodic boundary conditions
+            self.geo.apply_periodic_boundary_conditions(self.set)
+
+            if self.set.ablation:
+                self.geo.cellsToAblate = self.set.cellsToAblate
+
+            self.geo.init_reference_cell_values(self.set)
+
+            if self.set.Substrate == 1:
+                self.Dofs.GetDOFsSubstrate(self.geo, self.set)
+            else:
+                self.Dofs.get_dofs(self.geo, self.set)
+
+            if self.geo_0 is None:
+                self.geo_0 = self.geo.copy(update_measurements=False)
+
+            if self.geo_n is None:
+                self.geo_n = self.geo.copy(update_measurements=False)
+
+            # Adjust percentage of scutoids
+            self.adjust_percentage_of_scutoids()
+
+            # Save initial state
+            save_state(self, output_filename)
 
     def connect_substrate_cell(self, middle_cell, node_neighbours, domain_cells):
         """
@@ -415,7 +429,7 @@ class VertexModel:
 
         self.backupVars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
 
-        print("File: ", self.set.OutputFolder)
+        logger.info("File: ", self.set.OutputFolder)
         self.save_v_model_state()
 
         while self.t <= self.set.tend and not self.didNotConverge:
@@ -813,7 +827,7 @@ class VertexModel:
 
         if self.set.OutputFolder is not None:
             screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
-                        self.set.OutputFolder + '/images')
+                       self.set.OutputFolder + '/images')
 
 
         # Check if the number of scutoids is approximately the desired one
@@ -897,8 +911,9 @@ class VertexModel:
                     polygon_distribution = remodel_obj.Geo.compute_polygon_distribution('Bottom')
                     logger.info(f'Polygon distribution bottom: {polygon_distribution}')
                     #self.numStep += 1
-                    screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
-                                self.set.OutputFolder + '/images')
+                    if self.set.OutputFolder is not None:
+                        screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
+                                    self.set.OutputFolder + '/images')
 
                     self.geo = remodel_obj.Geo
                     #self.save_v_model_state(os.path.join(self.set.OutputFolder, 'data_step_' + str(round(c_scutoids, 2))))
@@ -952,7 +967,7 @@ class VertexModel:
             volumes = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
             optimal_deform_array_X_Y = find_optimal_deform_array_X_Y(self.geo.copy(), self.set.resize_z,
                                                                      middle_point, volumes)
-            print(f'Optimal deform_array_X_Y: {optimal_deform_array_X_Y}')
+            logger.info(f'Optimal deform_array_X_Y: {optimal_deform_array_X_Y}')
 
             for cell in self.geo.Cells:
                 deform_array = np.array(

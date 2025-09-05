@@ -564,6 +564,7 @@ class Remodelling:
 
             # Create a copy of the ghost node with the same location, but not the same ID
             self.Geo.split_ghost_node(ghost_node, cell_node, cell_to_split_from, cell_to_intercalate_with, self.Set)
+            if self.Set.OutputFolder is not None:
             screenshot_(self.Geo, self.Set, 0, 'after_remodelling_0_', self.Set.OutputFolder + '/images')
 
             # Perform the edge valence check and flip
@@ -571,6 +572,7 @@ class Remodelling:
             has_converged, Tnew = self.flip_nm(nodes_pair, cell_to_intercalate_with, old_tets, old_ys,
                                                cell_to_split_from)
 
+            if self.Set.OutputFolder is not None:
             screenshot_(self.Geo, self.Set, 0, 'after_remodelling_', self.Set.OutputFolder + '/images')
 
             if Tnew is not None:
