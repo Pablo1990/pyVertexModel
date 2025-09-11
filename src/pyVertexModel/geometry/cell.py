@@ -280,22 +280,24 @@ class Cell:
 
         return parts_of_cell
 
-    def create_vtk(self):
+    def create_vtk(self, offset=None):
         """
         Create a vtk cell
         :return:
         """
+        if offset is None:
+            offset = [0.0, 0.0, 0.0]
         points = vtk.vtkPoints()
         points.SetNumberOfPoints(len(self.Y) + len(self.Faces))
         for i in range(len(self.Y)):
-            points.SetPoint(i, self.Y[i, 0], self.Y[i, 1], self.Y[i, 2])
+            points.SetPoint(i, self.Y[i, 0] + offset[0], self.Y[i, 1] + offset[1], self.Y[i, 2] + offset[2])
 
         cell = vtk.vtkCellArray()
         # Go through all the faces and create the triangles for the VTK cell
         total_tris = 0
         for f in range(len(self.Faces)):
             c_face = self.Faces[f]
-            points.SetPoint(len(self.Y) + f, c_face.Centre[0], c_face.Centre[1], c_face.Centre[2])
+            points.SetPoint(len(self.Y) + f, c_face.Centre[0] + offset[0], c_face.Centre[1] + offset[1], c_face.Centre[2] + offset[2])
             for t in range(len(c_face.Tris)):
                 cell.InsertNextCell(3)
                 cell.InsertCellPoint(c_face.Tris[t].Edge[0])
@@ -330,21 +332,25 @@ class Cell:
 
         return vpoly
 
-    def create_pyvista_mesh(self):
+    def create_pyvista_mesh(self, offset=None):
         """
         Create a PyVista mesh
         :return:
         """
-        mesh = pv.PolyData(self.create_vtk())
+        if offset is None:
+            offset = [0.0, 0.0, 0.0]
+        mesh = pv.PolyData(self.create_vtk(offset=offset))
 
         return mesh
 
-    def create_pyvista_edges(self):
+    def create_pyvista_edges(self, offset=None):
         """
         Create a PyVista mesh
         :return:
         """
-        mesh = pv.PolyData(self.create_vtk_edges())
+        if offset is None:
+            offset = [0.0, 0.0, 0.0]
+        mesh = pv.PolyData(self.create_vtk_edges(offset=offset))
 
         return mesh
 
@@ -406,15 +412,18 @@ class Cell:
 
         return features
 
-    def create_vtk_edges(self):
+    def create_vtk_edges(self, offset=None):
         """
         Create a vtk with only the information on the edges of the cell
         :return:
         """
+        if offset is None:
+            offset = [0.0, 0.0, 0.0]
+
         points = vtk.vtkPoints()
         points.SetNumberOfPoints(len(self.Y))
         for i in range(len(self.Y)):
-            points.SetPoint(i, self.Y[i, 0], self.Y[i, 1], self.Y[i, 2])
+            points.SetPoint(i, self.Y[i, 0] + offset[0], self.Y[i, 1] + offset[1], self.Y[i, 2] + offset[2])
 
         cell = vtk.vtkCellArray()
         # Go through all the faces and create the triangles for the VTK cell
