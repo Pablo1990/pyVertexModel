@@ -2158,3 +2158,41 @@ class Geo:
                 self.Cells[num_cell].Y[found_tet, :] = new_equidistant_vertices[id_tet]
 
         self.ensure_consistent_tris_order()
+
+    def compute_average_3d_neighbours(self, exclude_border_cells=True):
+        """
+        Compute the average number of 3D neighbours per cell.
+        :return:
+        """
+        all_neighbours = []
+        for c_cell in self.Cells:
+            if c_cell.AliveStatus is not None and (not exclude_border_cells or c_cell.ID not in self.BorderCells):
+                neighbours = c_cell.compute_neighbours()
+                all_neighbours.append(len(neighbours))
+
+        return np.mean(all_neighbours)
+
+    def resize_tissue(self, average_volume=0.0003168604676977124):
+        """
+        Resize the tissue to a specific average volume.
+        :param average_volume: The target average volume for the cells.
+        """
+        self.update_measures()
+        # Calculate the current average volume of the cells
+        current_average_volume = np.mean([cell.Vol for cell in self.Cells if cell.AliveStatus is not None])
+        middle_point = np.mean([cell.X for cell in self.Cells], axis=0)
+        # Calculate the scaling factor
+        scaling_factor = (average_volume / current_average_volume) ** (1 / 3)
+        # Resize the cells
+        for cell in self.Cells:
+            cell.X = middle_point + (cell.X - middle_point) * scaling_factor
+            if cell.AliveStatus is not None:
+                cell.Y = middle_point + (cell.Y - middle_point) * scaling_factor
+                for face in cell.Faces:
+                    face.Centre = middle_point + (face.Centre - middle_point) * scaling_factor
+
+        # Update the geometry
+        self.update_measures()
+
+        volumes_after_deformation = np.array([cell.Vol for cell in self.Cells if cell.AliveStatus is not None])
+        logger.info(f'Volume difference: {np.mean(volumes_after_deformation) - average_volume}')

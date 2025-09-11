@@ -254,16 +254,21 @@ class VertexModel:
         if not os.path.exists(filename):
             logging.error(f'File {filename} not found')
 
-        output_filename = filename.replace('.tif', f'_{self.set.TotalCells}cells_{self.set.CellHeight}_scutoids_{self.set.percentage_scutoids}.pkl')
+        base, ext = os.path.splitext(filename)
+        if self.set.min_3d_neighbours is None:
+            output_filename = f"{base}_{self.set.TotalCells}cells_{self.set.CellHeight}_scutoids_{self.set.percentage_scutoids}.pkl"
+        else:
+            output_filename = f"{base}_{self.set.TotalCells}cells_{self.set.CellHeight}_min3d_{self.set.min_3d_neighbours}.pkl"
+
         if exists(output_filename):
             # Check date of the output_filename and if it is older than 1 day from today, redo the file
-            if os.path.getmtime(output_filename) < (time.time() - 24 * 60 * 60):
-                logger.info(f'Redoing the file {output_filename} as it is older than 1 day')
-            else:
-                logger.info(f'Loading existing state from {output_filename}')
-                new_set = self.set.copy()
-                load_state(self, output_filename)
-                self.set = new_set
+            # if os.path.getmtime(output_filename) < (time.time() - 24 * 60 * 60):
+            #     logger.info(f'Redoing the file {output_filename} as it is older than 1 day')
+            # else:
+            logger.info(f'Loading existing state from {output_filename}')
+            new_set = self.set.copy()
+            load_state(self, output_filename)
+            self.set = new_set
         else:
             if filename.endswith('.pkl'):
                 output_folder = self.set.OutputFolder
@@ -277,7 +282,7 @@ class VertexModel:
                 self.initialize_cells(filename)
 
             # Resize the geometry to a given cell volume average
-            self.resize_tissue()
+            self.geo.resize_tissue()
 
             # Create substrate(s)
             if self.set.Substrate == 3:
@@ -431,7 +436,7 @@ class VertexModel:
 
         self.backupVars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
 
-        logger.info("File: ", self.set.OutputFolder)
+        logger.info(f"File: {self.set.OutputFolder}")
         self.save_v_model_state()
 
         while self.t <= self.set.tend and not self.didNotConverge:
@@ -816,9 +821,13 @@ class VertexModel:
         :return:
         """
         c_scutoids = self.geo.compute_percentage_of_scutoids(exclude_border_cells=True) / 100
+        c_3d_neighbours = self.geo.compute_average_3d_neighbours()
 
         # Print initial percentage of scutoids
         logger.info(f'Percentage of scutoids initially: {c_scutoids}')
+
+        if self.set.percentage_scutoids == 0.0:
+            return
 
         remodel_obj = Remodelling(self.geo, self.geo, self.geo, self.set, self.Dofs)
 
@@ -833,95 +842,10 @@ class VertexModel:
 
 
         # Check if the number of scutoids is approximately the desired one
-        while c_scutoids < self.set.percentage_scutoids:
-            backup_vars = save_backup_vars(remodel_obj.Geo, remodel_obj.Geo_n, remodel_obj.Geo_0, 0, remodel_obj.Dofs)
-            non_scutoids = remodel_obj.Geo.obtain_non_scutoid_cells()
-            non_scutoids = [cell for cell in non_scutoids if cell.AliveStatus is not None]
-            # Order by volume with higher volume first
-            non_scutoids = sorted(non_scutoids, key=lambda x: x.Vol, reverse=True)
-            for c_cell in non_scutoids:
-                if c_cell.ID in remodel_obj.Geo.BorderCells:
-                    continue
-                # Get the neighbours of the cell
-                neighbours = c_cell.compute_neighbours(location_filter='Bottom')
-                # Remove border cells from neighbours
-                neighbours = np.setdiff1d(neighbours, self.geo.BorderCells)
-                if len(neighbours) == 0:
-                    continue
-
-                # Compute cell volume and pick the neighbour with the higher volume.
-                # These cells will be the ones that will lose neighbours
-                neighbours_vol = [cell.Vol for cell in remodel_obj.Geo.Cells if cell.ID in neighbours]
-
-                # Pick the neighbour with the lowest volume
-                random_neighbour = neighbours[np.argmin(neighbours_vol)]
-                shared_nodes = get_node_neighbours_per_domain(remodel_obj.Geo, c_cell.ID, remodel_obj.Geo.XgBottom,
-                                                              random_neighbour)
-
-                # Filter the shared nodes that are ghost nodes
-                shared_nodes = shared_nodes[np.isin(shared_nodes, remodel_obj.Geo.XgID)]
-                valence_segment, old_tets, old_ys = edge_valence(remodel_obj.Geo, [c_cell.ID, shared_nodes[0]])
-
-                cell_to_split_from_all = np.unique(old_tets)
-                cell_to_split_from_all = cell_to_split_from_all[~np.isin(cell_to_split_from_all, remodel_obj.Geo.XgID)]
-
-                if np.sum(np.isin(shared_nodes, remodel_obj.Geo.BorderCells)) > 0:
-                    print('More than 0 border cell')
-                    continue
-
-                cell_to_split_from = cell_to_split_from_all[
-                    ~np.isin(cell_to_split_from_all, [c_cell.ID, random_neighbour])]
-
-                if len(cell_to_split_from) == 0:
-                    continue
-
-                # Display information about the cells in the flip
-                logger.info(f'Cell {c_cell.ID} will win neighbour {random_neighbour} and lose neighbour {cell_to_split_from[0]}')
-
-                # Perform flip
-                all_tnew, ghost_node, ghost_nodes_tried, has_converged, old_tets = remodel_obj.perform_flip(c_cell.ID, random_neighbour, cell_to_split_from[0], shared_nodes[0])
-
-                if has_converged:
-                    cells_involved_intercalation = [cell.ID for cell in remodel_obj.Geo.Cells if cell.ID in all_tnew.flatten()
-                                                    and cell.AliveStatus == 1]
-
-                    remodel_obj.Geo = smoothing_cell_surfaces_mesh(remodel_obj.Geo, cells_involved_intercalation, backup_vars, location='Bottom')
-                    remodel_obj.Geo.ensure_consistent_tris_order()
-
-                    # Converge a single iteration
-                    remodel_obj.Geo.update_measures()
-                    remodel_obj.reset_preferred_values(backup_vars, cells_involved_intercalation)
-
-                    remodel_obj.Set.currentT = self.t
-                    remodel_obj.Dofs.get_dofs(remodel_obj.Geo, self.set)
-
-                if has_converged:
-                    c_scutoids = remodel_obj.Geo.compute_percentage_of_scutoids(exclude_border_cells=True) / 100
-                    logger.info(f'Percentage of scutoids: {c_scutoids}')
-
-                    # Count the number of small volume fraction
-                    logger.info('----Before')
-                    old_geo, _, _, _, _ = load_backup_vars(backup_vars)
-                    display_volume_fragments(old_geo, cells_involved_intercalation)
-                    logger.info(f'Other cells...')
-                    display_volume_fragments(old_geo, np.setdiff1d([cell.ID for cell in old_geo.Cells], cells_involved_intercalation))
-                    logger.info('----After')
-                    display_volume_fragments(remodel_obj.Geo, cells_involved_intercalation)
-                    logger.info(f'Other cells...')
-                    display_volume_fragments(remodel_obj.Geo, np.setdiff1d([cell.ID for cell in remodel_obj.Geo.Cells], cells_involved_intercalation))
-
-                    polygon_distribution = remodel_obj.Geo.compute_polygon_distribution('Bottom')
-                    logger.info(f'Polygon distribution bottom: {polygon_distribution}')
-                    #self.numStep += 1
-                    if self.set.OutputFolder is not None:
-                        screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
-                                    self.set.OutputFolder + '/images')
-
-                    self.geo = remodel_obj.Geo
-                    #self.save_v_model_state(os.path.join(self.set.OutputFolder, 'data_step_' + str(round(c_scutoids, 2))))
-                    break
-                else:
-                    remodel_obj.Geo, _, _, _, remodel_obj.Geo.Dofs = load_backup_vars(backup_vars)
+        while c_scutoids <= self.set.percentage_scutoids:
+            if self.set.min_3d_neighbours is not None and c_3d_neighbours >= self.set.min_3d_neighbours:
+                break
+            c_cell, c_scutoids, non_scutoids, c_3d_neighbours = self.increase_3d_neighbours(c_scutoids, c_3d_neighbours, remodel_obj)
 
             # If the last cell is reached, break the loop
             if c_cell == non_scutoids[-1]:
@@ -930,30 +854,133 @@ class VertexModel:
         self.geo.update_measures()
         self.geo.init_reference_cell_values(self.set)
 
-    def resize_tissue(self, average_volume=0.0003168604676977124):
+    def increase_3d_neighbours(self, c_scutoids, c_3d_neighbours, remodel_obj):
         """
-        Resize the tissue to a specific average volume.
-        :param average_volume: The target average volume for the cells.
+        Increase the number of 3D neighbours in the model by performing edge flips on non-scutoid cells.
+        :param c_scutoids:
+        :param remodel_obj:
+        :return:
         """
-        self.geo.update_measures()
-        # Calculate the current average volume of the cells
-        current_average_volume = np.mean([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
-        middle_point = np.mean([cell.X for cell in self.geo.Cells], axis=0)
-        # Calculate the scaling factor
-        scaling_factor = (average_volume / current_average_volume) ** (1 / 3)
-        # Resize the cells
-        for cell in self.geo.Cells:
-            cell.X = middle_point + (cell.X - middle_point) * scaling_factor
-            if cell.AliveStatus is not None:
-                cell.Y = middle_point + (cell.Y - middle_point) * scaling_factor
-                for face in cell.Faces:
-                    face.Centre = middle_point + (face.Centre - middle_point) * scaling_factor
+        backup_vars = save_backup_vars(remodel_obj.Geo, remodel_obj.Geo_n, remodel_obj.Geo_0, 0, remodel_obj.Dofs)
+        non_scutoids = remodel_obj.Geo.obtain_non_scutoid_cells()
+        non_scutoids = [cell for cell in non_scutoids if cell.AliveStatus is not None]
+        # Order by volume with higher volume first
+        non_scutoids = sorted(non_scutoids, key=lambda x: x.Vol, reverse=True)
 
-        # Update the geometry
-        self.geo.update_measures()
+        # Concatenate the rest of the cells that are scutoids if min_3d_neighbours is not set
+        if self.set.min_3d_neighbours is not None:
+            og_non_scutoids = [nc.ID for nc in non_scutoids]
+            list_of_ids = [cell.ID for cell in remodel_obj.Geo.Cells if cell.AliveStatus is not None and cell.ID not in og_non_scutoids]
+            np.random.shuffle(list_of_ids)
+            for cell_id in list_of_ids:
+                if cell_id not in self.geo.BorderCells:
+                    non_scutoids.append(remodel_obj.Geo.Cells[cell_id])
 
-        volumes_after_deformation = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
-        logger.info(f'Volume difference: {np.mean(volumes_after_deformation) - average_volume}')
+        for c_cell in non_scutoids:
+            if c_cell.ID in remodel_obj.Geo.BorderCells:
+                continue
+            # Get the neighbours of the cell
+            neighbours = c_cell.compute_neighbours(location_filter='Bottom')
+            # Remove border cells from neighbours
+            neighbours = np.setdiff1d(neighbours, self.geo.BorderCells)
+            if len(neighbours) == 0:
+                continue
+
+            # Compute cell volume and pick the neighbour with the higher volume.
+            # These cells will be the ones that will lose neighbours
+            neighbours_vol = [cell.Vol for cell in remodel_obj.Geo.Cells if cell.ID in neighbours]
+
+            # Pick the neighbour with the lowest volume
+            random_neighbour = neighbours[np.argmin(neighbours_vol)]
+            shared_nodes = get_node_neighbours_per_domain(remodel_obj.Geo, c_cell.ID, remodel_obj.Geo.XgBottom,
+                                                          random_neighbour)
+
+            # Filter the shared nodes that are ghost nodes
+            shared_nodes = shared_nodes[np.isin(shared_nodes, remodel_obj.Geo.XgID)]
+            valence_segment, old_tets, old_ys = edge_valence(remodel_obj.Geo, [c_cell.ID, shared_nodes[0]])
+
+            cell_to_split_from_all = np.unique(old_tets)
+            cell_to_split_from_all = cell_to_split_from_all[~np.isin(cell_to_split_from_all, remodel_obj.Geo.XgID)]
+
+            if np.sum(np.isin(shared_nodes, remodel_obj.Geo.BorderCells)) > 0:
+                print('More than 0 border cell')
+                continue
+
+            cell_to_split_from = cell_to_split_from_all[
+                ~np.isin(cell_to_split_from_all, [c_cell.ID, random_neighbour])]
+
+            if len(cell_to_split_from) == 0:
+                continue
+
+            # Display information about the cells in the flip
+            logger.info(
+                f'Cell {c_cell.ID} will win neighbour {random_neighbour} and lose neighbour {cell_to_split_from[0]}')
+
+            # Perform flip
+            all_tnew, ghost_node, ghost_nodes_tried, has_converged, old_tets = remodel_obj.perform_flip(c_cell.ID,
+                                                                                                        random_neighbour,
+                                                                                                        cell_to_split_from[
+                                                                                                            0],
+                                                                                                        shared_nodes[0])
+
+            if has_converged:
+                cells_involved_intercalation = [cell.ID for cell in remodel_obj.Geo.Cells if
+                                                cell.ID in all_tnew.flatten()
+                                                and cell.AliveStatus == 1]
+
+                remodel_obj.Geo = smoothing_cell_surfaces_mesh(remodel_obj.Geo, cells_involved_intercalation,
+                                                               backup_vars, location='Bottom')
+                remodel_obj.Geo.ensure_consistent_tris_order()
+
+                # Converge a single iteration
+                remodel_obj.Geo.update_measures()
+                remodel_obj.reset_preferred_values(backup_vars, cells_involved_intercalation)
+
+                remodel_obj.Set.currentT = self.t
+                remodel_obj.Dofs.get_dofs(remodel_obj.Geo, self.set)
+
+            if has_converged:
+                new_c_scutoids = remodel_obj.Geo.compute_percentage_of_scutoids(exclude_border_cells=True) / 100
+                logger.info(f'Percentage of scutoids: {new_c_scutoids}')
+
+                # Compute 3d neighbours and print it
+                new_c_3d_neighbours = remodel_obj.Geo.compute_average_3d_neighbours()
+                logger.info(f'3D neighbours: {new_c_3d_neighbours}')
+
+                if self.set.min_3d_neighbours is not None and c_3d_neighbours >= new_c_3d_neighbours:
+                    remodel_obj.Geo, _, _, _, remodel_obj.Geo.Dofs = load_backup_vars(backup_vars)
+                    continue
+
+                c_3d_neighbours = new_c_3d_neighbours
+                c_scutoids = new_c_scutoids
+                #
+                # # Count the number of small volume fraction
+                # logger.info('----Before')
+                # old_geo, _, _, _, _ = load_backup_vars(backup_vars)
+                # display_volume_fragments(old_geo, cells_involved_intercalation)
+                # logger.info(f'Other cells...')
+                # display_volume_fragments(old_geo, np.setdiff1d([cell.ID for cell in old_geo.Cells],
+                #                                                cells_involved_intercalation))
+                # logger.info('----After')
+                # display_volume_fragments(remodel_obj.Geo, cells_involved_intercalation)
+                # logger.info(f'Other cells...')
+                # display_volume_fragments(remodel_obj.Geo, np.setdiff1d([cell.ID for cell in remodel_obj.Geo.Cells],
+                #                                                        cells_involved_intercalation))
+
+                polygon_distribution = remodel_obj.Geo.compute_polygon_distribution('Bottom')
+                logger.info(f'Polygon distribution bottom: {polygon_distribution}')
+                # self.numStep += 1
+                if self.set.OutputFolder is not None:
+                    screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
+                                self.set.OutputFolder + '/images')
+
+                self.geo = remodel_obj.Geo
+                # self.save_v_model_state(os.path.join(self.set.OutputFolder, 'data_step_' + str(round(c_scutoids, 2))))
+                break
+            else:
+                remodel_obj.Geo, _, _, _, remodel_obj.Geo.Dofs = load_backup_vars(backup_vars)
+
+        return c_cell, c_scutoids, non_scutoids, c_3d_neighbours
 
     @abstractmethod
     def initialize_cells(self, filename):
@@ -986,7 +1013,7 @@ class VertexModel:
                     #self.move_cell(self.geo.Cells[cell.substrate_cell_bottom], deform_array, cell.X, middle_point)
             # Make a copy of the geometry before deformation
             geo_copy = self.geo.copy()
-            self.resize_tissue()
+            self.geo.resize_tissue()
 
             # Update the geometry
             self.geo.update_measures()
