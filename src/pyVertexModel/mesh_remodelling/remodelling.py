@@ -1,16 +1,13 @@
 import logging
-import os
 
 import numpy as np
 import pandas as pd
-from numpy.ma.extras import setdiff1d
 
-from src.pyVertexModel.algorithm.newtonRaphson import gGlobal, newton_raphson_iteration_explicit, \
-    newton_raphson_iteration, KgGlobal, constrain_bottom_vertices_x_y
+from src.pyVertexModel.algorithm.newtonRaphson import gGlobal, newton_raphson_iteration_explicit, constrain_bottom_vertices_x_y
 from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
 from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
 from src.pyVertexModel.util.utils import ismember_rows, save_backup_vars, load_backup_vars, compute_distance_3d, \
-    laplacian_smoothing, screenshot_, face_centres_to_middle_of_neighbours_vertices, get_interface
+    laplacian_smoothing, screenshot_, get_interface
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -470,14 +467,13 @@ class Remodelling:
         :param cells_involved_intercalation:
         :return:
         """
-        pass
-        # # Get the relation between Vol0 and Vol from the backup_vars
-        # for cell in backup_vars['Geo_b'].Cells:
-        #     if cell.ID in cells_involved_intercalation:
-        #         self.Geo.Cells[cell.ID].Vol0 = self.Geo.Cells[cell.ID].Vol * cell.Vol0 / cell.Vol
-        #         self.Geo.Cells[cell.ID].Area0 = self.Geo.Cells[cell.ID].Area * cell.Area0 / cell.Area
-        #         for f in range(len(self.Geo.Cells[cell.ID].Faces)):
-        #             self.Geo.Cells[cell.ID].Faces[f].Area0 = self.Geo.Cells[cell.ID].Faces[f].Area * cell.Area0 / cell.Area
+        # Get the relation between Vol0 and Vol from the backup_vars
+        for cell in backup_vars['Geo_b'].Cells:
+            if cell.ID in cells_involved_intercalation:
+                self.Geo.Cells[cell.ID].Vol0 = self.Geo.Cells[cell.ID].Vol * cell.Vol0 / cell.Vol
+                self.Geo.Cells[cell.ID].Area0 = self.Geo.Cells[cell.ID].Area * cell.Area0 / cell.Area
+                for f in range(len(self.Geo.Cells[cell.ID].Faces)):
+                    self.Geo.Cells[cell.ID].Faces[f].Area0 = self.Geo.Cells[cell.ID].Faces[f].Area * cell.Area0 / cell.Area
 
     def check_if_will_converge(self, best_geo, n_iter_max=20):
         """
@@ -565,7 +561,7 @@ class Remodelling:
             # Create a copy of the ghost node with the same location, but not the same ID
             self.Geo.split_ghost_node(ghost_node, cell_node, cell_to_split_from, cell_to_intercalate_with, self.Set)
             if self.Set.OutputFolder is not None:
-            screenshot_(self.Geo, self.Set, 0, 'after_remodelling_0_', self.Set.OutputFolder + '/images')
+                screenshot_(self.Geo, self.Set, 0, 'after_remodelling_0_', self.Set.OutputFolder + '/images')
 
             # Perform the edge valence check and flip
             valence_segment, old_tets, old_ys = edge_valence(self.Geo, nodes_pair)
@@ -573,7 +569,7 @@ class Remodelling:
                                                cell_to_split_from)
 
             if self.Set.OutputFolder is not None:
-            screenshot_(self.Geo, self.Set, 0, 'after_remodelling_', self.Set.OutputFolder + '/images')
+                screenshot_(self.Geo, self.Set, 0, 'after_remodelling_', self.Set.OutputFolder + '/images')
 
             if Tnew is not None:
                 all_tnew = Tnew if all_tnew is None else np.vstack((all_tnew, Tnew))
