@@ -40,7 +40,7 @@ def find_optimal_deform_array_X_Y(geo, deform_array_Z, middle_point, volumes):
         return abs(vol_difference)
 
     options = {'disp': True, 'ftol':1e-9}
-    result = minimize(objective, method='TNC', x0=np.array([2]), options=options)
+    result = minimize(objective, method='TNC', x0=np.array([3]), options=options)
     return result.x
 
 def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None, scalar_to_display='Volume'):
