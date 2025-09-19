@@ -314,8 +314,9 @@ class VertexModel:
                     # Create a substrate cell for each cell
                     self.geo.create_substrate_cells(self.set, domain='Top')
 
-            # Deform the tissue if required
-            self.deform_tissue()
+            # Change tissue height if required
+            #self.deform_tissue()
+            self.change_tissue_height()
 
             # Add border cells to the shared cells
             for cell in self.geo.Cells:
@@ -1058,3 +1059,20 @@ class VertexModel:
             cell.Y = cell.Y + (location - middle_point) * deform_array
             for face in cell.Faces:
                 face.Centre = face.Centre + (location - middle_point) * deform_array
+
+    def change_tissue_height(self):
+        """
+        Change the tissue height based on the set parameters.
+        :return:
+        """
+        if self.set.resize_z is not None:
+            # Change cell height including ghost nodes, and vertices
+            for cell in self.geo.Cells:
+                cell.X[2] = cell.X[2] * self.set.resize_z
+                if cell.Y is not None:
+                    for vertex in cell.Y:
+                        vertex[2] = vertex[2] * self.set.resize_z
+                    for face in cell.Faces:
+                        face.Centre[2] = face.Centre[2] * self.set.resize_z
+
+            self.geo.resize_tissue()
