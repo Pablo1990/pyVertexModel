@@ -13,6 +13,7 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.min_3d_neighbours = None
         self.periodic_boundaries = True
         self.frozen_face_centres = False
         self.model_name = ''
@@ -53,6 +54,8 @@ class Set:
         self.ellipsoid_axis2 = None
         self.ellipsoid_axis3 = None
         self.nu_bottom = None
+        self.substrate_top = False
+        self.kSubstrateTop = 0
         # ============================== Ablation ============================
         self.cellsToAblate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
         self.TInitAblation = 20
@@ -240,6 +243,7 @@ class Set:
         new_outputFolder = ''.join([PROJECT_DIRECTORY, '/Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")),
                                     self.model_name,
                                     '_scutoids_', str(self.percentage_scutoids),
+                                    '_noise_', '{:0.2e}'.format(self.noise_random),
                                     '_lVol_', '{:0.2e}'.format(self.lambdaV),
                                     '_kSubs_', '{:0.2e}'.format(self.kSubstrate),
                                     '_lt_', '{:0.2e}'.format(self.cLineTension),
@@ -332,11 +336,15 @@ class Set:
 
     def wing_disc_equilibrium(self):
         self.nu_bottom = self.nu
-        self.model_name = 'dWL6'
+        self.model_name = 'dWL1'
         self.initial_filename_state = 'Input/images/' + self.model_name + '.tif'
-        self.percentage_scutoids = 0.99
+        #self.initial_filename_state = 'Input/images/dWP1_150cells_15_scutoids_1.0.pkl'
+        self.percentage_scutoids = 0.0
         self.tend = 20
         self.Nincr = self.tend * 100
+        self.CellHeight = 1 * 15 #np.array([0.0001, 0.001, 0.01, 0.1, 0.5, 1, 2.0]) * original_wing_disc_height
+        #self.resize_z = 0.01
+        self.min_3d_neighbours = None # 10
 
         self.EnergyBarrierAR = True
         if self.EnergyBarrierAR:
@@ -349,9 +357,11 @@ class Set:
 
         # Substrate
         self.kSubstrate = 0.1
+        #self.kSubstrateTop = self.kSubstrate / 1000
+        self.substrate_top = False
 
         # Surface Area
-        self.ref_A0 = 0.92
+        self.ref_A0 = 0.99
         # Top
         self.lambdaS1 = 1.4
         # c_cell-c_cell
@@ -363,8 +373,9 @@ class Set:
         self.lambdaS4_bottom = self.lambdaS2
 
         self.VTK = False
-
-        self.Remodelling = False
+        self.Remodelling = True
+        self.ablation = False
+        self.noise_random = 0
 
         self.check_for_non_used_parameters()
 
@@ -393,7 +404,7 @@ class Set:
 
         # Contractility
         self.Contractility = False
-        self.cLineTension = 1e-7
+        #self.cLineTension = 0
 
         # Surface Area
         self.ref_A0 = 0.92
@@ -402,10 +413,14 @@ class Set:
         # c_cell-c_cell
         self.lambdaS2 = self.lambdaS1 / 100
         # Bottom
-        self.lambdaS3 = self.lambdaS1 / 10
-        # Substrate - c_cell
+        self.lambdaS3 = self.lambdaS1
+        # Substrate - c_cell/
         self.lambdaS4_top = self.lambdaS2
         self.lambdaS4_bottom = self.lambdaS2
+
+        #self.noise_random = 0.3
+
+        self.Remodel_stiffness_wound = 0.9
 
         self.VTK = False
 
@@ -464,7 +479,7 @@ class Set:
         # 0: Intensity-based purse string
         # 1: Strain-based purse string (delayed)
         # 2: Fixed with linear increase purse string
-        self.myosin_pool = (4e-5 + 7e-5) * myosin_pool_multiplier
+        self.myosin_pool = (3e-5 + 7e-5) * myosin_pool_multiplier
         self.purseStringStrength = 3e-5
         self.lateralCablesStrength = 7e-5
 
