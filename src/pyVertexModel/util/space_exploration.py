@@ -46,11 +46,14 @@ def objective(trial):
     # percentage_deviation = 0.1
     # new_set.lambdaV = trial.suggest_float('lambdaV', new_set.lambdaV - (new_set.lambdaV * percentage_deviation), new_set.lambdaV + (new_set.lambdaV * percentage_deviation))
     # new_set.lambdaS2 = trial.suggest_float('lambdaS2', new_set.lambdaS2 - (new_set.lambdaS2 * percentage_deviation), new_set.lambdaS2 + (new_set.lambdaS2 * percentage_deviation))
-    new_set.lambdaV = trial.suggest_float('lambdaV', 1e-3, 10)
-    new_set.lambdaS1 = trial.suggest_float('lambdaS1', 1e-4, 1)
-    new_set.lambdaS2 = trial.suggest_float('lambdaS2', 1e-4, 1)
-    new_set.lambdaS3 = trial.suggest_float('lambdaS3', 1e-4, 1)
+    #new_set.lambdaV = trial.suggest_float('lambdaV', 1e-3, 10)
+    new_set.lambdaS1 = trial.suggest_float('lambdaS1', 1e-5, 1)
+    new_set.lambdaS2 = trial.suggest_float('lambdaS2', 1e-5, 1)
+    new_set.lambdaS3 = new_set.lambdaS1
     new_set.update_derived_parameters()
+
+    #total_surface_area_new = new_set.lambdaS1 + 6 * new_set.lambdaS2 + new_set.lambdaS3
+    #print(f"Total surface area: {total_surface_area_new}, lambdaS1: {new_set.lambdaS1}, lambdaS2: {new_set.lambdaS2}, lambdaS3: {new_set.lambdaS3}")
 
     if error_type == 'gr':
         new_set.OutputFolder = None
