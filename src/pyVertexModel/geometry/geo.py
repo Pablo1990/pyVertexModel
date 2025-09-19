@@ -359,7 +359,7 @@ class Geo:
 
         # Initialize list for storing minimum lengths to the centre and edge lengths of tris
         lmin_values = []
-        avg_weight = 0.2
+        avg_weight = 0
 
         # Iterate over all cells in the Geo structure
         for c, c_cell in enumerate(self.Cells):
