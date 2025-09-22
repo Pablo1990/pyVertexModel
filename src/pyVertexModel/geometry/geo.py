@@ -969,7 +969,7 @@ class Geo:
         else:
             debrisCells = [-1]
 
-        for numTet in range(Tnew.shape[0]):
+        for numTet in range(Tnew.shape[0]): # For each new tet
             mainNode_current = mainNodesToConnect[np.isin(mainNodesToConnect, Tnew[numTet, :])]
             nGhostNodes_cTet = np.sum(np.isin(Tnew[numTet, :], self.XgID))
             YnewlyComputed = cell.compute_y(self, Tnew[numTet, :], self.Cells[mainNode_current[0]].X, Set)
@@ -1113,6 +1113,7 @@ class Geo:
 
                     # Iterate over the remaining debris cells
                     for debrisCell in remainingDebrisCells:
+                        logger.info(f' ---- Combining cell {debrisCell} into cell {uniqueDebrisCell}')
                         # Combine the debris cells
                         self.combine_two_nodes([uniqueDebrisCell, debrisCell], c_set)
 
