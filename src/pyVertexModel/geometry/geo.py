@@ -969,24 +969,25 @@ class Geo:
         else:
             debrisCells = [-1]
 
-        for numTet in range(Tnew.shape[0]): # For each new tet
-            mainNode_current = mainNodesToConnect[np.isin(mainNodesToConnect, Tnew[numTet, :])]
-            nGhostNodes_cTet = np.sum(np.isin(Tnew[numTet, :], self.XgID))
-            YnewlyComputed = cell.compute_y(self, Tnew[numTet, :], self.Cells[mainNode_current[0]].X, Set)
+        for num_tet in Tnew: # For each new tet
+            print(num_tet)
+            mainNode_current = mainNodesToConnect[np.isin(mainNodesToConnect, num_tet)]
+            nGhostNodes_cTet = np.sum(np.isin(num_tet, self.XgID))
+            YnewlyComputed = cell.compute_y(self, num_tet, self.Cells[mainNode_current[0]].X, Set)
 
-            if any(np.isin(Tnew[numTet, :], debrisCells)):
+            if any(np.isin(num_tet, debrisCells)):
                 contributionOldYs = 1
             else:
                 contributionOldYs = Set.contributionOldYs
 
-            if np.all(~np.isin(Tnew[numTet, :], np.concatenate([self.XgBottom, self.XgTop]))):
+            if np.all(~np.isin(num_tet, np.concatenate([self.XgBottom, self.XgTop]))):
                 Ynew.append(YnewlyComputed)
             else:
-                tetsToUse = np.sum(np.isin(allTs, Tnew[numTet, :]), axis=1) > 2
+                tetsToUse = np.sum(np.isin(allTs, num_tet), axis=1) > 2
 
-                if any(np.isin(Tnew[numTet, :], self.XgTop)):
+                if any(np.isin(num_tet, self.XgTop)):
                     tetsToUse = tetsToUse & np.any(np.isin(allTs, self.XgTop), axis=1)
-                elif any(np.isin(Tnew[numTet, :], self.XgBottom)):
+                elif any(np.isin(num_tet, self.XgBottom)):
                     tetsToUse = tetsToUse & np.any(np.isin(allTs, self.XgBottom), axis=1)
 
                 tetsToUse = tetsToUse & (nGhostNodes_allTs == nGhostNodes_cTet)
@@ -996,11 +997,11 @@ class Geo:
                     Ynew.append(contributionOldYs * np.mean(allYs[tetsToUse, :], axis=0) + (
                             1 - contributionOldYs) * YnewlyComputed)
                 else:
-                    tetsToUse = np.sum(np.isin(allTs, Tnew[numTet, :]), axis=1) > 1
+                    tetsToUse = np.sum(np.isin(allTs, num_tet), axis=1) > 1
 
-                    if any(np.isin(Tnew[numTet, :], self.XgTop)):
+                    if any(np.isin(num_tet, self.XgTop)):
                         tetsToUse = tetsToUse & np.any(np.isin(allTs, self.XgTop), axis=1)
-                    elif any(np.isin(Tnew[numTet, :], self.XgBottom)):
+                    elif any(np.isin(num_tet, self.XgBottom)):
                         tetsToUse = tetsToUse & np.any(np.isin(allTs, self.XgBottom), axis=1)
 
                     tetsToUse = tetsToUse & (nGhostNodes_allTs == nGhostNodes_cTet)
@@ -1115,7 +1116,7 @@ class Geo:
                     for debrisCell in remainingDebrisCells:
                         logger.info(f' ---- Combining cell {debrisCell} into cell {uniqueDebrisCell}')
                         # Combine the debris cells
-                        self.combine_two_nodes([uniqueDebrisCell, debrisCell], c_set, recalculate_ys=False)
+                        self.combine_two_nodes([uniqueDebrisCell, debrisCell], c_set)
 
                     # Get the cells that have changed to rebuild
                     cells_to_rebuild = get_node_neighbours(self, uniqueDebrisCell, [uniqueDebrisCell])
@@ -1487,6 +1488,7 @@ class Geo:
         else:
             new_cell.X = np.concatenate([c_cell.X for c_cell in cells_to_combine], axis=0)
             new_cell.cglobalids = np.concatenate([c_cell.globalIds for c_cell in cells_to_combine], axis=0)
+
         new_cell.T = np.concatenate([c_cell.T for c_cell in cells_to_combine], axis=0)
         new_cell.Y = np.concatenate([c_cell.Y for c_cell in cells_to_combine], axis=0)
 
