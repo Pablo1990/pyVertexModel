@@ -2,7 +2,7 @@
 
 # Define the Python script to run
 PYTHON_SCRIPT="pyVertexModel/main_paper_simulations.py"
-OUTPUT_DIR="Result/different_cell_shape_healing/"
+OUTPUT_DIR="Result"
 
 # Define the project directory and add it to PYTHONPATH
 PROJECT_DIR=$(dirname "$(dirname "$(realpath $0)")")
@@ -24,9 +24,9 @@ run_simulation() {
 
 # Parallel execution
 max_jobs=4
-for dir in "$OUTPUT_DIR"*/ ; do
+for dir in "$PROJECT_DIR/$OUTPUT_DIR"/* ; do
+    echo "$dir"
     dir_name=$(basename "$dir")
-    [ -z "$dir_name" ] && continue
     for num_parameter in "${num_parameters[@]}"; do
         while [ $(jobs -r | wc -l) -ge "$max_jobs" ]; do
             sleep 1
