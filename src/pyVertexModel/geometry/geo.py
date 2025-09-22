@@ -925,12 +925,12 @@ class Geo:
                                                                               c_set), axis=0)
                                     self.numY += 1
 
-    def recalculate_ys_from_previous(self, Tnew, mainNodesToConnect, Set):
+    def recalculate_ys_from_previous(self, tnew, main_nodes_to_connect, c_set):
         """
         Recalculate the Ys from the previous geometry
-        :param Tnew:
-        :param mainNodesToConnect:
-        :param Set:
+        :param tnew:
+        :param main_nodes_to_connect:
+        :param c_set:
         :return:
         """
 
@@ -969,16 +969,15 @@ class Geo:
         else:
             debrisCells = [-1]
 
-        for num_tet in Tnew: # For each new tet
-            print(num_tet)
-            mainNode_current = mainNodesToConnect[np.isin(mainNodesToConnect, num_tet)]
+        for num_tet in tnew: # For each new tet
+            mainNode_current = main_nodes_to_connect[np.isin(main_nodes_to_connect, num_tet)]
             nGhostNodes_cTet = np.sum(np.isin(num_tet, self.XgID))
-            YnewlyComputed = cell.compute_y(self, num_tet, self.Cells[mainNode_current[0]].X, Set)
+            YnewlyComputed = cell.compute_y(self, num_tet, self.Cells[mainNode_current[0]].X, c_set)
 
             if any(np.isin(num_tet, debrisCells)):
                 contributionOldYs = 1
             else:
-                contributionOldYs = Set.contributionOldYs
+                contributionOldYs = c_set.contributionOldYs
 
             if np.all(~np.isin(num_tet, np.concatenate([self.XgBottom, self.XgTop]))):
                 Ynew.append(YnewlyComputed)
@@ -1503,7 +1502,7 @@ class Geo:
                 remove_duplicates(c_cell, nodes_to_combine)
 
         if recalculate_ys:
-            new_cell.Y = self.recalculate_ys_from_previous(new_cell.T, new_cell.ID, c_set)
+            new_cell.Y = self.recalculate_ys_from_previous(new_cell.T, nodes_to_combine, c_set)
         else:
             new_cell.globalIds = np.concatenate([c_cell.globalIds for c_cell in cells_to_combine], axis=0)
             new_cell.Faces = np.concatenate([c_cell.Faces for c_cell in cells_to_combine], axis=0)
