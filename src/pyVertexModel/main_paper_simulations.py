@@ -92,7 +92,6 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
         vModel.set.dt = None
         vModel.set.update_derived_parameters()
         vModel.set.redirect_output()
-        vModel.deform_tissue()
     else:
         print("Output folder already exists: {}".format(output_folder))
         # if os.path.exists(os.path.join(output_folder, 'features_per_time.pkl')):
