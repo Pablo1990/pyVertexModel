@@ -36,30 +36,25 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
                    os.path.join(PROJECT_DIRECTORY, output_results_dir,
                                                    'before_ablation.pkl'))
 
-        vModel.set.wing_disc()
-        vModel.set.wound_default()
+        #vModel.set.wing_disc()
+        #vModel.set.wound_default()
+        #cells_to_ablate = vModel.set.cellsToAblate
         if getattr(vModel.set, 'model_name', None) is None:
             vModel.set.model_name = 'in_silico_movie'
-            vModel.set.RemodelStiffness = 0.65
         elif vModel.set.model_name == 'wing_disc_real_bottom_left':
             cells_to_ablate = np.array([0, 1, 2, 3, 4, 7, 8, 10, 13])
-            vModel.set.cellsToAblate = cells_to_ablate
-            vModel.geo.cellsToAblate = cells_to_ablate
-            vModel.set.RemodelStiffness = 0.7
         elif vModel.set.model_name == 'wing_disc_real_top_right':
             cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 10, 13, 15])
-            vModel.set.cellsToAblate = cells_to_ablate
-            vModel.geo.cellsToAblate = cells_to_ablate
-            vModel.set.wound_default(myosin_pool_multiplier=1.3)
-        elif vModel.set.model_name == 'wing_disc_real_bottom_right':
-            vModel.set.RemodelStiffness = 0.65
         elif vModel.set.model_name == 'wing_disc_real':
             cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-            vModel.set.cellsToAblate = cells_to_ablate
-            vModel.geo.cellsToAblate = cells_to_ablate
-            vModel.set.RemodelStiffness = 0.60
+        else:
+            cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
 
-        vModel.set.nu_bottom = vModel.set.nu * 600
+        vModel.set.cellsToAblate = cells_to_ablate
+        vModel.geo.cellsToAblate = cells_to_ablate
+
+        if vModel.set.CellHeight == 15:
+            vModel.set.nu_bottom = vModel.set.nu * 600
         vModel.set.OutputFolder = output_folder
         if combination == 'WT':
             pass
@@ -90,10 +85,14 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
                     vModel.set.RemodelStiffness = 2
                 else:
                     setattr(vModel.set, variable, 0)
+
+        if length == '120_mins':
+            vModel.set.tend = 120
         vModel.set.dt0 = None
         vModel.set.dt = None
         vModel.set.update_derived_parameters()
         vModel.set.redirect_output()
+        vModel.deform_tissue()
     else:
         print("Output folder already exists: {}".format(output_folder))
         # if os.path.exists(os.path.join(output_folder, 'features_per_time.pkl')):
@@ -134,13 +133,13 @@ combinations_of_variables = []
 for i in range(1, len(variables_to_change) + 1):
     combinations_of_variables.extend(itertools.combinations(variables_to_change, i))
 
-combinations_of_variables.insert(0, 'IntegrinDN_with_substrate')
-combinations_of_variables.insert(0, 'Talin_with_substrate')
-combinations_of_variables.insert(0, 'ShibireTS')
-combinations_of_variables.insert(0, 'Talin')
-combinations_of_variables.insert(0, 'IntegrinDN')
-combinations_of_variables.insert(0, 'Mbs')
-combinations_of_variables.insert(0, 'Rok')
+#combinations_of_variables.insert(0, 'IntegrinDN_with_substrate')
+#combinations_of_variables.insert(0, 'Talin_with_substrate')
+#combinations_of_variables.insert(0, 'ShibireTS')
+#combinations_of_variables.insert(0, 'Mbs')
+#combinations_of_variables.insert(0, 'Rok')
+#combinations_of_variables.insert(0, 'Talin')
+#combinations_of_variables.insert(0, 'IntegrinDN')
 combinations_of_variables.insert(0, 'WT')
 
 if __name__ == '__main__':
