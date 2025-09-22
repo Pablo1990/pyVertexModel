@@ -24,10 +24,10 @@ run_simulation() {
 
 # Parallel execution
 max_jobs=4
-for dir in "$PROJECT_DIR/$OUTPUT_DIR"/* ; do
-    echo "$dir"
-    dir_name=$(basename "$dir")
-    for num_parameter in "${num_parameters[@]}"; do
+for num_parameter in "${num_parameters[@]}"; do
+    for dir in "$PROJECT_DIR/$OUTPUT_DIR"/* ; do
+        echo "$dir"
+        dir_name=$(basename "$dir")
         while [ $(jobs -r | wc -l) -ge "$max_jobs" ]; do
             sleep 1
         done
