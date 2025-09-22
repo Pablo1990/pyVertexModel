@@ -26,6 +26,7 @@ run_simulation() {
 max_jobs=4
 for dir in "$OUTPUT_DIR"*/ ; do
     dir_name=$(basename "$dir")
+    [ -z "$dir_name" ] && continue
     for num_parameter in "${num_parameters[@]}"; do
         while [ $(jobs -r | wc -l) -ge "$max_jobs" ]; do
             sleep 1
