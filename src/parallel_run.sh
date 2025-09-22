@@ -23,7 +23,7 @@ run_simulation() {
 }
 
 # Parallel execution
-max_jobs=4
+max_jobs=1
 for num_parameter in "${num_parameters[@]}"; do
     for dir in "$PROJECT_DIR/$OUTPUT_DIR"/* ; do
         echo "$dir"

@@ -1502,7 +1502,7 @@ class Geo:
                 remove_duplicates(c_cell, nodes_to_combine)
 
         if recalculate_ys:
-            new_cell.Y = self.recalculate_ys_from_previous(new_cell.T, nodes_to_combine, c_set)
+            new_cell.Y = self.recalculate_ys_from_previous(new_cell.T, np.array(nodes_to_combine), c_set)
         else:
             new_cell.globalIds = np.concatenate([c_cell.globalIds for c_cell in cells_to_combine], axis=0)
             new_cell.Faces = np.concatenate([c_cell.Faces for c_cell in cells_to_combine], axis=0)
