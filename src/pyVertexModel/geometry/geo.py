@@ -1115,7 +1115,7 @@ class Geo:
                     for debrisCell in remainingDebrisCells:
                         logger.info(f' ---- Combining cell {debrisCell} into cell {uniqueDebrisCell}')
                         # Combine the debris cells
-                        self.combine_two_nodes([uniqueDebrisCell, debrisCell], c_set)
+                        self.combine_two_nodes([uniqueDebrisCell, debrisCell], c_set, recalculate_ys=False)
 
                     # Get the cells that have changed to rebuild
                     cells_to_rebuild = get_node_neighbours(self, uniqueDebrisCell, [uniqueDebrisCell])
@@ -1474,6 +1474,7 @@ class Geo:
     def combine_two_nodes(self, nodes_to_combine, c_set, recalculate_ys=True):
         """
         Combine two nodes into one node
+        :param recalculate_ys:
         :param nodes_to_combine:
         :param c_set:
         :return:
