@@ -2,7 +2,7 @@
 
 # Define the Python script to run
 PYTHON_SCRIPT="pyVertexModel/main_paper_simulations.py"
-OUTPUT_DIR="Result"
+OUTPUT_DIR="Result/different_cell_shape_healing"
 
 # Define the project directory and add it to PYTHONPATH
 PROJECT_DIR=$(dirname "$(dirname "$(realpath $0)")")
