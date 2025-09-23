@@ -331,7 +331,7 @@ class Remodelling:
 
             if has_converged is True:
                 has_converged = self.post_intercalation(segmentFeatures['num_cell'], how_close_to_vertex, allTnew, backup_vars,
-                                                        cellToSplitFrom, ghostNode, ghost_nodes_tried, has_converged)
+                                                        cellToSplitFrom, ghostNode, ghost_nodes_tried)
 
                 if not has_converged:
                     self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs = load_backup_vars(backup_vars)
@@ -396,7 +396,7 @@ class Remodelling:
         return True
 
     def post_intercalation(self, num_cell, how_close_to_vertex, all_tnew, backup_vars, cellToSplitFrom, ghostNode,
-                           ghost_nodes_tried, has_converged):
+                           ghost_nodes_tried):
         """
         Post intercalation process to remodel the mesh.
         :param num_cell:
@@ -406,7 +406,6 @@ class Remodelling:
         :param cellToSplitFrom:
         :param ghostNode:
         :param ghost_nodes_tried:
-        :param has_converged:
         :return:
         """
         # Get the degrees of freedom for the remodelling
@@ -482,6 +481,15 @@ class Remodelling:
         :param n_iter_max:
         :return:
         """
+        # Check basic properties of the geometry to be achieved
+        surface_area_top = np.array([cell.compute_area('Top') for cell in best_geo.Cells if cell.AliveStatus == 1])
+        average_area_top = surface_area_top.mean()
+        surface_area_bottom = np.array([cell.compute_area('Bottom') for cell in best_geo.Cells if cell.AliveStatus == 1])
+        average_area_bottom = surface_area_bottom.mean()
+        if np.any(surface_area_top < average_area_top * 0.01) or np.any(surface_area_bottom < average_area_bottom * 0.01):
+            return False
+
+        # Check if the remodelling will converge
         dy = np.zeros(((best_geo.numY + best_geo.numF + best_geo.nCells) * 3, 1), dtype=np.float64)
         g, energies = gGlobal(best_geo, best_geo, best_geo, self.Set, self.Set.implicit_method)
         previous_gr = np.linalg.norm(g[self.Dofs.Free])
@@ -501,6 +509,17 @@ class Remodelling:
                 if np.all(~np.isnan(g[self.Dofs.Free])) and np.all(~np.isnan(dy[self.Dofs.Free])):
                     pass
                 else:
+                    return False
+
+            best_geo.update_measures()
+            surface_area_top = np.array(
+                [cell.compute_area('Top') for cell in best_geo.Cells if cell.AliveStatus == 1])
+            average_area_top = surface_area_top.mean()
+            surface_area_bottom = np.array(
+                [cell.compute_area('Bottom') for cell in best_geo.Cells if cell.AliveStatus == 1])
+            average_area_bottom = surface_area_bottom.mean()
+            if np.any(surface_area_top < average_area_top * 0.01) or np.any(
+                    surface_area_bottom < average_area_bottom * 0.01):
                     return False
 
             if (gr < self.Set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
