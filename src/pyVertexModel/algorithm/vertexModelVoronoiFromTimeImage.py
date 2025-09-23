@@ -329,13 +329,13 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         output_filename = filename.replace('.tif', f'_{self.set.TotalCells}cells_{self.set.CellHeight}.pkl')
         if exists(output_filename):
             # Check date of the output_filename and if it is older than 1 day from today, redo the file
-            if os.path.getmtime(output_filename) < (time.time() - 24 * 60 * 60):
-                logger.info(f'Redoing the file {output_filename} as it is older than 1 day')
-            else:
-                logger.info(f'Loading existing state from {output_filename}')
-                self.geo = Geo()
-                load_state(self.geo, output_filename)
-                return
+            # if os.path.getmtime(output_filename) < (time.time() - 24 * 60 * 60):
+            #     logger.info(f'Redoing the file {output_filename} as it is older than 1 day')
+            # else:
+            logger.info(f'Loading existing state from {output_filename}')
+            self.geo = Geo()
+            load_state(self.geo, output_filename)
+            return
 
         # Load the image and obtain the initial X and tetrahedra
         Twg, X = self.obtain_initial_x_and_tetrahedra()
