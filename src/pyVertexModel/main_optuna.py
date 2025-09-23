@@ -11,14 +11,13 @@ original_wing_disc_height = 15 # in microns
 set_of_resize_z = np.array([0.0001, 0.001, 0.01, 0.1, 0.5, 1, 2.0]) * original_wing_disc_height
 type_of_search = '_gr_'  # '_KInitialRecoil_'
 num_trials = 500
-scutoids_percentage = [0.25, 0.5, 0.75, 1.0]
+scutoids_percentage = [0, 0.5, 0.99]
 
 # Get all the files from 'Input/images/' that end with '.tif' and do not contain 'labelled'
 all_files = [f.split('.')[0] for f in os.listdir(PROJECT_DIRECTORY + '/Input/images/') if f.endswith('.tif') and not f.endswith('labelled.tif')]
 np.random.shuffle(all_files)
 for input_file in all_files:
     # Random sort the set_of_resize_z
-    #np.random.seed(42)  # For reproducibility
     np.random.shuffle(set_of_resize_z)
     for resize_z in set_of_resize_z:
         for scutoids in scutoids_percentage:
