@@ -1037,7 +1037,7 @@ class Geo:
             if not os.path.exists(cell_sub_folder):
                 os.makedirs(cell_sub_folder)
 
-            for c in [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None and c_cell.ID == 4]:
+            for c in [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None]:
                 writer = vtk.vtkPolyDataWriter()
                 if folder_name.startswith('Cells'):
                     vtk_cells.append(self.Cells[c].create_vtk())
