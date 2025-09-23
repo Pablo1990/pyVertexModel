@@ -54,7 +54,7 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
         vModel.geo.cellsToAblate = cells_to_ablate
 
         # Additional viscosity for the bottom vertices based on the cell height
-        vModel.set.nu_bottom = vModel.set.nu * (600 * (vModel.set.CellHeight / 15) ** 2)
+        vModel.set.nu_bottom = vModel.set.nu + (vModel.set.nu * (600 * (vModel.set.CellHeight / 15) ** 2))
 
         vModel.set.OutputFolder = output_folder
         if combination == 'WT':
