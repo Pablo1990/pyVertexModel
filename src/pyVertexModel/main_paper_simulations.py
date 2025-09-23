@@ -48,7 +48,7 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
         elif vModel.set.model_name == 'wing_disc_real':
             cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
         elif vModel.set.model_name.startswith('dWL6'):
-            cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
+            cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13])
         else:
             cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
 
