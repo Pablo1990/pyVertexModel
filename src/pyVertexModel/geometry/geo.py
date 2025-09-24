@@ -439,17 +439,18 @@ class Geo:
         # Obtain the original cell height
         self.get_substrate_z()
 
-    def update_barrier_tri0(self, count_lateral_faces=True):
+    def update_barrier_tri0(self, factor=10, count_lateral_faces=True):
         """
         Update the BarrierTri0 based on the average edge length of the geometry.
         :return:
         """
+        self.update_measures()
         # Initialize BarrierTri0 and lmin0 with the maximum possible float value
         self.BarrierTri0 = np.finfo(float).max
 
         # Iterate over all cells in the Geo structure
         for c, c_cell in enumerate(self.Cells):
-            if c_cell.AliveStatus is not None:
+            if c_cell.AliveStatus == 1:
                 for f in range(len(self.Cells[c].Faces)):
                     if count_lateral_faces or get_interface(self.Cells[c].Faces[f].InterfaceType) != get_interface('CellCell'):
                         Face = self.Cells[c].Faces[f]
@@ -458,7 +459,7 @@ class Geo:
                         self.BarrierTri0 = min([min([tri.Area for tri in Face.Tris]), self.BarrierTri0])
 
         # Update BarrierTri0 based on its initial value
-        self.BarrierTri0 = self.BarrierTri0 / 10
+        self.BarrierTri0 = self.BarrierTri0 / factor
 
     def get_substrate_z(self):
         """
