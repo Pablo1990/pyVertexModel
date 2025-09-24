@@ -439,6 +439,27 @@ class Geo:
         # Obtain the original cell height
         self.get_substrate_z()
 
+    def update_barrier_tri0(self, count_lateral_faces=True):
+        """
+        Update the BarrierTri0 based on the average edge length of the geometry.
+        :return:
+        """
+        # Initialize BarrierTri0 and lmin0 with the maximum possible float value
+        self.BarrierTri0 = np.finfo(float).max
+
+        # Iterate over all cells in the Geo structure
+        for c, c_cell in enumerate(self.Cells):
+            if c_cell.AliveStatus is not None:
+                for f in range(len(self.Cells[c].Faces)):
+                    if count_lateral_faces or get_interface(self.Cells[c].Faces[f].InterfaceType) != get_interface('CellCell'):
+                        Face = self.Cells[c].Faces[f]
+
+                        # Update BarrierTri0 with the minimum area of all tris in the current face
+                        self.BarrierTri0 = min([min([tri.Area for tri in Face.Tris]), self.BarrierTri0])
+
+        # Update BarrierTri0 based on its initial value
+        self.BarrierTri0 = self.BarrierTri0 / 10
+
     def get_substrate_z(self):
         """
         Get the minimum and maximum z values of the cells to set the substrate and ceiling heights.
@@ -486,6 +507,7 @@ class Geo:
                 cell.barrier_tri0_bottom = (self.BarrierTri0 + self.BarrierTri0 * 2 *
                                             (min_faces / number_of_faces_per_cell_only_top_and_bottom[num_faces]) ** 2)
                 num_faces += 1
+
 
     def update_vertices(self, dy_reshaped, selected_cells=None):
         """

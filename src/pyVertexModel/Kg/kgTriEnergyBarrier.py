@@ -22,7 +22,7 @@ class KgTriEnergyBarrier(Kg):
             Cell.energy_tri_area = 0
 
             for f in range(len(Cell.Faces)):
-                if 1: #get_interface(Cell.Faces[f].InterfaceType) != get_interface('CellCell'):
+                if get_interface(Cell.Faces[f].InterfaceType) != get_interface('CellCell'):
                     barrier_tri0 = Geo.BarrierTri0
 
                     Face = Cell.Faces[f]
