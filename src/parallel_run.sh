@@ -10,7 +10,8 @@ export PYTHONPATH=$PROJECT_DIR:$PYTHONPATH
 export QT_QPA_PLATFORM="offscreen"
 
 # Parameters to run
-num_parameters=(0 1 2 3 4)
+#num_parameters=(0 1 2 3 4)
+num_parameters=(2 0)
 
 # Function to run a simulation
 run_simulation() {
