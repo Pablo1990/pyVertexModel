@@ -55,10 +55,14 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
         vModel.set.cellsToAblate = cells_to_ablate
         vModel.geo.cellsToAblate = cells_to_ablate
 
-        vModel.set.EnergyBarrierA = True
-        vModel.set.lambdaB = 1
-        vModel.set.Beta = 1
-        vModel.geo.update_barrier_tri0(count_lateral_faces=False, factor=100)
+        # vModel.set.EnergyBarrierA = True
+        # vModel.set.Beta = 1
+        # vModel.geo.update_barrier_tri0(factor=10, count_lateral_faces=False)
+        # print(f"Barrier tri0: {vModel.geo.BarrierTri0}")
+        # vModel.set.lambdaB = vModel.geo.BarrierTri0 * 10
+
+        # Recompute reference lengths to compare lateral cables and purse string effectively
+        vModel.geo.compute_edge_length_0(defaul_value=1.0)
 
         # Additional viscosity for the bottom vertices based on the cell height
         vModel.set.nu_bottom = vModel.set.nu + (vModel.set.nu * (600 * (vModel.set.CellHeight / 15) ** 2))

@@ -414,22 +414,7 @@ class Geo:
         self.BarrierTri0 = self.BarrierTri0 / 10
 
         # Edge lengths 0 as average of all cells by location (Top, bottom, or lateral)
-        self.EdgeLengthAvg_0 = []
-        all_faces = [c_cell.Faces for c_cell in self.Cells]
-        all_face_types = [c_face.InterfaceType for faces in all_faces for c_face in faces]
-
-        for face_type in np.unique(all_face_types):
-            current_tris = []
-            for faces in all_faces:
-                for c_face in faces:
-                    if c_face.InterfaceType == face_type:
-                        current_tris.extend(c_face.Tris)
-
-            edge_lengths = []
-            for tri in current_tris:
-                edge_lengths.append(tri.EdgeLength)
-
-            self.EdgeLengthAvg_0.append(np.mean(edge_lengths))
+        self.compute_edge_length_0()
 
         # Initialize an empty list for storing removed debris cells
         self.RemovedDebrisCells = []
@@ -438,6 +423,33 @@ class Geo:
 
         # Obtain the original cell height
         self.get_substrate_z()
+
+    def compute_edge_length_0(self, default_value=None, per_face=True):
+        """
+        Compute the average edge length of the geometry per face type (Top, Bottom, Lateral)
+        :param default_value:
+        :param per_face:
+        :return:
+        """
+        all_faces = [c_cell.Faces for c_cell in self.Cells]
+        all_face_types = [c_face.InterfaceType for faces in all_faces for c_face in faces]
+
+        for face_type in np.unique(all_face_types):
+            if default_value is not None:
+                self.EdgeLengthAvg_0 = []
+                    current_tris = []
+                    for faces in all_faces:
+                        for c_face in faces:
+                            if c_face.InterfaceType == face_type or not per_face:
+                                current_tris.extend(c_face.Tris)
+
+                    edge_lengths = []
+                    for tri in current_tris:
+                        edge_lengths.append(tri.EdgeLength)
+
+                    self.EdgeLengthAvg_0.append(np.mean(edge_lengths))
+            else:
+                self.EdgeLengthAvg_0.append(default_value)
 
     def update_barrier_tri0(self, factor=10, count_lateral_faces=True):
         """

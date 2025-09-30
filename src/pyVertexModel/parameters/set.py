@@ -426,52 +426,6 @@ class Set:
 
         self.check_for_non_used_parameters()
 
-    def squamous_cells(self):
-        self.initial_filename_state = 'Input/squamous_cells.pkl'
-
-        # Surface tension
-        self.lambda_s_total = (1.4 + 1.4/10 + 1.4/100) * 0.1
-        # Top
-        self.lambdaS1 = self.lambda_s_total * 2.5/10
-        # c_cell-c_cell
-        self.lambdaS2 = self.lambda_s_total * 5/10
-        # Bottom
-        self.lambdaS3 = self.lambda_s_total * 2.5/10
-
-        # Substrate
-        self.kSubstrate = 0.1
-
-        self.check_for_non_used_parameters()
-
-    def cuboidal_cells(self):
-        self.initial_filename_state = 'Input/cuboidal_cells.pkl'
-
-        # Surface tension
-        self.lambda_s_total = (1.4 + 1.4/10 + 1.4/100) * 0.1
-        # Top
-        self.lambdaS1 = self.lambda_s_total * 2.5/10
-        # c_cell-c_cell
-        self.lambdaS2 = self.lambda_s_total * 5/10
-        # Bottom
-        self.lambdaS3 = self.lambda_s_total * 2.5/10
-
-        # Substrate
-        self.kSubstrate = 0.001
-
-        self.check_for_non_used_parameters()
-
-    def columnar_cells(self):
-        self.initial_filename_state = 'Input/columnar_cells.pkl'
-
-        # Surface tension
-        self.lambda_s_total = (1.4 + 1.4/10 + 1.4/100)
-        # Top
-        self.lambdaS1 = self.lambda_s_total * 75/100
-        # c_cell-c_cell
-        self.lambdaS2 = self.lambda_s_total * 5/100
-        # Bottom
-        self.lambdaS3 = self.lambda_s_total * 20/100
-
     def wound_default(self, myosin_pool_multiplier=1):
         # =========================== Contractility ==========================
         self.Contractility = True
