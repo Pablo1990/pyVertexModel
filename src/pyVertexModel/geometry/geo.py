@@ -431,23 +431,24 @@ class Geo:
         :param per_face:
         :return:
         """
+        self.EdgeLengthAvg_0 = []
+
         all_faces = [c_cell.Faces for c_cell in self.Cells]
         all_face_types = [c_face.InterfaceType for faces in all_faces for c_face in faces]
 
         for face_type in np.unique(all_face_types):
             if default_value is not None:
-                self.EdgeLengthAvg_0 = []
-                    current_tris = []
-                    for faces in all_faces:
-                        for c_face in faces:
-                            if c_face.InterfaceType == face_type or not per_face:
-                                current_tris.extend(c_face.Tris)
+                current_tris = []
+                for faces in all_faces:
+                    for c_face in faces:
+                        if c_face.InterfaceType == face_type or not per_face:
+                            current_tris.extend(c_face.Tris)
 
-                    edge_lengths = []
-                    for tri in current_tris:
-                        edge_lengths.append(tri.EdgeLength)
+                edge_lengths = []
+                for tri in current_tris:
+                    edge_lengths.append(tri.EdgeLength)
 
-                    self.EdgeLengthAvg_0.append(np.mean(edge_lengths))
+                self.EdgeLengthAvg_0.append(np.mean(edge_lengths))
             else:
                 self.EdgeLengthAvg_0.append(default_value)
 
