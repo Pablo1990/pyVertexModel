@@ -342,7 +342,8 @@ class Geo:
 
         avg_weight = 0
 
-        self.init_reference_values_and_noise(avg_weight, c_set)
+        # Initialize reference values and add noise to mechanical parameters
+        self.init_reference_values_and_noise(c_set)
 
         # Update lmin0 with the minimum value in lmin_values
         self.update_lmin0()
@@ -361,7 +362,7 @@ class Geo:
         # Obtain the original cell height
         self.get_substrate_z()
 
-    def init_reference_values_and_noise(self, avg_weight: int, c_set):
+    def init_reference_values_and_noise(self, c_set, avg_weight=0):
         """
         Initialize reference values and add noise to mechanical parameters
         :param avg_weight:
