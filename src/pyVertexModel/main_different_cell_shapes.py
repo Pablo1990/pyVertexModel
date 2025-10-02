@@ -75,6 +75,7 @@ if input_file not in files_done:
             vModel.initialize()
             # Recompute reference lengths to compare lateral cables and purse string effectively
             vModel.geo.compute_edge_length_0(default_value=1.0)
+            vModel.geo.update_lmin0()
             vModel.iterate_over_time()
             analyse_simulation(vModel.set.OutputFolder)
         except Exception as e:
