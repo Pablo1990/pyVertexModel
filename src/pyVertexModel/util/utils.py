@@ -5,10 +5,10 @@ import math
 import os
 import pickle
 
-import imageio
+import matplotlib
 import numpy as np
 import pyvista as pv
-import matplotlib
+
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 from scipy.optimize import fsolve, minimize
