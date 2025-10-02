@@ -337,10 +337,6 @@ class Geo:
         logger.info('Initializing reference cell values')
         # Assemble nodes from all cells that are not None
         self.AssembleNodes = [i for i, cell in enumerate(self.Cells) if cell.AliveStatus is not None]
-        # Initialize BarrierTri0 and lmin0 with the maximum possible float value
-        self.BarrierTri0 = np.finfo(float).max
-
-        avg_weight = 0
 
         # Initialize reference values and add noise to mechanical parameters
         self.init_reference_values_and_noise(c_set)
@@ -467,8 +463,6 @@ class Geo:
         for c, c_cell in enumerate(self.Cells):
             if c_cell.AliveStatus == 1:
                 for f in range(len(self.Cells[c].Faces)):
-                    Face = self.Cells[c].Faces[f]
-
                     # Iterate over all tris in the current face
                     for nTris in range(len(self.Cells[c].Faces[f].Tris)):
                         tri = self.Cells[c].Faces[f].Tris[nTris]
@@ -479,6 +473,7 @@ class Geo:
         # Update lmin0 with the minimum value in lmin_values
         self.lmin0 = min(lmin_values)
         self.lmin0 = self.lmin0 * factor
+        print(f'Updated lmin0: {self.lmin0}')
 
     def get_substrate_z(self):
         """
