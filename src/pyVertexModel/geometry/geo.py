@@ -1,20 +1,17 @@
 import logging
 import os
 from collections import defaultdict
-from itertools import combinations
 
 import numpy as np
 import vtk
 from numpy import setdiff1d
-from scipy.spatial import ConvexHull, Delaunay
-from skimage.util import unique_rows
+from scipy.spatial import ConvexHull
 
-from src.pyVertexModel.Kg.kg import add_noise_to_parameter
 from src.pyVertexModel.geometry import face, cell
 from src.pyVertexModel.geometry.cell import Cell, compute_y
 from src.pyVertexModel.geometry.face import build_edge_based_on_tetrahedra
 from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes, calculate_polygon_area, \
-    get_interface, screenshot, compute_distance_3d
+    get_interface
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -342,8 +339,36 @@ class Geo:
         self.AssembleNodes = [i for i, cell in enumerate(self.Cells) if cell.AliveStatus is not None]
         # Initialize BarrierTri0 and lmin0 with the maximum possible float value
         self.BarrierTri0 = np.finfo(float).max
-        if self.lmin0 is None:
-            self.lmin0 = np.finfo(float).max
+
+        avg_weight = 0
+
+        self.init_reference_values_and_noise(avg_weight, c_set)
+
+        # Update lmin0 with the minimum value in lmin_values
+        self.update_lmin0()
+
+        # Update BarrierTri0 and lmin0 based on their initial values
+        self.update_barrier_tri0()
+
+        # Edge lengths 0 as average of all cells by location (Top, bottom, or lateral)
+        self.compute_edge_length_0()
+
+        # Initialize an empty list for storing removed debris cells
+        self.RemovedDebrisCells = []
+
+        self.non_dead_cells = [cell.ID for cell in self.Cells if cell.AliveStatus is not None]
+
+        # Obtain the original cell height
+        self.get_substrate_z()
+
+    def init_reference_values_and_noise(self, avg_weight: int, c_set):
+        """
+        Initialize reference values and add noise to mechanical parameters
+        :param avg_weight:
+        :param c_set:
+        :return:
+        """
+        # Initialize reference values and weights for noise
 
         ## Average values
         avg_vol = np.mean([c_cell.Vol for c_cell in self.Cells if c_cell.AliveStatus is not None])
@@ -357,72 +382,27 @@ class Geo:
                                     if c_cell.AliveStatus is not None])
         avg_area = np.mean([c_cell.Area for c_cell in self.Cells if c_cell.AliveStatus is not None])
 
-        # Initialize list for storing minimum lengths to the centre and edge lengths of tris
-        lmin_values = []
-        avg_weight = 0
-
         # Iterate over all cells in the Geo structure
         for c, c_cell in enumerate(self.Cells):
             if c_cell.AliveStatus is not None:
                 # Adjust the Vol0
-                self.Cells[c].Vol0 = (self.Cells[c].Vol * (1-avg_weight) + avg_vol * avg_weight) * c_set.ref_V0
-                self.Cells[c].Area0 = (self.Cells[c].Area * (1-avg_weight) + avg_area * avg_weight) * c_set.ref_A0
+                self.Cells[c].Vol0 = (self.Cells[c].Vol * (1 - avg_weight) + avg_vol * avg_weight) * c_set.ref_V0
+                self.Cells[c].Area0 = (self.Cells[c].Area * (1 - avg_weight) + avg_area * avg_weight) * c_set.ref_A0
 
                 # Iterate over all faces in the current cell
                 for f in range(len(self.Cells[c].Faces)):
                     if get_interface(self.Cells[c].Faces[f].InterfaceType) == get_interface('CellCell'):
-                        self.Cells[c].Faces[f].Area0 = (self.Cells[c].Faces[f].Area * (1-avg_weight) + avg_area_lateral * avg_weight) * c_set.ref_A0
+                        self.Cells[c].Faces[f].Area0 = (self.Cells[c].Faces[f].Area * (
+                                    1 - avg_weight) + avg_area_lateral * avg_weight) * c_set.ref_A0
                     elif get_interface(self.Cells[c].Faces[f].InterfaceType) == get_interface('Top'):
-                        self.Cells[c].Faces[f].Area0 = (self.Cells[c].Faces[f].Area * (1-avg_weight) + avg_area_top * avg_weight) * c_set.ref_A0
+                        self.Cells[c].Faces[f].Area0 = (self.Cells[c].Faces[f].Area * (
+                                    1 - avg_weight) + avg_area_top * avg_weight) * c_set.ref_A0
                     elif get_interface(self.Cells[c].Faces[f].InterfaceType) == get_interface('Bottom'):
-                        self.Cells[c].Faces[f].Area0 = (self.Cells[c].Faces[f].Area * (1-avg_weight) + avg_area_bottom * avg_weight) * c_set.ref_A0
-
-                    Face = self.Cells[c].Faces[f]
-
-                    # Update BarrierTri0 with the minimum area of all tris in the current face
-                    self.BarrierTri0 = min([min([tri.Area for tri in Face.Tris]), self.BarrierTri0])
-
-                    # Iterate over all tris in the current face
-                    for nTris in range(len(self.Cells[c].Faces[f].Tris)):
-                        tri = self.Cells[c].Faces[f].Tris[nTris]
-                        # Append the minimum length to the centre and the edge length of the current tri to lmin_values
-                        lmin_values.append(min(tri.LengthsToCentre))
-                        lmin_values.append(tri.EdgeLength)
+                        self.Cells[c].Faces[f].Area0 = (self.Cells[c].Faces[f].Area * (
+                                    1 - avg_weight) + avg_area_bottom * avg_weight) * c_set.ref_A0
 
                 # Compute the mechanical parameter with noise
-                # Surface area
-                self.Cells[c].lambda_s1_perc = add_noise_to_parameter(1, c_set.noise_random)
-                self.Cells[c].lambda_s2_perc = add_noise_to_parameter(1, c_set.noise_random)
-                self.Cells[c].lambda_s3_perc = add_noise_to_parameter(1, c_set.noise_random)
-                # Volume
-                self.Cells[c].lambda_v_perc = add_noise_to_parameter(1, c_set.noise_random)
-                # Aspect ratio/elongation
-                self.Cells[c].lambda_r_perc = add_noise_to_parameter(1, c_set.noise_random)
-                # Contractility
-                self.Cells[c].c_line_tension_perc = add_noise_to_parameter(1, c_set.noise_random)
-                # Substrate k
-                self.Cells[c].k_substrate_perc = add_noise_to_parameter(1, c_set.noise_random)
-                # Area Energy Barrier
-                self.Cells[c].lambda_b_perc = add_noise_to_parameter(1, c_set.noise_random)
-
-        # Update lmin0 with the minimum value in lmin_values
-        if self.lmin0 is None:
-            self.lmin0 = min(lmin_values)
-            self.lmin0 = self.lmin0 * 10
-
-        # Update BarrierTri0 and lmin0 based on their initial values
-        self.BarrierTri0 = self.BarrierTri0 / 10
-
-        # Edge lengths 0 as average of all cells by location (Top, bottom, or lateral)
-        self.compute_edge_length_0()
-
-        # Initialize an empty list for storing removed debris cells
-        self.RemovedDebrisCells = []
-
-        self.non_dead_cells = [cell.ID for cell in self.Cells if cell.AliveStatus is not None]
-
-        # Obtain the original cell height
-        self.get_substrate_z()
+                c_cell.add_noise_to_parameters(c_set)
 
     def compute_edge_length_0(self, default_value=None, per_face=True):
         """
@@ -458,7 +438,7 @@ class Geo:
         :return:
         """
         self.update_measures()
-        # Initialize BarrierTri0 and lmin0 with the maximum possible float value
+        # Initialize BarrierTri0 with the maximum possible float value
         self.BarrierTri0 = np.finfo(float).max
 
         # Iterate over all cells in the Geo structure
@@ -473,6 +453,31 @@ class Geo:
 
         # Update BarrierTri0 based on its initial value
         self.BarrierTri0 = self.BarrierTri0 / factor
+
+    def update_lmin0(self, factor=10):
+        """
+        Update the lmin0 based on the average edge length of the geometry.
+        :return:
+        """
+        self.update_measures()
+        lmin_values = []
+
+        # Iterate over all cells in the Geo structure
+        for c, c_cell in enumerate(self.Cells):
+            if c_cell.AliveStatus == 1:
+                for f in range(len(self.Cells[c].Faces)):
+                    Face = self.Cells[c].Faces[f]
+
+                    # Iterate over all tris in the current face
+                    for nTris in range(len(self.Cells[c].Faces[f].Tris)):
+                        tri = self.Cells[c].Faces[f].Tris[nTris]
+                        # Append the minimum length to the centre and the edge length of the current tri to lmin_values
+                        lmin_values.append(min(tri.LengthsToCentre))
+                        lmin_values.append(tri.EdgeLength)
+
+        # Update lmin0 with the minimum value in lmin_values
+        self.lmin0 = min(lmin_values)
+        self.lmin0 = self.lmin0 * factor
 
     def get_substrate_z(self):
         """

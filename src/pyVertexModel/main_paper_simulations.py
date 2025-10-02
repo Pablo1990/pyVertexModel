@@ -61,9 +61,6 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
         # print(f"Barrier tri0: {vModel.geo.BarrierTri0}")
         # vModel.set.lambdaB = vModel.geo.BarrierTri0 * 10
 
-        # Recompute reference lengths to compare lateral cables and purse string effectively
-        vModel.geo.compute_edge_length_0(default_value=1.0)
-
         # Additional viscosity for the bottom vertices based on the cell height
         vModel.set.nu_bottom = vModel.set.nu + (vModel.set.nu * (600 * (vModel.set.CellHeight / 15) ** 2))
 

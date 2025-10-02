@@ -1,6 +1,5 @@
 import logging
 import os
-import time
 from abc import abstractmethod
 from itertools import combinations
 from os.path import exists

@@ -2,7 +2,6 @@ import copy
 import lzma
 import os
 import pickle
-import time
 from itertools import combinations
 from os.path import exists
 
@@ -18,7 +17,7 @@ from src import PROJECT_DIRECTORY, logger
 from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrahedra_from_information, \
     calculate_cell_height_on_model
 from src.pyVertexModel.geometry.geo import Geo
-from src.pyVertexModel.util.utils import ismember_rows, save_variables, save_state, load_state, screenshot_, screenshot
+from src.pyVertexModel.util.utils import ismember_rows, save_variables, save_state, load_state, screenshot_
 
 
 def build_quartets_of_neighs_2d(neighbours):

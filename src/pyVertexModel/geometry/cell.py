@@ -6,6 +6,7 @@ import vtk
 from numpy.ma.extras import setxor1d
 from sklearn.decomposition import PCA
 
+from src.pyVertexModel.Kg.kg import add_noise_to_parameter
 from src.pyVertexModel.geometry import face
 from src.pyVertexModel.util.utils import copy_non_mutable_attributes, get_interface
 
@@ -750,3 +751,24 @@ class Cell:
                 min_angles.append(np.degrees(min_angle))
 
         return min(min_angles) if min_angles else 0
+
+    def add_noise_to_parameters(self, c_set):
+        """
+        Add noise to the mechanical parameters of the cell
+        :param c_set:
+        :return:
+        """
+        # Surface area
+        self.lambda_s1_perc = add_noise_to_parameter(1, c_set.noise_random)
+        self.lambda_s2_perc = add_noise_to_parameter(1, c_set.noise_random)
+        self.lambda_s3_perc = add_noise_to_parameter(1, c_set.noise_random)
+        # Volume
+        self.lambda_v_perc = add_noise_to_parameter(1, c_set.noise_random)
+        # Aspect ratio/elongation
+        self.lambda_r_perc = add_noise_to_parameter(1, c_set.noise_random)
+        # Contractility
+        self.c_line_tension_perc = add_noise_to_parameter(1, c_set.noise_random)
+        # Substrate k
+        self.k_substrate_perc = add_noise_to_parameter(1, c_set.noise_random)
+        # Area Energy Barrier
+        self.lambda_b_perc = add_noise_to_parameter(1, c_set.noise_random)
