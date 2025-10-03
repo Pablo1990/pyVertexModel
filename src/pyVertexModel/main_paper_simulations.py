@@ -57,6 +57,7 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
 
         # Additional viscosity for the bottom vertices based on the cell height
         vModel.set.nu_bottom = vModel.set.nu + (vModel.set.nu * (600 * (vModel.set.CellHeight / 15) ** 2))
+        vModel.set.myosin_pool = 1e-4
 
         vModel.set.OutputFolder = output_folder
         if combination == 'WT':

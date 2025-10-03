@@ -25,7 +25,7 @@ if input_file not in files_done:
         vModel.set.model_name = input_file + '_' + str(resize_z)
         vModel.set.CellHeight = resize_z
         vModel.set.resize_z = resize_z / original_wing_disc_height
-        vModel.set.myosin_pool = 1e-3
+        vModel.set.myosin_pool = 1e-4
 
         # Total surface area considering the number of faces and purse string strength
         if resize_z == set_of_resize_z[0]:
