@@ -26,7 +26,7 @@ if input_file not in files_done:
         vModel.set.model_name = input_file + '_' + str(resize_z)
         vModel.set.CellHeight = resize_z
         vModel.set.resize_z = resize_z / original_wing_disc_height
-        vModel.set.myosin_pool = 5e-5
+        vModel.set.myosin_pool = 1e-4
 
         # Equation of the relationship between lambda_S1 and lambda_S2 based on the cell height
         lambdaS1_normalised = 0.5 + 0.5 * (1 - np.exp(-0.8 * resize_z ** 0.4))
