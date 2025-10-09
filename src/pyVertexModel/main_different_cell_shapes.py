@@ -32,43 +32,15 @@ if input_file not in files_done:
         lambdaS1_normalised = 0.5 + 0.5 * (1 - np.exp(-0.8 * resize_z ** 0.4))
         lambdaS2_normalised = 1 - lambdaS1_normalised
 
-        # # Total surface area considering the number of faces and purse string strength
-        # if resize_z == set_of_resize_z[0]:
-        #     lambda_S1 = 0.01
-        #     lambda_S2 = lambda_S1 * 10
-        #     purse_string_strength = 0.5
-        # elif resize_z == set_of_resize_z[1]:
-        #     lambda_S1 = 0.1
-        #     lambda_S2 = lambda_S1
-        #     purse_string_strength = 0.5
-        # elif resize_z == set_of_resize_z[2]:
-        #     lambda_S1 = 0.3
-        #     lambda_S2 = lambda_S1
-        #     purse_string_strength = 0.5
-        # elif resize_z == set_of_resize_z[3]:
-        #     lambda_S1 = 0.5
-        #     lambda_S2 = lambda_S1/2
-        #     purse_string_strength = 0.5
-        # elif resize_z == set_of_resize_z[4]:
-        #     lambda_S1 = 1.0
-        #     lambda_S2 = lambda_S1/30
-        #     purse_string_strength = 0.5
-        # elif resize_z == original_wing_disc_height:
-        #     lambda_S1 = 1.4
-        #     lambda_S2 = lambda_S1/100
-        #     purse_string_strength = 0.5
-        # elif resize_z == set_of_resize_z[6]:
-        #     lambda_S1 = 1.6
-        #     lambda_S2 = lambda_S1/200
-        #     purse_string_strength = 0.5
-        # else:
-        #     logger.info("Resize_z not recognized")
-        #     continue
-
-        vModel.set.lambdaS1 = 1.4 * lambdaS1_normalised
-        vModel.set.lambdaS2 = 1.4 * lambdaS2_normalised
+        # Lambda values based on the normalised values and the cell height
+        vModel.set.lambdaS1 = 1.47 * ((vModel.set.CellHeight / 15) ** 0.1) * lambdaS1_normalised
+        vModel.set.lambdaS2 = 1.47 * ((vModel.set.CellHeight / 15) ** 0.1) * lambdaS2_normalised
         vModel.set.lambdaS3 = vModel.set.lambdaS1
 
+        # Aspect Ratio energy barrier adapted to cell height. IMPORTANT: The initial gradient should be equivalent to the original size.
+        vModel.set.lambdaR = vModel.set.lambdaR * (resize_z / original_wing_disc_height) ** 1.5
+
+        # Folder name
         vModel.set.OutputFolder = None
         vModel.set.update_derived_parameters()
         vModel.set.redirect_output()
