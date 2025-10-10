@@ -26,19 +26,21 @@ if input_file not in files_done:
         vModel.set.model_name = input_file + '_' + str(resize_z)
         vModel.set.CellHeight = resize_z
         vModel.set.resize_z = resize_z / original_wing_disc_height
-        vModel.set.myosin_pool = 1e-4
 
         # Equation of the relationship between lambda_S1 and lambda_S2 based on the cell height
-        lambdaS1_normalised = 0.5 + 0.5 * (1 - np.exp(-0.8 * resize_z ** 0.4))
+        lambdaS1_normalised = 0.5 + 0.5 * (1 - np.exp(-0.8 * vModel.set.CellHeight ** 0.4))
         lambdaS2_normalised = 1 - lambdaS1_normalised
 
         # Lambda values based on the normalised values and the cell height
-        vModel.set.lambdaS1 = 1.47 * ((vModel.set.CellHeight / 15) ** 0.1) * lambdaS1_normalised
-        vModel.set.lambdaS2 = 1.47 * ((vModel.set.CellHeight / 15) ** 0.1) * lambdaS2_normalised
+        vModel.set.lambdaS1 = 1.47 * ((vModel.set.CellHeight / original_wing_disc_height) ** 0.25) * lambdaS1_normalised
+        vModel.set.lambdaS2 = 1.47 * ((vModel.set.CellHeight / original_wing_disc_height) ** 0.25) * lambdaS2_normalised
         vModel.set.lambdaS3 = vModel.set.lambdaS1
 
         # Aspect Ratio energy barrier adapted to cell height. IMPORTANT: The initial gradient should be equivalent to the original size.
-        vModel.set.lambdaR = vModel.set.lambdaR * (resize_z / original_wing_disc_height) ** 1.5
+        vModel.set.lambdaR = vModel.set.lambdaR * (vModel.set.CellHeight / original_wing_disc_height) ** 1.5
+
+        # LambdaV adapted to cell height
+        vModel.set.lambdaV = vModel.set.lambdaV * (vModel.set.CellHeight / original_wing_disc_height) ** 0.25
 
         # Folder name
         vModel.set.OutputFolder = None
