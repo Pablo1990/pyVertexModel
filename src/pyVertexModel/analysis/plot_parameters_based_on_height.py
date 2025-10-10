@@ -3,6 +3,7 @@ import os
 
 import numpy as np
 import matplotlib.pyplot as plt
+from openpyxl.styles.alignment import vertical_aligments
 
 from src import PROJECT_DIRECTORY
 
@@ -51,14 +52,35 @@ for plot_to_show in plots_to_show:
         # Get the value of the parameter at that cell height
         if plot_to_show == 'lambdaS1':
             value = 1.47 * ((ch / original_wing_disc_height) ** 0.25) * (0.5 + 0.5 * (1 - np.exp(-0.8 * ch ** 0.4)))
+            if ch < 1:
+                plt.text(ch+0.15, value + 0.01, f'{value:.1e}', fontsize=12, color='black', ha='left', va='top', rotation=90)
+            elif ch > 15:
+                plt.text(ch, value - 0.01, f'{value:.1e}', fontsize=12, color='black', ha='right', va='top', rotation=90)
+            else:
+                # Italics for scientific notation
+                plt.text(ch, value + 0.01, f'{value:.1e}', fontsize=12, color='black', ha='right', va='bottom', rotation=90)
         elif plot_to_show == 'lambdaS2':
             value = 1.47 * ((ch / original_wing_disc_height) ** 0.25) * (1 - (0.5 + 0.5 * (1 - np.exp(-0.8 * ch ** 0.4))))
+            if ch < 1:
+                plt.text(ch+0.1, value, f'{value:.1e}', fontsize=12, color='black', ha='left', va='top', rotation=90)
+            else:
+                plt.text(ch, value, f'{value:.1e}', fontsize=12, color='black', ha='right', va='top', rotation=90)
         elif plot_to_show == 'lambdaR':
             value = 8e-7 * (ch / original_wing_disc_height) ** 1.5
+            if ch < 1:
+                plt.text(ch+0.1, value + 0.1*1e-6, f'{value:.1e}', fontsize=12, color='black', ha='left', va='bottom', rotation=90)
+            elif ch > 15:
+                plt.text(ch, value - 0.1*1e-6, f'{value:.1e}', fontsize=12, color='black', ha='right', va='top', rotation=90)
+            else:
+                plt.text(ch, value + 0.1*1e-6, f'{value:.1e}', fontsize=12, color='black', ha='right', va='bottom', rotation=90)
         elif plot_to_show == 'lambdaV':
             value = 1 * (ch / original_wing_disc_height) ** 0.25
-
-        plt.text(ch, value, f'{value:.1e}', fontsize=12, color='black', ha='right', va='bottom', rotation=90)
+            if ch < 1:
+                plt.text(ch+0.1, value, f'{value:.1e}', fontsize=12, color='black', ha='left', va='top', rotation=90)
+            elif ch > 15:
+                plt.text(ch, value - 0.01, f'{value:.1e}', fontsize=12, color='black', ha='right', va='top', rotation=90)
+            else:
+                plt.text(ch, value + 0.01, f'{value:.1e}', fontsize=12, color='black', ha='right', va='bottom', rotation=90)
 
     # Add legend and labels. Log scale for y axis
     plt.xlabel('Aspect Ratio (AR)', fontsize=20)
