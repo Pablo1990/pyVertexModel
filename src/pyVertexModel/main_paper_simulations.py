@@ -59,7 +59,7 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
         vModel.set.nu_bottom = vModel.set.nu + (vModel.set.nu * (600 * (vModel.set.CellHeight / 15) ** 2))
 
         # Update actomyosin parameters based on myosin pool
-        vModel.set.myosin_pool = 1e-3
+        vModel.set.myosin_pool = 5e-4
 
         # Purse string strength is a function based on cell height from 0 to 1.
         purse_string_strength = np.exp(-0.8 * vModel.set.CellHeight ** 0.4)
