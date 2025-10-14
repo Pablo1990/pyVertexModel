@@ -12,7 +12,7 @@ from src.pyVertexModel.util.utils import load_state
 
 logger = logging.getLogger("pyVertexModel")
 
-def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
+def run_simulation(combination, output_results_dir='Result/', length="60_mins", use_wing_disc_ps=True):
     """
     Run simulation with the given combination of variables.
     :param length: 
@@ -61,8 +61,12 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
         # Update actomyosin parameters based on myosin pool
         vModel.set.myosin_pool = 5e-4
 
+        fake_cell_height = 15
+        if not use_wing_disc_ps:
+            fake_cell_height = vModel.set.CellHeight
+
         # Purse string strength is a function based on cell height from 0 to 1.
-        purse_string_strength = np.exp(-0.8 * vModel.set.CellHeight ** 0.4)
+        purse_string_strength = np.exp(-0.8 * fake_cell_height ** 0.4)
         vModel.set.purseStringStrength = purse_string_strength * vModel.set.myosin_pool
         vModel.set.lateralCablesStrength = (1 - purse_string_strength) * vModel.set.myosin_pool
 
