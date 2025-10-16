@@ -1075,3 +1075,74 @@ class VertexModel:
                         face.Centre[2] = face.Centre[2] * self.set.resize_z
 
             self.geo.resize_tissue()
+
+    def required_purse_string_strength(self, directory, ar_dir, c_folder):
+        """
+        Find the minimum purse string strength needed to start closing the wound.
+        :param directory: Directory to save the results.
+        :param ar_dir: Directory to save the results.
+        :param c_folder: Directory to save the results.
+        :return:
+        """
+        self.set.tend = 26  # Run until 20+6 minutes after ablation
+        self.iterate_over_time()
+
+        # Move files from vModel.set.output_folder to c_folder/ar_dir/directory
+        if self.set.output_folder and os.path.exists(self.set.output_folder):
+            for f in os.listdir(self.set.output_folder):
+                if os.path.isfile(os.path.join(self.set.output_folder, f)):
+                    os.rename(os.path.join(self.set.output_folder, f), os.path.join(c_folder, ar_dir, directory, f))
+                elif os.path.isdir(os.path.join(self.set.output_folder, f)):
+                    # Merge subdirectories
+                    sub_dir = os.path.join(self.set.output_folder, f)
+                    dest_sub_dir = os.path.join(c_folder, ar_dir, directory, f)
+                    if not os.path.exists(dest_sub_dir):
+                        os.makedirs(dest_sub_dir)
+                    for sub_f in os.listdir(sub_dir):
+                        os.rename(os.path.join(sub_dir, sub_f), os.path.join(dest_sub_dir, sub_f))
+            # os.rmdir(vModel.set.output_folder)
+
+        # Save the state before starting the purse string strength exploration as backup
+        backup_vars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
+
+        # What is the purse string strength needed to start closing the wound?
+        # Strength of purse string should be multiplied by a factor of 2.5 since at 12 minutes myoII is 2.5 times higher than at 6 minutes
+        purse_string_strength_values = np.logspace(-7, -2, num=100)  # From 1e-7 to 1e-2
+        self.set.lateralCablesStrength = 0.0
+
+        dy_values = []
+        for ps_strength in purse_string_strength_values:
+            self.set.purseStringStrength = ps_strength
+            self.set.purseStringStrength = self.set.purseStringStrength * 2.5
+
+            # If vertices at the wound are moving closer (dy) to the centre of the wound, then the wound is closing
+            old_wound_vertices = self.geo.get_wound_vertices()
+            wound_center = self.geo.get_wound_center()
+            self.single_iteration(post_operations=False)
+
+            # Are the vertices of the wound edge moving closer to the centre of the wound?
+            wound_vertices = self.geo.get_wound_vertices()
+            dy = 0.0
+            for v in wound_vertices:
+                vec_to_center = wound_center - self.geo.vertices[v]
+                dist_to_center = np.linalg.norm(vec_to_center)
+                vec_to_center = vec_to_center / dist_to_center if dist_to_center > 0 else vec_to_center
+                old_dist_to_center = np.linalg.norm(wound_center - self.geo.vertices[old_wound_vertices[v]])
+                dy += dist_to_center - old_dist_to_center
+
+            dy_values.append(dy)
+
+            # Restore the backup variables
+            self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs = load_backup_vars(backup_vars)
+
+        # Save the results into a csv file
+        with open(os.path.join(c_folder, ar_dir, directory, 'purse_string_tension_vs_dy.csv'), 'w') as f:
+            f.write('purse_string_strength,dy\n')
+            for ps_strength, dy in zip(purse_string_strength_values, dy_values):
+                f.write(f'{ps_strength},{dy}\n')
+
+        # Find the minimum purse string strength that makes dy < 0
+        for ps_strength, dy in zip(purse_string_strength_values, dy_values):
+            if dy < 0:
+                print(f'Minimum purse string strength to start closing the wound: {ps_strength}')
+                break
