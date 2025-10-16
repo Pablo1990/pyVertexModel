@@ -3,15 +3,17 @@ import os
 
 import numpy as np
 
+from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from src.pyVertexModel.util.utils import load_state, save_backup_vars, load_backup_vars
 
 # Folder containing different simulations with different cell shapes
-c_folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/different_cell_shape_healing/'
+c_folder = os.path.join(PROJECT_DIRECTORY, 'Result/different_cell_shape_healing/')
 
 # Get all directories within c_folder
 all_directories = os.listdir(c_folder)
 all_directories = [d for d in all_directories if os.path.isdir(os.path.join(c_folder, d))]
+all_directories.sort()
 
 for ar_dir in all_directories:
     simulations_dirs = os.listdir(os.path.join(c_folder, ar_dir))
