@@ -14,7 +14,7 @@ if single_file:
     file_name = ''
     vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False, set_option='wing_disc_equilibrium')
     load_state(vModel, os.path.join(c_folder, ar_dir, directory, file_name))
-    vModel.required_purse_string_strength(directory, ar_dir, c_folder)
+    vModel.required_purse_string_strength(directory, ar_dir, c_folder, run_iteration=False)
 else:
     # Folder containing different simulations with different cell shapes
     c_folder = os.path.join(PROJECT_DIRECTORY, 'Result/different_cell_shape_healing/')

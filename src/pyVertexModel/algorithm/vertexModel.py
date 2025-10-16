@@ -1076,7 +1076,7 @@ class VertexModel:
 
             self.geo.resize_tissue()
 
-    def required_purse_string_strength(self, directory, ar_dir, c_folder):
+    def required_purse_string_strength(self, directory, ar_dir, c_folder, run_iteration=True):
         """
         Find the minimum purse string strength needed to start closing the wound.
         :param directory: Directory to save the results.
@@ -1084,23 +1084,24 @@ class VertexModel:
         :param c_folder: Directory to save the results.
         :return:
         """
-        self.set.tend = 26  # Run until 20+6 minutes after ablation
-        self.iterate_over_time()
+        if run_iteration:
+            self.set.tend = 26  # Run until 20+6 minutes after ablation
+            self.iterate_over_time()
 
-        # Move files from vModel.set.output_folder to c_folder/ar_dir/directory
-        if self.set.output_folder and os.path.exists(self.set.output_folder):
-            for f in os.listdir(self.set.output_folder):
-                if os.path.isfile(os.path.join(self.set.output_folder, f)):
-                    os.rename(os.path.join(self.set.output_folder, f), os.path.join(c_folder, ar_dir, directory, f))
-                elif os.path.isdir(os.path.join(self.set.output_folder, f)):
-                    # Merge subdirectories
-                    sub_dir = os.path.join(self.set.output_folder, f)
-                    dest_sub_dir = os.path.join(c_folder, ar_dir, directory, f)
-                    if not os.path.exists(dest_sub_dir):
-                        os.makedirs(dest_sub_dir)
-                    for sub_f in os.listdir(sub_dir):
-                        os.rename(os.path.join(sub_dir, sub_f), os.path.join(dest_sub_dir, sub_f))
-            # os.rmdir(vModel.set.output_folder)
+            # Move files from vModel.set.output_folder to c_folder/ar_dir/directory
+            if self.set.output_folder and os.path.exists(self.set.output_folder):
+                for f in os.listdir(self.set.output_folder):
+                    if os.path.isfile(os.path.join(self.set.output_folder, f)):
+                        os.rename(os.path.join(self.set.output_folder, f), os.path.join(c_folder, ar_dir, directory, f))
+                    elif os.path.isdir(os.path.join(self.set.output_folder, f)):
+                        # Merge subdirectories
+                        sub_dir = os.path.join(self.set.output_folder, f)
+                        dest_sub_dir = os.path.join(c_folder, ar_dir, directory, f)
+                        if not os.path.exists(dest_sub_dir):
+                            os.makedirs(dest_sub_dir)
+                        for sub_f in os.listdir(sub_dir):
+                            os.rename(os.path.join(sub_dir, sub_f), os.path.join(dest_sub_dir, sub_f))
+                # os.rmdir(vModel.set.output_folder)
 
         # Save the state before starting the purse string strength exploration as backup
         backup_vars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
