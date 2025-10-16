@@ -12,7 +12,7 @@ set_of_resize_z = np.array([0.0001, 0.001, 0.01, 0.1, 0.5, 1.0, 2.0]) * original
 
 set_of_resize_z_to_do = [set_of_resize_z[0], set_of_resize_z[1], set_of_resize_z[2], set_of_resize_z[3],
                          set_of_resize_z[4], set_of_resize_z[6]]
-files_done = ['dWL1']
+files_done = ['dWL1', 'dWL14', 'dWL6']
 
 # Get all the files from 'Input/to_rezize/' that end with '.pkl'
 all_files = [f.split('.')[0] for f in os.listdir(PROJECT_DIRECTORY + '/Input/images') if f.endswith('.tif') and not f.endswith('labelled.tif')]
@@ -46,7 +46,7 @@ if input_file not in files_done:
         vModel.set.OutputFolder = None
         vModel.set.update_derived_parameters()
         vModel.set.redirect_output()
-        vModel.set.tend = 21
+        vModel.set.tend = 26 # Run until 20+6 minutes after ablation
         try:
             vModel.initialize()
             # Recompute reference lengths to compare lateral cables and purse string effectively
