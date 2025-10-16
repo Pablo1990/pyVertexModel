@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the Python script to run
-PYTHON_SCRIPT="pyVertexModel/main_optuna.py"
+PYTHON_SCRIPT="pyVertexModel/analysis/find_required_purse_string.py"
 
 # Define the project directory and add it to PYTHONPATH
 PROJECT_DIR=$(dirname "$(dirname "$(realpath $0)")")
