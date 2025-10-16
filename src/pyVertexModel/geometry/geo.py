@@ -1258,7 +1258,7 @@ class Geo:
         Compute the wound area at the top by calculating the edge length of the alive cells with debris cells on top
         :return:
         """
-        wound_area_points, wound_area_points_tets = self.collect_points_wound_edge(location_filter)
+        wound_area_points, wound_area_points_tets = self.get_wound_edge_vertices(location_filter)
 
         # Obtain order of points based on tetrahedra
         first_point = wound_area_points_tets[0]
@@ -1281,7 +1281,7 @@ class Geo:
 
         return wound_area
 
-    def collect_points_wound_edge(self, location_filter):
+    def get_wound_edge_vertices(self, location_filter):
         # Get the cells that are alive and have debris cells on top
         wound_edge_cells = self.compute_cells_wound_edge(location_filter)
         debris_cells = [c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus == 0]
@@ -1316,8 +1316,8 @@ class Geo:
         Compute the wound volume from the wound edge on top to the bottom
         :return:
         """
-        wound_area_points_top, _ = self.collect_points_wound_edge(location_filter="Top")
-        wound_area_points_bottom, _ = self.collect_points_wound_edge(location_filter="Bottom")
+        wound_area_points_top, _ = self.get_wound_edge_vertices(location_filter="Top")
+        wound_area_points_bottom, _ = self.get_wound_edge_vertices(location_filter="Bottom")
 
         wound_area_points = np.concatenate([wound_area_points_top, wound_area_points_bottom])
 
@@ -1398,7 +1398,6 @@ class Geo:
         polygon_distribution = polygon_distribution / len(all_neighbours)
 
         return polygon_distribution
-
 
     def compute_cell_distance_to_wound(self, wound_cells, location_filter=None):
         """
