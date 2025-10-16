@@ -1106,6 +1106,9 @@ class VertexModel:
         # Save the state before starting the purse string strength exploration as backup
         backup_vars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
 
+        # Disable output folder to avoid creating files during the purse string strength exploration
+        self.set.OutputFolder = None
+
         # Compute the initial distance of the wound vertices to the centre of the wound
         initial_area = self.geo.compute_wound_area(location_filter='Top')
 
