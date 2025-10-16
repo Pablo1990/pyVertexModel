@@ -1106,6 +1106,9 @@ class VertexModel:
         # Save the state before starting the purse string strength exploration as backup
         backup_vars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
 
+        # Compute the initial distance of the wound vertices to the centre of the wound
+        initial_area = self.geo.compute_wound_area(location_filter='Top')
+
         # What is the purse string strength needed to start closing the wound?
         # Strength of purse string should be multiplied by a factor of 2.5 since at 12 minutes myoII is 2.5 times higher than at 6 minutes
         purse_string_strength_values = np.logspace(-7, -2, num=100)  # From 1e-7 to 1e-2
@@ -1116,22 +1119,11 @@ class VertexModel:
             self.set.purseStringStrength = ps_strength
             self.set.purseStringStrength = self.set.purseStringStrength * 2.5
 
-            # If vertices at the wound are moving closer (dy) to the centre of the wound, then the wound is closing
-            old_wound_vertices = self.geo.get_wound_vertices()
-            wound_center = self.geo.get_wound_center()
+            # Run a single iteration
             self.single_iteration(post_operations=False)
 
             # Are the vertices of the wound edge moving closer to the centre of the wound?
-            wound_vertices = self.geo.get_wound_vertices()
-            dy = 0.0
-            for v in wound_vertices:
-                vec_to_center = wound_center - self.geo.vertices[v]
-                dist_to_center = np.linalg.norm(vec_to_center)
-                vec_to_center = vec_to_center / dist_to_center if dist_to_center > 0 else vec_to_center
-                old_dist_to_center = np.linalg.norm(wound_center - self.geo.vertices[old_wound_vertices[v]])
-                dy += dist_to_center - old_dist_to_center
-
-            dy_values.append(dy)
+            dy_values.append(self.geo.compute_wound_area(location_filter='Top') - initial_area)
 
             # Restore the backup variables
             self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs = load_backup_vars(backup_vars)
