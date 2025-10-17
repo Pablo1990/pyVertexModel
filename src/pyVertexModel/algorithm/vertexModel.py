@@ -1084,58 +1084,76 @@ class VertexModel:
         :param c_folder: Directory to save the results.
         :return:
         """
-        if run_iteration and self.t < 26:
-            self.set.tend = 26  # Run until 20+6 minutes after ablation
-            self.iterate_over_time()
+        if os.path.exists(os.path.join(c_folder, ar_dir, directory, 'purse_string_tension_vs_dy.csv')):
+            print('Purse string strength vs dy file already exists for file '
+                  + os.path.join(c_folder, ar_dir, directory))
+            # Open the file and read the values
+            purse_string_strength_values = []
+            dy_values = []
+            with open(os.path.join(c_folder, ar_dir, directory, 'purse_string_tension_vs_dy.csv'), 'r') as f:
+                next(f)  # Skip header
+                for line in f:
+                    ps_strength, dy = line.strip().split(',')
+                    purse_string_strength_values.append(float(ps_strength))
+                    dy_values.append(float(dy))
+        else:
+            if run_iteration and self.t < 26:
+                self.set.tend = 26  # Run until 20+6 minutes after ablation
+                self.set.Remodelling = False
+                self.set.RemodelStiffness = 2
+                self.set.Remodel_stiffness_wound = 2
+                self.set.purseStringStrength = 0.0
+                self.set.lateralCablesStrength = 0.0
+                self.iterate_over_time()
 
-            # Move files from vModel.set.output_folder to c_folder/ar_dir/directory
-            if self.set.OutputFolder and os.path.exists(self.set.OutputFolder):
-                for f in os.listdir(self.set.OutputFolder):
-                    if os.path.isfile(os.path.join(self.set.OutputFolder, f)):
-                        os.rename(os.path.join(self.set.OutputFolder, f), os.path.join(c_folder, ar_dir, directory, f))
-                    elif os.path.isdir(os.path.join(self.set.OutputFolder, f)):
-                        # Merge subdirectories
-                        sub_dir = os.path.join(self.set.OutputFolder, f)
-                        dest_sub_dir = os.path.join(c_folder, ar_dir, directory, f)
-                        if not os.path.exists(dest_sub_dir):
-                            os.makedirs(dest_sub_dir)
-                        for sub_f in os.listdir(sub_dir):
-                            os.rename(os.path.join(sub_dir, sub_f), os.path.join(dest_sub_dir, sub_f))
-                # os.rmdir(vModel.set.OutputFolder)
+                # Move files from vModel.set.output_folder to c_folder/ar_dir/directory
+                if self.set.OutputFolder and os.path.exists(self.set.OutputFolder):
+                    for f in os.listdir(self.set.OutputFolder):
+                        if os.path.isfile(os.path.join(self.set.OutputFolder, f)):
+                            os.rename(os.path.join(self.set.OutputFolder, f), os.path.join(c_folder, ar_dir, directory, f))
+                        elif os.path.isdir(os.path.join(self.set.OutputFolder, f)):
+                            # Merge subdirectories
+                            sub_dir = os.path.join(self.set.OutputFolder, f)
+                            dest_sub_dir = os.path.join(c_folder, ar_dir, directory, f)
+                            if not os.path.exists(dest_sub_dir):
+                                os.makedirs(dest_sub_dir)
+                            for sub_f in os.listdir(sub_dir):
+                                os.rename(os.path.join(sub_dir, sub_f), os.path.join(dest_sub_dir, sub_f))
+                    # os.rmdir(vModel.set.OutputFolder)
 
-        # Save the state before starting the purse string strength exploration as backup
-        backup_vars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
+            # Save the state before starting the purse string strength exploration as backup
+            backup_vars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
 
-        # Disable output folder to avoid creating files during the purse string strength exploration
-        self.set.OutputFolder = None
+            # Disable output folder to avoid creating files during the purse string strength exploration
+            self.set.OutputFolder = None
 
-        # Compute the initial distance of the wound vertices to the centre of the wound
-        initial_area = self.geo.compute_wound_area(location_filter='Top')
+            # Compute the initial distance of the wound vertices to the centre of the wound
+            initial_area = self.geo.compute_wound_area(location_filter='Top')
 
-        # What is the purse string strength needed to start closing the wound?
-        # Strength of purse string should be multiplied by a factor of 2.5 since at 12 minutes myoII is 2.5 times higher than at 6 minutes
-        purse_string_strength_values = np.logspace(-7, -2, num=100)  # From 1e-7 to 1e-2
-        self.set.lateralCablesStrength = 0.0
+            # What is the purse string strength needed to start closing the wound?
+            # Strength of purse string should be multiplied by a factor of 2.5 since at 12 minutes myoII is 2.5 times higher than at 6 minutes
+            purse_string_strength_values = np.logspace(-7, -2, num=100)  # From 1e-7 to 1e-2
+            self.set.lateralCablesStrength = 0.0
 
-        dy_values = []
-        for ps_strength in purse_string_strength_values:
-            self.set.purseStringStrength = ps_strength
-            self.set.purseStringStrength = self.set.purseStringStrength * 2.5
+            dy_values = []
+            for ps_strength in purse_string_strength_values:
+                self.set.purseStringStrength = ps_strength
+                self.set.purseStringStrength = self.set.purseStringStrength * 2.5
 
-            # Run a single iteration
-            self.single_iteration(post_operations=False)
+                # Run a single iteration
+                self.single_iteration(post_operations=False)
 
-            # Are the vertices of the wound edge moving closer to the centre of the wound?
-            dy_values.append(self.geo.compute_wound_area(location_filter='Top') - initial_area)
+                # Are the vertices of the wound edge moving closer to the centre of the wound?
+                dy_values.append(self.geo.compute_wound_area(location_filter='Top') - initial_area)
 
-            # Restore the backup variables
-            self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs = load_backup_vars(backup_vars)
+                # Restore the backup variables
+                self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs = load_backup_vars(backup_vars)
 
-        # Save the results into a csv file
-        with open(os.path.join(c_folder, ar_dir, directory, 'purse_string_tension_vs_dy.csv'), 'w') as f:
-            f.write('purse_string_strength,dy\n')
-            for ps_strength, dy in zip(purse_string_strength_values, dy_values):
-                f.write(f'{ps_strength},{dy}\n')
+            # Save the results into a csv file
+            with open(os.path.join(c_folder, ar_dir, directory, 'purse_string_tension_vs_dy.csv'), 'w') as f:
+                f.write('purse_string_strength,dy\n')
+                for ps_strength, dy in zip(purse_string_strength_values, dy_values):
+                    f.write(f'{ps_strength},{dy}\n')
 
         # Find the minimum purse string strength that makes dy < 0
         for ps_strength, dy in zip(purse_string_strength_values, dy_values):

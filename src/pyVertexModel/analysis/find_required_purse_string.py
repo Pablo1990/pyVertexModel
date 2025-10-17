@@ -5,7 +5,7 @@ from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from src.pyVertexModel.util.utils import load_state
 
-single_file = True
+single_file = False
 
 if single_file:
     c_folder = os.path.join(PROJECT_DIRECTORY, 'Result/different_cell_shape_healing/')
