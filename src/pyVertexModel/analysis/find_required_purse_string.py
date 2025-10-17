@@ -27,10 +27,11 @@ else:
     for ar_dir in all_directories:
         simulations_dirs = os.listdir(os.path.join(c_folder, ar_dir))
         simulations_dirs = [d for d in simulations_dirs if os.path.isdir(os.path.join(c_folder, ar_dir, d))]
-        for directory in simulations_dirs:
-            # Get t=6 or more minutes after ablation, but the closest to 6 minutes
-            files_within_folder = os.listdir(os.path.join(c_folder, ar_dir, directory))
-            files_ending_pkl = [f for f in files_within_folder if f.endswith('.pkl') and f.startswith('before_ablation')]
+        directory = simulations_dirs[int(sys.argv[1])]  # Get the directory number from command line argument
+
+        # Get t=6 or more minutes after ablation, but the closest to 6 minutes
+        files_within_folder = os.listdir(os.path.join(c_folder, ar_dir, directory))
+        files_ending_pkl = [f for f in files_within_folder if f.endswith('.pkl') and f.startswith('before_ablation')]
 
             # Load it
             vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False, set_option='wing_disc_equilibrium')
