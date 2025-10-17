@@ -30,10 +30,7 @@ else:
         for directory in simulations_dirs:
             # Get t=6 or more minutes after ablation, but the closest to 6 minutes
             files_within_folder = os.listdir(os.path.join(c_folder, ar_dir, directory))
-            files_ending_pkl = [f for f in files_within_folder if f.endswith('.pkl') and f.startswith('data_step_')]
-
-            # Sort files_ending_pkl by the time in the filename
-            files_ending_pkl.sort(key=lambda x: int(x.split('_')[2].split('.')[0]))
+            files_ending_pkl = [f for f in files_within_folder if f.endswith('.pkl') and f.startswith('before_ablation')]
 
             # Load it
             vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False, set_option='wing_disc_equilibrium')
