@@ -41,5 +41,5 @@ else:
         load_state(vModel, os.path.join(c_folder, ar_dir, directory, files_ending_pkl[1]))
         current_folder = vModel.set.OutputFolder
         last_folder = current_folder.split('/')
-        vModel.set.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/', last_folder[1])
+        vModel.set.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/', last_folder[-1])
         vModel.required_purse_string_strength(directory, ar_dir, c_folder, run_iteration=False)
