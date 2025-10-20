@@ -33,6 +33,8 @@ else:
         # Get t=6 or more minutes after ablation, but the closest to 6 minutes
         files_within_folder = os.listdir(os.path.join(c_folder, ar_dir, directory))
         files_ending_pkl = [f for f in files_within_folder if f.endswith('.pkl') and f.startswith('data_step_')]
+        # Sort by created time
+        files_ending_pkl.sort(key=lambda x: os.path.getctime(os.path.join(c_folder, ar_dir, directory, x)))
 
         # Load it and run the required purse string strength analysis
         vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False, set_option='wing_disc_equilibrium')
