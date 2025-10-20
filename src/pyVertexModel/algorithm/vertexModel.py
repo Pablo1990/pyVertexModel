@@ -1132,7 +1132,7 @@ class VertexModel:
 
             # What is the purse string strength needed to start closing the wound?
             # Strength of purse string should be multiplied by a factor of 2.5 since at 12 minutes myoII is 2.5 times higher than at 6 minutes
-            purse_string_strength_values = np.logspace(-7, -2, num=100)  # From 1e-7 to 1e-2
+            purse_string_strength_values = np.logspace(-17, 4, num=100)  # From 1e-17 to 1e-2
             self.set.lateralCablesStrength = 0.0
 
             dy_values = []
@@ -1154,10 +1154,6 @@ class VertexModel:
                 f.write('purse_string_strength,dy\n')
                 for ps_strength, dy in zip(purse_string_strength_values, dy_values):
                     f.write(f'{ps_strength},{dy}\n')
-
-        # Find the speed achieved by a given force
-        print('Purse string strength of 1e-7: dy = '
-              + str(dy_values[np.argmin(np.abs(np.array(purse_string_strength_values) - 1e-7))]))
 
         # Find the minimum purse string strength that makes dy < 0
         for ps_strength, dy in zip(purse_string_strength_values, dy_values):
