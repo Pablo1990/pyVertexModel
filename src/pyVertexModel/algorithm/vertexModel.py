@@ -1155,6 +1155,10 @@ class VertexModel:
                 for ps_strength, dy in zip(purse_string_strength_values, dy_values):
                     f.write(f'{ps_strength},{dy}\n')
 
+        # Find the speed achieved by a given force
+        print('Purse string strength of 1e-7: dy = '
+              + str(dy_values[np.argmin(np.abs(np.array(purse_string_strength_values) - 1e-7))]))
+
         # Find the minimum purse string strength that makes dy < 0
         for ps_strength, dy in zip(purse_string_strength_values, dy_values):
             if dy < 0:
