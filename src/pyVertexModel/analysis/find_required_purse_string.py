@@ -29,6 +29,7 @@ else:
     # Save ps_strengths and dy for each cell shape
     ps_strengths = []
     dys = []
+    output_dirs = []
     for ar_dir in all_directories:
         simulations_dirs = os.listdir(os.path.join(c_folder, ar_dir))
         simulations_dirs = [d for d in simulations_dirs if os.path.isdir(os.path.join(c_folder, ar_dir, d))]
@@ -49,9 +50,11 @@ else:
         ps_strength, dy = vModel.required_purse_string_strength(directory, ar_dir, c_folder, run_iteration=False)
         ps_strengths.append(ps_strength)
         dys.append(dy)
+        output_dirs.append(directory)
+
 
     # Save the results to a csv file
-    df = pd.DataFrame({'AR_Dir': all_directories, 'Purse_String_Strength': ps_strengths, 'Dy': dys})
+    df = pd.DataFrame({'AR_Dir': output_dirs, 'Purse_String_Strength': ps_strengths, 'Dy': dys})
     df.to_csv(os.path.join(c_folder, 'required_purse_string_strengths.csv'), index=False)
 
 
