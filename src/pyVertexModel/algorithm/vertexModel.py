@@ -1076,9 +1076,11 @@ class VertexModel:
 
             self.geo.resize_tissue()
 
-    def required_purse_string_strength(self, directory, ar_dir, c_folder, run_iteration=True):
+    def required_purse_string_strength(self, directory, ar_dir, c_folder, run_iteration=True, tend=21):
         """
         Find the minimum purse string strength needed to start closing the wound.
+        :param run_iteration:
+        :param tend:
         :param directory: Directory to save the results.
         :param ar_dir: Directory to save the results.
         :param c_folder: Directory to save the results.
@@ -1097,8 +1099,8 @@ class VertexModel:
                     purse_string_strength_values.append(float(ps_strength))
                     dy_values.append(float(dy))
         else:
-            if run_iteration and self.t < 26:
-                self.set.tend = 26  # Run until 20+6 minutes after ablation
+            if run_iteration and self.t < tend:
+                self.set.tend = tend  # Run until 20+6 minutes after ablation
                 self.set.Remodelling = False
                 self.set.RemodelStiffness = 2
                 self.set.Remodel_stiffness_wound = 2
