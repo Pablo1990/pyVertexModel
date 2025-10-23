@@ -52,9 +52,12 @@ else:
         dys.append(dy)
         output_dirs.append(directory)
 
-
-    # Save the results to a csv file
+    # Append results into an existing csv file
     df = pd.DataFrame({'AR_Dir': output_dirs, 'Purse_String_Strength': ps_strengths, 'Dy': dys})
-    df.to_csv(os.path.join(c_folder, 'required_purse_string_strengths.csv'), index=False)
+    output_csv = os.path.join(PROJECT_DIRECTORY, 'Result/different_cell_shape_healing/required_purse_string_strengths.csv')
+    if os.path.exists(output_csv):
+        df_existing = pd.read_csv(output_csv)
+        df = pd.concat([df_existing, df], ignore_index=True)
+    df.to_csv(output_csv, index=False)
 
 
