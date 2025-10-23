@@ -1,6 +1,7 @@
 ## Find the required purse string tension to start closing the wound for different cell heights
 import os
 import sys
+import pandas as pd
 
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
@@ -25,6 +26,9 @@ else:
     all_directories = [d for d in all_directories if os.path.isdir(os.path.join(c_folder, d))]
     # all_directories.sort()
 
+    # Save ps_strengths and dy for each cell shape
+    ps_strengths = []
+    dys = []
     for ar_dir in all_directories:
         simulations_dirs = os.listdir(os.path.join(c_folder, ar_dir))
         simulations_dirs = [d for d in simulations_dirs if os.path.isdir(os.path.join(c_folder, ar_dir, d))]
@@ -42,4 +46,12 @@ else:
         current_folder = vModel.set.OutputFolder
         last_folder = current_folder.split('/')
         vModel.set.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/', last_folder[-1])
-        vModel.required_purse_string_strength(directory, ar_dir, c_folder, run_iteration=False)
+        ps_strength, dy = vModel.required_purse_string_strength(directory, ar_dir, c_folder, run_iteration=False)
+        ps_strengths.append(ps_strength)
+        dys.append(dy)
+
+    # Save the results to a csv file
+    df = pd.DataFrame({'AR_Dir': all_directories, 'Purse_String_Strength': ps_strengths, 'Dy': dys})
+    df.to_csv(os.path.join(c_folder, 'required_purse_string_strengths.csv'), index=False)
+
+
