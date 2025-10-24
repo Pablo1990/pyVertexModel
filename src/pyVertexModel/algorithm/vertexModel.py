@@ -1163,4 +1163,4 @@ class VertexModel:
                 print(f'Minimum purse string strength to start closing the wound: {ps_strength}')
                 return ps_strength, dy
 
-        return np.Inf, np.Inf
+        return np.inf, np.inf

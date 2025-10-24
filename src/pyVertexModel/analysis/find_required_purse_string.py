@@ -30,6 +30,7 @@ else:
     ps_strengths = []
     dys = []
     output_dirs = []
+    aspect_ratio = []
     for ar_dir in all_directories:
         simulations_dirs = os.listdir(os.path.join(c_folder, ar_dir))
         simulations_dirs = [d for d in simulations_dirs if os.path.isdir(os.path.join(c_folder, ar_dir, d))]
@@ -57,9 +58,11 @@ else:
         ps_strengths.append(ps_strength)
         dys.append(dy)
         output_dirs.append(directory)
+        directory_splitted = ar_dir.split('_')
+        aspect_ratio.append(float(directory_splitted[1]))
 
     # Append results into an existing csv file
-    df = pd.DataFrame({'AR_Dir': output_dirs, 'Purse_String_Strength': ps_strengths, 'Dy': dys})
+    df = pd.DataFrame({'AR_Dir': output_dirs, 'AR': aspect_ratio, 'Purse_String_Strength': ps_strengths, 'Dy': dys})
     output_csv = os.path.join(PROJECT_DIRECTORY, 'Result/different_cell_shape_healing/required_purse_string_strengths.csv')
     if os.path.exists(output_csv):
         df_existing = pd.read_csv(output_csv)
