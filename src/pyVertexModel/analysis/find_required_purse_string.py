@@ -32,6 +32,8 @@ else:
     output_dirs = []
     aspect_ratio = []
     recoilings = []
+    normalised_purse_string_strengths = []
+    purse_string_strength_0 = []
     for ar_dir in all_directories:
         simulations_dirs = os.listdir(os.path.join(c_folder, ar_dir))
         simulations_dirs = [d for d in simulations_dirs if os.path.isdir(os.path.join(c_folder, ar_dir, d))]
@@ -55,16 +57,18 @@ else:
         current_folder = vModel.set.OutputFolder
         last_folder = current_folder.split('/')
         vModel.set.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/', last_folder[-1])
-        ps_strength, dy, recoiling = vModel.required_purse_string_strength(directory, ar_dir, c_folder, run_iteration=run_iteration)
+        ps_strength, dy, recoiling, purse_string_strength_eq = vModel.required_purse_string_strength(directory, ar_dir, c_folder, run_iteration=run_iteration)
         ps_strengths.append(ps_strength)
         dys.append(dy)
         recoilings.append(recoiling)
         output_dirs.append(directory)
+        purse_string_strength_0.append(purse_string_strength_eq)
         directory_splitted = directory.split('_')
         aspect_ratio.append(float(directory_splitted[1]))
+        normalised_purse_string_strengths.append((ps_strength * recoiling) / (dy - recoiling))
 
     # Append results into an existing csv file
-    df = pd.DataFrame({'AR_Dir': output_dirs, 'AR': aspect_ratio, 'Purse_String_Strength': ps_strengths, 'Dy': dys, 'Recoil': recoilings})
+    df = pd.DataFrame({'AR_Dir': output_dirs, 'AR': aspect_ratio, 'Purse_String_Strength': ps_strengths, 'Dy': dys, 'Recoil': recoilings, 'Purse_string_strength_dy0', purse_string_strength_0, 'Normalised_Purse_String_Strength': normalised_purse_string_strengths})
     output_csv = os.path.join(PROJECT_DIRECTORY, 'Result/different_cell_shape_healing/required_purse_string_strengths.csv')
     if os.path.exists(output_csv):
         df_existing = pd.read_csv(output_csv)

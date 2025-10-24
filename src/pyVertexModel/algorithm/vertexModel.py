@@ -7,6 +7,7 @@ from os.path import exists
 import numpy as np
 import pandas as pd
 import scipy
+from matplotlib import pyplot as plt
 from scipy import stats
 from skimage.measure import regionprops
 
@@ -1158,10 +1159,37 @@ class VertexModel:
                 for ps_strength, dy in zip(purse_string_strength_values, dy_values):
                     f.write(f'{ps_strength},{dy}\n')
 
+
+        # Plot the results
+        plt.figure()
+        plt.plot(purse_string_strength_values, dy_values, marker='o')
+        plt.axhline(0, color='red', linestyle='--')
+        plt.xlabel('Purse String Strength')
+        plt.ylabel('dy (Change in Wound Area)')
+        plt.savefig(os.path.join(c_folder, ar_dir, directory, 'purse_string_tension_vs_dy.png'))
+        plt.close()
+
+        # Get the purse string strength value that satisfies dy=0
+        purse_string_strength_values = np.array(purse_string_strength_values)
+        dy_values = np.array(dy_values)
+
+        # Only proceed if we have both negative and positive dy values
+        if np.any(dy_values < 0) and np.any(dy_values > 0):
+            # Linear interpolation between the closest points around dy=0
+            idx_pos = np.where(dy_values > 0)[0][0]
+            idx_neg = np.where(dy_values < 0)[0][-1]
+
+            x1, y1 = purse_string_strength_values[idx_neg], dy_values[idx_neg]
+            x2, y2 = purse_string_strength_values[idx_pos], dy_values[idx_pos]
+            purse_string_strength_eq = x1 - y1 * (x2 - x1) / (y2 - y1)
+        else:
+            purse_string_strength_eq = np.inf
+
+
         # Find the minimum purse string strength that makes dy < 0
         for ps_strength, dy in zip(purse_string_strength_values, dy_values):
             if dy < 0:
                 print(f'Minimum purse string strength to start closing the wound: {ps_strength}')
-                return ps_strength, dy, dy_values[0]
+                return ps_strength, dy, dy_values[0], purse_string_strength_eq
 
-        return np.inf, np.inf, dy_values[0]
+        return np.inf, np.inf, dy_values[0], purse_string_strength_eq
