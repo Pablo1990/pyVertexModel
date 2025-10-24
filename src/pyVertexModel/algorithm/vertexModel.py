@@ -1145,14 +1145,14 @@ class VertexModel:
                 # Set the purse string strength
                 self.set.purseStringStrength = ps_strength
 
-                # Print current purse string strength
-                logger.info(f'Testing purse string strength: {ps_strength}')
-
                 # Run a single iteration
                 self.single_iteration(post_operations=False)
 
                 # Are the vertices of the wound edge moving closer to the centre of the wound?
                 dy_values.append(self.geo.compute_wound_area(location_filter='Top') - initial_area)
+
+                # Print current purse string strength
+                logger.info(f'Testing purse string strength: {ps_strength}, dy: {dy_values[-1]}')
 
                 # Restore the backup variables
                 self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs = load_backup_vars(backup_vars)
