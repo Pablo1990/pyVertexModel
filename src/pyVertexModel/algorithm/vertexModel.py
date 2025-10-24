@@ -1135,7 +1135,7 @@ class VertexModel:
 
             # What is the purse string strength needed to start closing the wound?
             purse_string_strength_values = [0]
-            purse_string_strength_values.extend(np.logspace(1e-6, 1e-2, num=100))
+            purse_string_strength_values.extend(np.linspace(1e-6, 1e-2, num=100))
             self.set.lateralCablesStrength = 0.0
             self.set.dt = 1e-10
             self.set.TypeOfPurseString = 3 # Fixed value
