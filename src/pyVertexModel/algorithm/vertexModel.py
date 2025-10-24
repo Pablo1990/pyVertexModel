@@ -1135,14 +1135,18 @@ class VertexModel:
 
             # What is the purse string strength needed to start closing the wound?
             purse_string_strength_values = [0]
-            purse_string_strength_values.extend(np.linspace(1e-5, 1e-2, num=30))
+            purse_string_strength_values.extend(np.logspace(1e-6, 1e-2, num=100))
             self.set.lateralCablesStrength = 0.0
             self.set.dt = 1e-10
             self.set.TypeOfPurseString = 3 # Fixed value
 
             dy_values = []
             for ps_strength in purse_string_strength_values:
+                # Set the purse string strength
                 self.set.purseStringStrength = ps_strength
+
+                # Print current purse string strength
+                logger.info(f'Testing purse string strength: {ps_strength}')
 
                 # Run a single iteration
                 self.single_iteration(post_operations=False)
@@ -1162,10 +1166,13 @@ class VertexModel:
 
         # Plot the results
         plt.figure()
-        plt.plot(purse_string_strength_values, dy_values, marker='o')
-        plt.axhline(0, color='red', linestyle='--')
-        plt.xlabel('Purse String Strength')
-        plt.ylabel('dy (Change in Wound Area)')
+        plt.plot(dy_values, purse_string_strength_values, marker='o')
+        plt.axvline(0, color='red', linestyle='--')
+        plt.ylabel('Purse String Strength')
+        plt.xlabel('dy (Change in Wound Area)')
+        plt.yscale('log')
+
+        # Save the figure
         plt.savefig(os.path.join(c_folder, ar_dir, directory, 'purse_string_tension_vs_dy.png'))
         plt.close()
 
