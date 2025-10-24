@@ -1135,10 +1135,12 @@ class VertexModel:
 
             # What is the purse string strength needed to start closing the wound?
             purse_string_strength_values = [0]
-            purse_string_strength_values.extend(np.linspace(1e-6, 1e-2, num=100))
+            purse_string_strength_values.extend(np.linspace(1e-6, 1e-2, num=1000))
             self.set.lateralCablesStrength = 0.0
             self.set.dt = 1e-10
             self.set.TypeOfPurseString = 3 # Fixed value
+
+            negative_values_in_a_row = 0
 
             dy_values = []
             for ps_strength in purse_string_strength_values:
@@ -1153,6 +1155,14 @@ class VertexModel:
 
                 # Print current purse string strength
                 logger.info(f'Testing purse string strength: {ps_strength}, dy: {dy_values[-1]}')
+
+                if dy_values[-1] < 0:
+                    negative_values_in_a_row += 1
+
+                if negative_values_in_a_row >= 10:
+                    # Stop the exploration if we have 10 negative values in a row
+                    logger.info('Stopping purse string strength exploration due to 10 negative dy values in a row.')
+                    break
 
                 # Restore the backup variables
                 self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs = load_backup_vars(backup_vars)
