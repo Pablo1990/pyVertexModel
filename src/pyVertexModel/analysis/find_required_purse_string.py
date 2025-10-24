@@ -58,7 +58,7 @@ else:
         ps_strengths.append(ps_strength)
         dys.append(dy)
         output_dirs.append(directory)
-        directory_splitted = ar_dir.split('_')
+        directory_splitted = directory.split('_')
         aspect_ratio.append(float(directory_splitted[1]))
 
     # Append results into an existing csv file
