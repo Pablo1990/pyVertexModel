@@ -1133,9 +1133,8 @@ class VertexModel:
             initial_area = self.geo.compute_wound_area(location_filter='Top')
 
             # What is the purse string strength needed to start closing the wound?
-            purse_string_strength_values = [0, 1e-17, 1e-16, 1e-15, 1e-14, 1e-13, 1e-12, 1e-11, 1e-10,
-                                             1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1.0, 10.0,
-                                            100.0, 1000.0, 10000.0]
+            purse_string_strength_values = [0]
+            purse_string_strength_values.extend(np.linspace(1e-5, 1e-2, num=30))
             self.set.lateralCablesStrength = 0.0
             self.set.dt = 1e-10
             self.set.TypeOfPurseString = 3 # Fixed value
