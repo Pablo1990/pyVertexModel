@@ -1138,13 +1138,11 @@ class VertexModel:
                                             100.0, 1000.0, 10000.0]
             self.set.lateralCablesStrength = 0.0
             self.set.dt = 1e-10
+            self.set.TypeOfPurseString = 3 # Fixed value
 
             dy_values = []
             for ps_strength in purse_string_strength_values:
                 self.set.purseStringStrength = ps_strength
-
-                # Strength of purse string should be multiplied by a factor of 2.5 since at 12 minutes myoII is 2.5 times higher than at 6 minutes
-                #self.set.purseStringStrength = self.set.purseStringStrength * 2.5
 
                 # Run a single iteration
                 self.single_iteration(post_operations=False)
