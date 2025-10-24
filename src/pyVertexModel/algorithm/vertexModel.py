@@ -1133,14 +1133,18 @@ class VertexModel:
             initial_area = self.geo.compute_wound_area(location_filter='Top')
 
             # What is the purse string strength needed to start closing the wound?
-            # Strength of purse string should be multiplied by a factor of 2.5 since at 12 minutes myoII is 2.5 times higher than at 6 minutes
-            purse_string_strength_values = np.logspace(-17, 4, num=100)  # From 1e-17 to 1e4
+            purse_string_strength_values = [0, 1e-17, 1e-16, 1e-15, 1e-14, 1e-13, 1e-12, 1e-11, 1e-10,
+                                             1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1.0, 10.0,
+                                            100.0, 1000.0, 10000.0]
             self.set.lateralCablesStrength = 0.0
+            self.set.dt = 1e-10
 
             dy_values = []
             for ps_strength in purse_string_strength_values:
                 self.set.purseStringStrength = ps_strength
-                self.set.purseStringStrength = self.set.purseStringStrength * 2.5
+
+                # Strength of purse string should be multiplied by a factor of 2.5 since at 12 minutes myoII is 2.5 times higher than at 6 minutes
+                #self.set.purseStringStrength = self.set.purseStringStrength * 2.5
 
                 # Run a single iteration
                 self.single_iteration(post_operations=False)
