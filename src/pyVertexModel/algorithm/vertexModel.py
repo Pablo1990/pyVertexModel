@@ -1100,7 +1100,7 @@ class VertexModel:
                     dy_values.append(float(dy))
         else:
             if run_iteration and self.t < tend:
-                self.set.tend = tend  # Run until 20+6 minutes after ablation
+                self.set.tend = tend
                 self.set.Remodelling = False
                 self.set.RemodelStiffness = 2
                 self.set.Remodel_stiffness_wound = 2
@@ -1134,7 +1134,7 @@ class VertexModel:
 
             # What is the purse string strength needed to start closing the wound?
             # Strength of purse string should be multiplied by a factor of 2.5 since at 12 minutes myoII is 2.5 times higher than at 6 minutes
-            purse_string_strength_values = np.logspace(-17, 4, num=100)  # From 1e-17 to 1e-2
+            purse_string_strength_values = np.logspace(-17, 4, num=100)  # From 1e-17 to 1e4
             self.set.lateralCablesStrength = 0.0
 
             dy_values = []
@@ -1162,3 +1162,5 @@ class VertexModel:
             if dy < 0:
                 print(f'Minimum purse string strength to start closing the wound: {ps_strength}')
                 return ps_strength, dy
+
+        return np.Inf, np.Inf
