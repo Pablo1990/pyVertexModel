@@ -1173,6 +1173,7 @@ class VertexModel:
                 for ps_strength, dy in zip(purse_string_strength_values, dy_values):
                     f.write(f'{ps_strength},{dy}\n')
 
+        purse_string_strength_values = purse_string_strength_values[:len(dy_values)]
 
         # Plot the results
         plt.figure()
