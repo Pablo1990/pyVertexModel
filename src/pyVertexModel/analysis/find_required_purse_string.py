@@ -68,7 +68,7 @@ else:
         normalised_purse_string_strengths.append((ps_strength * recoiling) / (dy - recoiling))
 
     # Append results into an existing csv file
-    df = pd.DataFrame({'AR_Dir': output_dirs, 'AR': aspect_ratio, 'Purse_String_Strength': ps_strengths, 'Dy': dys, 'Recoil': recoilings, 'Purse_string_strength_dy0', purse_string_strength_0, 'Normalised_Purse_String_Strength': normalised_purse_string_strengths})
+    df = pd.DataFrame({'AR_Dir': output_dirs, 'AR': aspect_ratio, 'Purse_String_Strength': ps_strengths, 'Dy': dys, 'Recoil': recoilings, 'Purse_string_strength_dy0': purse_string_strength_0, 'Normalised_Purse_String_Strength': normalised_purse_string_strengths})
     output_csv = os.path.join(PROJECT_DIRECTORY, 'Result/different_cell_shape_healing/required_purse_string_strengths.csv')
     if os.path.exists(output_csv):
         df_existing = pd.read_csv(output_csv)
