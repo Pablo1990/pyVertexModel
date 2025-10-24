@@ -1163,6 +1163,6 @@ class VertexModel:
         for ps_strength, dy in zip(purse_string_strength_values, dy_values):
             if dy < 0:
                 print(f'Minimum purse string strength to start closing the wound: {ps_strength}')
-                return ps_strength, dy
+                return ps_strength, dy, dy_values[0]
 
-        return np.inf, np.inf
+        return np.inf, np.inf, dy_values[0]
