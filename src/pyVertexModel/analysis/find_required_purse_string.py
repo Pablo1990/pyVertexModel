@@ -44,13 +44,21 @@ else:
 
         files_within_folder = os.listdir(os.path.join(c_folder, ar_dir, directory))
         files_ending_pkl = [f for f in files_within_folder if f.endswith('.pkl') and f.startswith('data_step_')]
+        if 'before_ablation.pkl' not in files_within_folder:
+            print(f"Skipping {directory} as 'before_ablation.pkl' not found.")
+            continue
+
+        load_state(vModel, os.path.join(c_folder, ar_dir, directory, 'before_ablation.pkl'))
         if len(files_ending_pkl) == 0:
-            load_state(vModel, os.path.join(c_folder, ar_dir, directory, 'before_ablation.pkl'))
             run_iteration = True
         else:
             # Sort by time step
             files_ending_pkl.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
-            load_state(vModel, os.path.join(c_folder, ar_dir, directory, files_ending_pkl[1]))
+
+            # I only want files that were created or modified after 'before_ablation.pkl' time-wise
+            files_ending_pkl = [f for f in files_ending_pkl if int(f.split('_')[-1].split('.')[0]) > vModel.numStep]
+
+            load_state(vModel, os.path.join(c_folder, ar_dir, directory, files_ending_pkl[0]))
             run_iteration = False
 
         # Run the required purse string strength analysis
