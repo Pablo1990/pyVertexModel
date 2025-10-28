@@ -215,9 +215,9 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g, selected_cells=None)
     dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
 
     Geo.update_vertices(dy_reshaped, selected_cells)
-    if Set.frozen_face_centres:
+    if Set.frozen_face_centres or Set.frozen_face_centres_border_cells:
         for cell in Geo.Cells:
-           if cell.AliveStatus is not None:
+           if cell.AliveStatus is not None and ((cell.ID in Geo.BorderCells and Set.frozen_face_centres_border_cells) or Set.frozen_face_centres):
                face_centres_to_middle_of_neighbours_vertices(Geo, cell.ID)
 
     Geo.update_measures()
