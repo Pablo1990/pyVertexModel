@@ -37,22 +37,26 @@ if input_file not in files_done:
         vModel.set.lambdaS3 = vModel.set.lambdaS1
 
         # Aspect Ratio energy barrier adapted to cell height. IMPORTANT: The initial gradient should be equivalent to the original size.
-        vModel.set.lambdaR = vModel.set.lambdaR * (vModel.set.CellHeight / original_wing_disc_height) ** 1.5
+        #vModel.set.lambdaR = vModel.set.lambdaR * (vModel.set.CellHeight / original_wing_disc_height) ** 1.5
+
 
         # LambdaV adapted to cell height
-        vModel.set.lambdaV = vModel.set.lambdaV * (vModel.set.CellHeight / original_wing_disc_height) ** 0.25
+        vModel.set.lambdaV = vModel.set.lambdaV * (vModel.set.CellHeight / original_wing_disc_height) ** 0.65
+
+        # nu equal to original nu
+        vModel.set.nu_bottom = vModel.set.nu
 
         # Folder name
         vModel.set.OutputFolder = None
         vModel.set.update_derived_parameters()
         vModel.set.redirect_output()
-        vModel.set.tend = 26 # Run until 20+6 minutes after ablation
+        vModel.set.tend = 20.1 # Run until 20+0.1 minutes after ablation
         try:
             vModel.initialize()
             # Recompute reference lengths to compare lateral cables and purse string effectively
             vModel.geo.compute_edge_length_0(default_value=1.0)
-            vModel.geo.update_lmin0()
+            #vModel.geo.update_lmin0()
             vModel.iterate_over_time()
-            analyse_simulation(vModel.set.OutputFolder)
+            #analyse_simulation(vModel.set.OutputFolder)
         except Exception as e:
             logger.error(f"An error occurred for file {input_file} with resize_z {resize_z}: {e}")

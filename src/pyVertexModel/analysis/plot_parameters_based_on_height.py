@@ -24,7 +24,7 @@ lambdaS3 = lambdaS1
 lambdaR = 8e-7 * (cell_heights / original_wing_disc_height) ** 1.5
 
 # LambdaV adapted to cell height
-lambdaV = 1 * (cell_heights / original_wing_disc_height) ** 0.25
+lambdaV = 1 * (cell_heights / original_wing_disc_height) ** 0.65
 
 plots_to_show = ['lambdaS1', 'lambdaS2', 'lambdaR', 'lambdaV']
 
