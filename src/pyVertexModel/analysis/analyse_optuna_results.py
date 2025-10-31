@@ -6,6 +6,7 @@ import optuna
 import pandas as pd
 from matplotlib import pyplot as plt
 import seaborn as sns
+from scipy.optimize import curve_fit
 
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.util.space_exploration import plot_optuna_all, create_study_name
@@ -19,23 +20,21 @@ scutoids_percentage = [0, 0.5, 0.99]
 
 # Save all the correlations into a dataframe
 correlations_only_error_df = None
-csv_file = os.path.join(PROJECT_DIRECTORY, 'Result', 'correlations_only_error.csv')
+c_folder = 'Result/VertexModel_gr_S1_eq_S3_S2_fixed_Vol'
+csv_file = os.path.join(PROJECT_DIRECTORY, c_folder, 'correlations_only_error.csv')
 if not os.path.exists(csv_file):
     # Get all the files from 'Input/images/' that end with '.tif' and do not contain 'labelled'
     all_files = [f.split('.')[0] for f in os.listdir(PROJECT_DIRECTORY + '/Input/images/') if f.endswith('.tif') and not f.endswith('labelled.tif')]
     #all_files.sort(reverse=True)
     for input_file in all_files:
-        if input_file.endswith('dWP1'):
-            continue
-
         for resize_z in set_of_resize_z:
             for scutoids in scutoids_percentage:
                 [study_name, storage_name] = create_study_name(resize_z, original_wing_disc_height, type_of_search,
-                                                               input_file, scutoids)
+                                                               input_file, scutoids, c_folder)
                 try:
                     study = optuna.load_study(study_name=study_name, storage=storage_name)
                     if len(study.trials) >= num_trials:
-                        correlations_only_error = plot_optuna_all(os.path.join(PROJECT_DIRECTORY, 'Result'), study_name, study)
+                        correlations_only_error = plot_optuna_all(os.path.join(PROJECT_DIRECTORY, c_folder), study_name, study)
                         correlations_only_error['input_file'] = input_file
                         correlations_only_error['resize_z'] = resize_z
                         correlations_only_error['scutoids'] = scutoids
@@ -65,10 +64,10 @@ for param in all_params:
 
         # Create the boxplot with using as group the resize_z
         plt.figure(figsize=(10, 6))
-        sns.boxplot(x='resize_z', y='correlation_with_value', data=param_df, whis=[0, 100], width=.6, palette="vlag")
+        sns.boxplot(x='resize_z', y='correlation_with_value', data=param_df, whis=[0, 100], width=.6, palette="vlag", native_scale=False)
 
         # Add in points to show each observation
-        sns.stripplot(x="resize_z", y="correlation_with_value", data=param_df, size=4, color=".3")
+        sns.stripplot(x="resize_z", y="correlation_with_value", data=param_df, size=4, color=".3", native_scale=False)
 
         # Add p-value statistics from 0% scutoids in paper style with '*' for p<0.05, '**' for p<0.01, '***' for p<0.001 and 'ns' for p>=0.05
         if not param_df_0_scutoids.empty:
@@ -99,6 +98,7 @@ for param in all_params:
                     else:
                         significance = 'ns'
                     plt.text(i, y_max + 0.05 * y_range, significance, ha='center', va='bottom', color='red', fontsize=12)
+
 
         # Tweak the visual presentation
         plt.title(f'Boxplot of {param} correlations with {scutoids*100}% scutoids')
