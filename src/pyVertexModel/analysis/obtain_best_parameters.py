@@ -106,10 +106,10 @@ for param in all_params:
             return 1 - lambda_s1_normalised_curve(x, p, q)
 
         def lambda_s1_curve(x, p, q):
-            return p + q * np.log1p(x)
+            return (p + q * np.log1p(x)) * lambda_s1_normalised_curve(x, -0.31, 0.62)
 
         def lambda_s2_curve(x, p, q):
-            return p + q * np.log1p(x)
+            return  (p + q * np.log1p(x)) * lambda_s2_normalised_curve(x, -0.31, 0.62)
 
         # TODO: both lambdaS1 and lambdaS2 should be fitted together with the same p parameter, but different lambda_s1 and lambda_s2 curves
         if param == 'params_lambdaS1_normalised':
@@ -128,40 +128,17 @@ for param in all_params:
             x_labels = ax.get_xticklabels()
             category_order = np.array([float(label.get_text()) for label in x_labels])
 
-            if param == 'params_lambdaS2':
-                ydata = np.concatenate([param_df[param] / lambda_s2_normalised_curve(param_df['resize_z'], -0.31, 0.62),
-                                        param_df['params_lambdaS1'] / lambda_s1_normalised_curve(param_df['resize_z'], -0.31, 0.62)])
-                xdata = np.concatenate([param_df['resize_z'], param_df['resize_z']])
-                sigma = np.concatenate([lambda_s2_normalised_curve(param_df['resize_z'], -0.31, 0.62) ** 2,
-                                        lambda_s1_normalised_curve(param_df['resize_z'], -0.31, 0.62) ** 2])
-                original_value = lambda_s2_normalised_curve(param_df['resize_z'], -0.31, 0.62)
-            elif param == 'params_lambdaS1':
-                ydata = np.concatenate([param_df[param] / lambda_s1_normalised_curve(param_df['resize_z'], -0.31, 0.62),
-                                        param_df['params_lambdaS2'] / lambda_s2_normalised_curve(param_df['resize_z'], -0.31, 0.62)])
-                xdata = np.concatenate([param_df['resize_z'], param_df['resize_z']])
-                sigma = np.concatenate([lambda_s1_normalised_curve(param_df['resize_z'], -0.31, 0.62) ** 2,
-                                        lambda_s2_normalised_curve(param_df['resize_z'], -0.31, 0.62) ** 2])
-                original_value = lambda_s1_normalised_curve(category_order, -0.31, 0.62)
-            else:
-                ydata = param_df[param]
-                xdata = param_df['resize_z']
-                sigma=None
-                original_value = 1.0
-
             # Fit the function to the mean correlation data
             popt_exp, _ = curve_fit(
                 function_to_fit,
-                xdata=xdata,
-                ydata=ydata,
-                sigma=sigma,
+                xdata=param_df['resize_z'],
+                ydata=param_df[param],
+                sigma=None,
                 maxfev=100000)
             x_fit = np.linspace(0,
                                 len(param_df["resize_z"].unique()), 100)
             x_fit_real = np.linspace(0, param_df["resize_z"].max(), 100)
-
-
-
-            y_fit = function_to_fit(category_order, *popt_exp) * original_value
+            y_fit = function_to_fit(category_order, *popt_exp)
             if param == 'params_lambdaS1_normalised':
                 label = f'$y = 1 - 0.5 \\cdot e^{{{popt_exp[0]:.2f} \\cdot x^{{{popt_exp[1]:.2f}}}}}$'
             elif param == 'params_lambdaS2_normalised':
