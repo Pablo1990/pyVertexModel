@@ -32,6 +32,11 @@ if not os.path.exists(os.path.join(PROJECT_DIRECTORY, result_folder, 'best_avera
         except ValueError:
             pass
 
+        try:
+            scutoids = float(parts[4])
+        except Exception:
+            pass
+
         # Load df.xlsx
         df_file = os.path.join(PROJECT_DIRECTORY, result_folder, folder, 'df.xlsx')
         if os.path.exists(df_file):

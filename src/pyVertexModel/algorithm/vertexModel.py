@@ -1034,11 +1034,6 @@ class VertexModel:
 
                             old_lmin.append(min(tri_copy.LengthsToCentre))
                             old_lmin.append(tri_copy.EdgeLength)
-
-            # TODO: Update the lmin values? I THINK IT IS NOT NEEDED SINCE IT WILL CHANGE PURSE STRING BEHAVIOURS
-            # self.geo.lmin0 = geo_copy.lmin0 * np.min(new_lmin) / np.min(old_lmin)
-            # TODO: UPDATE BarrierTri0??
-
             # Update the substrate z value
             self.geo.get_substrate_z()
 

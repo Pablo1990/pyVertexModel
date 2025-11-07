@@ -16,6 +16,7 @@ class Set:
         self.min_3d_neighbours = None
         self.periodic_boundaries = True
         self.frozen_face_centres = False
+        self.frozen_face_centres_border_cells = True
         self.model_name = ''
         self.percentage_scutoids = 0
         self.myosin_pool = None

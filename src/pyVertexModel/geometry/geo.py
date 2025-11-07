@@ -344,7 +344,7 @@ class Geo:
         # Update lmin0 with the minimum value in lmin_values
         self.update_lmin0()
 
-        # Update BarrierTri0 and lmin0 based on their initial values
+        # Update BarrierTri0
         self.update_barrier_tri0()
 
         # Edge lengths 0 as average of all cells by location (Top, bottom, or lateral)
