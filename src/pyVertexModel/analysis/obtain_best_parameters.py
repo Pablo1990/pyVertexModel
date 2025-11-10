@@ -8,11 +8,34 @@ from scipy.optimize import curve_fit
 
 from src import PROJECT_DIRECTORY
 
+
+# Predictions and R^2
+def r2(y, ypred):
+    ss_res = ((y - ypred) ** 2).sum()
+    ss_tot = ((y - y.mean()) ** 2).sum()
+    return 1 - (ss_res / ss_tot)
+
+def lambda_total_model(x, a, b, c):
+    return a + b * (np.log(x) + c) ** 2
+
+# Fit p and q based on f(x) = 0.5 + 0.5 * (1 - EXP(-p * x ^ q))
+def lambda_s1_normalised_curve(x, p, q):
+    return 1 - 0.5 * np.exp(p * (x ** q))
+
+def lambda_s2_normalised_curve(x, p, q):
+    return 1 - lambda_s1_normalised_curve(x, p, q)
+
+def lambda_s1_curve(x):
+    return lambda_total_model(x, 0.48, 0.02, 2.49) * lambda_s1_normalised_curve(x, -0.32, 0.36)
+
+def lambda_s2_curve(x):
+    return lambda_total_model(x, 0.48, 0.02, 2.49) * lambda_s2_normalised_curve(x, -0.32, 0.36)
+
 ## Obtain the best parameters per resize_z and percentage of scutoids
 
 # List folders starting with
 folders_prefix = 'VertexModel_gr_'
-result_folder = 'Result/VertexModel_gr_S1_eq_S3_S2_fixed_Vol'
+result_folder = 'Result/' #VertexModel_gr_S1_eq_S3_S2_fixed_Vol'
 
 if not os.path.exists(os.path.join(PROJECT_DIRECTORY, result_folder, 'best_average_values.csv')):
     all_folders = [f for f in os.listdir(os.path.join(PROJECT_DIRECTORY, result_folder)) if f.startswith(folders_prefix) and os.path.isdir(os.path.join(PROJECT_DIRECTORY, result_folder, f))]
@@ -28,7 +51,6 @@ if not os.path.exists(os.path.join(PROJECT_DIRECTORY, result_folder, 'best_avera
         scutoids = 0
         try:
             resize_z = float(parts[3])
-            scutoids = float(parts[4])
         except ValueError:
             pass
 
@@ -44,6 +66,7 @@ if not os.path.exists(os.path.join(PROJECT_DIRECTORY, result_folder, 'best_avera
 
             # Get the rows with 'value' lower to 0.07
             df_filtered = df[(df['value'] > 0.03) & (df['value'] < 0.07)]
+            #df_filtered = df[df['value'] < 1e-5]
 
             # Average the columns with the name starting with 'params_'
             param_columns = [col for col in df_filtered.columns if col.startswith('params_')]
@@ -73,7 +96,7 @@ else:
 
 # Create a figure with the mean and std of each parameter per resize_z and percentage of scutoids for all input files
 # Create the boxplot with using as group the resize_z
-all_params = ['params_lambdaS1_normalised', 'params_lambdaS2_normalised', 'params_lambdaS1', 'params_lambdaS2']
+all_params = ['params_lambdaS1_normalised', 'params_lambdaS2_normalised']
 scutoids_percentage = [0, 0.5, 0.99]
 # Check if the column exists before plotting
 for param in all_params:
@@ -84,6 +107,7 @@ for param in all_params:
         param_df = param_df[param_df['scutoids'] == scutoids]
         if param_df.empty:
             continue
+
         # plotting
         plt.figure(figsize=(10, 6))
         sns.boxplot(x='resize_z', y=param, data=param_df, whis=[0, 100], width=.6, palette="vlag")
@@ -97,34 +121,19 @@ for param in all_params:
         #plt.title(f'Boxplot of {param} correlations with {scutoids*100}% scutoids')
         plt.xlabel('Aspect ratio (AR)', fontsize=20, fontweight='bold')
         plt.ylabel('Parameter value', fontsize=20, fontweight='bold')
-        if param == 'params_lambdaS1_normalised' or param == 'params_lambdaS2_normalised':
-            plt.ylim(0, 1)
-        else:
-            plt.ylim(0, 2.55)
+        plt.ylim(0, 1)
         plt.xticks(rotation=45)
 
-        # Fit p and q based on f(x) = 0.5 + 0.5 * (1 - EXP(-p * x ^ q))
-        def lambda_s1_normalised_curve(x, p, q):
-            return 1 - 0.5 * np.exp(p * (x ** q))
 
-        def lambda_s2_normalised_curve(x, p, q):
-            return 1 - lambda_s1_normalised_curve(x, p, q)
-
-        def lambda_s1_curve(x, p, q):
-            return (p + q * np.log1p(x)) * lambda_s1_normalised_curve(x, -0.31, 0.62)
-
-        def lambda_s2_curve(x, p, q):
-            return  (p + q * np.log1p(x)) * lambda_s2_normalised_curve(x, -0.31, 0.62)
-
-        # TODO: both lambdaS1 and lambdaS2 should be fitted together with the same p parameter, but different lambda_s1 and lambda_s2 curves
+        # TODO: both lambdaS1 and lambdaS2 should be fitted together with the same p parameter
         if param == 'params_lambdaS1_normalised':
             function_to_fit = lambda_s1_normalised_curve
+            xdata = param_df['resize_z']
+            ydata = param_df[param]
         elif param == 'params_lambdaS2_normalised':
             function_to_fit = lambda_s2_normalised_curve
-        elif param == 'params_lambdaS1':
-            function_to_fit = lambda_s1_curve
-        elif param == 'params_lambdaS2':
-            function_to_fit = lambda_s2_curve
+            xdata = param_df['resize_z']
+            ydata = param_df[param]
         else:
             function_to_fit = None
 
@@ -136,28 +145,116 @@ for param in all_params:
             # Fit the function to the mean correlation data
             popt_exp, _ = curve_fit(
                 function_to_fit,
-                xdata=param_df['resize_z'],
-                ydata=param_df[param],
+                xdata=xdata,
+                ydata=ydata,
                 sigma=None,
                 maxfev=100000)
-            x_fit = np.linspace(0,
-                                len(param_df["resize_z"].unique()), 100)
-            x_fit_real = np.linspace(0, param_df["resize_z"].max(), 100)
             y_fit = function_to_fit(category_order, *popt_exp)
             if param == 'params_lambdaS1_normalised':
-                label = f'$y = 1 - 0.5 \\cdot e^{{{popt_exp[0]:.2f} \\cdot x^{{{popt_exp[1]:.2f}}}}}$'
+                label = f'$y = 1 - 0.5 \\cdot e^{{{popt_exp[0]:.2f} \\cdot x^{{{popt_exp[1]:.2f}}}}} - R^2$ = {r2(ydata, function_to_fit(xdata, *popt_exp)):.2f}'
             elif param == 'params_lambdaS2_normalised':
-                label = f'$y = 0.5 \\cdot e^{{{popt_exp[0]:.2f} \\cdot x^{{{popt_exp[1]:.2f}}}}}$'
-            elif param == 'params_lambdaS1':
-                label = f'$y = {popt_exp[0]:.2f} \\cdot x^{{{popt_exp[1]:.2f}}} \\cdot (1 - 0.5 \\cdot e^{{-0.31 \\cdot x^{{0.62}}}})$'
-            elif param == 'params_lambdaS2':
-                label = f'$y = {popt_exp[0]:.2f} \\cdot x^{{{popt_exp[1]:.2f}}} \\cdot (0.5 \\cdot e^{{-0.31 \\cdot x^{{0.62}}}})))$'
+                label = f'$y = 0.5 \\cdot e^{{{popt_exp[0]:.2f} \\cdot x^{{{popt_exp[1]:.2f}}}}} - R^2$ = {r2(ydata, function_to_fit(xdata, *popt_exp)):.2f}'
             sns.lineplot(data=None, x=x_positions, y=y_fit, label=label, linewidth=2, color='black')
             plt.legend()
 
         # Save the figure
         plt.tight_layout()
         plt.savefig(os.path.join(PROJECT_DIRECTORY, result_folder, f'boxplot_{param}_average_{scutoids:.2f}.png'))
+        plt.close()
+
+for scutoids in scutoids_percentage:
+
+    param_df = best_average_values[best_average_values['scutoids'] == scutoids]
+    if param_df.empty:
+        continue
+
+    param_df = param_df[param_df['params_lambdaS1'].notnull() & param_df['params_lambdaS2'].notnull()]
+    xdata = param_df['resize_z']
+    ydata = param_df['params_lambdaS1'] + param_df['params_lambdaS2']
+    param_df['params_lambdaS_total'] = ydata
+
+    # Fit the function to the mean correlation data
+    popt_exp, _ = curve_fit(
+        lambda_total_model,
+        xdata=xdata,
+        ydata=ydata,
+        sigma=None,
+        maxfev=100000)
+
+    # plotting
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(x='resize_z', y='params_lambdaS_total', data=param_df, whis=[0, 100], width=.6, palette="vlag")
+
+    ax = sns.stripplot(x="resize_z", y='params_lambdaS_total', data=param_df, size=4, color=".3")
+
+    # Increase font size and make it bold
+    plt.xticks(fontsize=20, fontweight='bold')
+    plt.yticks(fontsize=20, fontweight='bold')
+
+    # plt.title(f'Boxplot of {param} correlations with {scutoids*100}% scutoids')
+    plt.xlabel('Aspect ratio (AR)', fontsize=20, fontweight='bold')
+    plt.ylabel('Parameter value', fontsize=20, fontweight='bold')
+    plt.xticks(rotation=45)
+
+    x_positions = ax.get_xticks()  # This gives [0, 1, 2, 3]
+    x_labels = ax.get_xticklabels()
+    category_order = np.array([float(label.get_text()) for label in x_labels])
+    y_fit = lambda_total_model(category_order, *popt_exp)
+    ydata_average_by_ar = param_df.groupby('resize_z')['params_lambdaS_total'].mean().reindex(category_order).values
+    label = f'$y = {popt_exp[0]:.2f} + {popt_exp[1]:.2f} \\cdot (\\ln(x) + {popt_exp[2]:.2f})^2$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+    sns.lineplot(data=None, x=x_positions, y=y_fit, label=label, linewidth=2, color='black')
+    plt.legend()
+
+    # Save the figure
+    plt.tight_layout()
+    plt.savefig(os.path.join(PROJECT_DIRECTORY, result_folder, f'boxplot_lambdaS_total_average_{scutoids:.2f}.png'))
+    plt.close()
+
+    for param in ['params_lambdaS1', 'params_lambdaS2']:
+        param_df = best_average_values[best_average_values['scutoids'] == scutoids]
+        if param_df.empty:
+            continue
+
+        param_df = param_df[param_df[param].notnull()]
+
+        # plotting
+        plt.figure(figsize=(10, 6))
+        sns.boxplot(x='resize_z', y=param, data=param_df, whis=[0, 100], width=.6, palette="vlag")
+
+        ax = sns.stripplot(x="resize_z", y=param, data=param_df, size=4, color=".3")
+
+        # Increase font size and make it bold
+        plt.xticks(fontsize=20, fontweight='bold')
+        plt.yticks(fontsize=20, fontweight='bold')
+
+        #plt.title(f'Boxplot of {param} correlations with {scutoids*100}% scutoids')
+        plt.xlabel('Aspect ratio (AR)', fontsize=20, fontweight='bold')
+        plt.ylabel('Parameter value', fontsize=20, fontweight='bold')
+        plt.xticks(rotation=45)
+
+        if param == 'params_lambdaS1':
+            function_to_fit = lambda_s1_curve
+        elif param == 'params_lambdaS2':
+            function_to_fit = lambda_s2_curve
+        else:
+            function_to_fit = None
+
+        x_positions = ax.get_xticks()  # This gives [0, 1, 2, 3]
+        x_labels = ax.get_xticklabels()
+        category_order = np.array([float(label.get_text()) for label in x_labels])
+        if function_to_fit is not None:
+            y_fit = function_to_fit(category_order)
+            ydata_average_by_ar = param_df.groupby('resize_z')[param].mean().reindex(category_order).values
+            if param == 'params_lambdaS1':
+                label = f'$y= 0.48 + 0.02 \\cdot (\\ln(x) + 2.49)^2 \\cdot \\left(1 - 0.5 \\cdot e^{{-0.32 \\cdot x^{{0.36}}}}\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+            elif param == 'params_lambdaS2':
+                label = f'$y= 0.48 + 0.02 \\cdot (\\ln(x) + 2.49)^2 \\cdot \\left(0.5 \\cdot e^{{-0.32 \\cdot x^{{0.36}}}}\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+            sns.lineplot(data=None, x=x_positions, y=y_fit, label=label, linewidth=2, color='black')
+            plt.legend()
+
+        # Save the figure
+        plt.tight_layout()
+        plt.savefig(os.path.join(PROJECT_DIRECTORY, result_folder, f'boxplot_{param}_fitted_curve_average_{scutoids:.2f}.png'))
         plt.close()
 
 
