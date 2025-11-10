@@ -47,9 +47,16 @@ def objective(trial):
     # new_set.lambdaV = trial.suggest_float('lambdaV', new_set.lambdaV - (new_set.lambdaV * percentage_deviation), new_set.lambdaV + (new_set.lambdaV * percentage_deviation))
     # new_set.lambdaS2 = trial.suggest_float('lambdaS2', new_set.lambdaS2 - (new_set.lambdaS2 * percentage_deviation), new_set.lambdaS2 + (new_set.lambdaS2 * percentage_deviation))
     #new_set.lambdaV = trial.suggest_float('lambdaV', 1e-3, 100)
+    #p_surface_area = trial.suggest_float('p_surface_area', 0, 1)
+    #new_set.lambdaS1 = 1.47 * ((new_set.CellHeight / 15) ** p_surface_area) * (0.5 + 0.5 * (1 - np.exp(-0.31 * new_set.CellHeight ** 0.62)))
+    #new_set.lambdaS2 = 1.47 * ((new_set.CellHeight / 15) ** p_surface_area) * (1 - (0.5 + 0.5 * (1 - np.exp(-0.31 * new_set.CellHeight ** 0.62))))
     new_set.lambdaS1 = trial.suggest_float('lambdaS1', 1e-5, 10)
     new_set.lambdaS2 = trial.suggest_float('lambdaS2', 1e-5, 10)
     new_set.lambdaS3 = new_set.lambdaS1
+    #new_set.ref_A0 = 0.92
+    new_set.kSubstrate = 0
+    new_set.EnergyBarrierAR = False
+    new_set.lambdaR = 0
     new_set.update_derived_parameters()
 
     if error_type == 'gr':
@@ -60,6 +67,10 @@ def objective(trial):
 
         # Run the simulation
         vModel.initialize()
+
+        # Fixed parameters to understand relation of surface area and aspect ratio
+        #vModel.geo.fix_parameters({'lmin0': 1.0})
+
         gr = vModel.single_iteration(post_operations=False)
         return gr
     elif error_type == 'KInitialRecoil' or error_type == 'wound':
@@ -286,9 +297,10 @@ def plot_optuna_all(output_directory, study_name, study):
 
     return correlations_only_error
 
-def create_study_name(resize_z, original_wing_disc_height, type_of_search, input_file, scutoids):
+def create_study_name(resize_z, original_wing_disc_height, type_of_search, input_file, scutoids, folder='src'):
     """
     Create the study name
+    :param folder:
     :param scutoids:
     :param resize_z:
     :param original_wing_disc_height:
@@ -303,12 +315,12 @@ def create_study_name(resize_z, original_wing_disc_height, type_of_search, input
             error_type = type_of_search + input_file + '_' + str(resize_z) + '_'
         # Storage location should be in the Result folder
         storage_name = "sqlite:///{}.db".format(
-            os.path.join(PROJECT_DIRECTORY, 'src', "VertexModel_" + str(resize_z)))
+            os.path.join(PROJECT_DIRECTORY, folder, "VertexModel_" + str(resize_z)))
     else:
         error_type = type_of_search + input_file + '_'
         # Storage location should be in the Result folder
         storage_name = "sqlite:///{}.db".format(
-            os.path.join(PROJECT_DIRECTORY, 'src', "VertexModel"))
+            os.path.join(PROJECT_DIRECTORY, folder, "VertexModel"))
 
     if error_type is not None:
         study_name = "VertexModel" + error_type  # Unique identifier of the study.
