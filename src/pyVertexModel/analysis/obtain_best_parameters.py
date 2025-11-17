@@ -15,6 +15,7 @@ from src.pyVertexModel.util.utils import lambda_s2_normalised_curve, lambda_s1_n
 # List folders starting with
 folders_prefix = 'VertexModel_gr_'
 result_folder = 'Result/' #VertexModel_gr_S1_eq_S3_S2_fixed_Vol'
+max_fev = 10000000
 
 if not os.path.exists(os.path.join(PROJECT_DIRECTORY, result_folder, 'best_average_values.csv')):
     all_folders = [f for f in os.listdir(os.path.join(PROJECT_DIRECTORY, result_folder)) if f.startswith(folders_prefix) and os.path.isdir(os.path.join(PROJECT_DIRECTORY, result_folder, f))]
@@ -128,7 +129,7 @@ for param in all_params:
                 xdata=xdata,
                 ydata=ydata,
                 sigma=None,
-                maxfev=100000)
+                maxfev=max_fev)
             y_fit = function_to_fit(category_order, *popt_exp)
             if param == 'params_lambdaS1_normalised':
                 # Equation: 0.5 + ((l_max - 0.5) / (1 + np.exp(-k * np.log(x) + c)))
@@ -152,7 +153,7 @@ for scutoids in scutoids_percentage:
 
     param_df = param_df[param_df['params_lambdaS1'].notnull() & param_df['params_lambdaS2'].notnull()]
     xdata = param_df['resize_z']
-    ydata = param_df['params_lambdaS1'] * 2 + param_df['params_lambdaS2']
+    ydata = param_df['params_lambdaS1'] + param_df['params_lambdaS2']
     param_df['params_lambdaS_total'] = ydata
 
     # Fit the function to the mean correlation data
@@ -161,7 +162,7 @@ for scutoids in scutoids_percentage:
         xdata=xdata,
         ydata=ydata,
         sigma=None,
-        maxfev=100000)
+        maxfev=max_fev)
 
     # plotting
     plt.figure(figsize=(10, 6))
