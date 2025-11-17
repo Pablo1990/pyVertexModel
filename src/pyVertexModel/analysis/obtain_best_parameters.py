@@ -7,29 +7,8 @@ from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 
 from src import PROJECT_DIRECTORY
-
-
-# Predictions and R^2
-def r2(y, ypred):
-    ss_res = ((y - ypred) ** 2).sum()
-    ss_tot = ((y - y.mean()) ** 2).sum()
-    return 1 - (ss_res / ss_tot)
-
-def lambda_total_model(x, a, b, c):
-    return a + b * (np.log(x) + c) ** 2
-
-# Fit p and q based on f(x) = 0.5 + 0.5 * (1 - EXP(-p * x ^ q))
-def lambda_s1_normalised_curve(x, p, q):
-    return 1 - 0.5 * np.exp(p * (x ** q))
-
-def lambda_s2_normalised_curve(x, p, q):
-    return 1 - lambda_s1_normalised_curve(x, p, q)
-
-def lambda_s1_curve(x):
-    return lambda_total_model(x, 0.48, 0.02, 2.49) * lambda_s1_normalised_curve(x, -0.32, 0.36)
-
-def lambda_s2_curve(x):
-    return lambda_total_model(x, 0.48, 0.02, 2.49) * lambda_s2_normalised_curve(x, -0.32, 0.36)
+from src.pyVertexModel.util.utils import lambda_s2_normalised_curve, lambda_s1_normalised_curve, lambda_total_model, \
+    lambda_s1_curve, lambda_s2_curve, r2
 
 ## Obtain the best parameters per resize_z and percentage of scutoids
 
@@ -120,7 +99,6 @@ for param in all_params:
 
         #plt.title(f'Boxplot of {param} correlations with {scutoids*100}% scutoids')
         plt.xlabel('Aspect ratio (AR)', fontsize=20, fontweight='bold')
-        plt.ylabel('Parameter value', fontsize=20, fontweight='bold')
         plt.ylim(0, 1)
         plt.xticks(rotation=45)
 
@@ -130,10 +108,12 @@ for param in all_params:
             function_to_fit = lambda_s1_normalised_curve
             xdata = param_df['resize_z']
             ydata = param_df[param]
+            plt.ylabel(r'$\lambda_{s1}=\lambda_{s3}$ normalised', fontsize=20, fontweight='bold')
         elif param == 'params_lambdaS2_normalised':
             function_to_fit = lambda_s2_normalised_curve
             xdata = param_df['resize_z']
             ydata = param_df[param]
+            plt.ylabel(r'$\lambda_{s2}$ normalised', fontsize=20, fontweight='bold')
         else:
             function_to_fit = None
 
@@ -151,9 +131,11 @@ for param in all_params:
                 maxfev=100000)
             y_fit = function_to_fit(category_order, *popt_exp)
             if param == 'params_lambdaS1_normalised':
-                label = f'$y = 1 - 0.5 \\cdot e^{{{popt_exp[0]:.2f} \\cdot x^{{{popt_exp[1]:.2f}}}}} - R^2$ = {r2(ydata, function_to_fit(xdata, *popt_exp)):.2f}'
+                # Equation: 0.5 + ((l_max - 0.5) / (1 + np.exp(-k * np.log(x) + c)))
+                label = f'$y = 0.5 + (({popt_exp[2]:.2f} - 0.5) / (1 + e^{{-{popt_exp[0]:.2f} \\cdot x^{{{popt_exp[1]:.2f}}}}}))$ - R$^2$ = {r2(ydata, function_to_fit(xdata, *popt_exp)):.2f}'
             elif param == 'params_lambdaS2_normalised':
-                label = f'$y = 0.5 \\cdot e^{{{popt_exp[0]:.2f} \\cdot x^{{{popt_exp[1]:.2f}}}}} - R^2$ = {r2(ydata, function_to_fit(xdata, *popt_exp)):.2f}'
+                # Equation: 1 - (0.5 + ((l_max - 0.5) / (1 + np.exp(-k * np.log(x) + c)))
+                label = f'$y = 1 - (0.5 + (({popt_exp[2]:.2f} - 0.5) / (1 + e^{{-{popt_exp[0]:.2f} \\cdot x^{{{popt_exp[1]:.2f}}}}}))$ - R$^2$ = {r2(ydata, function_to_fit(xdata, *popt_exp)):.2f}'
             sns.lineplot(data=None, x=x_positions, y=y_fit, label=label, linewidth=2, color='black')
             plt.legend()
 
@@ -170,7 +152,7 @@ for scutoids in scutoids_percentage:
 
     param_df = param_df[param_df['params_lambdaS1'].notnull() & param_df['params_lambdaS2'].notnull()]
     xdata = param_df['resize_z']
-    ydata = param_df['params_lambdaS1'] + param_df['params_lambdaS2']
+    ydata = param_df['params_lambdaS1'] * 2 + param_df['params_lambdaS2']
     param_df['params_lambdaS_total'] = ydata
 
     # Fit the function to the mean correlation data
@@ -193,7 +175,7 @@ for scutoids in scutoids_percentage:
 
     # plt.title(f'Boxplot of {param} correlations with {scutoids*100}% scutoids')
     plt.xlabel('Aspect ratio (AR)', fontsize=20, fontweight='bold')
-    plt.ylabel('Parameter value', fontsize=20, fontweight='bold')
+    plt.ylabel(r'\lambda_{total}$', fontsize=20, fontweight='bold')
     plt.xticks(rotation=45)
 
     x_positions = ax.get_xticks()  # This gives [0, 1, 2, 3]
@@ -229,13 +211,14 @@ for scutoids in scutoids_percentage:
 
         #plt.title(f'Boxplot of {param} correlations with {scutoids*100}% scutoids')
         plt.xlabel('Aspect ratio (AR)', fontsize=20, fontweight='bold')
-        plt.ylabel('Parameter value', fontsize=20, fontweight='bold')
         plt.xticks(rotation=45)
 
         if param == 'params_lambdaS1':
             function_to_fit = lambda_s1_curve
+            plt.ylabel(r'$\lambda_{s1}=\lambda_{s2}$', fontsize=20, fontweight='bold')
         elif param == 'params_lambdaS2':
             function_to_fit = lambda_s2_curve
+            plt.ylabel(r'$\lambda_{s2}$', fontsize=20, fontweight='bold')
         else:
             function_to_fit = None
 
@@ -246,9 +229,9 @@ for scutoids in scutoids_percentage:
             y_fit = function_to_fit(category_order)
             ydata_average_by_ar = param_df.groupby('resize_z')[param].mean().reindex(category_order).values
             if param == 'params_lambdaS1':
-                label = f'$y= 0.48 + 0.02 \\cdot (\\ln(x) + 2.49)^2 \\cdot \\left(1 - 0.5 \\cdot e^{{-0.32 \\cdot x^{{0.36}}}}\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+                label = f'$y = 0.48 + 0.02 \\cdot (\\ln(x) + 2.49)^2 \\cdot \\left(0.5 + (0.84 - 0.5) \\cdot \\left(1 - e^{{-0.74 \\cdot x^{{0.38}}}}\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
             elif param == 'params_lambdaS2':
-                label = f'$y= 0.48 + 0.02 \\cdot (\\ln(x) + 2.49)^2 \\cdot \\left(0.5 \\cdot e^{{-0.32 \\cdot x^{{0.36}}}}\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+                label = f'$y = 0.48 + 0.02 \\cdot (\\ln(x) + 2.49)^2 \\cdot \\left(1 - \\left(0.5 + (0.84 - 0.5) \\cdot \\left(1 - e^{{-0.74 \\cdot x^{{0.38}}}}\\right)\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
             sns.lineplot(data=None, x=x_positions, y=y_fit, label=label, linewidth=2, color='black')
             plt.legend()
 

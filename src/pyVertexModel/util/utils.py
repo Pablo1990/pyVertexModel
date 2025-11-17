@@ -23,6 +23,7 @@ def find_optimal_deform_array_X_Y(geo, deform_array_Z, middle_point, volumes):
     :param volumes:
     :return:
     """
+
     def objective(deform_array_X_Y):
         geo_copy = geo.copy()
         deform_array = np.array([deform_array_X_Y[0], deform_array_X_Y[0], deform_array_Z])
@@ -39,9 +40,10 @@ def find_optimal_deform_array_X_Y(geo, deform_array_Z, middle_point, volumes):
         print(vol_difference)
         return abs(vol_difference)
 
-    options = {'disp': True, 'ftol':1e-9}
+    options = {'disp': True, 'ftol': 1e-9}
     result = minimize(objective, method='TNC', x0=np.array([3]), options=options)
     return result.x
+
 
 def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None, scalar_to_display='Volume'):
     """
@@ -144,13 +146,15 @@ def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None, scalar_to_d
             plotter.view_xz()
 
             # Adjust camera position and focal point for lateral view
-            plotter.camera.position = (geo.Cells[0].X[0] + 1, geo.Cells[0].X[1], geo.Cells[0].X[2])  # Offset for lateral view
+            plotter.camera.position = (geo.Cells[0].X[0] + 1, geo.Cells[0].X[1],
+                                       geo.Cells[0].X[2])  # Offset for lateral view
             plotter.camera.focal_point = (geo.Cells[0].X[0], geo.Cells[0].X[1], geo.Cells[0].X[2])
-            plotter.camera.zoom(1)# Focus on the first cell
+            plotter.camera.zoom(1)  # Focus on the first cell
 
             # Hide unwanted cells
             centre_of_wound = geo.compute_wound_centre()
-            cells_to_hide = np.array([cell.ID for cell in geo.Cells if ((cell.AliveStatus == 0 or cell.AliveStatus == 1) and cell.X[0] > geo.Cells[0].X[0])])
+            cells_to_hide = np.array([cell.ID for cell in geo.Cells if (
+                        (cell.AliveStatus == 0 or cell.AliveStatus == 1) and cell.X[0] > geo.Cells[0].X[0])])
             for cell in cells_to_hide:
                 plotter.remove_actor(f'cell_{cell}')
                 plotter.remove_actor(f'edge_{cell}')
@@ -181,6 +185,7 @@ def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None, scalar_to_d
     plt.savefig(combined_file, bbox_inches='tight')
     plt.close(fig)
 
+
 def screenshot(v_model, temp_dir, selected_cells=None, scalar_to_display='Volume'):
     """
     Create a screenshot of the current state of the model.
@@ -190,6 +195,7 @@ def screenshot(v_model, temp_dir, selected_cells=None, scalar_to_display='Volume
     :return:
     """
     screenshot_(v_model.geo, v_model.set, v_model.t, v_model.numStep, temp_dir, selected_cells, scalar_to_display)
+
 
 def load_backup_vars(backup_vars):
     return (backup_vars['Geo_b'].copy(), backup_vars['Geo_n_b'].copy(), backup_vars['Geo_0_b'], backup_vars['tr_b'],
@@ -510,7 +516,8 @@ def face_centres_to_middle_of_neighbours_vertices(Geo, c_cell, filter_location=N
     :return:
     """
     for num_face, _ in enumerate(Geo.Cells[c_cell].Faces):
-        if filter_location is None or get_interface(Geo.Cells[c_cell].Faces[num_face].InterfaceType) == get_interface(filter_location):
+        if filter_location is None or get_interface(Geo.Cells[c_cell].Faces[num_face].InterfaceType) == get_interface(
+                filter_location):
             all_edges = []
             for tri in Geo.Cells[c_cell].Faces[num_face].Tris:
                 all_edges.append(tri.Edge)
@@ -537,3 +544,31 @@ def get_interface(interface_type):
                                   value == interface_type or key == interface_type)
 
     return interface_type_str
+
+
+# Predictions and R^2
+def r2(y, ypred):
+    ss_res = ((y - ypred) ** 2).sum()
+    ss_tot = ((y - y.mean()) ** 2).sum()
+    return 1 - (ss_res / ss_tot)
+
+
+def lambda_total_model(x, a, b, c):
+    return a + b * (np.log(x) + c) ** 2
+
+
+# Fit p and q based on f(x) = 0.5 + 0.5 * (1 - EXP(-p * x ^ q))
+def lambda_s1_normalised_curve(x, k, c, l_max):
+    return 0.5 + ((l_max - 0.5) / (1 + np.exp(-k * np.log(x) + c)))
+
+
+def lambda_s2_normalised_curve(x, p, q, l_max):
+    return 1 - lambda_s1_normalised_curve(x, p, q, l_max)
+
+
+def lambda_s1_curve(x):
+    return lambda_total_model(x, 0.48, 0.02, 2.4) * lambda_s1_normalised_curve(x, 0.74, 0.38, 0.84)
+
+
+def lambda_s2_curve(x):
+    return lambda_total_model(x, 0.48, 0.02, 2.4) * lambda_s2_normalised_curve(x, 0.74, 0.38, 0.84)
