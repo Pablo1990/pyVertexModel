@@ -5,15 +5,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from src import PROJECT_DIRECTORY
-from src.pyVertexModel.util.utils import lambda_s1_normalised_curve, lambda_s1_curve, lambda_s2_curve
+from src.pyVertexModel.util.utils import lambda_s1_curve, lambda_s2_curve
 
 # Define the original wing disc height
 original_wing_disc_height = 15.0 # in microns
 cell_heights = np.linspace(0, 30, 10000)
 cell_heights_to_show = np.array([0.01, 0.1, 0.5, 1.0, 2.0]) * original_wing_disc_height
-
-lambdaS1_normalised = lambda_s1_normalised_curve(cell_heights, 0.74, 0.38, 0.84)
-lambdaS2_normalised = 1 - lambdaS1_normalised
 
 # Lambda values based on the normalised values and the cell height
 lambdaS1 = lambda_s1_curve(cell_heights)
@@ -64,7 +61,7 @@ for plot_to_show in plots_to_show:
         if plot_to_show == 'lambdaS1':
             value = lambda_s1_curve(ch)
             if ch < 1:
-                plt.text(ch+0.15, value + 0.01, f'{value:.1e}', fontsize=12, color='black', ha='left', va='top', rotation=90)
+                plt.text(ch+0.01, value + 0.01, f'{value:.1e}', fontsize=12, color='black', ha='left', va='top', rotation=90)
             elif ch > 15:
                 plt.text(ch, value - 0.01, f'{value:.1e}', fontsize=12, color='black', ha='right', va='top', rotation=90)
             else:
@@ -73,7 +70,7 @@ for plot_to_show in plots_to_show:
         elif plot_to_show == 'lambdaS2':
             value = lambda_s2_curve(ch)
             if ch < 1:
-                plt.text(ch+0.1, value, f'{value:.1e}', fontsize=12, color='black', ha='left', va='top', rotation=90)
+                plt.text(ch+0.01, value, f'{value:.1e}', fontsize=12, color='black', ha='left', va='top', rotation=90)
             else:
                 plt.text(ch, value, f'{value:.1e}', fontsize=12, color='black', ha='right', va='top', rotation=90)
         elif plot_to_show == 'lambdaR':
@@ -105,6 +102,7 @@ for plot_to_show in plots_to_show:
     ax = plt.gca()
     ax.set_xticklabels([f'{ch:.2f}' for ch in cell_heights_to_show], rotation=45, fontsize=20, fontweight='bold')
     plt.yticks(fontsize=20, fontweight='bold')
+    plt.xscale('symlog')
     plt.tight_layout()
     plt.savefig(os.path.join(PROJECT_DIRECTORY, 'Result', 'parameters_based_on_cell_height_' + plot_to_show + '.png'))
     plt.close()
