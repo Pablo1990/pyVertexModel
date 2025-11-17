@@ -24,7 +24,8 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
     vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
     if (combination == 'WT' or combination == 'Mbs' or combination == 'Rok' or
             combination == 'Talin' or combination == 'IntegrinDN' or
-            combination == 'ShibireTS' or combination == 'WT_substrate_gone_40_mins'):
+            combination == 'ShibireTS' or combination == 'WT_substrate_gone_40_mins' or
+            combination == 'ShibireTS_1' or combination == 'ShibireTS_2'):
         output_folder = os.path.join(PROJECT_DIRECTORY, output_results_dir, length + '_{}'.format(combination))
     else:
         output_folder = os.path.join(PROJECT_DIRECTORY, output_results_dir, length + '_no_{}'.format('_no_'.join(combination)))
@@ -70,8 +71,13 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
             vModel.set.lambdaS1 = vModel.set.lambdaS1 - (vModel.set.lambdaS1 * 0.51)
             vModel.set.purseStringStrength = vModel.set.purseStringStrength - (vModel.set.purseStringStrength * 0.35)
             vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength - (vModel.set.lateralCablesStrength * 0.35)
+        elif combination == 'ShibireTS_1':
+            vModel.set.purseStringStrength = vModel.set.purseStringStrength - (vModel.set.purseStringStrength * 0.4)
+            vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength - (vModel.set.lateralCablesStrength * 0.4)
         elif combination == 'ShibireTS':
             vModel.set.purseStringStrength = vModel.set.purseStringStrength - (vModel.set.purseStringStrength * 0.4)
+        elif combination == 'ShibireTS_2':
+            vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength - (vModel.set.lateralCablesStrength * 0.4)
         elif combination == 'Talin':
             vModel.set.kSubstrate = vModel.set.kSubstrate * 0
             vModel.set.lateralCablesStrength = vModel.set.lateralCablesStrength * 4.3/3.1
