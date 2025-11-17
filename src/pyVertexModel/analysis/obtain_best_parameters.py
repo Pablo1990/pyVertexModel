@@ -176,7 +176,7 @@ for scutoids in scutoids_percentage:
 
     # plt.title(f'Boxplot of {param} correlations with {scutoids*100}% scutoids')
     plt.xlabel('Aspect ratio (AR)', fontsize=20, fontweight='bold')
-    plt.ylabel(r'\lambda_{total}$', fontsize=20, fontweight='bold')
+    plt.ylabel(r'$\lambda_{total}$', fontsize=20, fontweight='bold')
     plt.xticks(rotation=45)
 
     x_positions = ax.get_xticks()  # This gives [0, 1, 2, 3]
@@ -184,7 +184,7 @@ for scutoids in scutoids_percentage:
     category_order = np.array([float(label.get_text()) for label in x_labels])
     y_fit = lambda_total_model(category_order, *popt_exp)
     ydata_average_by_ar = param_df.groupby('resize_z')['params_lambdaS_total'].mean().reindex(category_order).values
-    label = f'$y = {popt_exp[0]:.2f} + {popt_exp[1]:.2f} \\cdot (\\ln(x) + {popt_exp[2]:.2f})^2$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+    label = f'$y = {popt_exp[0]:.2f} \\cdot {popt_exp[1]:.2f}(\\ln(x) + 1.9)^2$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
     sns.lineplot(data=None, x=x_positions, y=y_fit, label=label, linewidth=2, color='black')
     plt.legend()
 
@@ -230,9 +230,9 @@ for scutoids in scutoids_percentage:
             y_fit = function_to_fit(category_order)
             ydata_average_by_ar = param_df.groupby('resize_z')[param].mean().reindex(category_order).values
             if param == 'params_lambdaS1':
-                label = f'$y = 0.48 + 0.02 \\cdot (\\ln(x) + 2.49)^2 \\cdot \\left(0.5 + (0.84 - 0.5) \\cdot \\left(1 - e^{{-0.74 \\cdot x^{{0.38}}}}\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+                label = f'$y = 0.48 + 0.02 \\cdot (\\ln(x) + 1.9)^2 \\cdot \\left(0.5 + (0.84 - 0.5) \\cdot \\left(1 - e^{{-0.74 \\cdot x^{{0.38}}}}\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
             elif param == 'params_lambdaS2':
-                label = f'$y = 0.48 + 0.02 \\cdot (\\ln(x) + 2.49)^2 \\cdot \\left(1 - \\left(0.5 + (0.84 - 0.5) \\cdot \\left(1 - e^{{-0.74 \\cdot x^{{0.38}}}}\\right)\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+                label = f'$y = 0.48 + 0.02 \\cdot (\\ln(x) + 1.9)^2 \\cdot \\left(1 - \\left(0.5 + (0.84 - 0.5) \\cdot \\left(1 - e^{{-0.74 \\cdot x^{{0.38}}}}\\right)\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
             sns.lineplot(data=None, x=x_positions, y=y_fit, label=label, linewidth=2, color='black')
             plt.legend()
 
