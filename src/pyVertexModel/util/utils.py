@@ -546,29 +546,77 @@ def get_interface(interface_type):
     return interface_type_str
 
 
-# Predictions and R^2
-def r2(y, ypred):
-    ss_res = ((y - ypred) ** 2).sum()
+def r2(y, y_predicted):
+    """
+    Compute the R^2 value.
+    :param y:
+    :param y_predicted:
+    :return:
+    """
+    ss_res = ((y - y_predicted) ** 2).sum()
     ss_tot = ((y - y.mean()) ** 2).sum()
     return 1 - (ss_res / ss_tot)
 
 
-def lambda_total_model(x, a, b, c):
-    return a + b * (np.log(x) + c) ** 2
+def lambda_total_model(x, a, b):
+    """
+    Compute the total lambda model.
+    :param x: aspect ratio
+    :param a:
+    :param b:
+    :param c:
+    :return:
+    """
+    return a + b * (np.log(x) + 1.9) ** 2
 
 
-# Fit p and q based on f(x) = 0.5 + 0.5 * (1 - EXP(-p * x ^ q))
 def lambda_s1_normalised_curve(x, k, c, l_max):
+    """
+    Compute the lambda_s1 normalised curve.
+    :param x: aspect ratio.
+    :param k:
+    :param c:
+    :param l_max:
+    :return:
+    """
     return 0.5 + ((l_max - 0.5) / (1 + np.exp(-k * np.log(x) + c)))
 
 
 def lambda_s2_normalised_curve(x, p, q, l_max):
+    """
+    Compute the lambda_s2 normalised curve.
+    :param x:
+    :param p:
+    :param q:
+    :param l_max:
+    :return:
+    """
     return 1 - lambda_s1_normalised_curve(x, p, q, l_max)
 
 
-def lambda_s1_curve(x):
-    return lambda_total_model(x, 0.48, 0.02, 2.4) * lambda_s1_normalised_curve(x, 0.74, 0.38, 0.84)
+def lambda_s1_curve(x, a=0.48, b=0.02, k=0.74, p=0.38, l_max=0.84):
+    """
+
+    :param x:
+    :param a:
+    :param b:
+    :param k:
+    :param p:
+    :param l_max:
+    :return:
+    """
+    return lambda_total_model(x, a, b) * lambda_s1_normalised_curve(x, k, p, l_max)
 
 
-def lambda_s2_curve(x):
-    return lambda_total_model(x, 0.48, 0.02, 2.4) * lambda_s2_normalised_curve(x, 0.74, 0.38, 0.84)
+def lambda_s2_curve(x, a=0.48, b=0.02, p=0.74, q=0.38, l_max=0.84):
+    """
+
+    :param x:
+    :param a:
+    :param b:
+    :param p:
+    :param q:
+    :param l_max:
+    :return:
+    """
+    return lambda_total_model(x, a, b) * lambda_s2_normalised_curve(x, p, q, l_max)
