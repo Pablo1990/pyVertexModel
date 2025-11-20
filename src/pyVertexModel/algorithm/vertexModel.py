@@ -9,10 +9,12 @@ import pandas as pd
 import scipy
 from matplotlib import pyplot as plt
 from scipy import stats
+from scipy.optimize import minimize
 from skimage.measure import regionprops
 
 from src import logger, PROJECT_DIRECTORY
 from src.pyVertexModel.Kg.kg import add_noise_to_parameter
+from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
 from src.pyVertexModel.algorithm import newtonRaphson
 from src.pyVertexModel.geometry import degreesOfFreedom
 from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain, edge_valence, get_node_neighbours
@@ -1206,3 +1208,21 @@ class VertexModel:
                 return ps_strength, dy, dy_values[0], purse_string_strength_eq
 
         return np.inf, np.inf, dy_values[0], purse_string_strength_eq
+
+    def find_lmin0_equal_target_gr(self, target_energy):
+        """
+        Find the lmin0 value that makes the average geometric ratio equal to target_gr for all aspect ratios.
+        :param target_energy:
+        :return:
+        """
+        def objective(lmin_0_value):
+            geo_copy = self.geo.copy()
+            geo_copy.lmin0 = lmin_0_value[0]
+            kg_tri_ar = KgTriAREnergyBarrier(geo_copy)
+            kg_tri_ar.compute_work(geo_copy, self.set, None, False)
+            return (kg_tri_ar.energy - target_energy) ** 2
+
+        options = {'disp': True, 'ftol': 1e-15, 'gtol': 1e-15}
+        self.geo.update_measures()
+        result = minimize(objective, method='TNC', x0=np.array([self.geo.lmin0]), options=options)
+        return result.x[0]
