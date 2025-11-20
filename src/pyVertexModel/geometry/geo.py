@@ -432,6 +432,8 @@ class Geo:
     def update_barrier_tri0(self, factor=10, count_lateral_faces=True):
         """
         Update the BarrierTri0 based on the average edge length of the geometry.
+        :param factor:
+        :param count_lateral_faces:
         :return:
         """
         self.update_measures()
@@ -451,12 +453,19 @@ class Geo:
         # Update BarrierTri0 based on its initial value
         self.BarrierTri0 = self.BarrierTri0 / factor
 
-    def update_lmin0(self, factor=10):
+    def update_lmin0(self, factor=10, default_value=None):
         """
         Update the lmin0 based on the average edge length of the geometry.
+        :param factor:
+        :param default_value:
         :return:
         """
         self.update_measures()
+        if default_value is not None:
+            self.lmin0 = default_value
+            print(f'Updated lmin0 by default: {self.lmin0}')
+            return
+
         lmin_values = []
 
         # Iterate over all cells in the Geo structure
