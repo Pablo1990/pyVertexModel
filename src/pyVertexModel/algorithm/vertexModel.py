@@ -249,7 +249,7 @@ class VertexModel:
         self.tr = 0
         self.numStep = 1
 
-    def initialize(self):
+    def  initialize(self):
         """
         Initialize the geometry and the topology of the model.
         """
@@ -356,6 +356,10 @@ class VertexModel:
 
             # Adjust percentage of scutoids
             self.adjust_percentage_of_scutoids()
+
+            # Save screenshot of the initial state
+            image_file = '/' + os.path.join(*filename.split('/')[:-1])
+            screenshot_(self.geo, self.set, 0, output_filename.split('/')[-1], image_file)
 
             # Save initial state
             save_state(self, output_filename)
@@ -1076,23 +1080,21 @@ class VertexModel:
 
             self.geo.resize_tissue()
 
-    def required_purse_string_strength(self, directory, ar_dir, c_folder, run_iteration=True, tend=21):
+    def required_purse_string_strength(self, directory, run_iteration=True, tend=21):
         """
         Find the minimum purse string strength needed to start closing the wound.
         :param run_iteration:
         :param tend:
         :param directory: Directory to save the results.
-        :param ar_dir: Directory to save the results.
-        :param c_folder: Directory to save the results.
         :return:
         """
-        if os.path.exists(os.path.join(c_folder, ar_dir, directory, 'purse_string_tension_vs_dy.csv')):
+        if os.path.exists(os.path.join(directory, 'purse_string_tension_vs_dy.csv')):
             print('Purse string strength vs dy file already exists for file '
-                  + os.path.join(c_folder, ar_dir, directory))
+                  + directory)
             # Open the file and read the values
             purse_string_strength_values = []
             dy_values = []
-            with open(os.path.join(c_folder, ar_dir, directory, 'purse_string_tension_vs_dy.csv'), 'r') as f:
+            with open(os.path.join(directory, 'purse_string_tension_vs_dy.csv'), 'r') as f:
                 next(f)  # Skip header
                 for line in f:
                     ps_strength, dy = line.strip().split(',')
@@ -1112,11 +1114,11 @@ class VertexModel:
                 if self.set.OutputFolder and os.path.exists(self.set.OutputFolder):
                     for f in os.listdir(self.set.OutputFolder):
                         if os.path.isfile(os.path.join(self.set.OutputFolder, f)):
-                            os.rename(os.path.join(self.set.OutputFolder, f), os.path.join(c_folder, ar_dir, directory, f))
+                            os.rename(os.path.join(self.set.OutputFolder, f), os.path.join(directory, f))
                         elif os.path.isdir(os.path.join(self.set.OutputFolder, f)):
                             # Merge subdirectories
                             sub_dir = os.path.join(self.set.OutputFolder, f)
-                            dest_sub_dir = os.path.join(c_folder, ar_dir, directory, f)
+                            dest_sub_dir = os.path.join(directory, f)
                             if not os.path.exists(dest_sub_dir):
                                 os.makedirs(dest_sub_dir)
                             for sub_f in os.listdir(sub_dir):
@@ -1167,7 +1169,7 @@ class VertexModel:
                 self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs = load_backup_vars(backup_vars)
 
             # Save the results into a csv file
-            with open(os.path.join(c_folder, ar_dir, directory, 'purse_string_tension_vs_dy.csv'), 'w') as f:
+            with open(os.path.join(directory, 'purse_string_tension_vs_dy.csv'), 'w') as f:
                 f.write('purse_string_strength,dy\n')
                 for ps_strength, dy in zip(purse_string_strength_values, dy_values):
                     f.write(f'{ps_strength},{dy}\n')
@@ -1183,7 +1185,7 @@ class VertexModel:
         plt.yscale('log')
 
         # Save the figure
-        plt.savefig(os.path.join(c_folder, ar_dir, directory, 'purse_string_tension_vs_dy.png'))
+        plt.savefig(os.path.join(directory, 'purse_string_tension_vs_dy.png'))
         plt.close()
 
         # Get the purse string strength value that satisfies dy=0
@@ -1201,7 +1203,6 @@ class VertexModel:
             purse_string_strength_eq = x1 - y1 * (x2 - x1) / (y2 - y1)
         else:
             purse_string_strength_eq = np.inf
-
 
         # Find the minimum purse string strength that makes dy < 0
         for ps_strength, dy in zip(purse_string_strength_values, dy_values):

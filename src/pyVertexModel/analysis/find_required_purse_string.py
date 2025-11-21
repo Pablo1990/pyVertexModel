@@ -16,10 +16,10 @@ if single_file:
     file_name = 'data_step_2619.pkl'
     vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False, set_option='wing_disc_equilibrium')
     load_state(vModel, os.path.join(c_folder, ar_dir, directory, file_name))
-    vModel.required_purse_string_strength(directory, ar_dir, c_folder, run_iteration=False)
+    vModel.required_purse_string_strength(directory, run_iteration=False)
 else:
     # Folder containing different simulations with different cell shapes
-    c_folder = os.path.join(PROJECT_DIRECTORY, 'Result/different_cell_shape_healing/')
+    c_folder = os.path.join(PROJECT_DIRECTORY, 'Result/to_calculate_ps_recoil/')
 
     # Get all directories within c_folder
     all_directories = os.listdir(c_folder)
@@ -37,10 +37,10 @@ else:
     for ar_dir in all_directories:
         simulations_dirs = os.listdir(os.path.join(c_folder, ar_dir))
         simulations_dirs = [d for d in simulations_dirs if os.path.isdir(os.path.join(c_folder, ar_dir, d))]
-        directory = simulations_dirs[int(sys.argv[1])]  # Get the directory number from command line argument
+        directory = simulations_dirs[1]  # Get the directory number from command line argument int(sys.argv[1])
 
         # Get the purse string strength
-        vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False, set_option='wing_disc_equilibrium')
+        vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False, set_option='wing_disc')
 
         files_within_folder = os.listdir(os.path.join(c_folder, ar_dir, directory))
         files_ending_pkl = [f for f in files_within_folder if f.endswith('.pkl') and f.startswith('data_step_')]
@@ -65,7 +65,8 @@ else:
         current_folder = vModel.set.OutputFolder
         last_folder = current_folder.split('/')
         vModel.set.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/', last_folder[-1])
-        ps_strength, dy, recoiling, purse_string_strength_eq = vModel.required_purse_string_strength(directory, ar_dir, c_folder, run_iteration=run_iteration)
+        ps_strength, dy, recoiling, purse_string_strength_eq = vModel.required_purse_string_strength(os.path.join(c_folder, ar_dir, directory),
+                                                                                                     run_iteration=run_iteration)
         ps_strengths.append(ps_strength)
         dys.append(dy)
         recoilings.append(recoiling)
