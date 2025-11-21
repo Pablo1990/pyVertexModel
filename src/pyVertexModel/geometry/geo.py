@@ -5,8 +5,10 @@ from collections import defaultdict
 import numpy as np
 import vtk
 from numpy import setdiff1d
+from scipy.optimize import minimize
 from scipy.spatial import ConvexHull
 
+from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
 from src.pyVertexModel.geometry import face, cell
 from src.pyVertexModel.geometry.cell import Cell, compute_y
 from src.pyVertexModel.geometry.face import build_edge_based_on_tetrahedra
@@ -15,6 +17,25 @@ from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attribu
 
 logger = logging.getLogger("pyVertexModel")
 
+def find_lmin0_equal_target_gr(geo, c_set, target_energy=1.321379914557796e-11):
+    """
+    Find the lmin0 value that makes the average geometric ratio equal to target_gr for all aspect ratios.
+    :param target_energy:
+    :return:
+    """
+
+    def objective(lmin_0_value):
+        geo_copy = geo.copy()
+        geo_copy.lmin0 = lmin_0_value[0]
+        kg_tri_ar = KgTriAREnergyBarrier(geo_copy)
+        kg_tri_ar.compute_work(geo_copy, c_set, None, False)
+        return (kg_tri_ar.energy - target_energy) ** 2
+
+    options = {'disp': True, 'ftol': 1e-15, 'gtol': 1e-15}
+    geo.update_measures()
+    result = minimize(objective, method='TNC', x0=np.array([geo.lmin0]), options=options)
+    logger.info(f'Found lmin0: {result.x[0]}')
+    return result.x[0]
 
 def get_cells_by_status(cells, status):
     """
@@ -343,6 +364,7 @@ class Geo:
 
         # Update lmin0 with the minimum value in lmin_values
         self.update_lmin0()
+        self.update_lmin0(default_value=find_lmin0_equal_target_gr(self, c_set))
 
         # Update BarrierTri0
         self.update_barrier_tri0()

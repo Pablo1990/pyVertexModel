@@ -14,7 +14,7 @@ from skimage.measure import regionprops
 
 from src import logger, PROJECT_DIRECTORY
 from src.pyVertexModel.Kg.kg import add_noise_to_parameter
-from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
+from src.pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
 from src.pyVertexModel.algorithm import newtonRaphson
 from src.pyVertexModel.geometry import degreesOfFreedom
 from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain, edge_valence, get_node_neighbours
@@ -24,6 +24,8 @@ from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_back
     screenshot, screenshot_, load_state, find_optimal_deform_array_X_Y
 
 logger = logging.getLogger("pyVertexModel")
+
+
 
 
 def display_volume_fragments(geo, selected_cells=None):
@@ -1209,20 +1211,25 @@ class VertexModel:
 
         return np.inf, np.inf, dy_values[0], purse_string_strength_eq
 
-    def find_lmin0_equal_target_gr(self, target_energy):
+
+    def find_lambda_s1_s2_equal_target_gr(self, target_energy=0.01299466280896831):
         """
         Find the lmin0 value that makes the average geometric ratio equal to target_gr for all aspect ratios.
         :param target_energy:
         :return:
         """
-        def objective(lmin_0_value):
+
+        def objective(lambdas):
             geo_copy = self.geo.copy()
-            geo_copy.lmin0 = lmin_0_value[0]
-            kg_tri_ar = KgTriAREnergyBarrier(geo_copy)
-            kg_tri_ar.compute_work(geo_copy, self.set, None, False)
-            return (kg_tri_ar.energy - target_energy) ** 2
+            self.set.lambdaS1 = lambdas[0]
+            self.set.lambdaS2 = lambdas[1]
+            self.set.lambdaS3 = lambdas[0]
+            kg_surface_area = KgSurfaceCellBasedAdhesion(geo_copy)
+            kg_surface_area.compute_work(geo_copy, self.set, None, False)
+            return (kg_surface_area.energy - target_energy) ** 2
 
         options = {'disp': True, 'ftol': 1e-15, 'gtol': 1e-15}
         self.geo.update_measures()
-        result = minimize(objective, method='TNC', x0=np.array([self.geo.lmin0]), options=options)
-        return result.x[0]
+        result = minimize(objective, method='TNC', x0=np.array([self.set.lambdaS1, self.set.lambdaS2]), options=options)
+        logger.info(f'Found lambdaS1: {result.x[0]}, lambdaS2: {result.x[1]}')
+        return result.x[0], result.x[1]
