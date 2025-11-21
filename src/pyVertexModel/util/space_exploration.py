@@ -25,41 +25,49 @@ def objective(trial):
     error_type = split_study_name[1]
 
     # Supress the output to the logger
-    if error_type == 'gr':
+    if error_type.startswith('gr'):
         logger = logging.getLogger("pyVertexModel")
         logger.propagate = False
         logger.setLevel(logging.CRITICAL)
 
-    new_set = Set()
-    new_set.wing_disc_equilibrium()
+        new_set = Set()
+        new_set.wing_disc_equilibrium()
 
-    new_set.model_name = split_study_name[2]
-    new_set.initial_filename_state = 'Input/images/' + new_set.model_name + '.tif'
-    if split_study_name[3] != '':
-        new_set.CellHeight = float(split_study_name[3])
-        new_set.SubstrateZ = None
+        new_set.model_name = split_study_name[2]
+        if split_study_name[3] != '':
+            new_set.CellHeight = float(split_study_name[3])
+            new_set.SubstrateZ = None
 
-    if len(split_study_name) > 4 and split_study_name[4] != '':
-        new_set.percentage_scutoids = float(split_study_name[4])
+        if len(split_study_name) > 4 and split_study_name[4] != '':
+            new_set.percentage_scutoids = float(split_study_name[4])
 
-    # Set and define the parameters space
-    # percentage_deviation = 0.1
-    # new_set.lambdaV = trial.suggest_float('lambdaV', new_set.lambdaV - (new_set.lambdaV * percentage_deviation), new_set.lambdaV + (new_set.lambdaV * percentage_deviation))
-    # new_set.lambdaS2 = trial.suggest_float('lambdaS2', new_set.lambdaS2 - (new_set.lambdaS2 * percentage_deviation), new_set.lambdaS2 + (new_set.lambdaS2 * percentage_deviation))
-    #new_set.lambdaV = trial.suggest_float('lambdaV', 1e-3, 100)
-    #p_surface_area = trial.suggest_float('p_surface_area', 0, 1)
-    #new_set.lambdaS1 = 1.47 * ((new_set.CellHeight / 15) ** p_surface_area) * (0.5 + 0.5 * (1 - np.exp(-0.31 * new_set.CellHeight ** 0.62)))
-    #new_set.lambdaS2 = 1.47 * ((new_set.CellHeight / 15) ** p_surface_area) * (1 - (0.5 + 0.5 * (1 - np.exp(-0.31 * new_set.CellHeight ** 0.62))))
-    new_set.lambdaS1 = trial.suggest_float('lambdaS1', 1e-5, 10)
-    new_set.lambdaS2 = trial.suggest_float('lambdaS2', 1e-5, 10)
-    new_set.lambdaS3 = new_set.lambdaS1
-    #new_set.ref_A0 = 0.92
-    new_set.kSubstrate = 0
-    new_set.EnergyBarrierAR = False
-    new_set.lambdaR = 0
-    new_set.update_derived_parameters()
+        if error_type == 'gr':
+            new_set.initial_filename_state = 'Input/images/' + new_set.model_name + '.tif'
+            # Set and define the parameters space
+            new_set.lambdaS1 = trial.suggest_float('lambdaS1', 1e-5, 10)
+            new_set.lambdaS2 = trial.suggest_float('lambdaS2', 1e-5, 10)
+            new_set.lambdaS3 = new_set.lambdaS1
+            new_set.kSubstrate = 0
+            new_set.EnergyBarrierAR = False
+            new_set.lambdaR = 0
+        elif error_type == 'grResized':
+            initial_filename_state = f"{new_set.model_name}.pkl"
+            new_set.initial_filename_state = 'Input/to_resize/' + initial_filename_state
 
-    if error_type == 'gr':
+            new_set.resize_z = new_set.CellHeight / 15.0  # original wing disc height
+
+            # Set and define the parameters space
+            new_set.lambdaS1 = trial.suggest_float('lambdaS1', 1e-7, 10)
+            new_set.lambdaS2 = trial.suggest_float('lambdaS2', 1e-7, 10)
+            new_set.lambdaS3 = new_set.lambdaS1
+            new_set.ref_A0 = 0.95
+
+            # nu equal to original nu
+            new_set.nu_bottom = new_set.nu
+
+        new_set.update_derived_parameters()
+
+    if error_type.startswith('gr'):
         new_set.OutputFolder = None
 
         # Initialize the model with the parameters
@@ -67,9 +75,6 @@ def objective(trial):
 
         # Run the simulation
         vModel.initialize()
-
-        # Fixed parameters to understand relation of surface area and aspect ratio
-        #vModel.geo.fix_parameters({'lmin0': 1.0})
 
         gr = vModel.single_iteration(post_operations=False)
         return gr
@@ -119,6 +124,8 @@ def objective(trial):
                     error += np.abs(important_features['wound_area_top_extrapolated_' + str(time)] - in_vivo_values_area[int(time/3)]) / in_vivo_values_area[int(time/3)]
 
             return error
+
+    return None
 
 def load_simulations(study, error_type=None):
     """
