@@ -32,19 +32,19 @@ for input_file in all_files:
                 vModel.set.lambdaS1 = 0.001
                 vModel.set.lambdaS2 = 0.05
             elif resize_z == original_wing_disc_height*0.001: # 0.015
-                vModel.set.lambdaS1 = 0.01
+                vModel.set.lambdaS1 = 0.001
                 vModel.set.lambdaS2 = 0.01
             elif resize_z == original_wing_disc_height*0.01: # 0.15
-                vModel.set.lambdaS1 = 0.05
+                vModel.set.lambdaS1 = 0.07
                 vModel.set.lambdaS2 = 0.08
             elif resize_z == original_wing_disc_height*0.1: # 1.5
-                vModel.set.lambdaS1 = 0.1
+                vModel.set.lambdaS1 = 0.3
                 vModel.set.lambdaS2 = 0.01
             elif resize_z == original_wing_disc_height*0.5: # 7.5
-                vModel.set.lambdaS1 = 0.7
+                vModel.set.lambdaS1 = 0.8
                 vModel.set.lambdaS2 = 0.02
             elif resize_z == original_wing_disc_height*2.0: # 30.0
-                vModel.set.lambdaS1 = 2.5
+                vModel.set.lambdaS1 = 2.0
                 vModel.set.lambdaS2 = 0.02
 
             # vModel.set.lambdaS1 = lambda_s1_curve(resize_z)
