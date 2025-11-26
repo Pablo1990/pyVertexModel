@@ -44,12 +44,14 @@ def objective(trial):
         if error_type == 'gr':
             new_set.initial_filename_state = 'Input/images/' + new_set.model_name + '.tif'
             # Set and define the parameters space
-            new_set.lambdaS1 = trial.suggest_float('lambdaS1', 1e-5, 10)
-            new_set.lambdaS2 = trial.suggest_float('lambdaS2', 1e-5, 10)
+            new_set.lambdaS1 = trial.suggest_float('lambdaS1', 1e-7, 1)
+            new_set.lambdaS2 = trial.suggest_float('lambdaS2', 1e-7, 1)
             new_set.lambdaS3 = new_set.lambdaS1
             new_set.kSubstrate = 0
             new_set.EnergyBarrierAR = False
             new_set.lambdaR = 0
+            new_set.ref_A0 = 0
+            new_set.ref_V0 = 0
         elif error_type == 'grResized':
             initial_filename_state = f"{new_set.model_name}.pkl"
             new_set.initial_filename_state = 'Input/to_resize/' + initial_filename_state
@@ -75,8 +77,10 @@ def objective(trial):
 
         # Run the simulation
         vModel.initialize()
+        vModel.geo.init_reference_values_and_noise(vModel.set)
 
         gr = vModel.single_iteration(post_operations=False)
+        print(f"Volume energy: {vModel.energies['Volume']}, Surface energy: {vModel.energies['Surface']}")
         return gr
     elif error_type == 'KInitialRecoil' or error_type == 'wound':
         # Initialize the model with the parameters
