@@ -28,23 +28,23 @@ for input_file in all_files:
             vModel.set.resize_z = resize_z / original_wing_disc_height
 
             # Lambda values based on the normalised values and the cell height
-            if resize_z == original_wing_disc_height*0.0001: # 0.0015
+            if resize_z == original_wing_disc_height * 0.0001:  # 0.0015 # NOT WORKING
                 vModel.set.lambdaS1 = 0.001
                 vModel.set.lambdaS2 = 0.05
-            elif resize_z == original_wing_disc_height*0.001: # 0.015
-                vModel.set.lambdaS1 = 0.001
+            elif resize_z == original_wing_disc_height * 0.001:  # 0.015
+                vModel.set.lambdaS1 = 0.08
                 vModel.set.lambdaS2 = 0.01
-            elif resize_z == original_wing_disc_height*0.01: # 0.15
-                vModel.set.lambdaS1 = 0.07
+            elif resize_z == original_wing_disc_height * 0.01:  # 0.15
+                vModel.set.lambdaS1 = 0.04
                 vModel.set.lambdaS2 = 0.08
-            elif resize_z == original_wing_disc_height*0.1: # 1.5
-                vModel.set.lambdaS1 = 0.3
+            elif resize_z == original_wing_disc_height * 0.1:  # 1.5
+                vModel.set.lambdaS1 = 0.19
                 vModel.set.lambdaS2 = 0.01
-            elif resize_z == original_wing_disc_height*0.5: # 7.5
-                vModel.set.lambdaS1 = 0.8
+            elif resize_z == original_wing_disc_height * 0.5:  # 7.5
+                vModel.set.lambdaS1 = 0.6
                 vModel.set.lambdaS2 = 0.02
-            elif resize_z == original_wing_disc_height*2.0: # 30.0
-                vModel.set.lambdaS1 = 2.0
+            elif resize_z == original_wing_disc_height * 2.0:  # 30.0
+                vModel.set.lambdaS1 = 2.45
                 vModel.set.lambdaS2 = 0.02
 
             # vModel.set.lambdaS1 = lambda_s1_curve(resize_z)
