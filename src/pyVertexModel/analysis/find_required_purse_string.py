@@ -5,7 +5,7 @@ import pandas as pd
 
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
-from src.pyVertexModel.util.utils import load_state
+from src.pyVertexModel.util.utils import load_state, plot_figure_with_line
 
 single_file = False
 
@@ -34,6 +34,9 @@ else:
     recoilings = []
     normalised_purse_string_strengths = []
     purse_string_strength_0 = []
+    lambda_s1_list = []
+    lambda_s2_list = []
+    model_name = []
     for ar_dir in all_directories:
         simulations_dirs = os.listdir(os.path.join(c_folder, ar_dir))
         simulations_dirs = [d for d in simulations_dirs if os.path.isdir(os.path.join(c_folder, ar_dir, d))]
@@ -61,6 +64,7 @@ else:
 
                 if len(files_ending_pkl) == 0:
                     run_iteration = True
+                    continue
                 else:
                     load_state(vModel, os.path.join(c_folder, ar_dir, directory, files_ending_pkl[0]))
                     run_iteration = False
@@ -69,21 +73,33 @@ else:
             current_folder = vModel.set.OutputFolder
             last_folder = current_folder.split('/')
             vModel.set.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/', last_folder[-1])
-            ps_strength, dy, recoiling, purse_string_strength_eq = vModel.required_purse_string_strength(os.path.join(c_folder, ar_dir, directory),
-                                                                                                         run_iteration=run_iteration)
+            ps_strength, dy, recoiling, purse_string_strength_eq = vModel.required_purse_string_strength(
+                os.path.join(c_folder, ar_dir, directory),
+                run_iteration=run_iteration)
             ps_strengths.append(ps_strength)
             dys.append(dy)
             recoilings.append(recoiling)
             output_dirs.append(directory)
             purse_string_strength_0.append(purse_string_strength_eq)
-            directory_splitted = directory.split('_')
-            aspect_ratio.append(float(directory_splitted[1]))
+            aspect_ratio.append(vModel.set.CellHeight)
+            lambda_s1_list.append(vModel.set.lambdaS1)
+            lambda_s2_list.append(vModel.set.lambdaS2)
+            model_name.append(vModel.set.model_name)
             normalised_purse_string_strengths.append((ps_strength * recoiling) / (dy - recoiling))
 
-
     # Append results into an existing csv file
-    df = pd.DataFrame({'AR_Dir': output_dirs, 'AR': aspect_ratio, 'Purse_String_Strength': ps_strengths, 'Dy': dys, 'Recoil': recoilings, 'Purse_string_strength_dy0': purse_string_strength_0, 'Normalised_Purse_String_Strength': normalised_purse_string_strengths})
+    df = pd.DataFrame(
+        {'Model_name': model_name, 'AR': aspect_ratio, 'LambdaS1': lambda_s1_list, 'LambdaS2': lambda_s2_list,
+         'Purse_String_Strength': ps_strengths, 'Dy': dys, 'Recoil': recoilings,
+         'Purse_string_strength_dy0': purse_string_strength_0,
+         'Normalised_Purse_String_Strength': normalised_purse_string_strengths})
     output_csv = os.path.join(PROJECT_DIRECTORY, 'Result/to_calculate_ps_recoil/required_purse_string_strengths.csv')
     df.to_csv(output_csv, index=False)
 
+    # Plot recoil over aspect ratio
+    plot_figure_with_line(df, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil'),
+                          y_axis_name='Recoil', y_axis_label='Recoil velocity (dt=1e-10)')
 
+    plot_figure_with_line(df, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil'),
+                          y_axis_name='Purse_string_strength_dy0',
+                          y_axis_label='Minimum purse string strength required to start closing the wound')
