@@ -98,8 +98,20 @@ else:
 
     # Plot recoil over aspect ratio
     plot_figure_with_line(df, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil'),
+                          x_axis_name='AR',
                           y_axis_name='Recoil', y_axis_label='Recoil velocity (dt=1e-10)')
 
     plot_figure_with_line(df, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil'),
+                          x_axis_name='AR',
                           y_axis_name='Purse_string_strength_dy0',
                           y_axis_label='Minimum purse string strength required to start closing the wound')
+
+    plot_figure_with_line(df, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil'),
+                          x_axis_name='AR',
+                          y_axis_name='LambdaS1',
+                          y_axis_label=r'$\lambda_{s1}=\lambda_{s3}$')
+
+    plot_figure_with_line(df, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil'),
+                          x_axis_name='AR',
+                          y_axis_name='LambdaS2',
+                          y_axis_label=r'$\lambda_{s2}$')
