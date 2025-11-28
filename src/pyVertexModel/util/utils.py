@@ -8,10 +8,11 @@ import pickle
 import matplotlib
 import numpy as np
 import pyvista as pv
+import seaborn as sns
 
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
-from scipy.optimize import fsolve, minimize
+from scipy.optimize import fsolve, minimize, curve_fit
 
 
 def find_optimal_deform_array_X_Y(geo, deform_array_Z, middle_point, volumes):
@@ -622,3 +623,87 @@ def lambda_s2_curve(x, a=0.48, b=0.02, c=2.4, k=0.74, p=0.38, l_max=0.84):
     :return:
     """
     return lambda_total_model(x, a, b, c) * lambda_s2_normalised_curve(x, k, p, l_max)
+
+def plot_figure_with_line(best_average_values, scutoids, current_path, x_axis_name='resize_z',
+                          x_axis_label='Aspect ratio (AR)', y_axis_name='params_lambdaS_total',
+                          y_axis_label=r'$\lambda_{total}$', max_fev=10000000):
+    """
+    Plot a figure with a boxplot and a fitted line
+    :param best_average_values:
+    :param max_fev:
+    :param current_path:
+    :param scutoids:
+    :param x_axis_name:
+    :param x_axis_label:
+    :param y_axis_name:
+    :param y_axis_label:
+    :return:
+    """
+    param_df = best_average_values[best_average_values[x_axis_name].notnull()]
+    param_df = param_df[param_df['scutoids'] == scutoids]
+    if param_df.empty:
+        return
+
+    if y_axis_name == 'params_lambdaS_total':
+        param_df = param_df[param_df['params_lambdaS1'].notnull() & param_df['params_lambdaS2'].notnull()]
+        ydata = param_df['params_lambdaS1'] + param_df['params_lambdaS2']
+        param_df['params_lambdaS_total'] = ydata
+
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(x=x_axis_name, y=y_axis_name, data=param_df, whis=[0, 100], width=.6, palette="vlag")
+    ax = sns.stripplot(x=x_axis_name, y=y_axis_name, data=param_df, size=4, color=".3")
+
+    # Increase font size and make it bold
+    plt.xticks(fontsize=20, fontweight='bold')
+    plt.yticks(fontsize=20, fontweight='bold')
+
+    # plt.title(f'Boxplot of {param} correlations with {scutoids*100}% scutoids')
+    plt.xlabel(x_axis_label, fontsize=20, fontweight='bold')
+    plt.ylabel(y_axis_label, fontsize=20, fontweight='bold')
+    plt.xticks(rotation=45)
+
+    x_positions = ax.get_xticks()  # This gives [0, 1, 2, 3]
+    x_labels = ax.get_xticklabels()
+    category_order = np.array([float(label.get_text()) for label in x_labels])
+    y_data = param_df[y_axis_name]
+    x_data = param_df[x_axis_name]
+    ydata_average_by_ar = param_df.groupby(x_axis_name)[y_axis_name].mean().reindex(category_order).values
+    if y_axis_name == 'params_lambdaS_total':
+        # Fit the function to the mean correlation data
+        popt_exp = curve_fit(lambda_total_model, xdata=x_data, ydata=y_data, sigma=None, maxfev=max_fev)
+        popt_exp = popt_exp[0]
+        y_fit = lambda_total_model(category_order, *popt_exp)
+
+        # Equation: a + b * (np.log(x) + c ) ** 2
+        label = f'$y = {popt_exp[0]:.2e} \\cdot {popt_exp[1]:.2e}(\\ln(x) + {popt_exp[2]:.2e})^2$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+    elif y_axis_name == 'params_lambdaS1_normalised':
+        popt_exp = curve_fit(lambda_s1_normalised_curve, xdata=x_data, ydata=y_data, sigma=None, maxfev=max_fev)
+        popt_exp = popt_exp[0]
+        y_fit = lambda_s1_normalised_curve(category_order, *popt_exp)
+
+        # Equation: 0.5 + ((l_max - 0.5) / (1 + np.exp(-k * np.log(x) + c)))
+        label = f'$y = 0.5 + (({popt_exp[2]:.2f} - 0.5) / (1 + e^{{-{popt_exp[0]:.2f} \\cdot (ln x - {popt_exp[1]:.2f})}}))$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+    elif y_axis_name == 'params_lambdaS2_normalised':
+        popt_exp = curve_fit(lambda_s2_normalised_curve, xdata=x_data, ydata=y_data, sigma=None, maxfev=max_fev)
+        popt_exp = popt_exp[0]
+        y_fit = lambda_s2_normalised_curve(category_order, *popt_exp)
+
+        # Equation: 1 - (0.5 + ((l_max - 0.5) / (1 + np.exp(-k * np.log(x) + c)))
+        label = f'$y = 1 - (0.5 + (({popt_exp[2]:.2f} - 0.5) / (1 + e^{{-{popt_exp[0]:.2f} \\cdot (ln x - {popt_exp[1]:.2f})}})))$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+    elif y_axis_name == 'params_lambdaS1':
+        y_fit = lambda_s2_curve(category_order)
+
+        # Equation: y = a + b · (ln(x) + c)^2 · (0.5 + (l_max - 0.5) · (1 - e^(-k · x^p)))
+        label = f'$y = 0.48 + 0.02 \\cdot (\\ln(x) + 2.4)^2 \\cdot \\left(0.5 + (0.84 - 0.5) \\cdot \\left(1 - e^{{-0.74 \\cdot x^{{0.38}}}}\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+    elif y_axis_name == 'params_lambdaS2':
+        y_fit = lambda_s2_curve(category_order)
+
+        # Equation: y = a + b · (ln(x) + c)^2 · (1 - (0.5 + (l_max - 0.5) · (1 - e^(-k · x^p))))
+        label = f'$y = 0.48 + 0.02 \\cdot (\\ln(x) + 2.4)^2 \\cdot \\left(1 - \\left(0.5 + (0.84 - 0.5) \\cdot \\left(1 - e^{{-0.74 \\cdot x^{{0.38}}}}\\right)\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+    sns.lineplot(data=None, x=x_positions, y=y_fit, label=label, linewidth=2, color='black')
+    plt.legend()
+
+    # Save the figure
+    plt.tight_layout()
+    plt.savefig(os.path.join(current_path, f'boxplot_{x_axis_name}_{y_axis_name}_scutoids_{scutoids:.2f}.png'))
+    plt.close()
