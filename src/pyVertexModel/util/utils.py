@@ -640,7 +640,9 @@ def plot_figure_with_line(best_average_values, scutoids, current_path, x_axis_na
     :return:
     """
     param_df = best_average_values[best_average_values[x_axis_name].notnull()]
-    param_df = param_df[param_df['scutoids'] == scutoids]
+    if scutoids is not None:
+        param_df = param_df[param_df['scutoids'] == scutoids]
+
     if param_df.empty:
         return
 
@@ -677,6 +679,9 @@ def plot_figure_with_line(best_average_values, scutoids, current_path, x_axis_na
         # Equation: a + b * (np.log(x) + c ) ** 2
         label = f'$y = {popt_exp[0]:.2e} \\cdot {popt_exp[1]:.2e}(\\ln(x) + {popt_exp[2]:.2e})^2$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
     elif y_axis_name == 'params_lambdaS1_normalised':
+        plt.ylim(0, 1)
+
+         # Fit the function to the mean correlation data
         popt_exp = curve_fit(lambda_s1_normalised_curve, xdata=x_data, ydata=y_data, sigma=None, maxfev=max_fev)
         popt_exp = popt_exp[0]
         y_fit = lambda_s1_normalised_curve(category_order, *popt_exp)
@@ -684,6 +689,9 @@ def plot_figure_with_line(best_average_values, scutoids, current_path, x_axis_na
         # Equation: 0.5 + ((l_max - 0.5) / (1 + np.exp(-k * np.log(x) + c)))
         label = f'$y = 0.5 + (({popt_exp[2]:.2f} - 0.5) / (1 + e^{{-{popt_exp[0]:.2f} \\cdot (ln x - {popt_exp[1]:.2f})}}))$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
     elif y_axis_name == 'params_lambdaS2_normalised':
+        plt.ylim(0, 1)
+
+         # Fit the function to the mean correlation data
         popt_exp = curve_fit(lambda_s2_normalised_curve, xdata=x_data, ydata=y_data, sigma=None, maxfev=max_fev)
         popt_exp = popt_exp[0]
         y_fit = lambda_s2_normalised_curve(category_order, *popt_exp)
@@ -700,8 +708,12 @@ def plot_figure_with_line(best_average_values, scutoids, current_path, x_axis_na
 
         # Equation: y = a + b · (ln(x) + c)^2 · (1 - (0.5 + (l_max - 0.5) · (1 - e^(-k · x^p))))
         label = f'$y = 0.48 + 0.02 \\cdot (\\ln(x) + 2.4)^2 \\cdot \\left(1 - \\left(0.5 + (0.84 - 0.5) \\cdot \\left(1 - e^{{-0.74 \\cdot x^{{0.38}}}}\\right)\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
-    sns.lineplot(data=None, x=x_positions, y=y_fit, label=label, linewidth=2, color='black')
-    plt.legend()
+    else:
+        y_fit = None
+
+    if y_fit is not None:
+        sns.lineplot(data=None, x=x_positions, y=y_fit, label=label, linewidth=2, color='black')
+        plt.legend()
 
     # Save the figure
     plt.tight_layout()
