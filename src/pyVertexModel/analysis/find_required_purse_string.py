@@ -20,81 +20,83 @@ if single_file:
 else:
     # Folder containing different simulations with different cell shapes
     c_folder = os.path.join(PROJECT_DIRECTORY, 'Result/to_calculate_ps_recoil/')
+    output_csv = os.path.join(PROJECT_DIRECTORY, 'Result/to_calculate_ps_recoil/required_purse_string_strengths.csv')
+    if not os.path.exists(output_csv):
+        # Get all directories within c_folder
+        all_directories = os.listdir(c_folder)
+        all_directories = [d for d in all_directories if os.path.isdir(os.path.join(c_folder, d))]
+        # all_directories.sort()
 
-    # Get all directories within c_folder
-    all_directories = os.listdir(c_folder)
-    all_directories = [d for d in all_directories if os.path.isdir(os.path.join(c_folder, d))]
-    # all_directories.sort()
+        # Save ps_strengths and dy for each cell shape
+        ps_strengths = []
+        dys = []
+        output_dirs = []
+        aspect_ratio = []
+        recoilings = []
+        normalised_purse_string_strengths = []
+        purse_string_strength_0 = []
+        lambda_s1_list = []
+        lambda_s2_list = []
+        model_name = []
+        for ar_dir in all_directories:
+            simulations_dirs = os.listdir(os.path.join(c_folder, ar_dir))
+            simulations_dirs = [d for d in simulations_dirs if os.path.isdir(os.path.join(c_folder, ar_dir, d))]
+            for directory in simulations_dirs:
+                print(f"Processing directory: {directory}")
 
-    # Save ps_strengths and dy for each cell shape
-    ps_strengths = []
-    dys = []
-    output_dirs = []
-    aspect_ratio = []
-    recoilings = []
-    normalised_purse_string_strengths = []
-    purse_string_strength_0 = []
-    lambda_s1_list = []
-    lambda_s2_list = []
-    model_name = []
-    for ar_dir in all_directories:
-        simulations_dirs = os.listdir(os.path.join(c_folder, ar_dir))
-        simulations_dirs = [d for d in simulations_dirs if os.path.isdir(os.path.join(c_folder, ar_dir, d))]
-        for directory in simulations_dirs:
-            print(f"Processing directory: {directory}")
+                # Get the purse string strength
+                vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False, set_option='wing_disc')
 
-            # Get the purse string strength
-            vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False, set_option='wing_disc')
+                files_within_folder = os.listdir(os.path.join(c_folder, ar_dir, directory))
+                files_ending_pkl = [f for f in files_within_folder if f.endswith('.pkl') and f.startswith('data_step_')]
+                if 'before_ablation.pkl' not in files_within_folder:
+                    print(f"Skipping {directory} as 'before_ablation.pkl' not found.")
+                    continue
 
-            files_within_folder = os.listdir(os.path.join(c_folder, ar_dir, directory))
-            files_ending_pkl = [f for f in files_within_folder if f.endswith('.pkl') and f.startswith('data_step_')]
-            if 'before_ablation.pkl' not in files_within_folder:
-                print(f"Skipping {directory} as 'before_ablation.pkl' not found.")
-                continue
-
-            load_state(vModel, os.path.join(c_folder, ar_dir, directory, 'before_ablation.pkl'))
-            if len(files_ending_pkl) == 0:
-                run_iteration = True
-            else:
-                # Sort by time step
-                files_ending_pkl.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
-
-                # I only want files that were created or modified after 'before_ablation.pkl' time-wise
-                files_ending_pkl = [f for f in files_ending_pkl if int(f.split('_')[-1].split('.')[0]) > vModel.numStep]
-
+                load_state(vModel, os.path.join(c_folder, ar_dir, directory, 'before_ablation.pkl'))
                 if len(files_ending_pkl) == 0:
                     run_iteration = True
-                    continue
                 else:
-                    load_state(vModel, os.path.join(c_folder, ar_dir, directory, files_ending_pkl[0]))
-                    run_iteration = False
+                    # Sort by time step
+                    files_ending_pkl.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
 
-            # Run the required purse string strength analysis
-            current_folder = vModel.set.OutputFolder
-            last_folder = current_folder.split('/')
-            vModel.set.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/', last_folder[-1])
-            ps_strength, dy, recoiling, purse_string_strength_eq = vModel.required_purse_string_strength(
-                os.path.join(c_folder, ar_dir, directory),
-                run_iteration=run_iteration)
-            ps_strengths.append(ps_strength)
-            dys.append(dy)
-            recoilings.append(recoiling)
-            output_dirs.append(directory)
-            purse_string_strength_0.append(purse_string_strength_eq)
-            aspect_ratio.append(vModel.set.CellHeight)
-            lambda_s1_list.append(vModel.set.lambdaS1)
-            lambda_s2_list.append(vModel.set.lambdaS2)
-            model_name.append(vModel.set.model_name)
-            normalised_purse_string_strengths.append((ps_strength * recoiling) / (dy - recoiling))
+                    # I only want files that were created or modified after 'before_ablation.pkl' time-wise
+                    files_ending_pkl = [f for f in files_ending_pkl if int(f.split('_')[-1].split('.')[0]) > vModel.numStep]
 
-    # Append results into an existing csv file
-    df = pd.DataFrame(
-        {'Model_name': model_name, 'AR': aspect_ratio, 'LambdaS1': lambda_s1_list, 'LambdaS2': lambda_s2_list,
-         'Purse_String_Strength': ps_strengths, 'Dy': dys, 'Recoil': recoilings,
-         'Purse_string_strength_dy0': purse_string_strength_0,
-         'Normalised_Purse_String_Strength': normalised_purse_string_strengths})
-    output_csv = os.path.join(PROJECT_DIRECTORY, 'Result/to_calculate_ps_recoil/required_purse_string_strengths.csv')
-    df.to_csv(output_csv, index=False)
+                    if len(files_ending_pkl) == 0:
+                        run_iteration = True
+                        continue
+                    else:
+                        load_state(vModel, os.path.join(c_folder, ar_dir, directory, files_ending_pkl[0]))
+                        run_iteration = False
+
+                # Run the required purse string strength analysis
+                current_folder = vModel.set.OutputFolder
+                last_folder = current_folder.split('/')
+                vModel.set.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/', last_folder[-1])
+                ps_strength, dy, recoiling, purse_string_strength_eq = vModel.required_purse_string_strength(
+                    os.path.join(c_folder, ar_dir, directory),
+                    run_iteration=run_iteration)
+                ps_strengths.append(ps_strength)
+                dys.append(dy)
+                recoilings.append(recoiling)
+                output_dirs.append(directory)
+                purse_string_strength_0.append(purse_string_strength_eq)
+                aspect_ratio.append(vModel.set.CellHeight)
+                lambda_s1_list.append(vModel.set.lambdaS1)
+                lambda_s2_list.append(vModel.set.lambdaS2)
+                model_name.append(vModel.set.model_name)
+                normalised_purse_string_strengths.append((ps_strength * recoiling) / (dy - recoiling))
+
+        # Append results into an existing csv file
+        df = pd.DataFrame(
+            {'Model_name': model_name, 'AR': aspect_ratio, 'LambdaS1': lambda_s1_list, 'LambdaS2': lambda_s2_list,
+             'Purse_String_Strength': ps_strengths, 'Dy': dys, 'Recoil': recoilings,
+             'Purse_string_strength_dy0': purse_string_strength_0,
+             'Normalised_Purse_String_Strength': normalised_purse_string_strengths})
+        df.to_csv(output_csv, index=False)
+    else:
+        df = pd.read_csv(output_csv)
 
     # Plot recoil over aspect ratio
     plot_figure_with_line(df, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil'),
@@ -104,7 +106,7 @@ else:
     plot_figure_with_line(df, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil'),
                           x_axis_name='AR',
                           y_axis_name='Purse_string_strength_dy0',
-                          y_axis_label='Minimum purse string strength required to start closing the wound')
+                          y_axis_label='Min. purse string strength')
 
     plot_figure_with_line(df, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil'),
                           x_axis_name='AR',
