@@ -80,7 +80,6 @@ def objective(trial):
         vModel.geo.init_reference_values_and_noise(vModel.set)
 
         gr = vModel.single_iteration(post_operations=False)
-        print(f"Volume energy: {vModel.energies['Volume']}, Surface energy: {vModel.energies['Surface']}")
         return gr
     elif error_type == 'KInitialRecoil' or error_type == 'wound':
         # Initialize the model with the parameters
