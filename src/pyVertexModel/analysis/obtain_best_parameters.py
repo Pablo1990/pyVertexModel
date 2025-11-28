@@ -133,10 +133,10 @@ for param in all_params:
             y_fit = function_to_fit(category_order, *popt_exp)
             if param == 'params_lambdaS1_normalised':
                 # Equation: 0.5 + ((l_max - 0.5) / (1 + np.exp(-k * np.log(x) + c)))
-                label = f'$y = 0.5 + (({popt_exp[2]:.2f} - 0.5) / (1 + e^{{-{popt_exp[0]:.2f} \\cdot x^{{{popt_exp[1]:.2f}}}}}))$ - R$^2$ = {r2(ydata, function_to_fit(xdata, *popt_exp)):.2f}'
+                label = f'$y = 0.5 + (({popt_exp[2]:.2f} - 0.5) / (1 + e^{{-{popt_exp[0]:.2f} \\cdot (ln x - {popt_exp[1]:.2f})}}))$ - R$^2$ = {r2(ydata, function_to_fit(xdata, *popt_exp)):.2f}'
             elif param == 'params_lambdaS2_normalised':
                 # Equation: 1 - (0.5 + ((l_max - 0.5) / (1 + np.exp(-k * np.log(x) + c)))
-                label = f'$y = 1 - (0.5 + (({popt_exp[2]:.2f} - 0.5) / (1 + e^{{-{popt_exp[0]:.2f} \\cdot x^{{{popt_exp[1]:.2f}}}}}))$ - R$^2$ = {r2(ydata, function_to_fit(xdata, *popt_exp)):.2f}'
+                label = f'$y = 1 - (0.5 + (({popt_exp[2]:.2f} - 0.5) / (1 + e^{{-{popt_exp[0]:.2f} \\cdot (ln x - {popt_exp[1]:.2f})}})))$ - R$^2$ = {r2(ydata, function_to_fit(xdata, *popt_exp)):.2f}'
             sns.lineplot(data=None, x=x_positions, y=y_fit, label=label, linewidth=2, color='black')
             plt.legend()
 
@@ -184,7 +184,7 @@ for scutoids in scutoids_percentage:
     category_order = np.array([float(label.get_text()) for label in x_labels])
     y_fit = lambda_total_model(category_order, *popt_exp)
     ydata_average_by_ar = param_df.groupby('resize_z')['params_lambdaS_total'].mean().reindex(category_order).values
-    label = f'$y = {popt_exp[0]:.2f} \\cdot {popt_exp[1]:.2f}(\\ln(x) + 1.9)^2$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+    label = f'$y = {popt_exp[0]:.2f} \\cdot {popt_exp[1]:.2f}(\\ln(x) + {popt_exp[2]:.2f})^2$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
     sns.lineplot(data=None, x=x_positions, y=y_fit, label=label, linewidth=2, color='black')
     plt.legend()
 
@@ -216,7 +216,7 @@ for scutoids in scutoids_percentage:
 
         if param == 'params_lambdaS1':
             function_to_fit = lambda_s1_curve
-            plt.ylabel(r'$\lambda_{s1}=\lambda_{s2}$', fontsize=20, fontweight='bold')
+            plt.ylabel(r'$\lambda_{s1}=\lambda_{s3}$', fontsize=20, fontweight='bold')
         elif param == 'params_lambdaS2':
             function_to_fit = lambda_s2_curve
             plt.ylabel(r'$\lambda_{s2}$', fontsize=20, fontweight='bold')
@@ -230,9 +230,9 @@ for scutoids in scutoids_percentage:
             y_fit = function_to_fit(category_order)
             ydata_average_by_ar = param_df.groupby('resize_z')[param].mean().reindex(category_order).values
             if param == 'params_lambdaS1':
-                label = f'$y = 0.48 + 0.02 \\cdot (\\ln(x) + 1.9)^2 \\cdot \\left(0.5 + (0.84 - 0.5) \\cdot \\left(1 - e^{{-0.74 \\cdot x^{{0.38}}}}\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+                label = f'$y = 0.48 + 0.02 \\cdot (\\ln(x) + 2.4)^2 \\cdot \\left(0.5 + (0.84 - 0.5) \\cdot \\left(1 - e^{{-0.74 \\cdot x^{{0.38}}}}\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
             elif param == 'params_lambdaS2':
-                label = f'$y = 0.48 + 0.02 \\cdot (\\ln(x) + 1.9)^2 \\cdot \\left(1 - \\left(0.5 + (0.84 - 0.5) \\cdot \\left(1 - e^{{-0.74 \\cdot x^{{0.38}}}}\\right)\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+                label = f'$y = 0.48 + 0.02 \\cdot (\\ln(x) + 2.4)^2 \\cdot \\left(1 - \\left(0.5 + (0.84 - 0.5) \\cdot \\left(1 - e^{{-0.74 \\cdot x^{{0.38}}}}\\right)\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
             sns.lineplot(data=None, x=x_positions, y=y_fit, label=label, linewidth=2, color='black')
             plt.legend()
 
