@@ -558,7 +558,7 @@ def r2(y, y_predicted):
     return 1 - (ss_res / ss_tot)
 
 
-def lambda_total_model(x, a, b):
+def lambda_total_model(x, a, b, c):
     """
     Compute the total lambda model.
     :param x: aspect ratio
@@ -567,7 +567,7 @@ def lambda_total_model(x, a, b):
     :param c:
     :return:
     """
-    return a + b * (np.log(x) + 1.9) ** 2
+    return a + b * (np.log(x) + c ) ** 2
 
 
 def lambda_s1_normalised_curve(x, k, c, l_max):
@@ -594,9 +594,10 @@ def lambda_s2_normalised_curve(x, p, q, l_max):
     return 1 - lambda_s1_normalised_curve(x, p, q, l_max)
 
 
-def lambda_s1_curve(x, a=0.48, b=0.02, k=0.74, p=0.38, l_max=0.84):
+def lambda_s1_curve(x, a=0.48, b=0.02, c=2.4, k=0.74, p=0.38, l_max=0.84):
     """
 
+    :param c:
     :param x:
     :param a:
     :param b:
@@ -605,18 +606,19 @@ def lambda_s1_curve(x, a=0.48, b=0.02, k=0.74, p=0.38, l_max=0.84):
     :param l_max:
     :return:
     """
-    return lambda_total_model(x, a, b) * lambda_s1_normalised_curve(x, k, p, l_max)
+    return lambda_total_model(x, a, b, c) * lambda_s1_normalised_curve(x, k, p, l_max)
 
 
-def lambda_s2_curve(x, a=0.48, b=0.02, p=0.74, q=0.38, l_max=0.84):
+def lambda_s2_curve(x, a=0.48, b=0.02, c=2.4, k=0.74, p=0.38, l_max=0.84):
     """
 
+    :param c:
+    :param k:
     :param x:
     :param a:
     :param b:
     :param p:
-    :param q:
     :param l_max:
     :return:
     """
-    return lambda_total_model(x, a, b) * lambda_s2_normalised_curve(x, p, q, l_max)
+    return lambda_total_model(x, a, b, c) * lambda_s2_normalised_curve(x, k, p, l_max)
