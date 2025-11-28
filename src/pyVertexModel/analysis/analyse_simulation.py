@@ -410,7 +410,9 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_edge_info_ap
             else:
                 v_model.set.RemodelingFrequency = 100
             v_model.set.ablation = False
-            v_model.set.export_images = True
+            v_model.set.export_images = False
+            v_model.set.purseStringStrength = 0
+            v_model.set.lateralCablesStrength = 0
             if v_model.set.export_images and not os.path.exists(v_model.set.OutputFolder + '/images'):
                 os.mkdir(v_model.set.OutputFolder + '/images')
             edge_length_final_normalized = []

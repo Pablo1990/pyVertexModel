@@ -19,7 +19,7 @@ class Set:
         self.frozen_face_centres_border_cells = True
         self.model_name = ''
         self.percentage_scutoids = 0
-        self.myosin_pool = None
+        self.myosin_pool = 1e-4
         self.resize_z = None
         self.edge_length_threshold = 0.3
         self.kCeiling = None

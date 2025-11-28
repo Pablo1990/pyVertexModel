@@ -5,7 +5,7 @@ import pandas as pd
 
 from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation, create_video
 
-folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/final_results'
+folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/'
 all_files_features = []
 # Recursive search of all the files in the folder
 lst = []
@@ -15,6 +15,7 @@ for root, dirs, files in os.walk(folder):
             lst.append(os.path.join(root, c_dir))
 
 lst.sort(reverse=True)
+#lst = ['/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/06-25_142308_dWP1_scutoids_0.0_lVol_1.00e+00_kSubs_1.00e-01_lt_0.00e+00_refA0_9.20e-01_eARBarrier_8.00e-07_RemStiff_0.9_lS1_1.40e+00_lS2_1.40e-02_lS3_1.40e-01_ps_3.00e-05_lc_7.00e-05']
 for _, file in enumerate(lst):
     print(file)
 
@@ -25,10 +26,10 @@ for _, file in enumerate(lst):
         if os.path.exists(os.path.join(folder, file, 'before_ablation.pkl')):
             # if the videos do not exist, create them
             #if not os.path.exists(os.path.join(folder, file, 'images', 'front_video.mp4')):
-                #create_video(os.path.join(folder, file, 'images'), 'top_')
-                #create_video(os.path.join(folder, file, 'images'), 'perspective_')
-                #create_video(os.path.join(folder, file, 'images'), 'bottom_')
-                #create_video(os.path.join(folder, file, 'images'), 'front_')
+            #    create_video(os.path.join(folder, file, 'images'), 'top_')
+            #    create_video(os.path.join(folder, file, 'images'), 'perspective_')
+            #    create_video(os.path.join(folder, file, 'images'), 'bottom_')
+            #    create_video(os.path.join(folder, file, 'images'), 'front_wound')
 
             # if the analysis file exists, load it
             # if os.path.exists(os.path.join(folder, file, 'recoil_info_apical.pkl')):
