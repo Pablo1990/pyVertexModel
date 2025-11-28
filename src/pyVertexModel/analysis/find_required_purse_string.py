@@ -37,51 +37,53 @@ else:
     for ar_dir in all_directories:
         simulations_dirs = os.listdir(os.path.join(c_folder, ar_dir))
         simulations_dirs = [d for d in simulations_dirs if os.path.isdir(os.path.join(c_folder, ar_dir, d))]
-        directory = simulations_dirs[1]  # Get the directory number from command line argument int(sys.argv[1])
+        for directory in simulations_dirs:
+            print(f"Processing directory: {directory}")
 
-        # Get the purse string strength
-        vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False, set_option='wing_disc')
+            # Get the purse string strength
+            vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False, set_option='wing_disc')
 
-        files_within_folder = os.listdir(os.path.join(c_folder, ar_dir, directory))
-        files_ending_pkl = [f for f in files_within_folder if f.endswith('.pkl') and f.startswith('data_step_')]
-        if 'before_ablation.pkl' not in files_within_folder:
-            print(f"Skipping {directory} as 'before_ablation.pkl' not found.")
-            continue
+            files_within_folder = os.listdir(os.path.join(c_folder, ar_dir, directory))
+            files_ending_pkl = [f for f in files_within_folder if f.endswith('.pkl') and f.startswith('data_step_')]
+            if 'before_ablation.pkl' not in files_within_folder:
+                print(f"Skipping {directory} as 'before_ablation.pkl' not found.")
+                continue
 
-        load_state(vModel, os.path.join(c_folder, ar_dir, directory, 'before_ablation.pkl'))
-        if len(files_ending_pkl) == 0:
-            run_iteration = True
-        else:
-            # Sort by time step
-            files_ending_pkl.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
+            load_state(vModel, os.path.join(c_folder, ar_dir, directory, 'before_ablation.pkl'))
+            if len(files_ending_pkl) == 0:
+                run_iteration = True
+            else:
+                # Sort by time step
+                files_ending_pkl.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
 
-            # I only want files that were created or modified after 'before_ablation.pkl' time-wise
-            files_ending_pkl = [f for f in files_ending_pkl if int(f.split('_')[-1].split('.')[0]) > vModel.numStep]
+                # I only want files that were created or modified after 'before_ablation.pkl' time-wise
+                files_ending_pkl = [f for f in files_ending_pkl if int(f.split('_')[-1].split('.')[0]) > vModel.numStep]
 
-            load_state(vModel, os.path.join(c_folder, ar_dir, directory, files_ending_pkl[0]))
-            run_iteration = False
+                if len(files_ending_pkl) == 0:
+                    run_iteration = True
+                else:
+                    load_state(vModel, os.path.join(c_folder, ar_dir, directory, files_ending_pkl[0]))
+                    run_iteration = False
 
-        # Run the required purse string strength analysis
-        current_folder = vModel.set.OutputFolder
-        last_folder = current_folder.split('/')
-        vModel.set.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/', last_folder[-1])
-        ps_strength, dy, recoiling, purse_string_strength_eq = vModel.required_purse_string_strength(os.path.join(c_folder, ar_dir, directory),
-                                                                                                     run_iteration=run_iteration)
-        ps_strengths.append(ps_strength)
-        dys.append(dy)
-        recoilings.append(recoiling)
-        output_dirs.append(directory)
-        purse_string_strength_0.append(purse_string_strength_eq)
-        directory_splitted = directory.split('_')
-        aspect_ratio.append(float(directory_splitted[1]))
-        normalised_purse_string_strengths.append((ps_strength * recoiling) / (dy - recoiling))
+            # Run the required purse string strength analysis
+            current_folder = vModel.set.OutputFolder
+            last_folder = current_folder.split('/')
+            vModel.set.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/', last_folder[-1])
+            ps_strength, dy, recoiling, purse_string_strength_eq = vModel.required_purse_string_strength(os.path.join(c_folder, ar_dir, directory),
+                                                                                                         run_iteration=run_iteration)
+            ps_strengths.append(ps_strength)
+            dys.append(dy)
+            recoilings.append(recoiling)
+            output_dirs.append(directory)
+            purse_string_strength_0.append(purse_string_strength_eq)
+            directory_splitted = directory.split('_')
+            aspect_ratio.append(float(directory_splitted[1]))
+            normalised_purse_string_strengths.append((ps_strength * recoiling) / (dy - recoiling))
+
 
     # Append results into an existing csv file
     df = pd.DataFrame({'AR_Dir': output_dirs, 'AR': aspect_ratio, 'Purse_String_Strength': ps_strengths, 'Dy': dys, 'Recoil': recoilings, 'Purse_string_strength_dy0': purse_string_strength_0, 'Normalised_Purse_String_Strength': normalised_purse_string_strengths})
-    output_csv = os.path.join(PROJECT_DIRECTORY, 'Result/different_cell_shape_healing/required_purse_string_strengths.csv')
-    if os.path.exists(output_csv):
-        df_existing = pd.read_csv(output_csv)
-        df = pd.concat([df_existing, df], ignore_index=True)
+    output_csv = os.path.join(PROJECT_DIRECTORY, 'Result/to_calculate_ps_recoil/required_purse_string_strengths.csv')
     df.to_csv(output_csv, index=False)
 
 

@@ -406,7 +406,12 @@ class Geo:
             if c_cell.AliveStatus is not None:
                 # Adjust the Vol0
                 self.Cells[c].Vol0 = (self.Cells[c].Vol * (1 - avg_weight) + avg_vol * avg_weight) * c_set.ref_V0
-                self.Cells[c].Area0 = (self.Cells[c].Area * (1 - avg_weight) + avg_area * avg_weight) * c_set.ref_A0
+
+                # Adjust the Area0
+                if c_set.ref_A0 == 0:
+                    self.Cells[c].Area0 = 1
+                else:
+                    self.Cells[c].Area0 = (self.Cells[c].Area * (1 - avg_weight) + avg_area * avg_weight) * c_set.ref_A0
 
                 # Iterate over all faces in the current cell
                 for f in range(len(self.Cells[c].Faces)):
