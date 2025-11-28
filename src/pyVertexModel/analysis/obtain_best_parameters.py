@@ -21,7 +21,7 @@ if not os.path.exists(os.path.join(PROJECT_DIRECTORY, result_folder, 'best_avera
     all_folders = [f for f in os.listdir(os.path.join(PROJECT_DIRECTORY, result_folder)) if f.startswith(folders_prefix) and os.path.isdir(os.path.join(PROJECT_DIRECTORY, result_folder, f))]
 
     # DataFrame to store the best average values with columns: input_file, resize_z, scutoids, params_lambdaS1, params_lambdaS2, params_lambdaS3, params_lambdaV
-    best_average_values = pd.DataFrame(columns=['input_file', 'resize_z', 'scutoids', 'params_lambdaS1', 'params_lambdaS2', 'params_lambda3', 'params_lambdaV', 'std_params_lambdaS1', 'std_params_lambdaS2', 'std_params_lambda3', 'std_params_lambdaV', 'params_lambdaS1_normalised', 'params_lambdaS2_normalised', 'params_lambda3_normalised', 'params_lambdaV_normalised'])
+    best_average_values = pd.DataFrame(columns=['input_file', 'resize_z', 'scutoids', 'params_lambdaS1', 'params_lambdaS2', 'params_lambdaTotal', 'std_params_lambdaS1', 'std_params_lambdaS2', 'params_lambdaS1_normalised', 'params_lambdaS2_normalised'])
     for folder in all_folders:
         # Extract resize_z and scutoids from the folder name
         parts = folder.split('_')
@@ -45,8 +45,11 @@ if not os.path.exists(os.path.join(PROJECT_DIRECTORY, result_folder, 'best_avera
             df = pd.read_excel(df_file, header=0)
 
             # Get the rows with 'value' lower to 0.07
-            df_filtered = df[(df['value'] > 0.03) & (df['value'] < 0.07)]
-            #df_filtered = df[df['value'] < 1e-5]
+            #df_filtered = df[(df['value'] > 0.06) & (df['value'] < 0.065)]
+            #df_filtered = df[df['value'] < 1e-9]
+            # Get the rows with 'value' lower to the 10th percentile
+            threshold = df['value'].quantile(5/1000)
+            df_filtered = df[df['value'] <= threshold]
 
             # Average the columns with the name starting with 'params_'
             param_columns = [col for col in df_filtered.columns if col.startswith('params_')]
@@ -60,12 +63,9 @@ if not os.path.exists(os.path.join(PROJECT_DIRECTORY, result_folder, 'best_avera
                 'scutoids': scutoids,
                 'params_lambdaS1': df_mean.get('params_lambdaS1', None),
                 'params_lambdaS2': df_mean.get('params_lambdaS2', None),
-                'params_lambdaS3': df_mean.get('params_lambdaS3', None),
-                'params_lambdaV': df_mean.get('params_lambdaV', None),
+                'params_lambdaTotal': df_mean.get('params_lambdaS1', None) + df_mean.get('params_lambdaS2', None),
                 'std_params_lambdaS1': df_std.get('params_lambdaS1', None),
                 'std_params_lambdaS2': df_std.get('params_lambdaS2', None),
-                'std_params_lambdaS3': df_std.get('params_lambdaS3', None),
-                'std_params_lambdaV': df_std.get('params_lambdaV', None),
                 'params_lambdaS1_normalised': df_mean.get('params_lambdaS1', None) / (df_mean.get('params_lambdaS1', None) + df_mean.get('params_lambdaS2', None)),
                 'params_lambdaS2_normalised': df_mean.get('params_lambdaS2', None) / (df_mean.get('params_lambdaS1', None) + df_mean.get('params_lambdaS2', None)),
             }
@@ -243,23 +243,22 @@ for scutoids in scutoids_percentage:
 
 
 # Create a table with the average of the best parameters per resize_z and percentage of scutoids
-average_best_parameters = pd.DataFrame(columns=['resize_z', 'scutoids', 'params_lambdaS1', 'params_lambdaS2', 'params_lambda3', 'params_lambdaV', 'params_lambdaS1_normalised', 'params_lambdaS2_normalised'])
-std_best_parameters = pd.DataFrame(columns=['resize_z', 'scutoids', 'params_lambdaS1', 'params_lambdaS2', 'params_lambda3', 'params_lambdaV', 'params_lambdaS1_normalised', 'params_lambdaS2_normalised'])
+average_best_parameters = pd.DataFrame(columns=['resize_z', 'scutoids', 'params_lambdaS1', 'params_lambdaS2', 'params_lambdaTotal', 'params_lambdaS1_normalised', 'params_lambdaS2_normalised'])
+std_best_parameters = pd.DataFrame(columns=['resize_z', 'scutoids', 'params_lambdaS1', 'params_lambdaS2', 'params_lambdaTotal', 'params_lambdaS1_normalised', 'params_lambdaS2_normalised'])
 unique_resize_z = best_average_values['resize_z'].unique()
 unique_scutoids = best_average_values['scutoids'].unique()
 for resize_z in unique_resize_z:
     for scutoids in unique_scutoids:
         subset = best_average_values[(best_average_values['resize_z'] == resize_z) & (best_average_values['scutoids'] == scutoids)]
         if not subset.empty:
-            mean_values = subset[['params_lambdaS1', 'params_lambdaS2', 'params_lambda3', 'params_lambdaV', 'params_lambdaS1_normalised', 'params_lambdaS2_normalised']].mean()
-            std_values = subset[['params_lambdaS1', 'params_lambdaS2', 'params_lambda3', 'params_lambdaV', 'params_lambdaS1_normalised', 'params_lambdaS2_normalised']].std()
+            mean_values = subset[['params_lambdaS1', 'params_lambdaS2', 'params_lambdaTotal', 'params_lambdaS1_normalised', 'params_lambdaS2_normalised']].mean()
+            std_values = subset[['params_lambdaS1', 'params_lambdaS2', 'params_lambdaTotal', 'params_lambdaS1_normalised', 'params_lambdaS2_normalised']].std()
             average_best_parameters.loc[len(average_best_parameters)] = {
                 'resize_z': resize_z,
                 'scutoids': scutoids,
                 'params_lambdaS1': mean_values['params_lambdaS1'],
                 'params_lambdaS2': mean_values['params_lambdaS2'],
-                'params_lambda3': mean_values['params_lambda3'],
-                'params_lambdaV': mean_values['params_lambdaV'],
+                'params_lambdaTotal': mean_values['params_lambdaTotal'],
                 'params_lambdaS1_normalised': mean_values['params_lambdaS1_normalised'],
                 'params_lambdaS2_normalised': mean_values['params_lambdaS2_normalised']
             }
@@ -268,8 +267,7 @@ for resize_z in unique_resize_z:
                 'scutoids': scutoids,
                 'params_lambdaS1': std_values['params_lambdaS1'],
                 'params_lambdaS2': std_values['params_lambdaS2'],
-                'params_lambda3': std_values['params_lambda3'],
-                'params_lambdaV': std_values['params_lambdaV'],
+                'params_lambdaTotal': std_values['params_lambdaTotal'],
                 'params_lambdaS1_normalised': std_values['params_lambdaS1_normalised'],
                 'params_lambdaS2_normalised': std_values['params_lambdaS2_normalised']
             }
