@@ -2,7 +2,7 @@
 
 # Define the Python script to run
 PYTHON_SCRIPT="pyVertexModel/main_paper_simulations.py"
-OUTPUT_DIR="Result/different_cell_shape_healing"
+OUTPUT_DIR="Result/to_calculate_ps_recoil/c/"
 
 # Define the project directory and add it to PYTHONPATH
 PROJECT_DIR=$(dirname "$(dirname "$(realpath $0)")")
@@ -11,7 +11,7 @@ export QT_QPA_PLATFORM="offscreen"
 
 # Parameters to run
 #num_parameters=(0 1 2 3 4)
-num_parameters=(2 0)
+num_parameters=(0)
 
 # Function to run a simulation
 run_simulation() {
@@ -19,7 +19,7 @@ run_simulation() {
     local dir_name=$2
     echo $OUTPUT_DIR
     echo "Running simulation number $num_parameter"
-    python $PYTHON_SCRIPT "$num_parameter" "$OUTPUT_DIR/$dir_name" "120_mins"
+    python $PYTHON_SCRIPT "$num_parameter" "$OUTPUT_DIR/$dir_name"
     echo "Finished simulation number $num_parameter"
 }
 
