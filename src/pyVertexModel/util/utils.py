@@ -1,5 +1,6 @@
 import copy
 import gzip
+import inspect
 import lzma
 import math
 import os
@@ -595,7 +596,7 @@ def lambda_s2_normalised_curve(x, p, q, l_max):
     return 1 - lambda_s1_normalised_curve(x, p, q, l_max)
 
 
-def lambda_s1_curve(x, a=0.48, b=0.02, c=2.4, k=0.74, p=0.38, l_max=0.84):
+def lambda_s1_curve(x, a=1.49e-4, b=1.15e-5, c=3.44, k=2.09, p=0.31, l_max=0.92):
     """
 
     :param c:
@@ -610,7 +611,7 @@ def lambda_s1_curve(x, a=0.48, b=0.02, c=2.4, k=0.74, p=0.38, l_max=0.84):
     return lambda_total_model(x, a, b, c) * lambda_s1_normalised_curve(x, k, p, l_max)
 
 
-def lambda_s2_curve(x, a=0.48, b=0.02, c=2.4, k=0.74, p=0.38, l_max=0.84):
+def lambda_s2_curve(x, a=1.49e-4, b=1.15e-5, c=3.44, k=2.09, p=0.31, l_max=0.92):
     """
 
     :param c:
@@ -623,6 +624,29 @@ def lambda_s2_curve(x, a=0.48, b=0.02, c=2.4, k=0.74, p=0.38, l_max=0.84):
     :return:
     """
     return lambda_total_model(x, a, b, c) * lambda_s2_normalised_curve(x, k, p, l_max)
+
+def purse_string_strength_curve(x, a, b):
+    """
+    Compute the purse string strength curve.
+    :param x: aspect ratio.
+    :param a:
+    :param b:
+    :return:
+    """
+    return a * x ** b
+
+def get_default_args(func):
+    """
+    Get default arguments of a function
+    :param func:
+    :return:
+    """
+    signature = inspect.signature(func)
+    return {
+        k: v.default
+        for k, v in signature.parameters.items()
+        if v.default is not inspect.Parameter.empty
+    }
 
 def plot_figure_with_line(best_average_values, scutoids, current_path, x_axis_name='resize_z',
                           x_axis_label='Aspect ratio (AR)', y_axis_name='params_lambdaS_total',
@@ -687,11 +711,11 @@ def plot_figure_with_line(best_average_values, scutoids, current_path, x_axis_na
         y_fit = lambda_s1_normalised_curve(category_order, *popt_exp)
 
         # Equation: 0.5 + ((l_max - 0.5) / (1 + np.exp(-k * np.log(x) + c)))
-        label = f'$y = 0.5 + (({popt_exp[2]:.2f} - 0.5) / (1 + e^{{-{popt_exp[0]:.2f} \\cdot (ln x - {popt_exp[1]:.2f})}}))$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+        label = f'$y = 0.5 + (({popt_exp[2]:.2f} - 0.5) / (1 + e^{{-{popt_exp[0]:.2f} \\cdot (ln x + {popt_exp[1]:.2f})}}))$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
     elif y_axis_name == 'params_lambdaS2_normalised':
         plt.ylim(0, 1)
 
-         # Fit the function to the mean correlation data
+        # Fit the function to the mean correlation data
         popt_exp = curve_fit(lambda_s2_normalised_curve, xdata=x_data, ydata=y_data, sigma=None, maxfev=max_fev)
         popt_exp = popt_exp[0]
         y_fit = lambda_s2_normalised_curve(category_order, *popt_exp)
@@ -699,15 +723,25 @@ def plot_figure_with_line(best_average_values, scutoids, current_path, x_axis_na
         # Equation: 1 - (0.5 + ((l_max - 0.5) / (1 + np.exp(-k * np.log(x) + c)))
         label = f'$y = 1 - (0.5 + (({popt_exp[2]:.2f} - 0.5) / (1 + e^{{-{popt_exp[0]:.2f} \\cdot (ln x - {popt_exp[1]:.2f})}})))$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
     elif y_axis_name == 'params_lambdaS1':
-        y_fit = lambda_s2_curve(category_order)
+        y_fit = lambda_s1_curve(category_order)
+        parameters = get_default_args(lambda_s1_curve)
 
         # Equation: y = a + b · (ln(x) + c)^2 · (0.5 + (l_max - 0.5) · (1 - e^(-k · x^p)))
-        label = f'$y = 0.48 + 0.02 \\cdot (\\ln(x) + 2.4)^2 \\cdot \\left(0.5 + (0.84 - 0.5) \\cdot \\left(1 - e^{{-0.74 \\cdot x^{{0.38}}}}\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+        label = f'$y = {parameters["a"]:.2e} + {parameters["b"]:.2e} \\cdot (\\ln(x) + {parameters["c"]:.2f})^2 \\cdot \\left(0.5 + ( {parameters["l_max"]:.2f} - 0.5) \\cdot \\left(e^{{-{parameters["k"]:.2f} \\cdot x^{{{parameters["p"]:.2f}}}}}\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
     elif y_axis_name == 'params_lambdaS2':
         y_fit = lambda_s2_curve(category_order)
+        parameters = get_default_args(lambda_s2_curve)
 
         # Equation: y = a + b · (ln(x) + c)^2 · (1 - (0.5 + (l_max - 0.5) · (1 - e^(-k · x^p))))
-        label = f'$y = 0.48 + 0.02 \\cdot (\\ln(x) + 2.4)^2 \\cdot \\left(1 - \\left(0.5 + (0.84 - 0.5) \\cdot \\left(1 - e^{{-0.74 \\cdot x^{{0.38}}}}\\right)\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+        label = f'$y = {parameters["a"]:.2e} + {parameters["b"]:.2e} \\cdot (\\ln(x) + {parameters["c"]:.2f})^2 \\cdot \\left(1 - \\left(0.5 + ( {parameters["l_max"]:.2f} - 0.5) \\cdot \\left(1 - e^{{-{parameters["k"]:.2f} \\cdot x^{{{parameters["p"]:.2f}}}}}\\right)\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+    elif y_axis_name == 'Purse_string_strength_dy0' or y_axis_name == 'Recoil':
+        # Fit the function to the mean correlation data
+        popt_exp = curve_fit(purse_string_strength_curve, xdata=x_data, ydata=y_data, sigma=None, maxfev=max_fev)
+        popt_exp = popt_exp[0]
+        y_fit = purse_string_strength_curve(category_order, *popt_exp)
+
+        # Equation: a * x ** b
+        label = f'$y = {popt_exp[0]:.2e} \\cdot x^{{{popt_exp[1]:.2f}}}$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
     else:
         y_fit = None
 
@@ -717,5 +751,8 @@ def plot_figure_with_line(best_average_values, scutoids, current_path, x_axis_na
 
     # Save the figure
     plt.tight_layout()
-    plt.savefig(os.path.join(current_path, f'boxplot_{x_axis_name}_{y_axis_name}_scutoids_{scutoids:.2f}.png'))
+    if scutoids is None:
+        plt.savefig(os.path.join(current_path, f'boxplot_{x_axis_name}_{y_axis_name}.png'))
+    else:
+        plt.savefig(os.path.join(current_path, f'boxplot_{x_axis_name}_{y_axis_name}_scutoids_{scutoids:.2f}.png'))
     plt.close()
