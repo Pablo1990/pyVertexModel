@@ -53,22 +53,10 @@ else:
                     print(f"Skipping {directory} as 'before_ablation.pkl' not found.")
                     continue
 
-                load_state(vModel, os.path.join(c_folder, ar_dir, directory, 'before_ablation.pkl'))
-                if len(files_ending_pkl) == 0:
-                    run_iteration = True
-                else:
-                    # Sort by time step
-                    files_ending_pkl.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
-
-                    # I only want files that were created or modified after 'before_ablation.pkl' time-wise
-                    files_ending_pkl = [f for f in files_ending_pkl if int(f.split('_')[-1].split('.')[0]) > vModel.numStep]
-
-                    if len(files_ending_pkl) == 0:
-                        run_iteration = True
-                        continue
-                    else:
-                        load_state(vModel, os.path.join(c_folder, ar_dir, directory, files_ending_pkl[0]))
-                        run_iteration = False
+                # Load the latest state before ablation
+                load_state(vModel, os.path.join(c_folder, ar_dir, directory, sorted(files_ending_pkl, key=lambda x: int(x.split('_')[2].split('.')[0]))[-1]))
+                #load_state(vModel, os.path.join(c_folder, ar_dir, directory, 'before_ablation.pkl'))
+                run_iteration = True
 
                 # Run the required purse string strength analysis
                 current_folder = vModel.set.OutputFolder
@@ -76,7 +64,7 @@ else:
                 vModel.set.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/', last_folder[-1])
                 ps_strength, dy, recoiling, purse_string_strength_eq = vModel.required_purse_string_strength(
                     os.path.join(c_folder, ar_dir, directory),
-                    run_iteration=run_iteration)
+                    run_iteration=run_iteration, tend=vModel.t + 0.1)
                 ps_strengths.append(ps_strength)
                 dys.append(dy)
                 recoilings.append(recoiling)
