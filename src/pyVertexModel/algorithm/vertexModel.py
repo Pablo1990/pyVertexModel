@@ -1080,7 +1080,7 @@ class VertexModel:
 
             self.geo.resize_tissue()
 
-    def required_purse_string_strength(self, directory, run_iteration=True, tend=21):
+    def required_purse_string_strength(self, directory, run_iteration=True, tend=20.1):
         """
         Find the minimum purse string strength needed to start closing the wound.
         :param run_iteration:
@@ -1108,6 +1108,7 @@ class VertexModel:
                 self.set.Remodel_stiffness_wound = 2
                 self.set.purseStringStrength = 0.0
                 self.set.lateralCablesStrength = 0.0
+                self.geo.ablate_cells(self.set, 25)
                 self.iterate_over_time()
 
                 # Move files from vModel.set.output_folder to c_folder/ar_dir/directory
