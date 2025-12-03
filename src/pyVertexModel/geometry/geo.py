@@ -490,7 +490,7 @@ class Geo:
         self.update_measures()
         if default_value is not None:
             self.lmin0 = default_value
-            print(f'Updated lmin0 by default: {self.lmin0}')
+            logger.info(f'Updated lmin0 by default: {self.lmin0}')
             return
 
         lmin_values = []
@@ -509,7 +509,7 @@ class Geo:
         # Update lmin0 with the minimum value in lmin_values
         self.lmin0 = min(lmin_values)
         self.lmin0 = self.lmin0 * factor
-        print(f'Updated lmin0: {self.lmin0}')
+        logger.info(f'Updated lmin0: {self.lmin0}')
 
     def get_substrate_z(self):
         """
