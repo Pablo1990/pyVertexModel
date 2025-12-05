@@ -5,7 +5,7 @@ import pandas as pd
 
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
-from src.pyVertexModel.util.utils import load_state, plot_figure_with_line
+from src.pyVertexModel.util.utils import load_state, plot_figure_with_line, find_timepoint_in_model
 
 single_file = False
 
@@ -28,12 +28,9 @@ else:
         # all_directories.sort()
 
         # Save ps_strengths and dy for each cell shape
-        ps_strengths = []
-        dys = []
-        output_dirs = []
         aspect_ratio = []
         recoilings = []
-        normalised_purse_string_strengths = []
+        time_list = []
         purse_string_strength_0 = []
         lambda_s1_list = []
         lambda_s2_list = []
@@ -48,43 +45,65 @@ else:
                 vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False, set_option='wing_disc')
 
                 files_within_folder = os.listdir(os.path.join(c_folder, ar_dir, directory))
-                files_ending_pkl = [f for f in files_within_folder if f.endswith('.pkl') and f.startswith('data_step_')]
                 if 'before_ablation.pkl' not in files_within_folder:
                     print(f"Skipping {directory} as 'before_ablation.pkl' not found.")
                     continue
 
-                # Load the latest state before ablation
-                load_state(vModel, os.path.join(c_folder, ar_dir, directory, sorted(files_ending_pkl, key=lambda x: int(x.split('_')[2].split('.')[0]))[-1]))
-                #load_state(vModel, os.path.join(c_folder, ar_dir, directory, 'before_ablation.pkl'))
-                run_iteration = True
+                load_state(vModel, os.path.join(c_folder, ar_dir, directory, 'before_ablation.pkl'))
+                t_ablation = vModel.t
 
                 # Run the required purse string strength analysis
                 current_folder = vModel.set.OutputFolder
                 last_folder = current_folder.split('/')
                 vModel.set.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/', last_folder[-1])
-                ps_strength, dy, recoiling, purse_string_strength_eq = vModel.required_purse_string_strength(
-                    os.path.join(c_folder, ar_dir, directory),
-                    run_iteration=run_iteration, tend=vModel.t + 0.1)
-                ps_strengths.append(ps_strength)
-                dys.append(dy)
+                _, _, recoiling, purse_string_strength_eq = vModel.required_purse_string_strength(
+                    os.path.join(c_folder, ar_dir, directory), tend=t_ablation + 0.1)
+
                 recoilings.append(recoiling)
-                output_dirs.append(directory)
                 purse_string_strength_0.append(purse_string_strength_eq)
                 aspect_ratio.append(vModel.set.CellHeight)
                 lambda_s1_list.append(vModel.set.lambdaS1)
                 lambda_s2_list.append(vModel.set.lambdaS2)
                 model_name.append(vModel.set.model_name)
-                normalised_purse_string_strengths.append((ps_strength * recoiling) / (dy - recoiling))
+                time_list.append(t_ablation + 0.1)
+
+                _, _, recoiling_t_6, purse_string_strength_eq_t_6 = vModel.required_purse_string_strength(
+                    os.path.join(c_folder, ar_dir, directory), tend=t_ablation + 6.0)
+
+                recoilings.append(recoiling_t_6)
+                purse_string_strength_0.append(purse_string_strength_eq_t_6)
+                aspect_ratio.append(vModel.set.CellHeight)
+                lambda_s1_list.append(vModel.set.lambdaS1)
+                lambda_s2_list.append(vModel.set.lambdaS2)
+                model_name.append(vModel.set.model_name)
+                time_list.append(t_ablation + 6.0)
 
         # Append results into an existing csv file
         df = pd.DataFrame(
             {'Model_name': model_name, 'AR': aspect_ratio, 'LambdaS1': lambda_s1_list, 'LambdaS2': lambda_s2_list,
-             'Purse_String_Strength': ps_strengths, 'Dy': dys, 'Recoil': recoilings,
-             'Purse_string_strength_dy0': purse_string_strength_0,
-             'Normalised_Purse_String_Strength': normalised_purse_string_strengths})
+             'Recoil': recoilings, 'Purse_string_strength': purse_string_strength_0, })
         df.to_csv(output_csv, index=False)
     else:
         df = pd.read_csv(output_csv)
+
+    # Check if df contains any nans or infs
+    if df.isnull().values.any():
+        print("DataFrame contains NaN values. Please check the data.")
+
+        # Remove rows with NaN values
+        df = df.dropna()
+
+    if df.isin([float('inf'), float('-inf')]).values.any():
+        print("DataFrame contains infinite values. Please check the data.")
+
+        # Remove rows with infinite values
+        df = df[~df.isin([float('inf'), float('-inf')]).any(axis=1)]
+
+    # Keep recoil values that are close to 2.4e-13 +- 4e-14
+    df = df[(df['Recoil'] > 2.0e-13) & (df['Recoil'] < 3e-13)]
+
+    # Save the cleaned DataFrame with 'filtered' suffix
+    df.to_csv(os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', 'required_purse_string_strengths_filtered.csv'), index=False)
 
     # Plot recoil over aspect ratio
     plot_figure_with_line(df, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil'),

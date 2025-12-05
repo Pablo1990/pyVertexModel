@@ -3,6 +3,7 @@ import os
 from abc import abstractmethod
 from itertools import combinations
 from os.path import exists
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -21,7 +22,7 @@ from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain, 
 from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling, smoothing_cell_surfaces_mesh
 from src.pyVertexModel.parameters.set import Set
 from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars, copy_non_mutable_attributes, \
-    screenshot, screenshot_, load_state, find_optimal_deform_array_X_Y
+    screenshot, screenshot_, load_state, find_optimal_deform_array_X_Y, find_timepoint_in_model
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -1080,27 +1081,27 @@ class VertexModel:
 
             self.geo.resize_tissue()
 
-    def required_purse_string_strength(self, directory, run_iteration=True, tend=20.1):
+    def required_purse_string_strength(self, directory, tend=20.1):
         """
         Find the minimum purse string strength needed to start closing the wound.
-        :param run_iteration:
-        :param tend:
+        :param tend: End time of the simulation.
         :param directory: Directory to save the results.
         :return:
         """
-        if os.path.exists(os.path.join(directory, 'purse_string_tension_vs_dy.csv')):
+        if os.path.exists(os.path.join(directory, 'purse_string_tension_vs_dy_t_' + str(round(tend, 2)) + '.png')):
             print('Purse string strength vs dy file already exists for file '
                   + directory)
             # Open the file and read the values
             purse_string_strength_values = []
             dy_values = []
-            with open(os.path.join(directory, 'purse_string_tension_vs_dy.csv'), 'r') as f:
+            with open(os.path.join(directory, 'purse_string_tension_vs_dy_t_' + str(round(tend, 2)) + '.csv'), 'r') as f:
                 next(f)  # Skip header
                 for line in f:
                     ps_strength, dy = line.strip().split(',')
                     purse_string_strength_values.append(float(ps_strength))
                     dy_values.append(float(dy))
         else:
+            run_iteration = find_timepoint_in_model(self, directory, tend)
             if run_iteration and self.t < tend:
                 self.set.tend = tend
                 self.set.Remodelling = False
@@ -1126,54 +1127,7 @@ class VertexModel:
                                 os.rename(os.path.join(sub_dir, sub_f), os.path.join(dest_sub_dir, sub_f))
                     # os.rmdir(vModel.set.OutputFolder)
 
-            # Save the state before starting the purse string strength exploration as backup
-            backup_vars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
-
-            # Disable output folder to avoid creating files during the purse string strength exploration
-            self.set.OutputFolder = None
-
-            # Compute the initial distance of the wound vertices to the centre of the wound
-            initial_area = self.geo.compute_wound_area(location_filter='Top')
-
-            # What is the purse string strength needed to start closing the wound?
-            purse_string_strength_values = [0]
-            purse_string_strength_values.extend(np.linspace(1e-6, 1e-2, num=1000))
-            self.set.lateralCablesStrength = 0.0
-            self.set.dt = 1e-10
-            self.set.TypeOfPurseString = 3 # Fixed value
-
-            negative_values_in_a_row = 0
-
-            dy_values = []
-            for ps_strength in purse_string_strength_values:
-                # Set the purse string strength
-                self.set.purseStringStrength = ps_strength
-
-                # Run a single iteration
-                self.single_iteration(post_operations=False)
-
-                # Are the vertices of the wound edge moving closer to the centre of the wound?
-                dy_values.append(self.geo.compute_wound_area(location_filter='Top') - initial_area)
-
-                # Print current purse string strength
-                logger.info(f'Testing purse string strength: {ps_strength}, dy: {dy_values[-1]}')
-
-                if dy_values[-1] < 0:
-                    negative_values_in_a_row += 1
-
-                if negative_values_in_a_row >= 10:
-                    # Stop the exploration if we have 10 negative values in a row
-                    logger.info('Stopping purse string strength exploration due to 10 negative dy values in a row.')
-                    break
-
-                # Restore the backup variables
-                self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs = load_backup_vars(backup_vars)
-
-            # Save the results into a csv file
-            with open(os.path.join(directory, 'purse_string_tension_vs_dy.csv'), 'w') as f:
-                f.write('purse_string_strength,dy\n')
-                for ps_strength, dy in zip(purse_string_strength_values, dy_values):
-                    f.write(f'{ps_strength},{dy}\n')
+            dy_values, purse_string_strength_values = self.required_purse_string_strength_for_timepoint(directory, timepoint=tend)
 
         purse_string_strength_values = purse_string_strength_values[:len(dy_values)]
 
@@ -1186,7 +1140,7 @@ class VertexModel:
         plt.yscale('log')
 
         # Save the figure
-        plt.savefig(os.path.join(directory, 'purse_string_tension_vs_dy.png'))
+        plt.savefig(os.path.join(directory, 'purse_string_tension_vs_dy_t_' + str(round(tend, 2)) + '.png'))
         plt.close()
 
         # Get the purse string strength value that satisfies dy=0
@@ -1213,6 +1167,61 @@ class VertexModel:
 
         return np.inf, np.inf, dy_values[0], purse_string_strength_eq
 
+    def required_purse_string_strength_for_timepoint(self, directory, timepoint) -> tuple[list[int], list[Any]]:
+        """
+        Find the minimum purse string strength needed to start closing the wound.
+        :param directory:
+        :return:
+        """
+        # Save the state before starting the purse string strength exploration as backup
+        backup_vars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
+
+        # Disable output folder to avoid creating files during the purse string strength exploration
+        self.set.OutputFolder = None
+
+        # Compute the initial distance of the wound vertices to the centre of the wound
+        initial_area = self.geo.compute_wound_area(location_filter='Top')
+
+        # What is the purse string strength needed to start closing the wound?
+        purse_string_strength_values = [0]
+        purse_string_strength_values.extend(np.linspace(1e-6, 1e-2, num=1000))
+        self.set.lateralCablesStrength = 0.0
+        self.set.dt = 1e-10
+        self.set.TypeOfPurseString = 3  # Fixed value
+
+        negative_values_in_a_row = 0
+
+        dy_values = []
+        for ps_strength in purse_string_strength_values:
+            # Set the purse string strength
+            self.set.purseStringStrength = ps_strength
+
+            # Run a single iteration
+            self.single_iteration(post_operations=False)
+
+            # Are the vertices of the wound edge moving closer to the centre of the wound?
+            dy_values.append(self.geo.compute_wound_area(location_filter='Top') - initial_area)
+
+            # Print current purse string strength
+            logger.info(f'Testing purse string strength: {ps_strength}, dy: {dy_values[-1]}')
+
+            if dy_values[-1] < 0:
+                negative_values_in_a_row += 1
+
+            # Restore the backup variables
+            self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs = load_backup_vars(backup_vars)
+
+            if negative_values_in_a_row >= 10:
+                # Stop the exploration if we have 10 negative values in a row
+                logger.info('Stopping purse string strength exploration due to 10 negative dy values in a row.')
+                break
+
+        # Save the results into a csv file
+        with open(os.path.join(directory, 'purse_string_tension_vs_dy_t_' + str(round(self.t, 2)) + '.csv'), 'w') as f:
+            f.write('purse_string_strength,dy\n')
+            for ps_strength, dy in zip(purse_string_strength_values, dy_values):
+                f.write(f'{ps_strength},{dy}\n')
+        return dy_values, purse_string_strength_values
 
     def find_lambda_s1_s2_equal_target_gr(self, target_energy=0.01299466280896831):
         """

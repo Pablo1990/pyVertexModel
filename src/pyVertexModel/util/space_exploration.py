@@ -51,7 +51,7 @@ def objective(trial):
             new_set.EnergyBarrierAR = False
             new_set.lambdaR = 0
             new_set.ref_A0 = 0
-            new_set.ref_V0 = 0
+            new_set.ref_V0 = 1
         elif error_type == 'grResized':
             initial_filename_state = f"{new_set.model_name}.pkl"
             new_set.initial_filename_state = 'Input/to_resize/' + initial_filename_state

@@ -756,3 +756,36 @@ def plot_figure_with_line(best_average_values, scutoids, current_path, x_axis_na
     else:
         plt.savefig(os.path.join(current_path, f'boxplot_{x_axis_name}_{y_axis_name}_scutoids_{scutoids:.2f}.png'))
     plt.close()
+
+
+def find_timepoint_in_model(v_model, input_directory, correct_time_to_find) -> bool:
+    """
+    Find the timepoint in the model closest to the correct_time_to_find
+    :param input_directory:
+    :param v_model:
+    :param correct_time_to_find:
+    :return:
+    """
+
+    files_within_folder = os.listdir(input_directory)
+    files_ending_pkl = [f for f in files_within_folder if f.endswith('.pkl') and f.startswith('data_step_')]
+
+    # Load the latest state
+    pk_files_to_load = sorted(files_ending_pkl, key=lambda x: int(x.split('_')[2].split('.')[0]))
+    load_state(v_model, os.path.join(input_directory, pk_files_to_load[-1]))
+
+    id_file = -1
+    run_iteration = True
+
+    # Get the correct tend time closest to ablation time + 0.1, but lower than t_ablation + 0.1
+    while v_model.t > correct_time_to_find:
+        id_file -= 1
+        load_state(v_model, os.path.join(input_directory, pk_files_to_load[id_file]))
+        run_iteration = False
+
+        if v_model.t <= correct_time_to_find:
+            id_file += 1
+            load_state(v_model, os.path.join(input_directory, pk_files_to_load[id_file]))
+            break
+
+    return run_iteration
