@@ -1088,7 +1088,7 @@ class VertexModel:
         :param directory: Directory to save the results.
         :return:
         """
-        if os.path.exists(os.path.join(directory, 'purse_string_tension_vs_dy_t_' + str(round(tend, 2)) + '.png')):
+        if os.path.exists(os.path.join(directory, 'purse_string_tension_vs_dy_t_' + str(round(tend, 2)) + '.csv')):
             print('Purse string strength vs dy file already exists for file '
                   + directory)
             # Open the file and read the values
@@ -1102,6 +1102,9 @@ class VertexModel:
                     dy_values.append(float(dy))
         else:
             run_iteration = find_timepoint_in_model(self, directory, tend)
+            if (self.set.dt / self.set.dt0) <= 1e-6:
+                return np.inf, np.inf, np.inf, np.inf
+
             if run_iteration and self.t < tend:
                 self.set.tend = tend
                 self.set.Remodelling = False
@@ -1110,7 +1113,11 @@ class VertexModel:
                 self.set.purseStringStrength = 0.0
                 self.set.lateralCablesStrength = 0.0
                 self.geo.ablate_cells(self.set, 25)
-                self.iterate_over_time()
+                try:
+                    self.iterate_over_time()
+                except Exception as e:
+                    logger.error(f'Error while running the iteration for purse string strength: {e}')
+                    return np.inf, np.inf, np.inf, np.inf
 
                 # Move files from vModel.set.output_folder to c_folder/ar_dir/directory
                 if self.set.OutputFolder and os.path.exists(self.set.OutputFolder):
@@ -1217,7 +1224,7 @@ class VertexModel:
                 break
 
         # Save the results into a csv file
-        with open(os.path.join(directory, 'purse_string_tension_vs_dy_t_' + str(round(self.t, 2)) + '.csv'), 'w') as f:
+        with open(os.path.join(directory, 'purse_string_tension_vs_dy_t_' + str(round(timepoint, 2)) + '.csv'), 'w') as f:
             f.write('purse_string_strength,dy\n')
             for ps_strength, dy in zip(purse_string_strength_values, dy_values):
                 f.write(f'{ps_strength},{dy}\n')
