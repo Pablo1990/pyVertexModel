@@ -1082,9 +1082,10 @@ class VertexModel:
 
             self.geo.resize_tissue()
 
-    def required_purse_string_strength(self, directory, tend=20.1):
+    def required_purse_string_strength(self, directory, tend=20.1, load_existing=True) -> tuple[float, float, float, float]:
         """
         Find the minimum purse string strength needed to start closing the wound.
+        :param load_existing:
         :param tend: End time of the simulation.
         :param directory: Directory to save the results.
         :return:
@@ -1103,7 +1104,10 @@ class VertexModel:
                     dy_values.append(float(dy))
         else:
             output_directory = self.set.OutputFolder
-            run_iteration = find_timepoint_in_model(self, directory, tend)
+            if load_existing:
+                run_iteration = find_timepoint_in_model(self, directory, tend)
+            else:
+                run_iteration = True
             self.set.OutputFolder = output_directory
             if (self.set.dt / self.set.dt0) <= 1e-6:
                 return np.inf, np.inf, np.inf, np.inf

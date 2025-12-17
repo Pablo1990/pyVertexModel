@@ -10,18 +10,58 @@ from src.pyVertexModel.util.utils import load_state, plot_figure_with_line, find
 
 single_file = False
 
-if single_file:
-    c_folder = os.path.join(PROJECT_DIRECTORY, 'Result/different_cell_shape_healing/')
-    ar_dir = 'c'
-    directory = '10-02_103722_dWP1_15.0_scutoids_0_noise_0.00e+00_lVol_1.00e+00_kSubs_1.00e-01_lt_0.00e+00_refA0_9.20e-01_eARBarrier_8.00e-07_RemStiff_0.9_lS1_1.40e+00_lS2_1.40e-02_lS3_1.40e+00_ps_5.00e-04_lc_5.00e-04'
-    file_name = 'data_step_2619.pkl'
-    vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False, set_option='wing_disc_equilibrium')
-    load_state(vModel, os.path.join(c_folder, ar_dir, directory, file_name))
-    vModel.required_purse_string_strength(directory, run_iteration=False)
+# Folder containing different simulations with different cell shapes
+c_folder = os.path.join(PROJECT_DIRECTORY, 'Result/to_calculate_ps_recoil/')
+output_csv = os.path.join(PROJECT_DIRECTORY, 'Result/to_calculate_ps_recoil/required_purse_string_strengths.csv')
+
+if single_file and os.path.exists(output_csv):
+    # Load the existing csv file
+    df = pd.read_csv(output_csv)
+
+    # Check if df contains any nans or infs
+    if df.isnull().values.any():
+        print("DataFrame contains NaN values. Please check the data.")
+
+        # Remove rows with NaN values
+        df = df.dropna()
+
+    if df.isin([float('inf'), float('-inf')]).values.any():
+        print("DataFrame contains infinite values. Please check the data.")
+
+        # Remove rows with infinite values
+        df = df[~df.isin([float('inf'), float('-inf')]).any(axis=1)]
+
+    # Two timepoints: 0.1 and 6.0 minutes after ablation
+    for timepoint in [0.1, 6.0]:
+        df_time = df[df['time'] == timepoint]
+
+        # Keep recoil values that are close to 2.4e-13 +- 4e-14
+        if timepoint == 0.1:
+            df_time = df_time[(df_time['Recoil'] > 2.0e-13) & (df_time['Recoil'] < 3e-13)]
+
+        # Save the cleaned DataFrame with 'filtered' suffix
+        df_time.to_csv(os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', 'required_purse_string_strengths_filtered' + f'_time_{timepoint}.csv'), index=False)
+
+        # Plot recoil over aspect ratio
+        plot_figure_with_line(df_time, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', str(timepoint)),
+                              x_axis_name='AR',
+                              y_axis_name='Recoil', y_axis_label='Recoil velocity (dt=1e-10)')
+
+        plot_figure_with_line(df_time, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', str(timepoint)),
+                              x_axis_name='AR',
+                              y_axis_name='Purse_string_strength',
+                              y_axis_label='Min. purse string strength')
+
+        plot_figure_with_line(df_time, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', str(timepoint)),
+                              x_axis_name='AR',
+                              y_axis_name='LambdaS1',
+                              y_axis_label=r'$\lambda_{s1}=\lambda_{s3}$')
+
+        plot_figure_with_line(df_time, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', str(timepoint)),
+                              x_axis_name='AR',
+                              y_axis_name='LambdaS2',
+                              y_axis_label=r'$\lambda_{s2}$')
 else:
-    # Folder containing different simulations with different cell shapes
-    c_folder = os.path.join(PROJECT_DIRECTORY, 'Result/to_calculate_ps_recoil/')
-    output_csv = os.path.join(PROJECT_DIRECTORY, 'Result/to_calculate_ps_recoil/required_purse_string_strengths.csv')
     #if not os.path.exists(output_csv):
     # Get all directories within c_folder
     all_directories = os.listdir(c_folder)
@@ -63,7 +103,7 @@ else:
         last_folder = current_folder.split('/')
         vModel.set.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/', last_folder[-1])
         _, _, recoiling, purse_string_strength_eq = vModel.required_purse_string_strength(
-            os.path.join(c_folder, ar_dir, directory), tend=t_ablation + 0.1)
+            os.path.join(c_folder, ar_dir, directory), tend=t_ablation + 0.1, load_existing=False)
 
         recoilings.append(recoiling)
         purse_string_strength_0.append(purse_string_strength_eq)
@@ -99,49 +139,3 @@ else:
             {'Model_name': model_name, 'AR': aspect_ratio, 'LambdaS1': lambda_s1_list, 'LambdaS2': lambda_s2_list,
              'Recoil': recoilings, 'Purse_string_strength': purse_string_strength_0, 'time': time_list})
         df.to_csv(output_csv, index=False)
-    #else:
-    #    df = pd.read_csv(output_csv)
-
-    # # Check if df contains any nans or infs
-    # if df.isnull().values.any():
-    #     print("DataFrame contains NaN values. Please check the data.")
-    #
-    #     # Remove rows with NaN values
-    #     df = df.dropna()
-    #
-    # if df.isin([float('inf'), float('-inf')]).values.any():
-    #     print("DataFrame contains infinite values. Please check the data.")
-    #
-    #     # Remove rows with infinite values
-    #     df = df[~df.isin([float('inf'), float('-inf')]).any(axis=1)]
-    #
-    # # Two timepoints: 0.1 and 6.0 minutes after ablation
-    # for timepoint in [0.1, 6.0]:
-    #     df_time = df[df['time'] == timepoint]
-    #
-    #     # Keep recoil values that are close to 2.4e-13 +- 4e-14
-    #     if timepoint == 0.1:
-    #         df_time = df_time[(df_time['Recoil'] > 2.0e-13) & (df_time['Recoil'] < 3e-13)]
-    #
-    #     # Save the cleaned DataFrame with 'filtered' suffix
-    #     df_time.to_csv(os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', 'required_purse_string_strengths_filtered' + f'_time_{timepoint}.csv'), index=False)
-    #
-    #     # Plot recoil over aspect ratio
-    #     plot_figure_with_line(df_time, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', str(timepoint)),
-    #                           x_axis_name='AR',
-    #                           y_axis_name='Recoil', y_axis_label='Recoil velocity (dt=1e-10)')
-    #
-    #     plot_figure_with_line(df_time, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', str(timepoint)),
-    #                           x_axis_name='AR',
-    #                           y_axis_name='Purse_string_strength',
-    #                           y_axis_label='Min. purse string strength')
-    #
-    #     plot_figure_with_line(df_time, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', str(timepoint)),
-    #                           x_axis_name='AR',
-    #                           y_axis_name='LambdaS1',
-    #                           y_axis_label=r'$\lambda_{s1}=\lambda_{s3}$')
-    #
-    #     plot_figure_with_line(df_time, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', str(timepoint)),
-    #                           x_axis_name='AR',
-    #                           y_axis_name='LambdaS2',
-    #                           y_axis_label=r'$\lambda_{s2}$')
