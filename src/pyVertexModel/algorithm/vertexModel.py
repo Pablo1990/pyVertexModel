@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 from abc import abstractmethod
 from itertools import combinations
 from os.path import exists
@@ -1101,7 +1102,9 @@ class VertexModel:
                     purse_string_strength_values.append(float(ps_strength))
                     dy_values.append(float(dy))
         else:
+            output_directory = self.set.OutputFolder
             run_iteration = find_timepoint_in_model(self, directory, tend)
+            self.set.OutputFolder = output_directory
             if (self.set.dt / self.set.dt0) <= 1e-6:
                 return np.inf, np.inf, np.inf, np.inf
 
@@ -1113,17 +1116,17 @@ class VertexModel:
                 self.set.purseStringStrength = 0.0
                 self.set.lateralCablesStrength = 0.0
                 self.geo.ablate_cells(self.set, 25)
-                try:
-                    self.iterate_over_time()
-                except Exception as e:
-                    logger.error(f'Error while running the iteration for purse string strength: {e}')
-                    return np.inf, np.inf, np.inf, np.inf
+                #try:
+                self.iterate_over_time()
+                #except Exception as e:
+                #    logger.error(f'Error while running the iteration for purse string strength: {e}')
+                #    return np.inf, np.inf, np.inf, np.inf
 
-                # Move files from vModel.set.output_folder to c_folder/ar_dir/directory
+                # Copy files from vModel.set.output_folder to c_folder/ar_dir/directory
                 if self.set.OutputFolder and os.path.exists(self.set.OutputFolder):
                     for f in os.listdir(self.set.OutputFolder):
                         if os.path.isfile(os.path.join(self.set.OutputFolder, f)):
-                            os.rename(os.path.join(self.set.OutputFolder, f), os.path.join(directory, f))
+                            shutil.copy(os.path.join(self.set.OutputFolder, f), os.path.join(directory, f))
                         elif os.path.isdir(os.path.join(self.set.OutputFolder, f)):
                             # Merge subdirectories
                             sub_dir = os.path.join(self.set.OutputFolder, f)
@@ -1131,8 +1134,7 @@ class VertexModel:
                             if not os.path.exists(dest_sub_dir):
                                 os.makedirs(dest_sub_dir)
                             for sub_f in os.listdir(sub_dir):
-                                os.rename(os.path.join(sub_dir, sub_f), os.path.join(dest_sub_dir, sub_f))
-                    # os.rmdir(vModel.set.OutputFolder)
+                                shutil.copy(os.path.join(sub_dir, sub_f), os.path.join(dest_sub_dir, sub_f))
 
             dy_values, purse_string_strength_values = self.required_purse_string_strength_for_timepoint(directory, timepoint=tend)
 
@@ -1191,10 +1193,11 @@ class VertexModel:
 
         # What is the purse string strength needed to start closing the wound?
         purse_string_strength_values = [0]
-        purse_string_strength_values.extend(np.linspace(1e-6, 1e-2, num=1000))
+        purse_string_strength_values.extend(np.linspace(1e-8, 1e-2, num=1000))
         self.set.lateralCablesStrength = 0.0
         self.set.dt = 1e-10
         self.set.TypeOfPurseString = 3  # Fixed value
+        self.set.Contractility = True
 
         negative_values_in_a_row = 0
 

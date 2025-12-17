@@ -5,13 +5,14 @@ import pandas as pd
 
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
+from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
 from src.pyVertexModel.util.utils import load_state, plot_figure_with_line, find_timepoint_in_model
 
 single_file = False
 
 if single_file:
     c_folder = os.path.join(PROJECT_DIRECTORY, 'Result/different_cell_shape_healing/')
-    ar_dir = 'AR_15'
+    ar_dir = 'c'
     directory = '10-02_103722_dWP1_15.0_scutoids_0_noise_0.00e+00_lVol_1.00e+00_kSubs_1.00e-01_lt_0.00e+00_refA0_9.20e-01_eARBarrier_8.00e-07_RemStiff_0.9_lS1_1.40e+00_lS2_1.40e-02_lS3_1.40e+00_ps_5.00e-04_lc_5.00e-04'
     file_name = 'data_step_2619.pkl'
     vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False, set_option='wing_disc_equilibrium')
@@ -25,7 +26,6 @@ else:
         # Get all directories within c_folder
         all_directories = os.listdir(c_folder)
         all_directories = [d for d in all_directories if os.path.isdir(os.path.join(c_folder, d))]
-        # all_directories.sort()
 
         # Save ps_strengths and dy for each cell shape
         aspect_ratio = []
@@ -38,6 +38,8 @@ else:
         for ar_dir in all_directories:
             simulations_dirs = os.listdir(os.path.join(c_folder, ar_dir))
             simulations_dirs = [d for d in simulations_dirs if os.path.isdir(os.path.join(c_folder, ar_dir, d))]
+            # Sort descending order
+            simulations_dirs.sort(reverse=True)
             for directory in simulations_dirs:
                 print(f"Processing directory: {directory}")
 
@@ -65,8 +67,9 @@ else:
                 lambda_s1_list.append(vModel.set.lambdaS1)
                 lambda_s2_list.append(vModel.set.lambdaS2)
                 model_name.append(vModel.set.model_name)
-                time_list.append(t_ablation + 0.1)
+                time_list.append(0.1)
 
+                vModel.set.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/', last_folder[-1])
                 _, _, recoiling_t_6, purse_string_strength_eq_t_6 = vModel.required_purse_string_strength(
                     os.path.join(c_folder, ar_dir, directory), tend=t_ablation + 6.0)
 
@@ -76,12 +79,13 @@ else:
                 lambda_s1_list.append(vModel.set.lambdaS1)
                 lambda_s2_list.append(vModel.set.lambdaS2)
                 model_name.append(vModel.set.model_name)
-                time_list.append(t_ablation + 6.0)
+                time_list.append(6.0)
+                analyse_simulation(os.path.join(c_folder, ar_dir, directory))
 
         # Append results into an existing csv file
         df = pd.DataFrame(
             {'Model_name': model_name, 'AR': aspect_ratio, 'LambdaS1': lambda_s1_list, 'LambdaS2': lambda_s2_list,
-             'Recoil': recoilings, 'Purse_string_strength': purse_string_strength_0, })
+             'Recoil': recoilings, 'Purse_string_strength': purse_string_strength_0, 'time': time_list})
         df.to_csv(output_csv, index=False)
     else:
         df = pd.read_csv(output_csv)
@@ -99,28 +103,33 @@ else:
         # Remove rows with infinite values
         df = df[~df.isin([float('inf'), float('-inf')]).any(axis=1)]
 
-    # Keep recoil values that are close to 2.4e-13 +- 4e-14
-    df = df[(df['Recoil'] > 2.0e-13) & (df['Recoil'] < 3e-13)]
+    # Two timepoints: 0.1 and 6.0 minutes after ablation
+    for timepoint in [0.1, 6.0]:
+        df_time = df[df['time'] == timepoint]
 
-    # Save the cleaned DataFrame with 'filtered' suffix
-    df.to_csv(os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', 'required_purse_string_strengths_filtered.csv'), index=False)
+        # Keep recoil values that are close to 2.4e-13 +- 4e-14
+        if timepoint == 0.1:
+            df_time = df_time[(df_time['Recoil'] > 2.0e-13) & (df_time['Recoil'] < 3e-13)]
 
-    # Plot recoil over aspect ratio
-    plot_figure_with_line(df, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil'),
-                          x_axis_name='AR',
-                          y_axis_name='Recoil', y_axis_label='Recoil velocity (dt=1e-10)')
+        # Save the cleaned DataFrame with 'filtered' suffix
+        df_time.to_csv(os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', 'required_purse_string_strengths_filtered' + f'_time_{timepoint}.csv'), index=False)
 
-    plot_figure_with_line(df, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil'),
-                          x_axis_name='AR',
-                          y_axis_name='Purse_string_strength_dy0',
-                          y_axis_label='Min. purse string strength')
+        # Plot recoil over aspect ratio
+        plot_figure_with_line(df_time, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', str(timepoint)),
+                              x_axis_name='AR',
+                              y_axis_name='Recoil', y_axis_label='Recoil velocity (dt=1e-10)')
 
-    plot_figure_with_line(df, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil'),
-                          x_axis_name='AR',
-                          y_axis_name='LambdaS1',
-                          y_axis_label=r'$\lambda_{s1}=\lambda_{s3}$')
+        plot_figure_with_line(df_time, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', str(timepoint)),
+                              x_axis_name='AR',
+                              y_axis_name='Purse_string_strength',
+                              y_axis_label='Min. purse string strength')
 
-    plot_figure_with_line(df, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil'),
-                          x_axis_name='AR',
-                          y_axis_name='LambdaS2',
-                          y_axis_label=r'$\lambda_{s2}$')
+        plot_figure_with_line(df_time, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', str(timepoint)),
+                              x_axis_name='AR',
+                              y_axis_name='LambdaS1',
+                              y_axis_label=r'$\lambda_{s1}=\lambda_{s3}$')
+
+        plot_figure_with_line(df_time, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', str(timepoint)),
+                              x_axis_name='AR',
+                              y_axis_name='LambdaS2',
+                              y_axis_label=r'$\lambda_{s2}$')
