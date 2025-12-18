@@ -35,7 +35,7 @@ if input_file not in files_done:
             vModel.set.lambdaS1 = 0.022
             vModel.set.lambdaS2 = 0.01
         elif resize_z == original_wing_disc_height * 0.01:  # 0.15
-            vModel.set.lambdaS1 = 0.25
+            vModel.set.lambdaS1 = 0.38
             vModel.set.lambdaS2 = 0.08
         elif resize_z == original_wing_disc_height * 0.1:  # 1.5
             vModel.set.lambdaS1 = 0.5
