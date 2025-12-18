@@ -83,6 +83,7 @@ else:
             print(f"No simulation directories found in {ar_dir}, skipping.")
             continue
 
+        simulations_dirs.sort(reverse=True)
         directory = simulations_dirs[int(sys.argv[1])]
         #for directory in simulations_dirs:
         print(f"Processing directory: {directory}")

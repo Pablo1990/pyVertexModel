@@ -1119,6 +1119,7 @@ class VertexModel:
                 self.set.Remodel_stiffness_wound = 2
                 self.set.purseStringStrength = 0.0
                 self.set.lateralCablesStrength = 0.0
+                self.set.nu_bottom = self.set.nu
                 self.geo.ablate_cells(self.set, 25)
                 #try:
                 self.iterate_over_time()
