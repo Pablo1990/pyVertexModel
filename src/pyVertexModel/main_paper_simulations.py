@@ -59,7 +59,7 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins", 
             vModel.set.purseStringStrength = purse_string_strength * vModel.set.myosin_pool
             vModel.set.lateralCablesStrength = (1 - purse_string_strength) * vModel.set.myosin_pool
         else:
-            vModel.set.purseStringStrength = 3e-4
+            vModel.set.purseStringStrength = 5e-5
             vModel.set.lateralCablesStrength = 0
 
         vModel.set.OutputFolder = output_folder
