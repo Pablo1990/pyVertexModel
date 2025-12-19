@@ -50,6 +50,8 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins", 
         vModel.set.cellsToAblate = cells_to_ablate
         vModel.geo.cellsToAblate = cells_to_ablate
 
+        vModel.set.nu_bottom = vModel.set.nu
+
         if not use_wing_disc_ps:
             # Additional viscosity for the bottom vertices based on the cell height
             vModel.set.nu_bottom = vModel.set.nu + (vModel.set.nu * (600 * (vModel.set.CellHeight / 15) ** 2))
@@ -59,6 +61,7 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins", 
             vModel.set.purseStringStrength = purse_string_strength * vModel.set.myosin_pool
             vModel.set.lateralCablesStrength = (1 - purse_string_strength) * vModel.set.myosin_pool
         else:
+            vModel.set.nu_bottom = vModel.set.nu
             vModel.set.purseStringStrength = 5e-5
             vModel.set.lateralCablesStrength = 0
 
