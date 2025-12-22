@@ -5,7 +5,7 @@ import pandas as pd
 
 from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation, create_video
 
-folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/'
+folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/to_calculate_ps_recoil/c/'
 all_files_features = []
 # Recursive search of all the files in the folder
 lst = []
@@ -86,6 +86,7 @@ for _, file in enumerate(lst):
                     #print("Error cells_area_top_lower_than_average_diff: ", e)
                     important_features['cells_area_top_lower_than_average_diff'] = np.nan
 
+                file = file.split('/')[-1]
                 important_features['folder'] = file
 
                 # Extract the variables from folder name
@@ -95,6 +96,9 @@ for _, file in enumerate(lst):
                 for i in range(3, len(file_splitted), 1):
                     if file_splitted[i] in variables_to_show:
                         important_features[file_splitted[i]] = file_splitted[i + 1]
+
+                important_features['AR'] = float(file_splitted[3])  # Aspect Ratio
+                important_features['model'] = file_splitted[2]  # Model name
 
                 # Transform the dictionary into a dataframe
                 important_features = pd.DataFrame([important_features])
