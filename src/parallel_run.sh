@@ -11,7 +11,7 @@ export QT_QPA_PLATFORM="offscreen"
 
 # Parameters to run
 #num_parameters=(0 1 2 3 4)
-num_parameters=(0)
+num_parameters=(2)
 
 # Function to run a simulation
 run_simulation() {
@@ -19,12 +19,12 @@ run_simulation() {
     local dir_name=$2
     echo $OUTPUT_DIR
     echo "Running simulation number $num_parameter"
-    python $PYTHON_SCRIPT "$num_parameter" "$OUTPUT_DIR/$dir_name"
+    python $PYTHON_SCRIPT "$num_parameter" "$OUTPUT_DIR/$dir_name" "30"
     echo "Finished simulation number $num_parameter"
 }
 
 # Parallel execution
-max_jobs=1
+max_jobs=4
 for num_parameter in "${num_parameters[@]}"; do
     for dir in "$PROJECT_DIR/$OUTPUT_DIR"/* ; do
         echo "$dir"
