@@ -12,7 +12,7 @@ from src.pyVertexModel.util.utils import load_state
 
 logger = logging.getLogger("pyVertexModel")
 
-def run_simulation(combination, output_results_dir='Result/', length="60_mins", use_wing_disc_ps=True):
+def run_simulation(combination, output_results_dir='Result/', length=60, use_wing_disc_ps=True):
     """
     Run simulation with the given combination of variables.
     :param length: 
@@ -26,9 +26,9 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins", 
             combination == 'Talin' or combination == 'IntegrinDN' or
             combination == 'ShibireTS' or combination == 'WT_substrate_gone_40_mins' or
             combination == 'Talin_with_substrate' or combination == 'IntegrinDN_with_substrate'):
-        output_folder = os.path.join(PROJECT_DIRECTORY, output_results_dir, length + '_{}'.format(combination))
+        output_folder = os.path.join(PROJECT_DIRECTORY, output_results_dir, '{}'.format(combination))
     else:
-        output_folder = os.path.join(PROJECT_DIRECTORY, output_results_dir, length + '_no_{}'.format('_no_'.join(combination)))
+        output_folder = os.path.join(PROJECT_DIRECTORY, output_results_dir, 'no_{}'.format('_no_'.join(combination)))
 
     # Check if output_folder exists
     if not os.path.exists(output_folder):
@@ -62,7 +62,7 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins", 
             vModel.set.lateralCablesStrength = (1 - purse_string_strength) * vModel.set.myosin_pool
         else:
             vModel.set.nu_bottom = vModel.set.nu
-            vModel.set.purseStringStrength = 5e-5
+            vModel.set.purseStringStrength = 1e-4
             vModel.set.lateralCablesStrength = 0
 
         vModel.set.OutputFolder = output_folder
@@ -96,10 +96,7 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins", 
                 else:
                     setattr(vModel.set, variable, 0)
 
-        if length == '120_mins':
-            vModel.set.tend = 120
-        else:
-            vModel.set.tend = 60
+        vModel.set.tend = length
         vModel.set.dt0 = None
         vModel.set.dt = None
         vModel.set.update_derived_parameters()
@@ -122,8 +119,7 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins", 
         if combination == 'WT_substrate_gone_40_mins':
             vModel.set.kSubstrate = 0
 
-        if length == '120_mins':
-            vModel.set.tend = 120
+        vModel.set.tend = length
 
         if vModel.t > vModel.set.tend:
             print("Performing analysis for folder...")
@@ -159,6 +155,6 @@ if __name__ == '__main__':
     if len(sys.argv) == 2:
         run_simulation(combinations_of_variables[index])
     elif len(sys.argv) == 4:
-        run_simulation(combinations_of_variables[index], sys.argv[2], sys.argv[3])
+        run_simulation(combinations_of_variables[index], sys.argv[2], int(sys.argv[3]))
     else:
         run_simulation(combinations_of_variables[index], sys.argv[2])
