@@ -62,6 +62,7 @@ def run_simulation(combination, output_results_dir='Result/', length=60, use_win
             vModel.set.lateralCablesStrength = (1 - purse_string_strength) * vModel.set.myosin_pool
         else:
             vModel.set.nu_bottom = vModel.set.nu
+            vModel.set.bottom_ecm = None
             vModel.set.purseStringStrength = 1e-4
             vModel.set.lateralCablesStrength = 0
 

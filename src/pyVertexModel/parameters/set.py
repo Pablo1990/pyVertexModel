@@ -55,6 +55,7 @@ class Set:
         self.ellipsoid_axis2 = None
         self.ellipsoid_axis3 = None
         self.nu_bottom = None
+        self.bottom_ecm = True
         self.substrate_top = False
         self.kSubstrateTop = 0
         # ============================== Ablation ============================

@@ -473,7 +473,8 @@ class VertexModel:
             # Ablate cells if needed
             if self.set.ablation:
                 if self.set.ablation and self.set.TInitAblation <= self.t and self.geo.cellsToAblate is not None:
-                    self.set.nu_bottom = self.set.nu * 600
+                    if self.set.bottom_ecm is not None:
+                        self.set.nu_bottom = self.set.nu * 600
                     self.save_v_model_state(file_name='before_ablation')
                 self.geo.ablate_cells(self.set, self.t)
                 self.geo_n = self.geo.copy()
