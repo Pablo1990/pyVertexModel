@@ -65,7 +65,7 @@ def run_simulation(combination, output_results_dir='Result/', length=60, use_win
             vModel.set.bottom_ecm = None
             vModel.set.Contractility = True
             vModel.set.TypeOfPurseString = 0
-            vModel.set.purseStringStrength = 1e-4
+            vModel.set.purseStringStrength = 1e-5
             vModel.set.lateralCablesStrength = 0
 
         vModel.set.OutputFolder = output_folder
