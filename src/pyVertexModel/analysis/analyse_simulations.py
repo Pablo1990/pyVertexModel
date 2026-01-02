@@ -86,7 +86,11 @@ for _, file in enumerate(lst):
                     #print("Error cells_area_top_lower_than_average_diff: ", e)
                     important_features['cells_area_top_lower_than_average_diff'] = np.nan
 
-                file = file.split('/')[-1]
+                if file.endswith('no_Remodelling'):
+                    file = file.split('/')[-2]
+                else:
+                    file = file.split('/')[-1]
+
                 important_features['folder'] = file
 
                 # Extract the variables from folder name
@@ -99,6 +103,8 @@ for _, file in enumerate(lst):
 
                 important_features['AR'] = float(file_splitted[3])  # Aspect Ratio
                 important_features['model'] = file_splitted[2]  # Model name
+
+                important_features['top_closure_velocity'] = (important_features['last_area_top'] - important_features['max_recoiling_top']) / important_features['last_area_time_top']
 
                 # Transform the dictionary into a dataframe
                 important_features = pd.DataFrame([important_features])
