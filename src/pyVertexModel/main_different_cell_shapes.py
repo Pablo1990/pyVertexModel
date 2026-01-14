@@ -5,13 +5,12 @@ import numpy as np
 
 from src import logger, PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
-from src.pyVertexModel.util.utils import lambda_s1_curve, lambda_s2_curve
 
 original_wing_disc_height = 15.0 # in microns
 set_of_resize_z = np.array([0.0001, 0.001, 0.01, 0.1, 0.5, 1.0, 2.0]) * original_wing_disc_height
 
 set_of_resize_z_to_do = [set_of_resize_z[int(sys.argv[1])]]# [set_of_resize_z[0], set_of_resize_z[1], set_of_resize_z[2], set_of_resize_z[3], set_of_resize_z[4], set_of_resize_z[6]]
-files_to_be_done = ['dWP8', 'dWP3', 'dWL3', 'dWL8', 'dWP15', 'dWP14', 'dWL4', 'dWL12', 'dWP12', 'dWP1']
+files_to_be_done = ['dWP12', 'dWP8', 'dWP3', 'dWL3', 'dWL8', 'dWP15', 'dWP14', 'dWL4', 'dWL12', 'dWP1']
 
 # Get all the files from 'Input/to_rezize/' that end with '.pkl'
 all_files = [f.split('.')[0] for f in os.listdir(PROJECT_DIRECTORY + '/Input/images') if f.endswith('.tif') and not f.endswith('labelled.tif')]
@@ -34,16 +33,16 @@ for input_file in all_files:
                 vModel.set.lambdaS1 = 0.022
                 vModel.set.lambdaS2 = 0.01
             elif resize_z == original_wing_disc_height * 0.01:  # 0.15
-                vModel.set.lambdaS1 = 0.38
+                vModel.set.lambdaS1 = 0.34
                 vModel.set.lambdaS2 = 0.08
             elif resize_z == original_wing_disc_height * 0.1:  # 1.5
-                vModel.set.lambdaS1 = 0.5
+                vModel.set.lambdaS1 = 0.45
                 vModel.set.lambdaS2 = 0.01
             elif resize_z == original_wing_disc_height * 0.5:  # 7.5
-                vModel.set.lambdaS1 = 1.0
+                vModel.set.lambdaS1 = 0.9
                 vModel.set.lambdaS2 = 0.02
             elif resize_z == original_wing_disc_height * 2.0:  # 30.0
-                vModel.set.lambdaS1 = 1.7
+                vModel.set.lambdaS1 = 1.9
                 vModel.set.lambdaS2 = 0.02
 
             # vModel.set.lambdaS1 = lambda_s1_curve(resize_z)
