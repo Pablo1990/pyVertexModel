@@ -9,7 +9,7 @@ from src.pyVertexModel.util.utils import plot_figure_with_line
 
 # List folders starting with
 folders_prefix = 'VertexModel_gr_'
-result_folder = 'Result/' #VertexModel_gr_S1_eq_S3_S2_fixed_Vol'
+result_folder = 'Result/optuna_starting_config/starting_topology/gr_A0_0_V0_1/' #VertexModel_gr_S1_eq_S3_S2_fixed_Vol'
 max_fev = 10000000
 
 if not os.path.exists(os.path.join(PROJECT_DIRECTORY, result_folder, 'best_average_values.csv')):
@@ -41,10 +41,10 @@ if not os.path.exists(os.path.join(PROJECT_DIRECTORY, result_folder, 'best_avera
 
             # Get the rows with 'value' lower to 0.07
             #df_filtered = df[(df['value'] > 0.06) & (df['value'] < 0.065)]
-            #df_filtered = df[df['value'] < 1e-9]
+            df_filtered = df[df['value'] < 1e-6]
             # Get the rows with 'value' lower to the 10th percentile
-            threshold = df['value'].quantile(5/1000)
-            df_filtered = df[df['value'] <= threshold]
+            #threshold = df_filtered['value'].quantile(0.1)
+            #df_filtered = df_filtered[df_filtered['value'] <= threshold]
 
             # Average the columns with the name starting with 'params_'
             param_columns = [col for col in df_filtered.columns if col.startswith('params_')]

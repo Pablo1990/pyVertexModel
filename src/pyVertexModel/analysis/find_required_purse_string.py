@@ -6,15 +6,15 @@ import pandas as pd
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
-from src.pyVertexModel.util.utils import load_state, plot_figure_with_line, find_timepoint_in_model
+from src.pyVertexModel.util.utils import load_state, plot_figure_with_line
 
-single_file = False
+plot_figures = True
 
 # Folder containing different simulations with different cell shapes
 c_folder = os.path.join(PROJECT_DIRECTORY, 'Result/to_calculate_ps_recoil/')
 output_csv = os.path.join(PROJECT_DIRECTORY, 'Result/to_calculate_ps_recoil/required_purse_string_strengths.csv')
 
-if single_file and os.path.exists(output_csv):
+if plot_figures and os.path.exists(output_csv):
     # Load the existing csv file
     df = pd.read_csv(output_csv)
 
@@ -36,8 +36,8 @@ if single_file and os.path.exists(output_csv):
         df_time = df[df['time'] == timepoint]
 
         # Keep recoil values that are close to 2.4e-13 +- 4e-14
-        if timepoint == 0.1:
-            df_time = df_time[(df_time['Recoil'] > 2.0e-13) & (df_time['Recoil'] < 3e-13)]
+        # if timepoint == 0.1:
+        #     df_time = df_time[(df_time['Recoil'] > 2.0e-13) & (df_time['Recoil'] < 3e-13)]
 
         # Save the cleaned DataFrame with 'filtered' suffix
         df_time.to_csv(os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', 'required_purse_string_strengths_filtered' + f'_time_{timepoint}.csv'), index=False)
@@ -45,12 +45,12 @@ if single_file and os.path.exists(output_csv):
         # Plot recoil over aspect ratio
         plot_figure_with_line(df_time, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', str(timepoint)),
                               x_axis_name='AR',
-                              y_axis_name='Recoil', y_axis_label='Recoil velocity (dt=1e-10)')
+                              y_axis_name='Recoil', y_axis_label='Recoil velocity (t=' + str(timepoint) + ')')
 
         plot_figure_with_line(df_time, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', str(timepoint)),
                               x_axis_name='AR',
                               y_axis_name='Purse_string_strength',
-                              y_axis_label='Min. purse string strength')
+                              y_axis_label='Purse string strength (t=' + str(timepoint) + ')')
 
         plot_figure_with_line(df_time, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil', str(timepoint)),
                               x_axis_name='AR',
@@ -61,6 +61,19 @@ if single_file and os.path.exists(output_csv):
                               x_axis_name='AR',
                               y_axis_name='LambdaS2',
                               y_axis_label=r'$\lambda_{s2}$')
+
+    output_csv = output_csv.replace('required_purse_string_strengths.csv', 'all_files_features_filtered.xlsx')
+    df = pd.read_excel(output_csv)
+
+    plot_figure_with_line(df, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil'),
+                            x_axis_name='AR',
+                            y_axis_name='wound_area_top_extrapolated_60', y_axis_label='Wound area top at 60 min.')
+    plot_figure_with_line(df, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil'),
+                            x_axis_name='AR',
+                            y_axis_name='wound_area_bottom_extrapolated_60', y_axis_label='Wound area bottom at 60 min.')
+    plot_figure_with_line(df, None, os.path.join(PROJECT_DIRECTORY, 'Result', 'to_calculate_ps_recoil'),
+                            x_axis_name='AR',
+                            y_axis_name='lS1', y_axis_label=r'$\lambda_{s1}=\lambda_{s3}$')
 else:
     #if not os.path.exists(output_csv):
     # Get all directories within c_folder
@@ -85,6 +98,8 @@ else:
 
         simulations_dirs.sort(reverse=True)
         directory = simulations_dirs[int(sys.argv[1])]
+        if directory.startswith('no_'):
+            continue
         #for directory in simulations_dirs:
         print(f"Processing directory: {directory}")
 
