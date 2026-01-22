@@ -32,12 +32,19 @@ for dir_name in all_dirs:
 
     # Get the feature of cells from 0 to 20
     list_of_features = []
+    list_of_neighbours = []
     for c_cell in vModel.geo.Cells:
         if feature_to_ablate == 'cell_area_top':
             list_of_features.append(c_cell.compute_area(location_filter=0))
+            # Compute neighbours
+            list_of_neighbours.append(c_cell.compute_neighbours(location_filter=0))
         elif feature_to_ablate == 'cell_area_bottom':
+            # Compute neighbours
+            list_of_neighbours.append(c_cell.compute_neighbours(location_filter=2))
             list_of_features.append(c_cell.compute_area(location_filter=2))
         elif feature_to_ablate == 'cell_volume':
+            # Compute neighbours
+            list_of_neighbours.append(c_cell.compute_neighbours())
             list_of_features.append(c_cell.Vol)
         else:
             raise ValueError(f'Unknown feature to ablate: {feature_to_ablate}')
@@ -58,24 +65,15 @@ for dir_name in all_dirs:
             for existing_c_id in cell_ids:
                 # Check if the new cell is a neighbour of all the cells in cell_ids
                 is_neighbour = True
-                for c_id, c_feature  in enumerate(list_of_features):
+                for c_id, c_feature in enumerate(list_of_features):
                     # Skip if c_id is already in cell_ids
                     if c_id in cell_ids:
                         continue
 
                     # Check if c_id is a neighbour of existing_c_id
-                    if feature_to_ablate == 'cell_volume':
-                        if c_id not in vModel.geo.Cells[existing_c_id].compute_neighbours():
-                            is_neighbour = False
-                            continue
-                    elif feature_to_ablate == 'cell_area_top':
-                        if c_id not in vModel.geo.Cells[existing_c_id].compute_neighbours(location_filter=0):
-                            is_neighbour = False
-                            continue
-                    elif feature_to_ablate == 'cell_area_bottom':
-                        if c_id not in vModel.geo.Cells[existing_c_id].compute_neighbours(location_filter=2):
-                            is_neighbour = False
-                            continue
+                    if c_id not in list_of_neighbours[existing_c_id]:
+                        is_neighbour = False
+                        continue
 
                     if is_neighbour:
                         new_cell_ids = np.sort(np.append(cell_ids, c_id))
