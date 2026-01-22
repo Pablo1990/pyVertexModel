@@ -95,12 +95,13 @@ for dir_name in all_dirs:
             break
 
         df_new_rows = pd.DataFrame(new_rows)
+        # Save the dataframe with the combinations of cell ids and their features
+        output_file = os.path.join(input_dir, f'cell_combinations_{feature_to_ablate}_size_{len(df_new_rows.iloc[0]["cell_ids"])}.xlsx')
+        df = df_new_rows
+        # Sort the dataframe by the feature
+        df.to_excel(output_file, index=False)
+        print(f'Saved combinations to {output_file}')
 
-    # Save the dataframe with the combinations of cell ids and their features
-    output_file = os.path.join(input_dir, f'cell_combinations_{feature_to_ablate}.xlsx')
-    # Sort the dataframe by the feature
-    df = df.sort_values(by='feature')
-    df.to_excel(output_file, index=False)
-    print(f'Saved combinations to {output_file}')
+
 
 
