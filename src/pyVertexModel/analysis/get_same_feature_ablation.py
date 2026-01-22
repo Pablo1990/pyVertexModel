@@ -2,6 +2,7 @@
 import os
 
 import numpy as np
+import pandas as pd
 
 from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
@@ -11,6 +12,7 @@ original_wing_disc_height = 15.0 # in microns
 set_of_resize_z = np.array([0.0001, 0.001, 0.01, 0.1, 0.5, 1.0, 2.0]) * original_wing_disc_height
 input_folder = '/Result/to_calculate_ps_recoil/c/'
 feature_to_ablate = 'cell_area_top'  # Options: 'cell_area_top', 'cell_area_bottom', 'cell_volume'
+max_combinations = 20
 
 all_dirs = os.listdir(PROJECT_DIRECTORY + input_folder)
 
@@ -28,7 +30,7 @@ for dir_name in all_dirs:
     vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
     load_state(vModel, file_to_load)
 
-    # Get the feature of cells from 0 to 30
+    # Get the feature of cells from 0 to 20
     list_of_features = []
     for c_cell in vModel.geo.Cells:
         if feature_to_ablate == 'cell_area_top':
@@ -36,6 +38,71 @@ for dir_name in all_dirs:
         elif feature_to_ablate == 'cell_area_bottom':
             list_of_features.append(c_cell.compute_area(location_filter=2))
         elif feature_to_ablate == 'cell_volume':
-            c_cell.feature_to_ablate = c_cell.volume
+            list_of_features.append(c_cell.Vol)
         else:
             raise ValueError(f'Unknown feature to ablate: {feature_to_ablate}')
+
+        if len(list_of_features) >= max_combinations:
+            break
+
+    # Get the combinations of cells features, all the cells must be neighbours and the spherecity of the wound should be ok
+    df = pd.DataFrame({'cell_ids': [[0]], 'feature': [[list_of_features[0]]]})
+
+    df_new_rows = df.__deepcopy__()
+    var_exit = False
+    while not var_exit:
+        new_rows = []
+        for _, row in df_new_rows.iterrows():
+            cell_ids = row['cell_ids']
+
+            for existing_c_id in cell_ids:
+                # Check if the new cell is a neighbour of all the cells in cell_ids
+                is_neighbour = True
+                for c_id, c_feature  in enumerate(list_of_features):
+                    # Skip if c_id is already in cell_ids
+                    if c_id in cell_ids:
+                        continue
+
+                    # Check if c_id is a neighbour of existing_c_id
+                    if feature_to_ablate == 'cell_volume':
+                        if c_id not in vModel.geo.Cells[existing_c_id].compute_neighbours():
+                            is_neighbour = False
+                            continue
+                    elif feature_to_ablate == 'cell_area_top':
+                        if c_id not in vModel.geo.Cells[existing_c_id].compute_neighbours(location_filter=0):
+                            is_neighbour = False
+                            continue
+                    elif feature_to_ablate == 'cell_area_bottom':
+                        if c_id not in vModel.geo.Cells[existing_c_id].compute_neighbours(location_filter=2):
+                            is_neighbour = False
+                            continue
+
+                    if is_neighbour:
+                        new_cell_ids = np.sort(np.append(cell_ids, c_id))
+                        new_feature = row['feature'] + c_feature
+                        new_rows.append({'cell_ids': new_cell_ids, 'feature': new_feature})
+
+        for new_row in new_rows:
+            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+
+            if new_row['cell_ids'].size >= len(list_of_features):
+                var_exit = True
+                break
+
+        # Remove duplicate rows
+        df = df.drop_duplicates(subset=['cell_ids'])
+        print(df)
+
+        if len(new_rows) == 0:
+            break
+
+        df_new_rows = pd.DataFrame(new_rows)
+
+    # Save the dataframe with the combinations of cell ids and their features
+    output_file = os.path.join(input_dir, f'cell_combinations_{feature_to_ablate}.xlsx')
+    # Sort the dataframe by the feature
+    df = df.sort_values(by='feature')
+    df.to_excel(output_file, index=False)
+    print(f'Saved combinations to {output_file}')
+
+
