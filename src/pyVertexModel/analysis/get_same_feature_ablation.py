@@ -21,6 +21,12 @@ for dir_name in all_dirs:
     if not os.path.isdir(input_dir):
         continue
 
+    output_file = os.path.join(input_dir,
+                               f'cell_combinations_{feature_to_ablate}_size_{max_combinations}.csv')
+    if os.path.exists(output_file):
+        print(f'Output file already exists: {output_file}, skipping...')
+        continue
+
     print(f'Processing directory: {dir_name}')
     file_to_load = os.path.join(input_dir + '/before_ablation.pkl')
     if not os.path.exists(file_to_load):
@@ -88,3 +94,63 @@ for dir_name in all_dirs:
     del dfs
     gc.collect()
     print('Memory cleaned up.\n')
+
+print('All directories processed.')
+
+# Get combinations of cells with similar feature values using DFS with relaxed ANY-neighbour connectivity rule
+
+# Get all the values of the 'feature' of cell 0 in the aspect ratio of 0.15
+aspect_ratio = 0.15
+dirs_of_aspect_ratio = [
+    d for d in all_dirs if f'_{aspect_ratio}_' in d
+]
+feature_to_compare_to = []
+for dir_name in dirs_of_aspect_ratio:
+    # Read the 'csv' file
+    input_dir = PROJECT_DIRECTORY + input_folder + dir_name
+    output_file = os.path.join(input_dir,
+                               f'cell_combinations_{feature_to_ablate}_size_{max_combinations}.csv')
+    if not os.path.exists(output_file):
+        print(f'File not found: {output_file}, skipping...')
+        continue
+
+    # Read only the first 50 rows
+    df = pd.read_csv(output_file, nrows=50)
+
+    # Get the value of the feature for cell 0
+    feature_value_cell_0 = df[df['cell_ids'].apply(lambda x: eval(x)[0] == 0)]['feature'].values
+
+    feature_to_compare_to.append(feature_value_cell_0)
+
+avg_feature = np.mean(np.concatenate(feature_to_compare_to))
+
+# Go through all directories in '/Result/to_calculate_ps_recoil/c/' that are not of aspect ratio 0.15
+dirs_of_remaining_aspect_ratios = [
+    d for d in all_dirs if f'_{aspect_ratio}_' not in d
+]
+
+for dir_name in dirs_of_remaining_aspect_ratios:
+    input_dir = PROJECT_DIRECTORY + input_folder + dir_name
+    output_file = os.path.join(input_dir,
+                               f'cell_combinations_{feature_to_ablate}_size_{max_combinations}.csv')
+    if not os.path.exists(output_file):
+        print(f'File not found: {output_file}, skipping...')
+        continue
+
+    df = pd.read_csv(output_file)
+
+    # Find the row with the closest feature value to avg_feature
+    df['feature_diff'] = np.abs(df['feature'] - avg_feature)
+    closest_row = df.loc[df['feature_diff'].idxmin()]
+
+    print(f'In directory {dir_name}, closest feature to {avg_feature} is {closest_row["feature"]} '
+          f'with cell IDs {closest_row["cell_ids"]}')
+
+    # Append this information to a summary file
+    summary_file = os.path.join(PROJECT_DIRECTORY + input_folder,
+                                f'summary_closest_{feature_to_ablate}_size_{max_combinations}.csv')
+    with open(summary_file, 'a') as f:
+        f.write(f'{dir_name},{closest_row["cell_ids"]},{closest_row["feature"]}\n')
+
+
+
