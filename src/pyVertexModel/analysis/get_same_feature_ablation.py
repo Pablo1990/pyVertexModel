@@ -35,7 +35,7 @@ for dir_name in all_dirs:
 
     for c_cell in vModel.geo.Cells:
         if (c_cell.AliveStatus is not None and c_cell.ID not in vModel.geo.BorderCells
-                and c_cell.ID < max_combinations * 1.5):
+                and c_cell.ID < (max_combinations * 1.5)):
             if feature_to_ablate == 'cell_area_top':
                 list_of_features.append(c_cell.compute_area(location_filter=0))
                 list_of_neighbours.append(c_cell.compute_neighbours(location_filter=0))
@@ -77,8 +77,8 @@ for dir_name in all_dirs:
 
     output_file = os.path.join(
         input_dir,
-        f'cell_combinations_{feature_to_ablate}_size_{df["size"].max()}.xlsx'
+        f'cell_combinations_{feature_to_ablate}_size_{df["size"].max()}.csv'
     )
 
-    df.to_excel(output_file, index=False)
+    df.to_csv(output_file, index=False)
     print(f'Saved combinations to {output_file}')
