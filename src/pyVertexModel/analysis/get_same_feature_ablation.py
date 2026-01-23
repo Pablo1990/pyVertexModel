@@ -1,5 +1,5 @@
 # DFS version with relaxed ANY-neighbour connectivity rule
-
+import gc
 import os
 import numpy as np
 import pandas as pd
@@ -11,7 +11,7 @@ original_wing_disc_height = 15.0
 set_of_resize_z = np.array([0.0001, 0.001, 0.01, 0.1, 0.5, 1.0, 2.0]) * original_wing_disc_height
 
 input_folder = '/Result/to_calculate_ps_recoil/c/'
-feature_to_ablate = 'cell_area_top'
+feature_to_ablate = 'cell_volume' # Options: 'cell_area_top', 'cell_area_bottom', 'cell_volume'
 max_combinations = 20
 
 all_dirs = os.listdir(PROJECT_DIRECTORY + input_folder)
@@ -82,3 +82,9 @@ for dir_name in all_dirs:
 
     df.to_csv(output_file, index=False)
     print(f'Saved combinations to {output_file}')
+
+    # Clean up
+    del df
+    del dfs
+    gc.collect()
+    print('Memory cleaned up.\n')
