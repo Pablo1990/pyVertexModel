@@ -650,7 +650,7 @@ def get_default_args(func):
 
 def plot_figure_with_line(best_average_values, scutoids, current_path, x_axis_name='resize_z',
                           x_axis_label='Aspect ratio (AR)', y_axis_name='params_lambdaS_total',
-                          y_axis_label=r'$\lambda_{total}$', max_fev=10000000):
+                          y_axis_label=r'$\lambda_{total}$', max_fev=1000000000):
     """
     Plot a figure with a boxplot and a fitted line
     :param best_average_values:
@@ -700,8 +700,8 @@ def plot_figure_with_line(best_average_values, scutoids, current_path, x_axis_na
         popt_exp = popt_exp[0]
         y_fit = lambda_total_model(category_order, *popt_exp)
 
-        # Equation: a + b * (np.log(x) + c ) ** 2
-        label = f'$y = {popt_exp[0]:.2e} \\cdot {popt_exp[1]:.2e}(\\ln(x) + {popt_exp[2]:.2e})^2$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+        # Equation: a + b * (np.log1p(x) + c)
+        label = f'$y = {popt_exp[0]:.2e} + {popt_exp[1]:.2e} \\cdot (ln(1 + x) + {popt_exp[2]:.2f})$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
     elif y_axis_name == 'params_lambdaS1_normalised':
         plt.ylim(0, 1)
 
@@ -710,8 +710,8 @@ def plot_figure_with_line(best_average_values, scutoids, current_path, x_axis_na
         popt_exp = popt_exp[0]
         y_fit = lambda_s1_normalised_curve(category_order, *popt_exp)
 
-        # Equation: 0.5 + ((l_max - 0.5) / (1 + np.exp(-k * np.log(x) + c)))
-        label = f'$y = 0.5 + (({popt_exp[2]:.2f} - 0.5) / (1 + e^{{-{popt_exp[0]:.2f} \\cdot (ln x + {popt_exp[1]:.2f})}}))$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+        # Equation: l_min + ((l_max - l_min) / (1 + np.exp(-k * np.log(x) - p)))
+        label = f'$y = {popt_exp[3]:.2f} + (({popt_exp[2]:.2f} - {popt_exp[3]:.2f}) / (1 + e^{{-{popt_exp[0]:.2f} \\cdot (ln(x) - {popt_exp[1]:.2f})}}))$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
     elif y_axis_name == 'params_lambdaS2_normalised':
         plt.ylim(0, 1)
 
@@ -720,21 +720,22 @@ def plot_figure_with_line(best_average_values, scutoids, current_path, x_axis_na
         popt_exp = popt_exp[0]
         y_fit = lambda_s2_normalised_curve(category_order, *popt_exp)
 
-        # Equation: 1 - (0.5 + ((l_max - 0.5) / (1 + np.exp(-k * np.log(x) + c)))
-        label = f'$y = 1 - (0.5 + (({popt_exp[2]:.2f} - 0.5) / (1 + e^{{-{popt_exp[0]:.2f} \\cdot (ln x - {popt_exp[1]:.2f})}})))$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+        # Equation: 1 - (l_min + ((l_max - l_min) / (1 + np.exp(-k * np.log(x) - p))))
+        label = f'$y = 1 - \\left({popt_exp[3]:.2f} + (({popt_exp[2]:.2f} - {popt_exp[3]:.2f}) / (1 + e^{{-{popt_exp[0]:.2f} \\cdot (ln(x) - {popt_exp[1]:.2f})}}))\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
     elif y_axis_name == 'params_lambdaS1':
         y_fit = lambda_s1_curve(category_order)
         parameters = get_default_args(lambda_s1_curve)
 
-        # Equation: y = a + b · (ln(x) + c)^2 · (0.5 + (l_max - 0.5) · (1 - e^(-k · x^p)))
-        label = f'$y = {parameters["a"]:.2e} + {parameters["b"]:.2e} \\cdot (\\ln(x) + {parameters["c"]:.2f})^2 \\cdot \\left(0.5 + ( {parameters["l_max"]:.2f} - 0.5) \\cdot \\left(e^{{-{parameters["k"]:.2f} \\cdot x^{{{parameters["p"]:.2f}}}}}\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+        # Equation: y = (a + b · (log(1 + x) + c)) · (l_min + ((l_max - l_min) / (1 + np.exp(-k * np.log(x) - p))))
+        label = f'$y = ({parameters["a"]:.2e} + {parameters["b"]:.2e} \\cdot (\\ln(1 + x) + {parameters["c"]:.2f}) ) \\cdot \\left({parameters["l_min"]:.2f} + ( {parameters["l_max"]:.2f} - {parameters["l_min"]:.2f}) \\cdot e^{{-{parameters["k"]:.2f} \\cdot (ln(x) - {parameters["p"]:.2f}}}\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
     elif y_axis_name == 'params_lambdaS2':
         y_fit = lambda_s2_curve(category_order)
         parameters = get_default_args(lambda_s2_curve)
 
-        # Equation: y = a + b · (ln(x) + c)^2 · (1 - (0.5 + (l_max - 0.5) · (1 - e^(-k · x^p))))
-        label = f'$y = {parameters["a"]:.2e} + {parameters["b"]:.2e} \\cdot (\\ln(x) + {parameters["c"]:.2f})^2 \\cdot \\left(1 - \\left(0.5 + ( {parameters["l_max"]:.2f} - 0.5) \\cdot \\left(1 - e^{{-{parameters["k"]:.2f} \\cdot x^{{{parameters["p"]:.2f}}}}}\\right)\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
-    elif y_axis_name == 'Purse_string_strength_dy0' or y_axis_name == 'Recoil':
+        # Equation: y = (a + b · (log(1 + x) + c)) · (1 - (l_min + ((l_max - l_min) / (1 + np.exp(-k * np.log(x) - p)))))
+        label = f'$y = ({parameters["a"]:.2e} + {parameters["b"]:.2e} \\cdot (\\ln(1 + x) + {parameters["c"]:.2f}) ) \\cdot \\left(1 - \\left({parameters["l_min"]:.2f} + ( {parameters["l_max"]:.2f} - {parameters["l_min"]:.2f}) \\cdot e^{{-{parameters["k"]:.2f} \\cdot (ln(x) - {parameters["p"]:.2f}}}\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+    elif (y_axis_name == 'Purse_string_strength_dy0' or y_axis_name == 'Recoil' or y_axis_name == 'top_closure_velocity'
+          or y_axis_name == 'max_recoiling_top' or y_axis_name == 'Purse_string_strength' or y_axis_name == 'lS1'):
         # Fit the function to the mean correlation data
         popt_exp = curve_fit(purse_string_strength_curve, xdata=x_data, ydata=y_data, sigma=None, maxfev=max_fev)
         popt_exp = popt_exp[0]
