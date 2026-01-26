@@ -68,6 +68,7 @@ def get_ablation_analysis(full_path):
                 all_ARs.append(float(file_splitted[3]))
                 all_model_names.append(file_splitted[2])
                 all_file_names.append(file_name)
+                all_ls1.append(vModel.set.lambdaS1)
 
 
 if not os.path.exists(os.path.join(folder, 'all_simulations_metrics.xlsx')):
@@ -88,6 +89,7 @@ if not os.path.exists(os.path.join(folder, 'all_simulations_metrics.xlsx')):
     all_ARs = []
     all_model_names = []
     all_file_names = []
+    all_ls1 = []
     if len(sys.argv) == 2:
         full_path = lst[int(sys.argv[1])]
         # Split the file into the different folders
@@ -99,16 +101,13 @@ if not os.path.exists(os.path.join(folder, 'all_simulations_metrics.xlsx')):
 
         # Save the Ks and initial recoils into a csv file
         df_metrics = pd.DataFrame({'file_name': all_file_names, 'K': all_Ks, 'initial_recoil': all_initial_recoils,
-                                   'final_edge_normalised': all_final_edges_normalised,
+                                   'final_edge_normalised': all_final_edges_normalised, 'lS1': all_ls1,
                                      'AR': all_ARs, 'model_name': all_model_names})
         df_metrics.to_excel(os.path.join(folder, 'all_simulations_metrics.xlsx'))
 
 
 print("Metrics file already exists.")
 df_metrics = pd.read_excel(os.path.join(folder, 'all_simulations_metrics.xlsx'))
-
-# Use only the dWP12 model
-df_metrics = df_metrics[df_metrics['model_name'] == 'dWP12']
 
 # Plot
 plot_figure_with_line(df_metrics, None, folder, y_axis_name='final_edge_normalised',
@@ -117,4 +116,7 @@ plot_figure_with_line(df_metrics, None, folder, y_axis_name='K',
                         y_axis_label='Stiffness K', x_axis_name='AR')
 plot_figure_with_line(df_metrics, None, folder, y_axis_name='initial_recoil',
                         y_axis_label='Initial recoil speed', x_axis_name='AR')
+plot_figure_with_line(df_metrics, None, folder,
+                      x_axis_name='AR',
+                      y_axis_name='lS1', y_axis_label=r'$\lambda_{s1}=\lambda_{s3}$')
 
