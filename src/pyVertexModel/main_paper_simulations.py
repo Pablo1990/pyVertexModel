@@ -12,11 +12,13 @@ from src.pyVertexModel.util.utils import load_state
 
 logger = logging.getLogger("pyVertexModel")
 
-def run_simulation(combination, output_results_dir='Result/', length=60, use_wing_disc_ps=True):
+def run_simulation(combination, output_results_dir='Result/', length=60, use_wing_disc_ps=True, cells_to_ablate=None):
     """
     Run simulation with the given combination of variables.
-    :param length: 
-    :param output_results_dir: 
+    :param cells_to_ablate:
+    :param use_wing_disc_ps:
+    :param length:
+    :param output_results_dir:
     :param combination:
     :return:
     """
@@ -30,22 +32,47 @@ def run_simulation(combination, output_results_dir='Result/', length=60, use_win
     else:
         output_folder = os.path.join(PROJECT_DIRECTORY, output_results_dir, 'no_{}'.format('_no_'.join(combination)))
 
+    if cells_to_ablate is not None:
+        dir_name = output_folder.split('/')[-2]
+        aspect_ratio = float(dir_name.split('_')[3])
+        if aspect_ratio == 0.15:
+            cells_to_ablate = 1
+        elif aspect_ratio == 1.5:
+            cells_to_ablate = 5
+        elif aspect_ratio == 7.5:
+            cells_to_ablate = 14
+        elif aspect_ratio == 15.0:
+            cells_to_ablate = 22
+        elif aspect_ratio == 30.0:
+            cells_to_ablate = 35
+
+        if output_folder[-1] == '/':
+            output_folder = output_folder[:-1]
+        output_folder = output_folder + '_ablating_' + str(cells_to_ablate) + '/'
+
     # Check if output_folder exists
     if not os.path.exists(output_folder):
+        if not os.path.exists(os.path.join(PROJECT_DIRECTORY, output_results_dir, 'before_ablation.pkl')):
+            print("No initial state found to load from before ablation.")
+            return
+
         load_state(vModel,
                    os.path.join(PROJECT_DIRECTORY, output_results_dir,
                                                    'before_ablation.pkl'))
 
-        if getattr(vModel.set, 'model_name', None) is None:
-            vModel.set.model_name = 'in_silico_movie'
-        elif vModel.set.model_name == 'wing_disc_real_bottom_left':
-            cells_to_ablate = np.array([0, 1, 2, 3, 4, 7, 8, 10, 13])
-        elif vModel.set.model_name == 'wing_disc_real_top_right':
-            cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 10, 13, 15])
-        elif vModel.set.model_name == 'wing_disc_real':
-            cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        if cells_to_ablate is None:
+            if getattr(vModel.set, 'model_name', None) is None:
+                vModel.set.model_name = 'in_silico_movie'
+            elif vModel.set.model_name == 'wing_disc_real_bottom_left':
+                cells_to_ablate = np.array([0, 1, 2, 3, 4, 7, 8, 10, 13])
+            elif vModel.set.model_name == 'wing_disc_real_top_right':
+                cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 10, 13, 15])
+            elif vModel.set.model_name == 'wing_disc_real':
+                cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+            else:
+                cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
         else:
-            cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+            cells_to_ablate = np.arange(0, cells_to_ablate, dtype=int)
 
         vModel.set.cellsToAblate = cells_to_ablate
         vModel.geo.cellsToAblate = cells_to_ablate
@@ -154,10 +181,12 @@ combinations_of_variables.insert(0, 'WT')
 
 if __name__ == '__main__':
     index = int(sys.argv[1])
-    # Check if there are two arguments
+    # Check if the number of arguments
     if len(sys.argv) == 2:
         run_simulation(combinations_of_variables[index])
     elif len(sys.argv) == 4:
         run_simulation(combinations_of_variables[index], sys.argv[2], int(sys.argv[3]))
-    else:
+    elif len(sys.argv) == 3:
         run_simulation(combinations_of_variables[index], sys.argv[2])
+    elif len(sys.argv) == 5:
+        run_simulation(combinations_of_variables[index], sys.argv[2], int(sys.argv[3]), cells_to_ablate=int(sys.argv[4]))
