@@ -11,8 +11,8 @@ original_wing_disc_height = 15.0
 set_of_resize_z = np.array([0.0001, 0.001, 0.01, 0.1, 0.5, 1.0, 2.0]) * original_wing_disc_height
 
 input_folder = '/Result/to_calculate_ps_recoil/c/'
-feature_to_ablate = 'cell_volume' # Options: 'cell_area_top', 'cell_area_bottom', 'cell_volume'
-max_combinations = 20
+feature_to_ablate = 'cell_area_top' # Options: 'cell_area_top', 'cell_area_bottom', 'cell_volume'
+max_combinations = 2
 
 all_dirs = os.listdir(PROJECT_DIRECTORY + input_folder)
 
@@ -41,7 +41,7 @@ for dir_name in all_dirs:
 
     for c_cell in vModel.geo.Cells:
         if (c_cell.AliveStatus is not None and c_cell.ID not in vModel.geo.BorderCells
-                and c_cell.ID < (max_combinations * 1.5)):
+                and c_cell.ID < max_combinations):
             if feature_to_ablate == 'cell_area_top':
                 list_of_features.append(c_cell.compute_area(location_filter=0))
                 list_of_neighbours.append(c_cell.compute_neighbours(location_filter=0))
@@ -118,7 +118,7 @@ for dir_name in dirs_of_aspect_ratio:
     df = pd.read_csv(output_file, nrows=50)
 
     # Get the value of the feature for cell 0
-    feature_value_cell_0 = df[df['cell_ids'].apply(lambda x: eval(x)[0] == 0)]['feature'].values
+    feature_value_cell_0 = df[df['cell_ids'].apply(lambda x: x == '[0]')]['feature']
 
     feature_to_compare_to.append(feature_value_cell_0)
 
@@ -129,6 +129,9 @@ dirs_of_remaining_aspect_ratios = [
     d for d in all_dirs if f'_{aspect_ratio}_' not in d
 ]
 
+list_of_num_cells_needed = []
+list_of_AR = []
+list_of_dirs = []
 for dir_name in dirs_of_remaining_aspect_ratios:
     input_dir = PROJECT_DIRECTORY + input_folder + dir_name
     output_file = os.path.join(input_dir,
@@ -137,20 +140,35 @@ for dir_name in dirs_of_remaining_aspect_ratios:
         print(f'File not found: {output_file}, skipping...')
         continue
 
-    df = pd.read_csv(output_file)
+    df = pd.read_csv(output_file, nrows=50)
 
-    # Find the row with the closest feature value to avg_feature
-    df['feature_diff'] = np.abs(df['feature'] - avg_feature)
-    closest_row = df.loc[df['feature_diff'].idxmin()]
+    # Get the value of the feature for cell 0
+    feature_value_cell_0 = df[df['cell_ids'].apply(lambda x: x == '[0]')]['feature'].values
 
-    print(f'In directory {dir_name}, closest feature to {avg_feature} is {closest_row["feature"]} '
-          f'with cell IDs {closest_row["cell_ids"]}')
+    # Divide by the average feature value of cell 0 in aspect ratio 0.15 to obtain the number of cells needed to match
+    num_cells_needed = int(np.round(avg_feature / feature_value_cell_0))
+    list_of_num_cells_needed.append(num_cells_needed)
 
-    # Append this information to a summary file
-    summary_file = os.path.join(PROJECT_DIRECTORY + input_folder,
-                                f'summary_closest_{feature_to_ablate}_size_{max_combinations}.csv')
-    with open(summary_file, 'a') as f:
-        f.write(f'{dir_name},{closest_row["cell_ids"]},{closest_row["feature"]}\n')
+    # Get the aspect ratio from the directory name
+    AR = float(dir_name.split('_')[3])
+    list_of_AR.append(AR)
+
+    list_of_dirs.append(dir_name)
+
+# Save the results to a dataframe
+df_results = pd.DataFrame({
+    'dir_name': list_of_dirs,
+    'aspect_ratio': list_of_AR,
+    'num_cells_needed': list_of_num_cells_needed})
+df_results.to_csv(PROJECT_DIRECTORY + input_folder + 'num_cells_needed_to_match_feature.csv', index=False)
+print('Saved number of cells needed to match feature to CSV file.')
+
+# Summary of df_results grouped by aspect ratio
+summary = df_results.groupby('aspect_ratio')['num_cells_needed'].agg(['min', 'max', 'mean', 'count', pd.Series.mode]).reset_index()
+summary.to_csv(PROJECT_DIRECTORY + input_folder + 'summary_num_cells_needed_to_match_feature.csv', index=False)
+print('Saved summary of number of cells needed to match feature to CSV file.')
+
+
 
 
 
