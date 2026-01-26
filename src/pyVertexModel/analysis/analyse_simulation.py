@@ -84,6 +84,10 @@ def analyse_simulation(folder):
         vModel = VertexModel(create_output_folder=False)
         load_state(vModel, os.path.join(folder, 'before_ablation.pkl'))
 
+    # Create video
+    create_video(os.path.join(folder, 'images'), 'vModel_combined_',
+                 model_name=vModel.set.model_name)
+
     # Obtain wound edge cells features
     wound_edge_cells_top = vModel.geo.compute_cells_wound_edge('Top')
     wound_edge_cells_top_ids = [cell.ID for cell in wound_edge_cells_top]
@@ -550,12 +554,20 @@ def compute_edge_length_v_model(cells_to_ablate, edge_length_final, edge_length_
     # Calculate the recoil
     recoil_speed.append(edge_length_final_normalized[-1] / time_steps[-1])
 
-def create_video(folder, name_containing_images='top_'):
+def create_video(folder, name_containing_images='top_', model_name=None):
     """
     Create a video of the images in the folder
+    :param name_containing_images:
+    :param model_name:
     :param folder:
     :return:
     """
+    # Create the output video name
+    output_video_name = os.path.join(folder, '_'.join([model_name, 'video.mp4']))
+
+    # Check if video exists
+    if os.path.exists(output_video_name):
+        return
 
     # Get the images
     images = [img for img in os.listdir(folder) if img.endswith(".png") and name_containing_images in img]
@@ -570,7 +582,7 @@ def create_video(folder, name_containing_images='top_'):
 
     # Define the codec and create VideoWriter object
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Use 'mp4v' for MP4
-    video = cv2.VideoWriter(os.path.join(folder, name_containing_images + 'video.mp4'), fourcc, 7, (width, height))
+    video = cv2.VideoWriter(output_video_name, fourcc, 7, (width, height))
 
     for image in images:
         video.write(cv2.imread(os.path.join(folder, image)))

@@ -6,7 +6,7 @@ import pandas as pd
 from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation, create_video
 from src.pyVertexModel.util.utils import plot_figure_with_line
 
-folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/to_calculate_ps_recoil/c/'
+folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/same_recoil_wound_area_results/c/'
 
 # Check if excel exists
 if not os.path.exists(os.path.join(folder, 'all_files_features.xlsx')):
@@ -30,53 +30,13 @@ if not os.path.exists(os.path.join(folder, 'all_files_features.xlsx')):
             files_within_folder = os.listdir(os.path.join(folder, file))
             # Analyse the edge recoil
             if os.path.exists(os.path.join(folder, file, 'before_ablation.pkl')):
-                # if the videos do not exist, create them
-                #if not os.path.exists(os.path.join(folder, file, 'images', 'front_video.mp4')):
-                #    create_video(os.path.join(folder, file, 'images'), 'top_')
-                #    create_video(os.path.join(folder, file, 'images'), 'perspective_')
-                #    create_video(os.path.join(folder, file, 'images'), 'bottom_')
-                #    create_video(os.path.join(folder, file, 'images'), 'front_wound')
-
-                # if the analysis file exists, load it
-                # if os.path.exists(os.path.join(folder, file, 'recoil_info_apical.pkl')):
-                #     # recoiling_info_df_basal = load_variables(
-                #     #     os.path.join(folder, file, 'recoil_info_basal.pkl'))['recoiling_info_df_basal']
-                #     recoiling_info_df_apical = load_variables(
-                #         os.path.join(folder, file, 'recoil_info_apical.pkl'))['recoiling_info_df_apical']
-                # else:
                 file_name = os.path.join(folder, file, 'before_ablation.pkl')
-
-                # t_end = 0.5
-                # n_ablations = 2
-                # recoiling_edge_info_df_apical = analyse_edge_recoil(os.path.join(folder, file, 'before_ablation.pkl'),
-                #                                                type_of_ablation='recoil_edge_info_apical',
-                #                                                n_ablations=n_ablations, location_filter=0, t_end=t_end)
-                # if recoiling_edge_info_df_apical is None:
-                #     continue
-
-                # recoiling_info = analyse_edge_recoil(os.path.join(folder, file, 'data_step_300.pkl'),
-                #                                      n_ablations=n_ablations, location_filter=2, t_end=t_end)
-                # recoiling_info_df_basal = pd.DataFrame(recoiling_info)
-                # recoiling_info_df_basal.to_excel(os.path.join(folder, file, 'recoil_info_basal.xlsx'))
-                # save_variables({'recoiling_info_df_basal': recoiling_info_df_basal},
-                #                os.path.join(folder, file, 'recoil_info_basal.pkl'))
 
                 # Analyse the simulation
                 features_per_time_df, post_wound_features, important_features, features_per_time_all_cells_df = (
                     analyse_simulation(os.path.join(folder, file)))
 
                 if important_features is not None and len(important_features) > 5:
-                    #important_features['recoiling_speed_apical'] = recoiling_info_df_apical[0]['initial_recoil_in_s']
-                    #important_features['K'] = recoiling_info_df_apical[0]['K']
-
-                    # important_features['K_edge'] = np.mean([recoiling_edge_info_df_apical[i]['K'] for i in range(n_ablations) if
-                    #                                         1 > recoiling_edge_info_df_apical[i]['K'] > 1e-5])
-                    # important_features['recoiling_speed_edge_apical'] = np.mean([recoiling_edge_info_df_apical[i]['initial_recoil_in_s'] for i in range(n_ablations) if
-                    #                                                              1 > recoiling_edge_info_df_apical[i]['initial_recoil_in_s'] > 1e-5])
-
-                    # important_features['recoiling_speed_basal'] = np.mean(recoiling_info_df_basal['initial_recoil_in_s'])
-                    # important_features['recoiling_speed_basal_std'] = np.std(recoiling_info_df_basal['initial_recoil_in_s'])
-
                     # Sort features_per_time_df by time
                     features_per_time_df_std = features_per_time_all_cells_df.groupby(by='time').std().reset_index()
                     id_before_ablation = np.where(features_per_time_df_std.time < 30)[0][-1]
