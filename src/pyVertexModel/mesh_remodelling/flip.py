@@ -25,8 +25,13 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, Set, old_geo):
     :param old_geo:
     :return:
     """
+    from src.pyVertexModel.geometry.geo import check_vertex_valence
+    
     Geo.add_and_rebuild_cells(old_geo, oldTets, Tnew, Ynew, Set, True)
     has_converged = True
+    
+    # Check for 4-fold or higher vertices after flip operation
+    check_vertex_valence(Geo, log_warnings=True)
 
     return Geo_0, Geo_n, Geo, Dofs, has_converged
 
