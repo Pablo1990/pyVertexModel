@@ -26,6 +26,7 @@ dependencies = [
     "pyvista",
     "scikit-learn",
     "matplotlib",
+    "seaborn",
 ]
 
 [tool.setuptools_scm]
