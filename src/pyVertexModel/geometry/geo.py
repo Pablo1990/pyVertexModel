@@ -769,7 +769,16 @@ class Geo:
                 # Initialize gIds with the same shape as CellJ.globalIds
                 for numId in np.where(face_ids_i)[0]:
                     match = np.all(np.isin(CellJ.T, Cell.T[numId, :]), axis=1)
-                    g_ids[numId] = CellJ.globalIds[match]
+                    # CRITICAL FIX: Ensure exactly one match to prevent 4-fold vertices
+                    # Multiple matches indicate vertices incorrectly shared by >3 cells
+                    if np.sum(match) == 1:
+                        g_ids[numId] = CellJ.globalIds[match][0]
+                    elif np.sum(match) > 1:
+                        # Log warning but use first match to prevent crash
+                        logger.warning(f"Multiple tet matches ({np.sum(match)}) found in build_global_ids for cell {ci} tet {numId}. "
+                                     f"This indicates a 4-fold vertex bug. Using first match.")
+                        g_ids[numId] = CellJ.globalIds[match][0]
+                    # If no match, g_ids[numId] remains -1 and gets assigned new ID later
 
                 for f in range(len(Cell.Faces)):
                     Face = Cell.Faces[f]
@@ -1041,6 +1050,13 @@ class Geo:
                                                                               num_node,
                                                                               c_set), axis=0)
                                     self.numY += 1
+        
+        # CRITICAL FIX: Validate that added tets don't create 4-fold vertices
+        # Check vertex valence after adding all new tetrahedra
+        problematic_vertices = check_vertex_valence(self, log_warnings=True)
+        if problematic_vertices:
+            logger.error(f"WARNING: Added tetrahedra created {len(problematic_vertices)} 4-fold or higher vertices. "
+                        f"This may cause numerical instability!")
 
     def recalculate_ys_from_previous(self, tnew, main_nodes_to_connect, c_set):
         """

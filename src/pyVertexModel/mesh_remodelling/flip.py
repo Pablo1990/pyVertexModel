@@ -144,11 +144,27 @@ def y_flip23(Ys, Ts, YsToChange, Geo):
                          [n3[1], n3[2], n1, n2],
                          [n3[2], n3[0], n1, n2]])
 
+    # CRITICAL FIX: Better ghost node filtering to prevent boundary 4-fold vertices
+    # Check for tets that are fully ghost (all 4 nodes) OR mixed boundary tets
+    # that could create problematic 4-fold vertices
     ghostNodes = np.isin(Tnew, Geo.XgID)
-    ghostNodes = np.all(ghostNodes, axis=1)
+    
+    # A tet is "ghost" if all 4 nodes are ghost nodes
+    all_ghost = np.all(ghostNodes, axis=1)
+    
+    # Additional check: tets with 3+ ghost nodes are problematic at boundaries
+    # They can create vertices shared by 4 cells at the boundary
+    num_ghost_per_tet = np.sum(ghostNodes, axis=1)
+    mostly_ghost = num_ghost_per_tet >= 3
+    
+    # Filter out both fully ghost and mostly ghost tets
+    tets_to_remove = all_ghost | mostly_ghost
 
     Ynew = do_flip23(Ys[YsToChange], Geo, n3)
-    Ynew = Ynew[~ghostNodes]
+    Ynew = Ynew[~tets_to_remove]
+    
+    # Also filter the corresponding tets
+    Tnew = Tnew[~tets_to_remove]
 
     return Ynew, Tnew
 
@@ -385,10 +401,27 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, endNode, ghost_n
         if np.all(np.sum(np.isin(new_tets, Geo.XgID), axis=1) < 4):
             if intercalation_flip:
                 Xs_c = Xs[~np.isin(Xs, ghost_nodes_without_debris)]
-                # Split into the different combination of tets using 'combinations'
+                # CRITICAL FIX: Don't blindly re-add 4-fold tets during intercalation
+                # Instead, only add new tet combinations that don't already exist
+                # and won't create 4-fold vertices
                 for combination in combinations(Xs_c, 4):
-                    if ~ismember_rows(np.array(combination), np.vstack([new_tets, tets4_cells]))[0][0]:
-                        new_tets = np.append(new_tets, np.array([combination]), axis=0)
+                    combination_array = np.array(combination)
+                    # Check if this combination would create a 4-fold vertex
+                    # by seeing if it already exists in the geometry
+                    exists_in_new = ismember_rows(combination_array, np.vstack([new_tets, tets4_cells]))[0]
+                    if not exists_in_new[0]:
+                        # Additional validation: check if adding this tet would create 4-fold
+                        # Count how many existing cells would share vertices with this tet
+                        shared_cells = set()
+                        for node in combination:
+                            if node < len(Geo.Cells) and Geo.Cells[node].AliveStatus is not None:
+                                shared_cells.add(node)
+                        
+                        # Only add if it won't create excessive vertex sharing
+                        if len(shared_cells) <= 3:
+                            new_tets = np.append(new_tets, combination_array.reshape(1, -1), axis=0)
+                        else:
+                            logger.warning(f"Skipping tet combination {combination} - would create {len(shared_cells)}-fold vertex")
 
             current_valence_segment, shared_tets, _ = (
                 edge_valence_t(new_tets, [xs_to_disconnect_cells, cell_to_split_from]))

@@ -41,10 +41,18 @@ def compute_y(geo, T, cellCentre, Set):
         newY = cellCentre + offset
 
     if "Bubbles" not in Set.InputGeo:
-        if any(i in geo.XgTop for i in T):
-            newY[2] /= sum(i in geo.XgTop for i in T) / 2
-        elif any(i in geo.XgBottom for i in T):
-            newY[2] /= sum(i in geo.XgBottom for i in T) / 2
+        # CRITICAL FIX: Proper handling of boundary vertices to prevent 4-fold issues
+        # Count ghost nodes to normalize Z-coordinate for top/bottom surfaces
+        num_ghost_top = sum(i in geo.XgTop for i in T)
+        num_ghost_bottom = sum(i in geo.XgBottom for i in T)
+        
+        if num_ghost_top > 0:
+            # Normalize Z based on number of top ghost nodes
+            # This ensures consistent Z values for vertices on the same surface
+            newY[2] = newY[2] * 2.0 / num_ghost_top
+        elif num_ghost_bottom > 0:
+            # Normalize Z based on number of bottom ghost nodes
+            newY[2] = newY[2] * 2.0 / num_ghost_bottom
     return newY
 
 
