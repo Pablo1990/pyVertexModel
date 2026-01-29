@@ -192,3 +192,5 @@ data/
 Input
 
 *.xlsx
+
+src/pyVertexModel/_version.py
