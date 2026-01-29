@@ -28,6 +28,10 @@ dependencies = [
     "matplotlib",
 ]
 
+[tool.setuptools_scm]
+local_scheme = "no-local-version"
+write_to = "src/pyVertexModel/_version.py"
+
 [tool.coverage]
 report = {skip_covered = true, sort = "cover"}
 run = {branch = true, parallel = true, source = [

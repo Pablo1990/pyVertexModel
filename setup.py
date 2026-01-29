@@ -7,11 +7,7 @@ extensions = [Extension("src.pyVertexModel.Kg.kg_functions", ["src/pyVertexModel
 
 setup(
     name='pyVertexModel',
-    version='0.0.1a0',
     packages=['src', 'src.pyVertexModel', 'src.pyVertexModel.Kg', 'pyVertexModel'],
-    url='',
-    license='',
-    description='',
     ext_modules=cythonize(extensions, **ext_options),
     include_dirs=[np.get_include()],
 )
