@@ -7,6 +7,7 @@ from scipy.optimize import minimize
 from scipy.spatial import Delaunay
 
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
+from src.pyVertexModel.util.utils import save_state
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -378,10 +379,10 @@ def extrapolate_points_to_ellipsoid(points, ellipsoid_axis_normalised1, ellipsoi
 
 
 class VertexModelBubbles(VertexModel):
-    def __init__(self, set_test=None):
-        super().__init__(set_test)
+    def __init__(self, set_option=None):
+        super().__init__(set_option)
 
-    def initialize(self):
+    def initialize_cells(self, filename):
         """
         Initialize the geometry and the topology of the model.
         :return:
@@ -420,8 +421,9 @@ class VertexModelBubbles(VertexModel):
             # Extrapolate Face centres and Ys to the ellipsoid
             self.geo = extrapolate_ys_faces_ellipsoid(self.geo, self.set)
 
-        # Define upper and lower area threshold for remodelling
-        self.geo.init_reference_cell_values(self.set)
+        # Save state with filename using the number of cells
+        filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
+        save_state(self.geo, filename)
 
     def generate_Xs(self, nx=None, ny=None, nz=None):
         """

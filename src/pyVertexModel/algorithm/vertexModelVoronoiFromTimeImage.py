@@ -1,27 +1,23 @@
 import copy
-import logging
 import lzma
 import os
 import pickle
 from itertools import combinations
+from os.path import exists
 
 import numpy as np
 import scipy
-from numpy import arange
 from scipy.ndimage import label
 from scipy.spatial.distance import squareform, pdist, cdist
 from skimage import io
 from skimage.measure import regionprops_table
-from skimage.morphology import dilation, disk, square
-from skimage.segmentation import find_boundaries
+from skimage.morphology import dilation
 
 from src import PROJECT_DIRECTORY, logger
 from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrahedra_from_information, \
     calculate_cell_height_on_model
-from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain, edge_valence
-from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling, smoothing_cell_surfaces_mesh
-from src.pyVertexModel.util.utils import ismember_rows, save_variables, load_state, find_optimal_deform_array_X_Y, \
-    save_backup_vars, screenshot_, save_state, load_backup_vars
+from src.pyVertexModel.geometry.geo import Geo
+from src.pyVertexModel.util.utils import ismember_rows, save_variables, save_state, load_state, screenshot_
 
 
 def build_quartets_of_neighs_2d(neighbours):
@@ -99,9 +95,6 @@ def build_triplets_of_neighs(neighbours):
         triplets_of_neighs = np.unique(np.sort(triplets_of_neighs, axis=1), axis=0)
 
     return triplets_of_neighs
-
-
-
 
 
 def boundary_of_cell(vertices_of_cell, neighbours=None):
@@ -319,192 +312,40 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
     """
     Vertex model from a time image.
     """
-    def __init__(self, set_option='wing_disc', set_test=None, update_derived_parameters=True, create_output_folder=True):
-        super().__init__(set_option=set_option, c_set=set_test, update_derived_parameters=update_derived_parameters, create_output_folder=create_output_folder)
+
+    def __init__(self, set_option='wing_disc', set_test=None, update_derived_parameters=True,
+                 create_output_folder=True):
+        super().__init__(set_option=set_option, c_set=set_test, update_derived_parameters=update_derived_parameters,
+                         create_output_folder=create_output_folder)
         self.dilated_cells = None
 
-    def initialize(self):
+    def initialize_cells(self, filename):
         """
-        Initialize the geometry and the topology of the model.
-        """
-        filename = os.path.join(PROJECT_DIRECTORY, self.set.initial_filename_state)
-
-        if not os.path.exists(filename):
-            logging.error(f'File {filename} not found')
-
-        if filename.endswith('.pkl'):
-            output_folder = self.set.OutputFolder
-            load_state(self, filename, ['geo', 'geo_0', 'geo_n'])
-            self.set.OutputFolder = output_folder
-            self.geo.update_measures()
-            for cell in self.geo.Cells:
-                self.geo.Cells[cell.ID].Vol0 = self.geo.Cells[cell.ID].Vol
-                self.geo.Cells[cell.ID].Area0 = self.geo.Cells[cell.ID].Area
-        elif filename.endswith('.mat'):
-            mat_info = scipy.io.loadmat(filename)
-            self.geo = Geo(mat_info['Geo'])
-            self.geo.update_measures()
-        else:
-            # Load the image and obtain the initial X and tetrahedra
-            Twg, X = self.obtain_initial_x_and_tetrahedra()
-            # Build cells
-            self.geo.build_cells(self.set, X, Twg)
-
-            # Save state with filename using the number of cells
-            filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
-            save_state(self.geo, filename)
-
-        # Resize the geometry to a given cell volume average
-        self.resize_tissue()
-
-        # Deform the tissue if required
-        self.deform_tissue()
-
-        # Create substrate(s)
-        if self.set.Substrate == 3:
-           # Create a substrate cell for each cell
-           self.geo.create_substrate_cells(self.set, domain='Top')
-
-        # Add border cells to the shared cells
-        for cell in self.geo.Cells:
-            if cell.ID in self.geo.BorderCells:
-                for face in cell.Faces:
-                    for tris in face.Tris:
-                        tets_1 = cell.T[tris.Edge[0]]
-                        tets_2 = cell.T[tris.Edge[1]]
-                        shared_cells = np.intersect1d(tets_1, tets_2)
-                        if np.any(np.isin(self.geo.BorderGhostNodes, shared_cells)):
-                            shared_cells_list = list(tris.SharedByCells)
-                            shared_cells_list.append(shared_cells[np.isin(shared_cells, self.geo.BorderGhostNodes)][0])
-                            tris.SharedByCells = np.array(shared_cells_list)
-
-        # Create periodic boundary conditions
-        self.geo.apply_periodic_boundary_conditions(self.set)
-
-        if self.set.ablation:
-            self.geo.cellsToAblate = self.set.cellsToAblate
-
-        self.geo.init_reference_cell_values(self.set)
-
-        if self.set.Substrate == 1:
-            self.Dofs.GetDOFsSubstrate(self.geo, self.set)
-        else:
-            self.Dofs.get_dofs(self.geo, self.set)
-
-        if self.geo_0 is None:
-            self.geo_0 = self.geo.copy(update_measurements=False)
-
-        if self.geo_n is None:
-            self.geo_n = self.geo.copy(update_measurements=False)
-
-        # Adjust percentage of scutoids
-        self.adjust_percentage_of_scutoids()
-
-    def adjust_percentage_of_scutoids(self):
-        """
-        Adjust the percentage of scutoids in the model.
+        Initialize the cells from the image.
+        :param filename:
         :return:
         """
-        c_scutoids = self.geo.compute_percentage_of_scutoids() / 100
+        output_filename = filename.replace('.tif', f'_{self.set.TotalCells}cells_{self.set.CellHeight}.pkl')
+        if exists(output_filename):
+            # Check date of the output_filename and if it is older than 1 day from today, redo the file
+            # if os.path.getmtime(output_filename) < (time.time() - 24 * 60 * 60):
+            #     logger.info(f'Redoing the file {output_filename} as it is older than 1 day')
+            # else:
+            logger.info(f'Loading existing state from {output_filename}')
+            self.geo = Geo()
+            load_state(self.geo, output_filename)
+            return
 
-        # Print initial percentage of scutoids
-        logger.info(f'Percentage of scutoids initially: {c_scutoids}')
+        # Load the image and obtain the initial X and tetrahedra
+        Twg, X = self.obtain_initial_x_and_tetrahedra()
+        # Build cells
+        self.geo.build_cells(self.set, X, Twg)
+        # Save screenshot of the initial state
+        image_file = '/'+ os.path.join(*filename.split('/')[:-1])
+        screenshot_(self.geo, self.set, 0, output_filename.split('/')[-1], image_file)
 
-        remodel_obj = Remodelling(self.geo, self.geo, self.geo, self.set, self.Dofs)
-
-        polygon_distribution = remodel_obj.Geo.compute_polygon_distribution('Bottom')
-        print(f'Polygon distribution bottom: {polygon_distribution}')
-
-        screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
-                    self.set.OutputFolder + '/images')
-
-
-        # Check if the number of scutoids is approximately the desired one
-        while c_scutoids < self.set.percentage_scutoids:
-            backup_vars = save_backup_vars(remodel_obj.Geo, remodel_obj.Geo_n, remodel_obj.Geo_0, 0, remodel_obj.Dofs)
-            non_scutoids = remodel_obj.Geo.obtain_non_scutoid_cells()
-            non_scutoids = [cell for cell in non_scutoids if cell.AliveStatus is not None]
-            # Order by volume with higher volume first
-            non_scutoids = sorted(non_scutoids, key=lambda x: x.Vol, reverse=True)
-            for c_cell in non_scutoids:
-                if c_cell.ID in remodel_obj.Geo.BorderCells:
-                    continue
-                # Get the neighbours of the cell
-                neighbours = c_cell.compute_neighbours(location_filter='Bottom')
-                # Remove border cells from neighbours
-                neighbours = np.setdiff1d(neighbours, self.geo.BorderCells)
-                if len(neighbours) == 0:
-                    continue
-
-                # Compute cell volume and pick the neighbour with the higher volume.
-                # These cells will be the ones that will lose neighbours
-                neighbours_vol = [cell.Vol for cell in remodel_obj.Geo.Cells if cell.ID in neighbours]
-
-                # Pick the neighbour with the lowest volume
-                random_neighbour = neighbours[np.argmin(neighbours_vol)]
-                shared_nodes = get_node_neighbours_per_domain(remodel_obj.Geo, c_cell.ID, remodel_obj.Geo.XgBottom,
-                                                              random_neighbour)
-
-                # Filter the shared nodes that are ghost nodes
-                shared_nodes = shared_nodes[np.isin(shared_nodes, remodel_obj.Geo.XgID)]
-                valence_segment, old_tets, old_ys = edge_valence(remodel_obj.Geo, [c_cell.ID, shared_nodes[0]])
-
-                cell_to_split_from_all = np.unique(old_tets)
-                cell_to_split_from_all = cell_to_split_from_all[~np.isin(cell_to_split_from_all, remodel_obj.Geo.XgID)]
-
-                if np.sum(np.isin(shared_nodes, remodel_obj.Geo.BorderCells)) > 0:
-                    print('More than 0 border cell')
-                    continue
-
-                cell_to_split_from = cell_to_split_from_all[
-                    ~np.isin(cell_to_split_from_all, [c_cell.ID, random_neighbour])]
-
-                if len(cell_to_split_from) == 0:
-                    continue
-
-                # Display information about the cells in the flip
-                logger.info(f'Cell {c_cell.ID} will win neighbour {random_neighbour} and lose neighbour {cell_to_split_from[0]}')
-
-                # Perform flip
-                all_tnew, ghost_node, ghost_nodes_tried, has_converged, old_tets = remodel_obj.perform_flip(c_cell.ID, random_neighbour, cell_to_split_from[0], shared_nodes[0])
-
-                if has_converged:
-
-                    cells_involved_intercalation = [cell.ID for cell in remodel_obj.Geo.Cells if cell.ID in all_tnew.flatten()
-                                                    and cell.AliveStatus == 1]
-
-                    remodel_obj.Geo = smoothing_cell_surfaces_mesh(remodel_obj.Geo, cells_involved_intercalation, backup_vars, location='Bottom')
-
-                    # Converge a single iteration
-                    remodel_obj.Geo.update_measures()
-
-                    remodel_obj.Set.currentT = self.t
-                    remodel_obj.Dofs.get_dofs(remodel_obj.Geo, self.set)
-
-                if has_converged:
-                    c_scutoids = remodel_obj.Geo.compute_percentage_of_scutoids() / 100
-                    print(f'Percentage of scutoids: {c_scutoids}')
-
-                    polygon_distribution = remodel_obj.Geo.compute_polygon_distribution('Bottom')
-                    print(f'Polygon distribution bottom: {polygon_distribution}')
-
-                    screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
-                                self.set.OutputFolder + '/images')
-
-                    self.geo = remodel_obj.Geo
-                    self.save_v_model_state(os.path.join(self.set.OutputFolder, 'data_step_' + str(round(c_scutoids, 2)) + '.pkl'))
-                    break
-                else:
-                    remodel_obj.Geo, _, _, _, remodel_obj.Geo.Dofs = load_backup_vars(backup_vars)
-
-            # If the last cell is reached, break the loop
-            if c_cell == non_scutoids[-1]:
-                break
-
-
-        self.geo.update_measures()
-        self.geo.init_reference_cell_values(self.set)
-
+        # Save state with filename using the number of cells
+        save_state(self.geo, output_filename)
 
     def build_2d_voronoi_from_image(self, labelled_img, watershed_img, total_cells):
         """
@@ -579,7 +420,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         props = regionprops_table(labelled_img, properties=('centroid', 'label',))
         zeros_column = np.zeros((props['centroid-1'].shape[0], 1))
         cell_centroids_current = np.column_stack([props['label'], props['centroid-0'], props['centroid-1'],
-                                                    zeros_column])
+                                                  zeros_column])
 
         return (triangles_connectivity, neighbours_network, cell_edges, vertices_location, border_cells,
                 border_of_border_cells_and_main_cells, main_cells, cell_centroids_current)
@@ -614,53 +455,6 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                     len(img_neighbours_all[num_cell])), 'Error missing vertices of neighbours'
         return vertices_info
 
-    def deform_tissue(self):
-        if self.set.resize_z is not None:
-            middle_point = np.mean([cell.X for cell in self.geo.Cells if cell.AliveStatus is not None], axis=0)
-            volumes = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
-            optimal_deform_array_X_Y = find_optimal_deform_array_X_Y(self.geo.copy(), self.set.resize_z,
-                                                                     middle_point, volumes)
-            print(f'Optimal deform_array_X_Y: {optimal_deform_array_X_Y}')
-
-            for cell in self.geo.Cells:
-                deform_array = np.array(
-                    [optimal_deform_array_X_Y[0], optimal_deform_array_X_Y[0], self.set.resize_z])
-
-                cell.X = cell.X + (middle_point - cell.X) * deform_array
-                if cell.AliveStatus is not None:
-                    cell.Y = cell.Y + (middle_point - cell.Y) * deform_array
-                    for face in cell.Faces:
-                        face.Centre = face.Centre + (middle_point - face.Centre) * deform_array
-
-            self.geo.update_measures()
-            volumes_after_deformation = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
-            logger.info(f'Volume difference: {np.mean(volumes) - np.mean(volumes_after_deformation)}')
-
-    def resize_tissue(self, average_volume=0.0003168604676977124):
-        """
-        Resize the tissue to a specific average volume.
-        :param average_volume: The target average volume for the cells.
-        """
-        self.geo.update_measures()
-        # Calculate the current average volume of the cells
-        current_average_volume = np.mean([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
-        middle_point = np.mean([cell.X for cell in self.geo.Cells], axis=0)
-        # Calculate the scaling factor
-        scaling_factor = (average_volume / current_average_volume) ** (1 / 3)
-        # Resize the cells
-        for cell in self.geo.Cells:
-            cell.X = middle_point + (cell.X - middle_point) * scaling_factor
-            if cell.AliveStatus is not None:
-                cell.Y = middle_point + (cell.Y - middle_point) * scaling_factor
-                for face in cell.Faces:
-                    face.Centre = middle_point + (face.Centre - middle_point) * scaling_factor
-
-        # Update the geometry
-        self.geo.update_measures()
-
-        volumes_after_deformation = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
-        logger.info(f'Volume difference: {np.mean(volumes_after_deformation) - average_volume}')
-
     def calculate_neighbours(self, labelled_img, ratio_strel):
         """
         Calculate the neighbours of each cell
@@ -679,7 +473,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         cells = cells[cells != 0]  # Remove cell 0 if it exists
 
         img_neighbours = [None] * (np.max(cells) + 1)
-        #boundaries = find_boundaries(labelled_img, mode='inner') * labelled_img
+        # boundaries = find_boundaries(labelled_img, mode='inner') * labelled_img
 
         self.dilated_cells = [None] * (np.max(labelled_img) + 1)
 
@@ -743,6 +537,7 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         Obtain the initial X and tetrahedra for the model.
         :return:
         """
+        self.geo = Geo()
         if img_filename is None:
             img_filename = PROJECT_DIRECTORY + '/' + self.set.initial_filename_state
 
@@ -769,7 +564,8 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             (triangles_connectivity, neighbours_network,
              cell_edges, vertices_location, border_cells,
              border_of_border_cells_and_main_cells,
-             main_cells, cell_centroids_current) = self.build_2d_voronoi_from_image(current_img, current_img, main_cells)
+             main_cells, cell_centroids_current) = self.build_2d_voronoi_from_image(current_img, current_img,
+                                                                                    main_cells)
 
             trianglesConnectivity[id_plane] = triangles_connectivity
             neighboursNetwork[id_plane] = neighbours_network
@@ -811,7 +607,8 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         self.geo.XgLateral = np.setdiff1d(all_main_cells, main_cells)
         self.geo.XgID = np.setdiff1d(np.arange(X.shape[0]), main_cells)
         # Define border cells
-        self.geo.BorderCells = np.unique(np.concatenate([borderCells[numPlane] for numPlane, id_plane in enumerate(selectedPlanes)]))
+        self.geo.BorderCells = np.unique(
+            np.concatenate([borderCells[numPlane] for numPlane, id_plane in enumerate(selectedPlanes)]))
         self.geo.BorderGhostNodes = self.geo.XgLateral
 
         # Create new tetrahedra based on intercalations
@@ -823,8 +620,8 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         Twg = Twg[~np.all(np.isin(Twg, self.geo.XgID), axis=1)]
 
         # Remove tetrahedra with cells that are not in all_main_cells
-        #cells_to_remove = np.setdiff1d(range(1, np.max(all_main_cells) + 1), all_main_cells)
-        #Twg = Twg[~np.any(np.isin(Twg, cells_to_remove), axis=1)]
+        # cells_to_remove = np.setdiff1d(range(1, np.max(all_main_cells) + 1), all_main_cells)
+        # Twg = Twg[~np.any(np.isin(Twg, cells_to_remove), axis=1)]
 
         # Re-number the surviving tets
         Twg, X = self.renumber_tets_xs(Twg, X)

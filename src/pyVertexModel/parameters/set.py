@@ -13,10 +13,13 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.min_3d_neighbours = None
+        self.periodic_boundaries = True
         self.frozen_face_centres = False
+        self.frozen_face_centres_border_cells = True
         self.model_name = ''
         self.percentage_scutoids = 0
-        self.myosin_pool = None
+        self.myosin_pool = 1e-4
         self.resize_z = None
         self.edge_length_threshold = 0.3
         self.kCeiling = None
@@ -52,6 +55,9 @@ class Set:
         self.ellipsoid_axis2 = None
         self.ellipsoid_axis3 = None
         self.nu_bottom = None
+        self.bottom_ecm = True
+        self.substrate_top = False
+        self.kSubstrateTop = 0
         # ============================== Ablation ============================
         self.cellsToAblate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
         self.TInitAblation = 20
@@ -76,7 +82,7 @@ class Set:
             # Volumes
             self.lambdaV = 1
             self.lambdaV_Debris = 1e-8
-            self.ref_V0 = 1.0
+            self.ref_V0 = 0.9999
             # Surface area
             self.SurfaceType = 1
             self.A0eq0 = True
@@ -87,7 +93,8 @@ class Set:
             # Bottom
             self.lambdaS3 = self.lambdaS1 / 100
             # Substrate - c_cell
-            self.lambdaS4 = self.lambdaS2
+            self.lambdaS4_top = self.lambdaS2
+            self.lambdaS4_bottom = self.lambdaS2
             self.ref_A0 = 0.92
             # Tri energy Area
             self.EnergyBarrierA = False
@@ -106,7 +113,7 @@ class Set:
             self.Confinement = False
             # Contractility
             self.Contractility = False
-            self.cLineTension = 0.0001
+            self.cLineTension = 0
             self.noise_random = 0
             # In plane elasticity
             self.InPlaneElasticity = False
@@ -122,8 +129,9 @@ class Set:
             self.LocalViscosityOption = 2
             # =========================== remodelling ============================
             self.Remodelling = True
-            self.contributionOldYs = 0 #0.8
+            self.contributionOldYs = 0
             self.RemodelStiffness = None
+            self.Remodel_stiffness_wound = None
             # ============================ Solution ==============================
             self.tol = 1e-08
             self.MaxIter = 30
@@ -176,9 +184,11 @@ class Set:
             self.tol0 = self.nu/20
 
         if self.Remodelling:
-            self.RemodelStiffness = 0.7
+            self.RemodelStiffness = 0.9
+            self.Remodel_stiffness_wound = 0.7
         else:
             self.RemodelStiffness = 2
+            self.Remodel_stiffness_wound = 2
 
     def redirect_output(self):
         os.makedirs(self.OutputFolder, exist_ok=True)
@@ -219,7 +229,8 @@ class Set:
         self.define_if_not_defined("RemodelingFrequency", 0.1)
         self.define_if_not_defined("lambdaS2", self.lambdaS1 * 0.1)
         self.define_if_not_defined("lambdaS3", self.lambdaS1 / 10)
-        self.define_if_not_defined("lambdaS4", self.lambdaS1 / 10)
+        self.define_if_not_defined("lambdaS4_top", self.lambdaS1 / 10)
+        self.define_if_not_defined("lambdaS4_bottom", self.lambdaS1 / 10)
         self.define_if_not_defined("SubstrateZ", - self.CellHeight / 2)
         self.define_if_not_defined("f", self.s / 2)
         self.define_if_not_defined("nu_LP_Initial", self.nu)
@@ -233,6 +244,7 @@ class Set:
         current_datetime = datetime.now()
         new_outputFolder = ''.join([PROJECT_DIRECTORY, '/Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")),
                                     self.model_name,
+                                    '_scutoids_', str(self.percentage_scutoids),
                                     '_noise_', '{:0.2e}'.format(self.noise_random),
                                     '_lVol_', '{:0.2e}'.format(self.lambdaV),
                                     '_kSubs_', '{:0.2e}'.format(self.kSubstrate),
@@ -257,6 +269,44 @@ class Set:
         self.lambdaS3 = 0.1
         self.InputGeo = 'Bubbles'
         self.VTK = False
+
+    def bubbles(self):
+        self.InputGeo = 'Bubbles'
+        self.model_name = 'Bubbles_with_substrate'
+        self.initial_filename_state = 'Input/Bubbles_with_substrate.mat'
+        self.Substrate = 3
+        self.periodic_boundaries = False
+        self.resize_z = None
+
+        self.lambdaS1 = 1
+        self.lambdaS2 = self.lambdaS1 / 100
+        self.lambdaS3 = self.lambdaS1
+        self.lambdaS4_top = 0.1
+        self.lambdaS4_bottom = 0.1
+
+        self.Nincr = self.tend * 100
+
+        self.EnergyBarrierAR = False
+        if self.EnergyBarrierAR:
+            self.lambdaR = 8e-7
+        else:
+            self.lambdaR = 0
+
+        # Volume
+        self.lambdaV = 1
+        self.ref_V0 = 1.1
+
+        # Substrate
+        self.kSubstrate = 0.1
+
+        # Surface Area
+        self.ref_A0 = 0.99
+
+        self.Remodelling = False
+
+        self.VTK = False
+
+        self.check_for_non_used_parameters()
 
     def cyst(self):
         mat_info = scipy.io.loadmat(os.path.join(PROJECT_DIRECTORY, 'Tests/data/Geo_var_cyst.mat'))
@@ -287,12 +337,16 @@ class Set:
         self.check_for_non_used_parameters()
 
     def wing_disc_equilibrium(self):
-        self.contributionOldYs = 0.8
         self.nu_bottom = self.nu
         self.model_name = 'dWL1'
         self.initial_filename_state = 'Input/images/' + self.model_name + '.tif'
-        self.percentage_scutoids = 0.45
+        #self.initial_filename_state = 'Input/images/dWP1_150cells_15_scutoids_1.0.pkl'
+        self.percentage_scutoids = 0.0
+        self.tend = 20
         self.Nincr = self.tend * 100
+        self.CellHeight = 1 * 15 #np.array([0.0001, 0.001, 0.01, 0.1, 0.5, 1, 2.0]) * original_wing_disc_height
+        #self.resize_z = 0.01
+        self.min_3d_neighbours = None # 10
 
         self.EnergyBarrierAR = True
         if self.EnergyBarrierAR:
@@ -305,9 +359,11 @@ class Set:
 
         # Substrate
         self.kSubstrate = 0.1
+        #self.kSubstrateTop = self.kSubstrate / 1000
+        self.substrate_top = False
 
         # Surface Area
-        self.ref_A0 = 0.92
+        self.ref_A0 = 0.99
         # Top
         self.lambdaS1 = 1.4
         # c_cell-c_cell
@@ -315,18 +371,24 @@ class Set:
         # Bottom
         self.lambdaS3 = self.lambdaS1
         # Substrate - c_cell
-        self.lambdaS4 = self.lambdaS2
+        self.lambdaS4_top = self.lambdaS2
+        self.lambdaS4_bottom = self.lambdaS2
 
         self.VTK = False
+        self.Remodelling = True
+        self.ablation = False
+        self.noise_random = 0
 
         self.check_for_non_used_parameters()
 
     def wing_disc(self):
+        self.frozen_face_centres = False
         #self.nu_bottom = self.nu
         #self.model_name = 'in_silico_movie_0'
         #self.initial_filename_state = 'Input/' + self.model_name + '.mat'
         #self.percentage_scutoids = 0
         self.Nincr = self.tend * 100
+        self.resize_z = None
 
         self.EnergyBarrierA = False
         # Energy Barrier Aspect Ratio
@@ -344,7 +406,7 @@ class Set:
 
         # Contractility
         self.Contractility = False
-        self.cLineTension = 1e-7
+        #self.cLineTension = 0
 
         # Surface Area
         self.ref_A0 = 0.92
@@ -353,59 +415,18 @@ class Set:
         # c_cell-c_cell
         self.lambdaS2 = self.lambdaS1 / 100
         # Bottom
-        self.lambdaS3 = self.lambdaS1 / 10
-        # Substrate - c_cell
-        self.lambdaS4 = self.lambdaS2
+        self.lambdaS3 = self.lambdaS1
+        # Substrate - c_cell/
+        self.lambdaS4_top = self.lambdaS2
+        self.lambdaS4_bottom = self.lambdaS2
+
+        #self.noise_random = 0.3
+
+        self.Remodel_stiffness_wound = 0.9
 
         self.VTK = False
 
         self.check_for_non_used_parameters()
-
-    def squamous_cells(self):
-        self.initial_filename_state = 'Input/squamous_cells.pkl'
-
-        # Surface tension
-        self.lambda_s_total = (1.4 + 1.4/10 + 1.4/100) * 0.1
-        # Top
-        self.lambdaS1 = self.lambda_s_total * 2.5/10
-        # c_cell-c_cell
-        self.lambdaS2 = self.lambda_s_total * 5/10
-        # Bottom
-        self.lambdaS3 = self.lambda_s_total * 2.5/10
-
-        # Substrate
-        self.kSubstrate = 0.1
-
-        self.check_for_non_used_parameters()
-
-    def cuboidal_cells(self):
-        self.initial_filename_state = 'Input/cuboidal_cells.pkl'
-
-        # Surface tension
-        self.lambda_s_total = (1.4 + 1.4/10 + 1.4/100) * 0.1
-        # Top
-        self.lambdaS1 = self.lambda_s_total * 2.5/10
-        # c_cell-c_cell
-        self.lambdaS2 = self.lambda_s_total * 5/10
-        # Bottom
-        self.lambdaS3 = self.lambda_s_total * 2.5/10
-
-        # Substrate
-        self.kSubstrate = 0.001
-
-        self.check_for_non_used_parameters()
-
-    def columnar_cells(self):
-        self.initial_filename_state = 'Input/columnar_cells.pkl'
-
-        # Surface tension
-        self.lambda_s_total = (1.4 + 1.4/10 + 1.4/100)
-        # Top
-        self.lambdaS1 = self.lambda_s_total * 75/100
-        # c_cell-c_cell
-        self.lambdaS2 = self.lambda_s_total * 5/100
-        # Bottom
-        self.lambdaS3 = self.lambda_s_total * 20/100
 
     def wound_default(self, myosin_pool_multiplier=1):
         # =========================== Contractility ==========================
@@ -414,7 +435,7 @@ class Set:
         # 0: Intensity-based purse string
         # 1: Strain-based purse string (delayed)
         # 2: Fixed with linear increase purse string
-        self.myosin_pool = (4e-5 + 7e-5) * myosin_pool_multiplier
+        self.myosin_pool = (3e-5 + 7e-5) * myosin_pool_multiplier
         self.purseStringStrength = 3e-5
         self.lateralCablesStrength = 7e-5
 

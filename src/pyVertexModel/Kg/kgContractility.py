@@ -156,6 +156,11 @@ def get_contractility_based_on_location(current_face, current_tri, geo, c_set):
                                                            CUTOFF * c_set.purseStringStrength)
         elif c_set.TypeOfPurseString == 2:
             contractilityValue = get_intensity_based_contractility(c_set, current_face, intensity_images=False)
+        elif c_set.TypeOfPurseString == 3:
+            if get_interface(current_face.InterfaceType) == get_interface('CellCell'):
+                contractilityValue = c_set.lateralCablesStrength
+            elif get_interface(current_face.InterfaceType) == get_interface('Top'):
+                contractilityValue = c_set.purseStringStrength
     else:
         contractilityValue = c_set.cLineTension
 
@@ -171,9 +176,9 @@ def get_contractility_based_on_location(current_face, current_tri, geo, c_set):
             if any([geo.Cells[cell].AliveStatus == 0 for cell in current_tri.SharedByCells]):
                 pass
             else:
-                contractilityValue = c_set.cLineTension / 10
+                contractilityValue = c_set.cLineTension
         elif get_interface(current_face.InterfaceType) == get_interface('Bottom'):
-            contractilityValue = c_set.cLineTension / 10
+            contractilityValue = c_set.cLineTension
         else:
             contractilityValue = c_set.cLineTension
 

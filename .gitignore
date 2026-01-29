@@ -190,3 +190,5 @@ data/
 *.o
 
 Input
+
+*.xlsx

@@ -18,24 +18,29 @@ def build_edge_based_on_tetrahedra(face_tets):
     :return:
     """
     tet_order = np.zeros(len(face_tets), dtype=int) - 1
-    tet_order[0] = 0
-    prev_tet = face_tets[0, :]
-    if len(face_tets) > 3:
-        for yi in range(1, len(face_tets)):
-            i = np.sum(np.isin(face_tets, prev_tet), axis=1) == 3
-            i = i & ~np.isin(np.arange(len(face_tets)), tet_order)
-            i = np.where(i)[0]
-            if len(i) == 0:
-                raise Exception('BuildEdges:TetrahedraOrdering', 'Cannot create a face with these tetrahedra')
-            tet_order[yi] = i[0]
-            prev_tet = face_tets[i[0], :]
 
-        if np.sum(np.isin(face_tets[0, :], prev_tet)) != 3:
-            raise Exception('BuildEdges:TetrahedraOrdering', 'Cannot create a face with these tetrahedra')
-    else:
-        tet_order = np.array([0, 1, 2])
-    tet_order = np.array(tet_order, dtype=int)
-    return tet_order
+    for first_tet in range(len(face_tets)):
+        tet_order[0] = first_tet
+        prev_tet = face_tets[first_tet, :]
+        if len(face_tets) > 3:
+            for yi in range(1, len(face_tets)):
+                i = np.sum(np.isin(face_tets, prev_tet), axis=1) == 3
+                i = i & ~np.isin(np.arange(len(face_tets)), tet_order)
+                i = np.where(i)[0]
+                if len(i) == 0:
+                    break
+                tet_order[yi] = i[0]
+                prev_tet = face_tets[i[0], :]
+
+            if np.sum(np.isin(face_tets[first_tet, :], prev_tet)) != 3:
+                continue
+        else:
+            tet_order = np.array([0, 1, 2])
+
+        tet_order = np.array(tet_order, dtype=int)
+        return tet_order
+
+    raise Exception('BuildEdges:TetrahedraOrdering', 'Cannot create a face with these tetrahedra')
 
 
 class Face:
@@ -73,13 +78,27 @@ class Face:
         get_interface(self.InterfaceType)
 
     def build_face(self, ci, cj, face_ids, nCells, Cell, XgID, Set, XgTop, XgBottom, oldFace=None):
+        """
+        Build the face based on the given parameters.
+        :param ci:
+        :param cj:
+        :param face_ids:
+        :param nCells:
+        :param Cell:
+        :param XgID:
+        :param Set:
+        :param XgTop:
+        :param XgBottom:
+        :param oldFace:
+        :return:
+        """
         self.InterfaceType = None
         ij = [ci, cj]
         self.ij = ij
         self.globalIds = None
         self.build_interface_type(ij, XgID, XgTop, XgBottom)
 
-        if oldFace is not None:
+        if oldFace is not None and getattr(oldFace, 'ij', None) is not None:
             self.Centre = oldFace.Centre
         else:
             self.build_face_centre(ij, nCells, Cell.X, Cell.Y[face_ids, :], Set.f,
@@ -88,11 +107,10 @@ class Face:
         self.build_edges(Cell.T, face_ids, self.Centre, self.InterfaceType, Cell.X, Cell.Y,
                          list(range(nCells)))
 
-        if oldFace is not None:
-            self.Area = oldFace.Area
+        self.Area, _ = self.compute_face_area(Cell.Y)
+        if oldFace is not None and getattr(oldFace, 'ij', None) is not None:
             self.Area0 = oldFace.Area0
         else:
-            self.Area, _ = self.compute_face_area(Cell.Y)
             self.Area0 = self.Area * Set.ref_A0
 
 
@@ -114,7 +132,6 @@ class Face:
             ftype = self.InterfaceType_allValues[1]  # Border face
 
         self.InterfaceType = get_interface(ftype)
-        return self.InterfaceType
 
     def build_face_centre(self, ij, ncells, X, Ys, H, extrapolate_face_centre):
         """
@@ -216,7 +233,11 @@ class Face:
             y_tri = np.vstack([y[tri.Edge, :], y3])
 
             # Calculate the area of the triangle
-            tri_area = 0.5 * np.linalg.norm(np.cross(y_tri[1, :] - y_tri[0, :], y_tri[0, :] - y_tri[2, :]))
+            cross_product = np.cross(y_tri[1, :] - y_tri[0, :], y_tri[0, :] - y_tri[2, :])
+            tri_area = 0.5 * np.linalg.norm(cross_product)
+            if np.allclose(cross_product, 0):
+                tri_area = 0  # Handle collinear points
+
             tris_area[t] = tri_area
 
         area = np.sum(tris_area)

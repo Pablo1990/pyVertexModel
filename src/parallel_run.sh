@@ -2,38 +2,38 @@
 
 # Define the Python script to run
 PYTHON_SCRIPT="pyVertexModel/main_paper_simulations.py"
-OUTPUT_DIR="Result/final_results_wing_disc_real_bottom_right"
+OUTPUT_DIR="Result/to_calculate_ps_recoil/c/"
 
-# Conda environment name (update this)
-CONDA_ENV="pyVertexModel"
-
-# Project directory setup
-PROJECT_DIR=$(dirname "$(dirname "$(realpath "$0")")")
+# Define the project directory and add it to PYTHONPATH
+PROJECT_DIR=$(dirname "$(dirname "$(realpath $0)")")
+export PYTHONPATH=$PROJECT_DIR:$PYTHONPATH
+export QT_QPA_PLATFORM="offscreen"
 
 # Parameters to run
-num_parameters=(0 1 2 3 4 5 6 7 8 9)
+#num_parameters=(0 1 2 3 4)
+num_parameters=(2)
 
+# Function to run a simulation
 run_simulation() {
     local num_parameter=$1
-    echo "Running simulation for num_parameter: $num_parameter"
-    #mamba run -n "$CONDA_ENV" nice -n -10 python "$PYTHON_SCRIPT" "$num_parameter" "$OUTPUT_DIR"
-    sudo nice -n -15 bash -c "
-        source '$(conda info --base)/etc/profile.d/conda.sh'
-        conda activate '$CONDA_ENV'
-        export PYTHONPATH='$PROJECT_DIR:$PYTHONPATH'
-        export QT_QPA_PLATFORM='offscreen'
-        python '$PYTHON_SCRIPT' '$num_parameter' '$OUTPUT_DIR'
-    "
-    echo "Finished simulation for num_parameter: $num_parameter"
+    local dir_name=$2
+    echo $OUTPUT_DIR
+    echo "Running simulation number $num_parameter"
+    python $PYTHON_SCRIPT "$num_parameter" "$OUTPUT_DIR/$dir_name" "30"
+    echo "Finished simulation number $num_parameter"
 }
 
-# Parallel execution (max 2 jobs)
-max_jobs=2
+# Parallel execution
+max_jobs=4
 for num_parameter in "${num_parameters[@]}"; do
-    while [ $(jobs -r | wc -l) -ge "$max_jobs" ]; do
-        sleep 1
+    for dir in "$PROJECT_DIR/$OUTPUT_DIR"/* ; do
+        echo "$dir"
+        dir_name=$(basename "$dir")
+        while [ $(jobs -r | wc -l) -ge "$max_jobs" ]; do
+            sleep 1
+        done
+        run_simulation "$num_parameter" "$dir_name" &
     done
-    run_simulation "$num_parameter" &
 done
 
 wait

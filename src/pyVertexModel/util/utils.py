@@ -1,14 +1,19 @@
 import copy
 import gzip
+import inspect
 import lzma
 import math
 import os
 import pickle
 
-import imageio
+import matplotlib
 import numpy as np
 import pyvista as pv
-from scipy.optimize import fsolve, minimize
+import seaborn as sns
+
+matplotlib.use('Agg')
+from matplotlib import pyplot as plt
+from scipy.optimize import fsolve, minimize, curve_fit
 
 
 def find_optimal_deform_array_X_Y(geo, deform_array_Z, middle_point, volumes):
@@ -20,6 +25,7 @@ def find_optimal_deform_array_X_Y(geo, deform_array_Z, middle_point, volumes):
     :param volumes:
     :return:
     """
+
     def objective(deform_array_X_Y):
         geo_copy = geo.copy()
         deform_array = np.array([deform_array_X_Y[0], deform_array_X_Y[0], deform_array_Z])
@@ -36,9 +42,10 @@ def find_optimal_deform_array_X_Y(geo, deform_array_Z, middle_point, volumes):
         print(vol_difference)
         return abs(vol_difference)
 
-    options = {'disp': True, 'ftol':1e-9}
-    result = minimize(objective, method='TNC', x0=np.array([2]), options=options)
+    options = {'disp': True, 'ftol': 1e-9}
+    result = minimize(objective, method='TNC', x0=np.array([3]), options=options)
     return result.x
+
 
 def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None, scalar_to_display='Volume'):
     """
@@ -68,91 +75,118 @@ def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None, scalar_to_d
     if selected_cells is None:
         selected_cells = []
 
-    plotter = pv.Plotter(off_screen=True)
+    # Capture screenshots for different views
+    views = ['perspective', 'top', 'bottom', 'front']
+    images = []
 
-    for _, cell in enumerate(geo.Cells):
-        if cell.AliveStatus == 1 and (cell.ID in selected_cells or len(selected_cells) == 0):
-            # Load the VTK file as a pyvista mesh
-            mesh = cell.create_pyvista_mesh()
+    for view in views:
+        plotter = pv.Plotter(off_screen=True)
 
-            # Add the mesh to the plotter
-            # Cmaps that I like: 'tab20b', 'BuPu', 'Blues'
-            # Cmaps that I don't like: 'prism', 'bone'
-            plotter.add_mesh(mesh, name=f'cell_{cell.ID}', scalars=scalar_to_display, lighting=True, cmap="pink",
-                             clim=colormap_lim, show_edges=True, edge_color='white', edge_opacity=0.3)
+        for _, cell in enumerate(geo.Cells):
+            if cell.AliveStatus == 1 and (cell.ID in selected_cells or len(selected_cells) == 0):
+                # Load the VTK file as a pyvista mesh
+                mesh = cell.create_pyvista_mesh()
 
+                # Add the mesh to the plotter
+                # Cmaps that I like: 'tab20b', 'BuPu', 'Blues'
+                # Cmaps that I don't like: 'prism', 'bone'
+                plotter.add_mesh(mesh, name=f'cell_{cell.ID}', scalars=scalar_to_display, lighting=True, cmap="pink",
+                                 clim=colormap_lim, show_edges=True, edge_color='white', edge_opacity=0.3)
 
-    for _, cell in enumerate(geo.Cells):
-        if cell.AliveStatus == 1 and (cell.ID in selected_cells or len(selected_cells) == 0):
-            edge_mesh = cell.create_pyvista_edges()
-            plotter.add_mesh(edge_mesh, name=f'edge_{cell.ID}', color='black', line_width=3, render_lines_as_tubes=True)
+        for _, cell in enumerate(geo.Cells):
+            if cell.AliveStatus == 1 and (cell.ID in selected_cells or len(selected_cells) == 0):
+                edge_mesh = cell.create_pyvista_edges()
+                plotter.add_mesh(edge_mesh, name=f'edge_{cell.ID}', color='black', line_width=3,
+                                 render_lines_as_tubes=True)
 
-    # Set a fixed camera zoom level
-    fixed_zoom_level = 1
-    plotter.camera.zoom(fixed_zoom_level)
+        # Add text to the plotter
+        if set.ablation:
+            timeAfterAblation = float(t) - float(set.TInitAblation)
+            text_content = f"Ablation time: {timeAfterAblation:.2f}"
+            plotter.add_text(text_content, position='upper_left', font_size=25, color='black')
+        else:
+            text_content = f"Time: {t:.2f}"
+            plotter.add_text(text_content, position='upper_left', font_size=25, color='black')
 
-    # Add text to the plotter
-    if set.ablation:
-        timeAfterAblation = float(t) - float(set.TInitAblation)
-        text_content = f"Ablation time: {timeAfterAblation:.2f}"
-        plotter.add_text(text_content, position='upper_right', font_size=12, color='black')
-    else:
-        text_content = f"Time: {t:.2f}"
-        plotter.add_text(text_content, position='upper_right', font_size=12, color='black')
+        if view == 'perspective':
+            plotter.camera.zoom(1.1)
+        elif view == 'top':
+            plotter.enable_parallel_projection()
+            plotter.enable_image_style()
+            plotter.view_xy()
+            plotter.camera.zoom(1.5)
+            # Adjust the camera position and focal point
+            plotter.camera.position = (
+                plotter.camera.position[0],  # Keep the x-coordinate unchanged
+                plotter.camera.position[1] - 0.03,  # Move the y-coordinate up
+                plotter.camera.position[2]  # Keep the z-coordinate unchanged
+            )
+            plotter.camera.focal_point = (
+                plotter.camera.focal_point[0],  # Keep the x-coordinate unchanged
+                plotter.camera.focal_point[1] - 0.03,  # Move the y-coordinate up
+                plotter.camera.focal_point[2]  # Keep the z-coordinate unchanged
+            )
+        elif view == 'bottom':
+            plotter.enable_parallel_projection()
+            plotter.enable_image_style()
+            plotter.view_xy(negative=True)
+            plotter.camera.zoom(1.5)
+            # Adjust the camera position and focal point
+            plotter.camera.position = (
+                plotter.camera.position[0],  # Keep the x-coordinate unchanged
+                plotter.camera.position[1] - 0.03,  # Move the y-coordinate up
+                plotter.camera.position[2]  # Keep the z-coordinate unchanged
+            )
+            plotter.camera.focal_point = (
+                plotter.camera.focal_point[0],  # Keep the x-coordinate unchanged
+                plotter.camera.focal_point[1] - 0.03,  # Move the y-coordinate up
+                plotter.camera.focal_point[2]  # Keep the z-coordinate unchanged
+            )
+        elif view == 'front':
+            plotter.enable_parallel_projection()
+            plotter.enable_image_style()
+            plotter.view_xz()
 
+            # Adjust camera position and focal point for lateral view
+            plotter.camera.position = (geo.Cells[0].X[0] + 1, geo.Cells[0].X[1],
+                                       geo.Cells[0].X[2])  # Offset for lateral view
+            plotter.camera.focal_point = (geo.Cells[0].X[0], geo.Cells[0].X[1], geo.Cells[0].X[2])
+            plotter.camera.zoom(1)  # Focus on the first cell
 
+            # Hide unwanted cells
+            centre_of_wound = geo.compute_wound_centre()
+            cells_to_hide = np.array([cell.ID for cell in geo.Cells if (
+                        (cell.AliveStatus == 0 or cell.AliveStatus == 1) and cell.X[0] > geo.Cells[0].X[0])])
+            for cell in cells_to_hide:
+                plotter.remove_actor(f'cell_{cell}')
+                plotter.remove_actor(f'edge_{cell}')
+            for _, cell in enumerate(geo.Cells):
+                if cell.AliveStatus == 0 and cell.ID not in cells_to_hide:
+                    # Load the VTK file as a pyvista mesh
+                    mesh = cell.create_pyvista_mesh()
+                    plotter.add_mesh(mesh, color='white', lighting=True, opacity=0.5)
 
-    # Render the scene and capture a screenshot
-    img = plotter.screenshot(transparent_background=True, scale=3)
-    # Save the image to a temporary file
-    temp_file = os.path.join(temp_dir, f'vModel_perspective_{numStep}.png')
-    imageio.imwrite(temp_file, img)
+        img = plotter.screenshot(scale=3)
+        images.append(img)
+        plotter.close()
 
-    # True 2D
-    plotter.enable_parallel_projection()
-    plotter.enable_image_style()
+    # Reorder the images to match the views
+    images = [images[views.index(view)] for view in ['top', 'bottom', 'perspective', 'front']]
 
-    # Set the camera to the top view
-    plotter.view_xy()
+    # Combine screenshots into one figure
+    fig, axes = plt.subplots(2, 2, figsize=(10, 10), dpi=600)
+    for ax, img, title in zip(axes.flatten(), images, views):
+        ax.imshow(img)
+        #ax.set_title(title)
+        ax.axis('off')
 
-    img = plotter.screenshot(transparent_background=True, scale=3)
-    temp_file = os.path.join(temp_dir, f'vModel_top_{numStep}.png')
-    imageio.imwrite(temp_file, img)
+    plt.subplots_adjust(wspace=-0.01, hspace=-0.35)
 
-    # Set the camera to the bottom view
-    plotter.view_xy(negative=True)
+    # Save the combined figure
+    combined_file = os.path.join(temp_dir, f'vModel_combined_{numStep}.png')
+    plt.savefig(combined_file, bbox_inches='tight')
+    plt.close(fig)
 
-    img = plotter.screenshot(transparent_background=True, scale=3)
-    temp_file = os.path.join(temp_dir, f'vModel_bottom_{numStep}.png')
-    imageio.imwrite(temp_file, img)
-
-    # Set the camera to the front view and adjust the position to be inside the tissue
-    plotter.view_xz()
-    plotter.camera.position = (-0.6836302475532527, 0.49746550619602203, -0.0024260058999061584)
-    plotter.focal_point = (0.5723095089197159, 0.49746550619602203, -0.0024260058999061584)
-    # Do not show the following cells =
-    cells_to_hide = np.array([11, 12, 16, 19, 21, 22, 23, 31, 32, 35, 36, 37, 38, 39, 41, 44, 54, 55, 56, 58, 59, 60, 61, 65, 67, 68, 75, 76, 81, 82, 83, 86, 88, 89, 90, 91, 94, 96, 97, 102, 104, 106, 108, 112, 114, 116, 119, 120, 123, 124, 128, 129, 133, 135, 140, 141, 142, 143, 144, 145, 149])
-    for cell in cells_to_hide:
-        plotter.remove_actor(f'cell_{cell}')
-        plotter.remove_actor(f'edge_{cell}')
-
-    img = plotter.screenshot(transparent_background=True, scale=3)
-    temp_file = os.path.join(temp_dir, f'vModel_front_{numStep}.png')
-    imageio.imwrite(temp_file, img)
-
-    #Add debris cells
-    for _, cell in enumerate(geo.Cells):
-        if cell.AliveStatus == 0:
-            # Load the VTK file as a pyvista mesh
-            mesh = cell.create_pyvista_mesh()
-            plotter.add_mesh(mesh, color='white', lighting=True, opacity=0.5)
-
-    img = plotter.screenshot(scale=3)
-    temp_file = os.path.join(temp_dir, f'vModel_front_wound_{numStep}.png')
-    imageio.imwrite(temp_file, img)
-
-    # Close the plotter
-    plotter.close()
 
 def screenshot(v_model, temp_dir, selected_cells=None, scalar_to_display='Volume'):
     """
@@ -163,6 +197,7 @@ def screenshot(v_model, temp_dir, selected_cells=None, scalar_to_display='Volume
     :return:
     """
     screenshot_(v_model.geo, v_model.set, v_model.t, v_model.numStep, temp_dir, selected_cells, scalar_to_display)
+
 
 def load_backup_vars(backup_vars):
     return (backup_vars['Geo_b'].copy(), backup_vars['Geo_n_b'].copy(), backup_vars['Geo_0_b'], backup_vars['tr_b'],
@@ -483,7 +518,8 @@ def face_centres_to_middle_of_neighbours_vertices(Geo, c_cell, filter_location=N
     :return:
     """
     for num_face, _ in enumerate(Geo.Cells[c_cell].Faces):
-        if filter_location is None or get_interface(Geo.Cells[c_cell].Faces[num_face].InterfaceType) == get_interface(filter_location):
+        if filter_location is None or get_interface(Geo.Cells[c_cell].Faces[num_face].InterfaceType) == get_interface(
+                filter_location):
             all_edges = []
             for tri in Geo.Cells[c_cell].Faces[num_face].Tris:
                 all_edges.append(tri.Edge)
@@ -510,3 +546,247 @@ def get_interface(interface_type):
                                   value == interface_type or key == interface_type)
 
     return interface_type_str
+
+
+def r2(y, y_predicted):
+    """
+    Compute the R^2 value.
+    :param y:
+    :param y_predicted:
+    :return:
+    """
+    ss_res = ((y - y_predicted) ** 2).sum()
+    ss_tot = ((y - y.mean()) ** 2).sum()
+    return 1 - (ss_res / ss_tot)
+
+
+def lambda_total_model(x, a, b, c):
+    """
+    Compute the total lambda model.
+    :param x: aspect ratio
+    :param a:
+    :param b:
+    :param c:
+    :return:
+    """
+    return a + b * (np.log(x) + c ) ** 2
+
+
+def lambda_s1_normalised_curve(x, k, c, l_max):
+    """
+    Compute the lambda_s1 normalised curve.
+    :param x: aspect ratio.
+    :param k:
+    :param c:
+    :param l_max:
+    :return:
+    """
+    return 0.5 + ((l_max - 0.5) / (1 + np.exp(-k * np.log(x) + c)))
+
+
+def lambda_s2_normalised_curve(x, p, q, l_max):
+    """
+    Compute the lambda_s2 normalised curve.
+    :param x:
+    :param p:
+    :param q:
+    :param l_max:
+    :return:
+    """
+    return 1 - lambda_s1_normalised_curve(x, p, q, l_max)
+
+
+def lambda_s1_curve(x, a=1.49e-4, b=1.15e-5, c=3.44, k=2.09, p=0.31, l_max=0.92):
+    """
+
+    :param c:
+    :param x:
+    :param a:
+    :param b:
+    :param k:
+    :param p:
+    :param l_max:
+    :return:
+    """
+    return lambda_total_model(x, a, b, c) * lambda_s1_normalised_curve(x, k, p, l_max)
+
+
+def lambda_s2_curve(x, a=1.49e-4, b=1.15e-5, c=3.44, k=2.09, p=0.31, l_max=0.92):
+    """
+
+    :param c:
+    :param k:
+    :param x:
+    :param a:
+    :param b:
+    :param p:
+    :param l_max:
+    :return:
+    """
+    return lambda_total_model(x, a, b, c) * lambda_s2_normalised_curve(x, k, p, l_max)
+
+def purse_string_strength_curve(x, a, b):
+    """
+    Compute the purse string strength curve.
+    :param x: aspect ratio.
+    :param a:
+    :param b:
+    :return:
+    """
+    return a * x ** b
+
+def get_default_args(func):
+    """
+    Get default arguments of a function
+    :param func:
+    :return:
+    """
+    signature = inspect.signature(func)
+    return {
+        k: v.default
+        for k, v in signature.parameters.items()
+        if v.default is not inspect.Parameter.empty
+    }
+
+def plot_figure_with_line(best_average_values, scutoids, current_path, x_axis_name='resize_z',
+                          x_axis_label='Aspect ratio (AR)', y_axis_name='params_lambdaS_total',
+                          y_axis_label=r'$\lambda_{total}$', max_fev=1000000000):
+    """
+    Plot a figure with a boxplot and a fitted line
+    :param best_average_values:
+    :param max_fev:
+    :param current_path:
+    :param scutoids:
+    :param x_axis_name:
+    :param x_axis_label:
+    :param y_axis_name:
+    :param y_axis_label:
+    :return:
+    """
+    param_df = best_average_values[best_average_values[x_axis_name].notnull()]
+    if scutoids is not None:
+        param_df = param_df[param_df['scutoids'] == scutoids]
+
+    if param_df.empty:
+        return
+
+    if y_axis_name == 'params_lambdaS_total':
+        param_df = param_df[param_df['params_lambdaS1'].notnull() & param_df['params_lambdaS2'].notnull()]
+        ydata = param_df['params_lambdaS1'] + param_df['params_lambdaS2']
+        param_df['params_lambdaS_total'] = ydata
+
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(x=x_axis_name, y=y_axis_name, data=param_df, whis=[0, 100], width=.6, palette="vlag")
+    ax = sns.stripplot(x=x_axis_name, y=y_axis_name, data=param_df, size=4, color=".3")
+
+    # Increase font size and make it bold
+    plt.xticks(fontsize=20, fontweight='bold')
+    plt.yticks(fontsize=20, fontweight='bold')
+
+    # plt.title(f'Boxplot of {param} correlations with {scutoids*100}% scutoids')
+    plt.xlabel(x_axis_label, fontsize=20, fontweight='bold')
+    plt.ylabel(y_axis_label, fontsize=20, fontweight='bold')
+    plt.xticks(rotation=45)
+
+    x_positions = ax.get_xticks()  # This gives [0, 1, 2, 3]
+    x_labels = ax.get_xticklabels()
+    category_order = np.array([float(label.get_text()) for label in x_labels])
+    y_data = param_df[y_axis_name]
+    x_data = param_df[x_axis_name]
+    ydata_average_by_ar = param_df.groupby(x_axis_name)[y_axis_name].mean().reindex(category_order).values
+    if y_axis_name == 'params_lambdaS_total':
+        # Fit the function to the mean correlation data
+        popt_exp = curve_fit(lambda_total_model, xdata=x_data, ydata=y_data, sigma=None, maxfev=max_fev)
+        popt_exp = popt_exp[0]
+        y_fit = lambda_total_model(category_order, *popt_exp)
+
+        # Equation: a + b * (np.log1p(x) + c)
+        label = f'$y = {popt_exp[0]:.2e} + {popt_exp[1]:.2e} \\cdot (ln(1 + x) + {popt_exp[2]:.2f})$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+    elif y_axis_name == 'params_lambdaS1_normalised':
+        plt.ylim(0, 1)
+
+         # Fit the function to the mean correlation data
+        popt_exp = curve_fit(lambda_s1_normalised_curve, xdata=x_data, ydata=y_data, sigma=None, maxfev=max_fev)
+        popt_exp = popt_exp[0]
+        y_fit = lambda_s1_normalised_curve(category_order, *popt_exp)
+
+        # Equation: l_min + ((l_max - l_min) / (1 + np.exp(-k * np.log(x) - p)))
+        label = f'$y = {popt_exp[3]:.2f} + (({popt_exp[2]:.2f} - {popt_exp[3]:.2f}) / (1 + e^{{-{popt_exp[0]:.2f} \\cdot (ln(x) - {popt_exp[1]:.2f})}}))$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+    elif y_axis_name == 'params_lambdaS2_normalised':
+        plt.ylim(0, 1)
+
+        # Fit the function to the mean correlation data
+        popt_exp = curve_fit(lambda_s2_normalised_curve, xdata=x_data, ydata=y_data, sigma=None, maxfev=max_fev)
+        popt_exp = popt_exp[0]
+        y_fit = lambda_s2_normalised_curve(category_order, *popt_exp)
+
+        # Equation: 1 - (l_min + ((l_max - l_min) / (1 + np.exp(-k * np.log(x) - p))))
+        label = f'$y = 1 - \\left({popt_exp[3]:.2f} + (({popt_exp[2]:.2f} - {popt_exp[3]:.2f}) / (1 + e^{{-{popt_exp[0]:.2f} \\cdot (ln(x) - {popt_exp[1]:.2f})}}))\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+    elif y_axis_name == 'params_lambdaS1':
+        y_fit = lambda_s1_curve(category_order)
+        parameters = get_default_args(lambda_s1_curve)
+
+        # Equation: y = (a + b · (log(1 + x) + c)) · (l_min + ((l_max - l_min) / (1 + np.exp(-k * np.log(x) - p))))
+        label = f'$y = ({parameters["a"]:.2e} + {parameters["b"]:.2e} \\cdot (\\ln(1 + x) + {parameters["c"]:.2f}) ) \\cdot \\left({parameters["l_min"]:.2f} + ( {parameters["l_max"]:.2f} - {parameters["l_min"]:.2f}) \\cdot e^{{-{parameters["k"]:.2f} \\cdot (ln(x) - {parameters["p"]:.2f}}}\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+    elif y_axis_name == 'params_lambdaS2':
+        y_fit = lambda_s2_curve(category_order)
+        parameters = get_default_args(lambda_s2_curve)
+
+        # Equation: y = (a + b · (log(1 + x) + c)) · (1 - (l_min + ((l_max - l_min) / (1 + np.exp(-k * np.log(x) - p)))))
+        label = f'$y = ({parameters["a"]:.2e} + {parameters["b"]:.2e} \\cdot (\\ln(1 + x) + {parameters["c"]:.2f}) ) \\cdot \\left(1 - \\left({parameters["l_min"]:.2f} + ( {parameters["l_max"]:.2f} - {parameters["l_min"]:.2f}) \\cdot e^{{-{parameters["k"]:.2f} \\cdot (ln(x) - {parameters["p"]:.2f}}}\\right)\\right)$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+    elif (y_axis_name == 'Purse_string_strength_dy0' or y_axis_name == 'Recoil' or y_axis_name == 'top_closure_velocity'
+          or y_axis_name == 'max_recoiling_top' or y_axis_name == 'Purse_string_strength' or y_axis_name == 'lS1'):
+        # Fit the function to the mean correlation data
+        popt_exp = curve_fit(purse_string_strength_curve, xdata=x_data, ydata=y_data, sigma=None, maxfev=max_fev)
+        popt_exp = popt_exp[0]
+        y_fit = purse_string_strength_curve(category_order, *popt_exp)
+
+        # Equation: a * x ** b
+        label = f'$y = {popt_exp[0]:.2e} \\cdot x^{{{popt_exp[1]:.2f}}}$ - R$^2$ = {r2(ydata_average_by_ar, y_fit):.2f}'
+    else:
+        y_fit = None
+
+    if y_fit is not None:
+        sns.lineplot(data=None, x=x_positions, y=y_fit, label=label, linewidth=2, color='black')
+        plt.legend()
+
+    # Save the figure
+    plt.tight_layout()
+    if scutoids is None:
+        plt.savefig(os.path.join(current_path, f'boxplot_{x_axis_name}_{y_axis_name}.png'))
+    else:
+        plt.savefig(os.path.join(current_path, f'boxplot_{x_axis_name}_{y_axis_name}_scutoids_{scutoids:.2f}.png'))
+    plt.close()
+
+
+def find_timepoint_in_model(v_model, input_directory, correct_time_to_find) -> bool:
+    """
+    Find the timepoint in the model closest to the correct_time_to_find
+    :param input_directory:
+    :param v_model:
+    :param correct_time_to_find:
+    :return:
+    """
+
+    files_within_folder = os.listdir(input_directory)
+    files_ending_pkl = [f for f in files_within_folder if f.endswith('.pkl') and f.startswith('data_step_')]
+
+    # Load the latest state
+    pk_files_to_load = sorted(files_ending_pkl, key=lambda x: int(x.split('_')[2].split('.')[0]))
+    load_state(v_model, os.path.join(input_directory, pk_files_to_load[-1]))
+
+    id_file = -1
+    run_iteration = True
+
+    # Get the correct tend time closest to ablation time + 0.1, but lower than t_ablation + 0.1
+    while v_model.t > correct_time_to_find:
+        id_file -= 1
+        load_state(v_model, os.path.join(input_directory, pk_files_to_load[id_file]))
+        run_iteration = False
+
+        if v_model.t <= correct_time_to_find:
+            id_file += 1
+            load_state(v_model, os.path.join(input_directory, pk_files_to_load[id_file]))
+            break
+
+    return run_iteration

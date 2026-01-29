@@ -1,7 +1,6 @@
 import logging
 
 import numpy as np
-from scipy.optimize import minimize, Bounds
 
 from src.pyVertexModel.Kg.kgContractility import KgContractility
 from src.pyVertexModel.Kg.kgContractility_external import KgContractilityExternal
@@ -216,9 +215,9 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g, selected_cells=None)
     dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
 
     Geo.update_vertices(dy_reshaped, selected_cells)
-    if Set.frozen_face_centres:
+    if Set.frozen_face_centres or Set.frozen_face_centres_border_cells:
         for cell in Geo.Cells:
-           if cell.AliveStatus is not None:
+           if cell.AliveStatus is not None and ((cell.ID in Geo.BorderCells and Set.frozen_face_centres_border_cells) or Set.frozen_face_centres):
                face_centres_to_middle_of_neighbours_vertices(Geo, cell.ID)
 
     Geo.update_measures()
@@ -298,38 +297,32 @@ def map_vertices_periodic_boundaries(Geo, dy):
                         if possible_tets.shape[0] > 1 and not scutoid:
                             old_possible_tets = possible_tets
                             # Get the tet that has the same number of ghost nodes as the original tet
-                            possible_tets = possible_tets[np.sum(np.isin(tet[tet != node], Geo.XgID)) == np.sum(
-                                np.isin(possible_tets, np.concatenate([Geo.XgTop, Geo.XgBottom])), axis=1)]
+                            possible_tets = possible_tets[
+                                np.sum(np.isin(tet[tet != node], Geo.XgID)) == np.sum(np.isin(possible_tets, np.concatenate([Geo.XgTop, Geo.XgBottom])), axis=1)]
 
                             if possible_tets.shape[0] == 0:
                                 possible_tets = old_possible_tets
                     else:
                         print('Error in Tet ID: ', tet)
 
-                    if possible_tets.shape[0] == 1:
+                    # TODO: what happens if it is an scutoid
+                    if scutoid:
+                        avg_dy = np.zeros(3)
+                        # Average of the dys
+                        for c_tet in possible_tets:
+                            opposite_global_id = opposite_cell.globalIds[
+                                np.where(np.all(opposite_cell.T == c_tet, axis=1))[0][0]]
+                            avg_dy += dy[opposite_global_id * 3:opposite_global_id * 3 + 3, 0]
+                        avg_dy /= possible_tets.shape[0]
+
+                        # NOW IT IS 0, WITH THE AVERAGE IT THERE WERE ERRORS
+                        dy[global_id * 3:global_id * 3 + 3, 0] = 0
+                    else:
                         opposite_global_id = opposite_cell.globalIds[
                             np.where(np.all(opposite_cell.T == possible_tets[0], axis=1))[0][0]]
                         dy[global_id * 3:global_id * 3 + 3, 0] = dy[opposite_global_id * 3:opposite_global_id * 3 + 3,
                                                                  0]
-                    elif possible_tets.shape[0] > 1:
-                        # TODO: what happens if it is an scutoid
-                        if scutoid:
-                            avg_dy = np.zeros(3)
-                            # Average of the dys
-                            for c_tet in possible_tets:
-                                opposite_global_id = opposite_cell.globalIds[
-                                    np.where(np.all(opposite_cell.T == c_tet, axis=1))[0][0]]
-                                avg_dy += dy[opposite_global_id * 3:opposite_global_id * 3 + 3, 0]
-                            avg_dy /= possible_tets.shape[0]
 
-                            # NOW IT IS 0, WITH THE AVERAGE IT THERE WERE ERRORS
-                            dy[global_id * 3:global_id * 3 + 3, 0] = 0
-                        else:
-                            opposite_global_id = opposite_cell.globalIds[
-                                np.where(np.all(opposite_cell.T == possible_tets[0], axis=1))[0][0]]
-                            dy[global_id * 3:global_id * 3 + 3, 0] = dy[
-                                                                     opposite_global_id * 3:opposite_global_id * 3 + 3,
-                                                                     0]
     return dy
 
 
@@ -516,7 +509,7 @@ def gGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True, num_step=None):
         Geo.create_vtk_cell(Set, num_step, 'Arrows_volume', -kg_Vol.g)
         energies["Volume"] = kg_Vol.energy
 
-    if implicit_method is True:
+    if implicit_method:
         # Viscous Energy
         kg_Viscosity = KgViscosity(Geo)
         kg_Viscosity.compute_work(Geo, Set, Geo_n, False)

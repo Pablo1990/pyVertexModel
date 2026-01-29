@@ -1,9 +1,12 @@
+import itertools
+
 import numpy as np
 import pyvista as pv
 import vtk
 from numpy.ma.extras import setxor1d
 from sklearn.decomposition import PCA
 
+from src.pyVertexModel.Kg.kg import add_noise_to_parameter
 from src.pyVertexModel.geometry import face
 from src.pyVertexModel.util.utils import copy_non_mutable_attributes, get_interface
 
@@ -72,6 +75,8 @@ class Cell:
         self.lambda_s1_perc = 1
         self.lambda_s2_perc = 1
         self.lambda_s3_perc = 1
+        self.lambda_s4_top_perc = 1
+        self.lambda_s4_bottom_perc = 1
         # Volume
         self.lambda_v_perc = 1
         # Aspect ratio/elongation
@@ -152,6 +157,43 @@ class Cell:
 
         return total_area
 
+    def compute_areas_from_tris(self, location_filter=None):
+        """
+        Compute the area of the cell
+        :param location_filter:
+        :return: all areas of the triangles cell
+        """
+        all_areas = []
+        for f in range(len(self.Faces)):
+            if location_filter is not None:
+                if get_interface(self.Faces[f].InterfaceType) == get_interface(location_filter):
+                    for t in range(len(self.Faces[f].Tris)):
+                        all_areas.append(self.Faces[f].Tris[t].Area)
+            else:
+                for t in range(len(self.Faces[f].Tris)):
+                    all_areas.append(self.Faces[f].Tris[t].Area)
+
+        return all_areas
+
+    def count_small_volume_fraction_per_cell(self, threshold=0.01, location=None):
+        """
+        Count the number of faces with small volume fraction per cell.
+        :param location:
+        :param threshold: The threshold for small volume fraction.
+        :return: The count of faces with small volume fraction.
+        """
+        count = 0
+        volumes = np.zeros(0)
+        for c_face in self.Faces:
+            if location is not None:
+                if get_interface(c_face.InterfaceType) == get_interface(location):
+                    volumes = self.compute_volume_fraction(c_face)
+                    count += np.sum(volumes < threshold)
+            else:
+                volumes = self.compute_volume_fraction(c_face)
+                count += np.sum(volumes < threshold)
+        return count, volumes
+
     def compute_volume(self):
         """
         Compute the volume of the cell
@@ -159,43 +201,104 @@ class Cell:
         """
         v = 0.0
         for f in range(len(self.Faces)):
-            c_face = self.Faces[f]
-            for t in range(len(c_face.Tris)):
-                y1 = self.Y[c_face.Tris[t].Edge[0], :] - self.X
-                y2 = self.Y[c_face.Tris[t].Edge[1], :] - self.X
-                y3 = c_face.Centre - self.X
-                ytri = np.array([y1, y2, y3])
-
-                current_v = np.linalg.det(ytri) / 6
-                # If the volume is negative, switch two the other option
-                if current_v < 0:
-                    ytri = np.array([y2, y1, y3])
-                    current_v = np.linalg.det(ytri) / 6
-                    # If the volume is negative, switch two the other option
-                    if current_v < 0:
-                        raise "Negative volume detected. Check the cell geometry."
-
-                v += current_v
+            volumes = self.compute_volume_fraction(self.Faces[f])
+            v += np.sum(volumes)
 
         self.Vol = v
         return v
 
-    def create_vtk(self):
+    def compute_volume_fraction(self, c_face):
+        """
+        Compute the volume fraction of a face and add it to the total volume.
+        :param c_face:
+        :return:
+        """
+        volumes = np.zeros(len(c_face.Tris))
+        for t in range(len(c_face.Tris)):
+            idx0 = c_face.Tris[t].Edge[0]
+            idx1 = c_face.Tris[t].Edge[1]
+            y1 = self.Y[idx0, :] - self.X
+            y2 = self.Y[idx1, :] - self.X
+            y3 = c_face.Centre - self.X
+
+            if c_face.Tris[t].is_degenerated(self.Y):
+                print(
+                    f"Warning: Degenerate triangle with identical edge indices ({idx0}) in cell {self.ID}, face {c_face.globalIds}")
+                continue  # Skip this triangle
+
+            current_v = np.linalg.det(np.array([y1, y2, y3])) / 6
+            # If the volume is negative, switch two the other option
+            if current_v < 0:
+                raise Exception("Negative volume detected. Check the cell geometry." + str(c_face.Tris[t].Edge[0]) + ", " + str(c_face.Tris[t].Edge[1]) + ", " + str(c_face.globalIds) + ", " + str(self.ID))
+
+            volumes[t] = current_v
+        return volumes
+
+    def compute_overlapping_volume_fraction(self):
+        """
+        Compute the overlapping volume fraction of the cell.
+        :return: The overlapping volume fraction.
+        """
+        total_volume = 0.0
+        for f in range(len(self.Faces)):
+            volumes = self.compute_volume_fraction(self.Faces[f])
+            total_volume += np.sum(volumes)
+
+        return total_volume / self.Vol if self.Vol > 0 else 0.0
+
+    def create_vtk_parts(self):
+        """
+        Create a vtk cell with the parts of the cell
+        :return:
+        """
+        parts_of_cell = []
+
+        # Go through all the faces and create the triangles for the VTK cell
+        for c_face in self.Faces:
+            for t in range(len(c_face.Tris)):
+                points = vtk.vtkPoints()
+                points.SetNumberOfPoints(4)
+                # Centre of cell
+                points.SetPoint(0, self.X[0], self.X[1], self.X[2])
+                # Face centre
+                points.SetPoint(1, c_face.Centre[0], c_face.Centre[1], c_face.Centre[2])
+                # Edge points
+                points.SetPoint(2, self.Y[c_face.Tris[t].Edge[0], 0], self.Y[c_face.Tris[t].Edge[0], 1], self.Y[c_face.Tris[t].Edge[0], 2])
+                points.SetPoint(3, self.Y[c_face.Tris[t].Edge[1], 0], self.Y[c_face.Tris[t].Edge[1], 1], self.Y[c_face.Tris[t].Edge[1], 2])
+
+                # Create the cell with the points
+                cell = vtk.vtkCellArray()
+                combinations = itertools.combinations([0, 1, 2, 3], 3)
+                for subset in combinations:
+                    cell.InsertNextCell(3)
+                    for point_index in subset:
+                        cell.InsertCellPoint(point_index)
+
+                vpoly = vtk.vtkPolyData()
+                vpoly.SetPoints(points)
+                vpoly.SetPolys(cell)
+                parts_of_cell.append(vpoly)
+
+        return parts_of_cell
+
+    def create_vtk(self, offset=None):
         """
         Create a vtk cell
         :return:
         """
+        if offset is None:
+            offset = [0.0, 0.0, 0.0]
         points = vtk.vtkPoints()
         points.SetNumberOfPoints(len(self.Y) + len(self.Faces))
         for i in range(len(self.Y)):
-            points.SetPoint(i, self.Y[i, 0], self.Y[i, 1], self.Y[i, 2])
+            points.SetPoint(i, self.Y[i, 0] + offset[0], self.Y[i, 1] + offset[1], self.Y[i, 2] + offset[2])
 
         cell = vtk.vtkCellArray()
         # Go through all the faces and create the triangles for the VTK cell
         total_tris = 0
         for f in range(len(self.Faces)):
             c_face = self.Faces[f]
-            points.SetPoint(len(self.Y) + f, c_face.Centre[0], c_face.Centre[1], c_face.Centre[2])
+            points.SetPoint(len(self.Y) + f, c_face.Centre[0] + offset[0], c_face.Centre[1] + offset[1], c_face.Centre[2] + offset[2])
             for t in range(len(c_face.Tris)):
                 cell.InsertNextCell(3)
                 cell.InsertCellPoint(c_face.Tris[t].Edge[0])
@@ -224,27 +327,31 @@ class Cell:
             # Add the property array to the cell data
             vpoly.GetCellData().AddArray(property_array)
 
-            if key == 'ID':
+            if key == 'Volume':
                 # Default parameter
                 vpoly.GetCellData().SetScalars(property_array)
 
         return vpoly
 
-    def create_pyvista_mesh(self):
+    def create_pyvista_mesh(self, offset=None):
         """
         Create a PyVista mesh
         :return:
         """
-        mesh = pv.PolyData(self.create_vtk())
+        if offset is None:
+            offset = [0.0, 0.0, 0.0]
+        mesh = pv.PolyData(self.create_vtk(offset=offset))
 
         return mesh
 
-    def create_pyvista_edges(self):
+    def create_pyvista_edges(self, offset=None):
         """
         Create a PyVista mesh
         :return:
         """
-        mesh = pv.PolyData(self.create_vtk_edges())
+        if offset is None:
+            offset = [0.0, 0.0, 0.0]
+        mesh = pv.PolyData(self.create_vtk_edges(offset=offset))
 
         return mesh
 
@@ -263,10 +370,12 @@ class Cell:
         # Compute the features of the cell
         features = {'ID': self.ID,
                     'Area': self.compute_area(),
+                    'Area0': self.Area0,
                     'Area_top': self.compute_area(location_filter=0),
                     'Area_bottom': self.compute_area(location_filter=2),
                     'Area_cellcell': self.compute_area(location_filter=1),
                     'Volume': self.compute_volume(),
+                    'Volume0': self.Vol0,
                     'Height': self.compute_height(),
                     'Width': self.compute_width(),
                     'Length': self.compute_length(),
@@ -304,15 +413,18 @@ class Cell:
 
         return features
 
-    def create_vtk_edges(self):
+    def create_vtk_edges(self, offset=None):
         """
         Create a vtk with only the information on the edges of the cell
         :return:
         """
+        if offset is None:
+            offset = [0.0, 0.0, 0.0]
+
         points = vtk.vtkPoints()
         points.SetNumberOfPoints(len(self.Y))
         for i in range(len(self.Y)):
-            points.SetPoint(i, self.Y[i, 0], self.Y[i, 1], self.Y[i, 2])
+            points.SetPoint(i, self.Y[i, 0] + offset[0], self.Y[i, 1] + offset[1], self.Y[i, 2] + offset[2])
 
         cell = vtk.vtkCellArray()
         # Go through all the faces and create the triangles for the VTK cell
@@ -639,3 +751,24 @@ class Cell:
                 min_angles.append(np.degrees(min_angle))
 
         return min(min_angles) if min_angles else 0
+
+    def add_noise_to_parameters(self, c_set):
+        """
+        Add noise to the mechanical parameters of the cell
+        :param c_set:
+        :return:
+        """
+        # Surface area
+        self.lambda_s1_perc = add_noise_to_parameter(1, c_set.noise_random)
+        self.lambda_s2_perc = add_noise_to_parameter(1, c_set.noise_random)
+        self.lambda_s3_perc = add_noise_to_parameter(1, c_set.noise_random)
+        # Volume
+        self.lambda_v_perc = add_noise_to_parameter(1, c_set.noise_random)
+        # Aspect ratio/elongation
+        self.lambda_r_perc = add_noise_to_parameter(1, c_set.noise_random)
+        # Contractility
+        self.c_line_tension_perc = add_noise_to_parameter(1, c_set.noise_random)
+        # Substrate k
+        self.k_substrate_perc = add_noise_to_parameter(1, c_set.noise_random)
+        # Area Energy Barrier
+        self.lambda_b_perc = add_noise_to_parameter(1, c_set.noise_random)

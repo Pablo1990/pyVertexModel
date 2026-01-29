@@ -12,54 +12,89 @@ from src.pyVertexModel.util.utils import load_state
 
 logger = logging.getLogger("pyVertexModel")
 
-def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
+def run_simulation(combination, output_results_dir='Result/', length=60, use_wing_disc_ps=True, cells_to_ablate=None):
     """
     Run simulation with the given combination of variables.
-    :param length: 
-    :param output_results_dir: 
+    :param cells_to_ablate:
+    :param use_wing_disc_ps:
+    :param length:
+    :param output_results_dir:
     :param combination:
     :return:
-    """  # output directory
-
-    vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False)
+    """
+    # output directory
+    vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False, set_option='wing_disc_equilibrium')
     if (combination == 'WT' or combination == 'Mbs' or combination == 'Rok' or
             combination == 'Talin' or combination == 'IntegrinDN' or
             combination == 'ShibireTS' or combination == 'WT_substrate_gone_40_mins' or
             combination == 'Talin_with_substrate' or combination == 'IntegrinDN_with_substrate'):
-        output_folder = os.path.join(PROJECT_DIRECTORY, output_results_dir, length + '_{}'.format(combination))
+        output_folder = os.path.join(PROJECT_DIRECTORY, output_results_dir, '{}'.format(combination))
     else:
-        output_folder = os.path.join(PROJECT_DIRECTORY, output_results_dir, length + '_no_{}'.format('_no_'.join(combination)))
+        output_folder = os.path.join(PROJECT_DIRECTORY, output_results_dir, 'no_{}'.format('_no_'.join(combination)))
+
+    if cells_to_ablate is not None:
+        dir_name = output_folder.split('/')[-2]
+        aspect_ratio = float(dir_name.split('_')[3])
+        if aspect_ratio == 0.15:
+            cells_to_ablate = 1
+        elif aspect_ratio == 1.5:
+            cells_to_ablate = 5
+        elif aspect_ratio == 7.5:
+            cells_to_ablate = 14
+        elif aspect_ratio == 15.0:
+            cells_to_ablate = 22
+        elif aspect_ratio == 30.0:
+            cells_to_ablate = 35
+
+        if output_folder[-1] == '/':
+            output_folder = output_folder[:-1]
+        output_folder = output_folder + '_ablating_' + str(cells_to_ablate) + '/'
 
     # Check if output_folder exists
     if not os.path.exists(output_folder):
+        if not os.path.exists(os.path.join(PROJECT_DIRECTORY, output_results_dir, 'before_ablation.pkl')):
+            print("No initial state found to load from before ablation.")
+            return
+
         load_state(vModel,
                    os.path.join(PROJECT_DIRECTORY, output_results_dir,
                                                    'before_ablation.pkl'))
 
-        vModel.set.wing_disc()
-        vModel.set.wound_default()
-        if getattr(vModel.set, 'model_name', None) is None:
-            vModel.set.model_name = 'in_silico_movie'
-            vModel.set.RemodelStiffness = 0.65
-        elif vModel.set.model_name == 'wing_disc_real_bottom_left':
-            cells_to_ablate = np.array([0, 1, 2, 3, 4, 7, 8, 10, 13])
-            vModel.set.cellsToAblate = cells_to_ablate
-            vModel.geo.cellsToAblate = cells_to_ablate
-            vModel.set.RemodelStiffness = 0.7
-        elif vModel.set.model_name == 'wing_disc_real_top_right':
-            cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 10, 13, 15])
-            vModel.set.cellsToAblate = cells_to_ablate
-            vModel.geo.cellsToAblate = cells_to_ablate
-            vModel.set.wound_default(myosin_pool_multiplier=1.3)
-        elif vModel.set.model_name == 'wing_disc_real_bottom_right':
-            vModel.set.RemodelStiffness = 0.65
-        elif vModel.set.model_name == 'wing_disc_real':
-            cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-            vModel.set.cellsToAblate = cells_to_ablate
-            vModel.geo.cellsToAblate = cells_to_ablate
-            vModel.set.RemodelStiffness = 0.60
+        if cells_to_ablate is None:
+            if getattr(vModel.set, 'model_name', None) is None:
+                vModel.set.model_name = 'in_silico_movie'
+            elif vModel.set.model_name == 'wing_disc_real_bottom_left':
+                cells_to_ablate = np.array([0, 1, 2, 3, 4, 7, 8, 10, 13])
+            elif vModel.set.model_name == 'wing_disc_real_top_right':
+                cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 10, 13, 15])
+            elif vModel.set.model_name == 'wing_disc_real':
+                cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+            else:
+                cells_to_ablate = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+        else:
+            cells_to_ablate = np.arange(0, cells_to_ablate, dtype=int)
 
-        vModel.set.nu_bottom = vModel.set.nu * 600
+        vModel.set.cellsToAblate = cells_to_ablate
+        vModel.geo.cellsToAblate = cells_to_ablate
+
+        vModel.set.nu_bottom = vModel.set.nu
+
+        if not use_wing_disc_ps:
+            # Additional viscosity for the bottom vertices based on the cell height
+            vModel.set.nu_bottom = vModel.set.nu + (vModel.set.nu * (600 * (vModel.set.CellHeight / 15) ** 2))
+
+            # Purse string strength is a function based on cell height from 0 to 1.
+            purse_string_strength = np.exp(-0.8 * vModel.set.CellHeight ** 0.4)
+            vModel.set.purseStringStrength = purse_string_strength * vModel.set.myosin_pool
+            vModel.set.lateralCablesStrength = (1 - purse_string_strength) * vModel.set.myosin_pool
+        else:
+            vModel.set.nu_bottom = vModel.set.nu
+            vModel.set.bottom_ecm = None
+            vModel.set.Contractility = True
+            vModel.set.TypeOfPurseString = 0
+            vModel.set.purseStringStrength = 1e-5
+            vModel.set.lateralCablesStrength = 0
+
         vModel.set.OutputFolder = output_folder
         if combination == 'WT':
             pass
@@ -90,6 +125,8 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
                     vModel.set.RemodelStiffness = 2
                 else:
                     setattr(vModel.set, variable, 0)
+
+        vModel.set.tend = length
         vModel.set.dt0 = None
         vModel.set.dt = None
         vModel.set.update_derived_parameters()
@@ -112,8 +149,7 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
         if combination == 'WT_substrate_gone_40_mins':
             vModel.set.kSubstrate = 0
 
-        if length == '120_mins':
-            vModel.set.tend = 120
+        vModel.set.tend = length
 
         if vModel.t > vModel.set.tend:
             print("Performing analysis for folder...")
@@ -121,6 +157,7 @@ def run_simulation(combination, output_results_dir='Result/', length="60_mins"):
             return
 
     #try:
+    vModel.geo.update_measures()
     vModel.iterate_over_time()
     analyse_simulation(vModel.set.OutputFolder)
     #except Exception as e:
@@ -133,21 +170,23 @@ combinations_of_variables = []
 for i in range(1, len(variables_to_change) + 1):
     combinations_of_variables.extend(itertools.combinations(variables_to_change, i))
 
-combinations_of_variables.insert(0, 'IntegrinDN_with_substrate')
-combinations_of_variables.insert(0, 'Talin_with_substrate')
-combinations_of_variables.insert(0, 'ShibireTS')
-combinations_of_variables.insert(0, 'Talin')
-combinations_of_variables.insert(0, 'IntegrinDN')
-combinations_of_variables.insert(0, 'Mbs')
-combinations_of_variables.insert(0, 'Rok')
+#combinations_of_variables.insert(0, 'IntegrinDN_with_substrate')
+#combinations_of_variables.insert(0, 'Talin_with_substrate')
+#combinations_of_variables.insert(0, 'ShibireTS')
+#combinations_of_variables.insert(0, 'Mbs')
+#combinations_of_variables.insert(0, 'Rok')
+#combinations_of_variables.insert(0, 'Talin')
+#combinations_of_variables.insert(0, 'IntegrinDN')
 combinations_of_variables.insert(0, 'WT')
 
 if __name__ == '__main__':
     index = int(sys.argv[1])
-    # Check if there are two arguments
+    # Check if the number of arguments
     if len(sys.argv) == 2:
         run_simulation(combinations_of_variables[index])
     elif len(sys.argv) == 4:
-        run_simulation(combinations_of_variables[index], sys.argv[2], sys.argv[3])
-    else:
+        run_simulation(combinations_of_variables[index], sys.argv[2], int(sys.argv[3]))
+    elif len(sys.argv) == 3:
         run_simulation(combinations_of_variables[index], sys.argv[2])
+    elif len(sys.argv) == 5:
+        run_simulation(combinations_of_variables[index], sys.argv[2], int(sys.argv[3]), cells_to_ablate=int(sys.argv[4]))

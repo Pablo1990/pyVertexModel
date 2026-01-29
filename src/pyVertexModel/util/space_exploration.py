@@ -6,6 +6,7 @@ import optuna
 import pandas as pd
 import plotly
 
+from src import PROJECT_DIRECTORY
 from src.pyVertexModel.algorithm.vertexModel import VertexModel
 from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from src.pyVertexModel.analysis.analyse_simulation import analyse_edge_recoil, analyse_simulation
@@ -20,37 +21,55 @@ def objective(trial):
     :return:
     """
     # Define the error type
-    error_type = '_wound_area_'
+    split_study_name = trial.study.study_name.split('_')
+    error_type = split_study_name[1]
 
     # Supress the output to the logger
-    if error_type == '_gr_':
+    if error_type.startswith('gr'):
         logger = logging.getLogger("pyVertexModel")
         logger.propagate = False
         logger.setLevel(logging.CRITICAL)
 
-    new_set = Set()
-    new_set.wing_disc()
-    new_set.wound_default()
+        new_set = Set()
+        new_set.wing_disc_equilibrium()
 
-    # Set and define the parameters space
-    percentage_deviation = 0.1
-    # new_set.lambdaV = trial.suggest_float('lambdaV', new_set.lambdaV - (new_set.lambdaV * percentage_deviation), new_set.lambdaV + (new_set.lambdaV * percentage_deviation))
-    # new_set.ref_V0 = trial.suggest_float('ref_V0', new_set.ref_V0 - (new_set.ref_V0 * percentage_deviation), new_set.ref_V0 + (new_set.ref_V0 * percentage_deviation))
-    # new_set.kSubstrate = trial.suggest_float('kSubstrate', new_set.kSubstrate - (new_set.kSubstrate * percentage_deviation), new_set.kSubstrate + (new_set.kSubstrate * percentage_deviation))
-    # new_set.lambdaS2 = trial.suggest_float('lambdaS2', new_set.lambdaS2 - (new_set.lambdaS2 * percentage_deviation), new_set.lambdaS2 + (new_set.lambdaS2 * percentage_deviation))
+        new_set.model_name = split_study_name[2]
+        if split_study_name[3] != '':
+            new_set.CellHeight = float(split_study_name[3])
+            new_set.SubstrateZ = None
 
-    new_set.ref_A0 = trial.suggest_float('ref_A0', 0.92, 1.1)
-    new_set.cLineTension = trial.suggest_float('cLineTension', 0, 1e-7)
-    new_set.lambdaS1 = trial.suggest_float('lambdaS1', 1e-2, 1.5)
-    new_set.lambdaS3 = new_set.lambdaS1 / 10
-    #new_set.lambdaR = trial.suggest_float('lambdaR', 0, 1)
+        if len(split_study_name) > 4 and split_study_name[4] != '':
+            new_set.percentage_scutoids = float(split_study_name[4])
 
-    #percentage_deviation = 0.9
-    #new_set.purseStringStrength = trial.suggest_float('purseStringStrength', new_set.purseStringStrength - (new_set.purseStringStrength * percentage_deviation), new_set.purseStringStrength + (new_set.purseStringStrength * percentage_deviation))
-    #new_set.lateralCablesStrength = trial.suggest_float('lateralCablesStrength', new_set.lateralCablesStrength - (new_set.lateralCablesStrength * percentage_deviation), new_set.lateralCablesStrength + (new_set.lateralCablesStrength * percentage_deviation))
-    new_set.update_derived_parameters()
+        if error_type == 'gr':
+            new_set.initial_filename_state = 'Input/images/' + new_set.model_name + '.tif'
+            # Set and define the parameters space
+            new_set.lambdaS1 = trial.suggest_float('lambdaS1', 1e-7, 1)
+            new_set.lambdaS2 = trial.suggest_float('lambdaS2', 1e-7, 1)
+            new_set.lambdaS3 = new_set.lambdaS1
+            new_set.kSubstrate = 0
+            new_set.EnergyBarrierAR = False
+            new_set.lambdaR = 0
+            new_set.ref_A0 = 0
+            new_set.ref_V0 = 1
+        elif error_type == 'grResized':
+            initial_filename_state = f"{new_set.model_name}.pkl"
+            new_set.initial_filename_state = 'Input/to_resize/' + initial_filename_state
 
-    if error_type == '_gr_':
+            new_set.resize_z = new_set.CellHeight / 15.0  # original wing disc height
+
+            # Set and define the parameters space
+            new_set.lambdaS1 = trial.suggest_float('lambdaS1', 1e-7, 10)
+            new_set.lambdaS2 = trial.suggest_float('lambdaS2', 1e-7, 10)
+            new_set.lambdaS3 = new_set.lambdaS1
+            new_set.ref_A0 = 0.95
+
+            # nu equal to original nu
+            new_set.nu_bottom = new_set.nu
+
+        new_set.update_derived_parameters()
+
+    if error_type.startswith('gr'):
         new_set.OutputFolder = None
 
         # Initialize the model with the parameters
@@ -58,9 +77,11 @@ def objective(trial):
 
         # Run the simulation
         vModel.initialize()
+        vModel.geo.init_reference_values_and_noise(vModel.set)
+
         gr = vModel.single_iteration(post_operations=False)
         return gr
-    elif error_type == '_K_InitialRecoil_' or error_type == '_wound_area_':
+    elif error_type == 'KInitialRecoil' or error_type == 'wound':
         # Initialize the model with the parameters
         vModel = VertexModelVoronoiFromTimeImage(set_test=new_set)
 
@@ -68,7 +89,7 @@ def objective(trial):
         vModel.initialize()
         vModel.iterate_over_time()
 
-        if error_type == '_K_InitialRecoil_':
+        if error_type == 'KInitialRecoil':
             # Analyse the edge recoil
             try:
                 file_name = os.path.join(vModel.set.OutputFolder, 'before_ablation.pkl')
@@ -85,7 +106,7 @@ def objective(trial):
 
             error = vModel.calculate_error(K=K, initial_recoil=initial_recoil, error_type=error_type)
             return error
-        elif error_type == '_wound_area_':
+        elif error_type == 'wound':
             features_per_time_df, post_wound_features, important_features, features_per_time_all_cells_df = (
                 analyse_simulation(vModel.set.OutputFolder))
 
@@ -106,6 +127,8 @@ def objective(trial):
                     error += np.abs(important_features['wound_area_top_extrapolated_' + str(time)] - in_vivo_values_area[int(time/3)]) / in_vivo_values_area[int(time/3)]
 
             return error
+
+    return None
 
 def load_simulations(study, error_type=None):
     """
@@ -231,6 +254,16 @@ def plot_optuna_all(output_directory, study_name, study):
     correlations_only_error = correlations_only_error.drop('value')
     correlations_only_error.columns = ['correlation_with_value']
 
+    # Export the correlations to an excel file
+    correlations_only_error.to_excel(output_dir_study + '/correlations.xlsx')
+
+    if os.path.exists(output_dir_study + '/8_terminator_improvement.png'):
+        print("All the plots already exist")
+        # Positive correlation only
+        correlations_only_error['correlation_with_value'] = correlations_only_error['correlation_with_value'].abs()
+        correlations_only_error['parameter'] = correlations_only_error.index.str.replace('params_', '')
+        return correlations_only_error
+
     # Plot the heatmap using plotly.graph_objects
     fig = plotly.graph_objects.Figure(data=plotly.graph_objects.Heatmap(
         z=correlations_only_error.values,
@@ -269,5 +302,39 @@ def plot_optuna_all(output_directory, study_name, study):
     fig.update_yaxes(type="log")
     plotly.io.write_image(fig, output_dir_study + '/8_terminator_improvement.png', scale=2)
     # Plot the contour of the study for each pair of parameters
-    fig = optuna.visualization.plot_contour(study)
-    plotly.io.write_image(fig, output_dir_study + '/9_countour.png', width=1920*2, height=1080*2, scale=2)
+    #fig = optuna.visualization.plot_contour(study)
+    #plotly.io.write_image(fig, output_dir_study + '/9_countour.png', width=1920*2, height=1080*2, scale=2)
+
+    return correlations_only_error
+
+def create_study_name(resize_z, original_wing_disc_height, type_of_search, input_file, scutoids, folder='src'):
+    """
+    Create the study name
+    :param folder:
+    :param scutoids:
+    :param resize_z:
+    :param original_wing_disc_height:
+    :param type_of_search:
+    :param input_file:
+    :return:
+    """
+    if resize_z != original_wing_disc_height or scutoids > 0:
+        if scutoids > 0:
+            error_type = type_of_search + input_file + '_' + str(resize_z) + '_' + str(scutoids) + '_'
+        else:
+            error_type = type_of_search + input_file + '_' + str(resize_z) + '_'
+        # Storage location should be in the Result folder
+        storage_name = "sqlite:///{}.db".format(
+            os.path.join(PROJECT_DIRECTORY, folder, "VertexModel_" + str(resize_z)))
+    else:
+        error_type = type_of_search + input_file + '_'
+        # Storage location should be in the Result folder
+        storage_name = "sqlite:///{}.db".format(
+            os.path.join(PROJECT_DIRECTORY, folder, "VertexModel"))
+
+    if error_type is not None:
+        study_name = "VertexModel" + error_type  # Unique identifier of the study.
+    else:
+        study_name = "VertexModel"
+
+    return study_name, storage_name

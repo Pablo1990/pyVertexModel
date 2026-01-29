@@ -1,23 +1,74 @@
 import logging
 import os
+import shutil
 from abc import abstractmethod
 from itertools import combinations
+from os.path import exists
+from typing import Any
 
 import numpy as np
 import pandas as pd
-from numpy.ma.extras import setdiff1d
+import scipy
+from matplotlib import pyplot as plt
+from scipy import stats
+from scipy.optimize import minimize
 from skimage.measure import regionprops
 
+from src import logger, PROJECT_DIRECTORY
 from src.pyVertexModel.Kg.kg import add_noise_to_parameter
+from src.pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
 from src.pyVertexModel.algorithm import newtonRaphson
 from src.pyVertexModel.geometry import degreesOfFreedom
-from src.pyVertexModel.geometry.geo import Geo
-from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
+from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain, edge_valence, get_node_neighbours
+from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling, smoothing_cell_surfaces_mesh
 from src.pyVertexModel.parameters.set import Set
 from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars, copy_non_mutable_attributes, \
-    screenshot
+    screenshot, screenshot_, load_state, find_optimal_deform_array_X_Y, find_timepoint_in_model
 
 logger = logging.getLogger("pyVertexModel")
+
+
+
+
+def display_volume_fragments(geo, selected_cells=None):
+    """
+    Display the number of fragments on top, bottom and lateral of the cells.
+    :param selected_cells:
+    :param geo:
+    :return:
+    """
+    number_of_small_top = 0
+    number_of_small_bottom = 0
+    number_of_small_lateral = 0
+    volumes_sum_top = 0
+    volumes_sum_bottom = 0
+    volumes_sum_lateral = 0
+    for c_cell in geo.Cells:
+        if selected_cells is not None and c_cell.ID not in selected_cells:
+            continue
+        if c_cell.AliveStatus is None:
+            continue
+        c_number_of_small_top, c_volumes_top = c_cell.count_small_volume_fraction_per_cell(location='Top')
+        c_number_of_small_bottom, c_volumes_bottom = c_cell.count_small_volume_fraction_per_cell(location='Bottom')
+        c_number_of_small_lateral, c_volumes_lateral = c_cell.count_small_volume_fraction_per_cell(
+            location='CellCell')
+        number_of_small_top += c_number_of_small_top
+        number_of_small_bottom += c_number_of_small_bottom
+        number_of_small_lateral += c_number_of_small_lateral
+        volumes_sum_top += np.sum(c_volumes_top)
+        volumes_sum_bottom += np.sum(c_volumes_bottom)
+        volumes_sum_lateral += np.sum(c_volumes_lateral)
+    total_volume = volumes_sum_top + volumes_sum_bottom + volumes_sum_lateral
+    logger.info(f'Number of fragments on top: {number_of_small_top}'
+                f' with total volume {volumes_sum_top}'
+                f' with percentage {volumes_sum_top / total_volume}')
+    logger.info(f'Number of fragments on bottom: {number_of_small_bottom}'
+                f' with total volume {volumes_sum_bottom}'
+                f' with percentage {volumes_sum_bottom / total_volume}')
+    logger.info(f'Number of fragments on lateral: {number_of_small_lateral}'
+                f' with total volume {volumes_sum_lateral}'
+                f' with percentage {volumes_sum_lateral / total_volume}')
+    logger.info(f'Total volume: {volumes_sum_top + volumes_sum_bottom + volumes_sum_lateral}')
 
 def generate_tetrahedra_from_information(X, cell_edges, cell_height, cell_centroids, main_cells,
                                          neighbours_network, selected_planes, triangles_connectivity,
@@ -158,6 +209,7 @@ class VertexModel:
         Vertex Model class.
         :param c_set:
         """
+        self.remodelled_cells = None
         self.colormap_lim = None
         self.OutputFolder = None
         self.numStep = None
@@ -168,7 +220,7 @@ class VertexModel:
         self.t = None
         self.X = None
         self.didNotConverge = False
-        self.geo = Geo()
+        self.geo = None
 
         # Set definition
         if c_set is not None:
@@ -199,9 +251,156 @@ class VertexModel:
         self.tr = 0
         self.numStep = 1
 
-    @abstractmethod
-    def initialize(self):
-        pass
+    def  initialize(self):
+        """
+        Initialize the geometry and the topology of the model.
+        """
+        filename = os.path.join(PROJECT_DIRECTORY, self.set.initial_filename_state)
+
+        if not os.path.exists(filename):
+            logging.error(f'File {filename} not found')
+
+        base, ext = os.path.splitext(filename)
+        if self.set.min_3d_neighbours is None:
+            output_filename = f"{base}_{self.set.TotalCells}cells_{self.set.CellHeight}_scutoids_{self.set.percentage_scutoids}.pkl"
+        else:
+            output_filename = f"{base}_{self.set.TotalCells}cells_{self.set.CellHeight}_min3d_{self.set.min_3d_neighbours}.pkl"
+
+        if exists(output_filename):
+            # Check date of the output_filename and if it is older than 1 day from today, redo the file
+            # if os.path.getmtime(output_filename) < (time.time() - 24 * 60 * 60):
+            #     logger.info(f'Redoing the file {output_filename} as it is older than 1 day')
+            # else:
+            logger.info(f'Loading existing state from {output_filename}')
+            new_set = self.set.copy()
+            load_state(self, output_filename)
+            self.set = new_set
+        else:
+            if filename.endswith('.pkl'):
+                output_folder = self.set.OutputFolder
+                load_state(self, filename, ['geo', 'geo_0', 'geo_n'])
+                self.set.OutputFolder = output_folder
+            elif filename.endswith('.mat'):
+                mat_info = scipy.io.loadmat(filename)
+                self.geo = Geo(mat_info['Geo'])
+                self.geo.update_measures()
+            else:
+                self.initialize_cells(filename)
+
+            # Resize the geometry to a given cell volume average
+            self.geo.resize_tissue()
+
+            # Create substrate(s)
+            if self.set.Substrate == 3:
+                # Check if there are 3 layers of cells
+                if self.set.InputGeo.__contains__('Bubbles'):
+                    # Get middle cells by dropping the cells that have XgBottom and XgTop neighbours in T
+                    middle_cells = [c for c in self.geo.Cells if not np.any(np.isin(self.geo.XgBottom, c.T)) and
+                                   not np.any(np.isin(self.geo.XgTop, c.T))]
+                    middle_cells_ids = [mc.ID for mc in middle_cells]
+                    z_middle_cells = stats.mode([c.X[2] for c in middle_cells])
+                    # Add other middle_cells that are not in the top or bottom layers and have the same Z
+                    middle_cells.extend([c for c in self.geo.Cells if c.X[2] == z_middle_cells[0] and c.AliveStatus is not None
+                                         and c.ID not in middle_cells_ids])
+                    middle_cells_ids = [mc.ID for mc in middle_cells]
+
+                    # Get top and bottom cells
+                    top_cells = [c for c in self.geo.Cells if np.any(np.isin(self.geo.XgTop, c.T)) and c.AliveStatus is not None and c.ID not in middle_cells_ids]
+                    bottom_cells = [c for c in self.geo.Cells if np.any(np.isin(self.geo.XgBottom, c.T)) and c.AliveStatus is not None and c.ID not in middle_cells_ids]
+
+                    # Identify the substrate cells for the middle cells
+                    for middle_cell in middle_cells:
+                        # Top substrate cell
+                        node_neighbours = np.unique(get_node_neighbours(self.geo, middle_cell.ID))
+                        middle_cell.substrate_cell_top = self.connect_substrate_cell(middle_cell, node_neighbours, top_cells)
+                        #self.geo.Cells[middle_cell.substrate_cell_top].AliveStatus = 2
+                        middle_cell.substrate_cell_bottom = self.connect_substrate_cell(middle_cell, node_neighbours, bottom_cells)
+                        #self.geo.Cells[middle_cell.substrate_cell_bottom].AliveStatus = 2
+                else:
+                    # Create a substrate cell for each cell
+                    self.geo.create_substrate_cells(self.set, domain='Top')
+
+            # Change tissue height if required
+            #self.deform_tissue()
+            self.change_tissue_height()
+
+            # Add border cells to the shared cells
+            for cell in self.geo.Cells:
+                if cell.ID in self.geo.BorderCells:
+                    for face in cell.Faces:
+                        for tris in face.Tris:
+                            tets_1 = cell.T[tris.Edge[0]]
+                            tets_2 = cell.T[tris.Edge[1]]
+                            shared_cells = np.intersect1d(tets_1, tets_2)
+                            if np.any(np.isin(self.geo.BorderGhostNodes, shared_cells)):
+                                shared_cells_list = list(tris.SharedByCells)
+                                shared_cells_list.append(shared_cells[np.isin(shared_cells, self.geo.BorderGhostNodes)][0])
+                                tris.SharedByCells = np.array(shared_cells_list)
+
+            # Create periodic boundary conditions
+            self.geo.apply_periodic_boundary_conditions(self.set)
+
+            if self.set.ablation:
+                self.geo.cellsToAblate = self.set.cellsToAblate
+
+            self.geo.init_reference_cell_values(self.set)
+
+            if self.set.Substrate == 1:
+                self.Dofs.GetDOFsSubstrate(self.geo, self.set)
+            else:
+                self.Dofs.get_dofs(self.geo, self.set)
+
+            if self.geo_0 is None:
+                self.geo_0 = self.geo.copy(update_measurements=False)
+
+            if self.geo_n is None:
+                self.geo_n = self.geo.copy(update_measurements=False)
+
+            # Adjust percentage of scutoids
+            self.adjust_percentage_of_scutoids()
+
+            # Save screenshot of the initial state
+            image_file = '/' + os.path.join(*filename.split('/')[:-1])
+            screenshot_(self.geo, self.set, 0, output_filename.split('/')[-1], image_file)
+
+            # Save initial state
+            save_state(self, output_filename)
+
+    def connect_substrate_cell(self, middle_cell, node_neighbours, domain_cells):
+        """
+        Connects a substrate cell to the closest top or bottom neighbour of a middle cell.
+        :param middle_cell:
+        :param node_neighbours:
+        :param domain_cells:
+        :return:
+        """
+        domain_neighbours = np.intersect1d(node_neighbours, [c.ID for c in domain_cells])
+        # Get the closest top neighbour in X-Y plane
+        if len(domain_neighbours) > 0:
+            closest_domain_neighbour = domain_neighbours[
+                np.argmin(
+                    np.linalg.norm(
+                        np.array([self.geo.Cells[n].X[0:2] for n in domain_neighbours]) - middle_cell.X[0:2],
+                        axis=1
+                    )
+                )
+            ]
+            # Shared Ys should have the same Z coordinate
+            tets_to_change = np.any(np.isin(middle_cell.T, closest_domain_neighbour), axis=1)
+            new_z = np.mean(middle_cell.Y[tets_to_change, 2])
+            middle_cell.Y[tets_to_change, 2] = new_z
+            tets_to_change = np.any(np.isin(self.geo.Cells[closest_domain_neighbour].T, middle_cell.ID), axis=1)
+            self.geo.Cells[closest_domain_neighbour].Y[tets_to_change, 2] = new_z
+
+            # Update face centre
+            for cell in [c for c in self.geo.Cells if c.ID == closest_domain_neighbour or c.ID == middle_cell.ID]:
+                for faces in cell.Faces:
+                    if np.isin(faces.ij, np.sort([closest_domain_neighbour, cell.ID])).all():
+                        faces.Centre[2] = new_z
+
+            return closest_domain_neighbour
+
+        return None
 
     def brownian_motion(self, scale):
         """
@@ -248,7 +447,7 @@ class VertexModel:
 
         self.backupVars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
 
-        print("File: ", self.set.OutputFolder)
+        logger.info(f"File: {self.set.OutputFolder}")
         self.save_v_model_state()
 
         while self.t <= self.set.tend and not self.didNotConverge:
@@ -274,7 +473,8 @@ class VertexModel:
             # Ablate cells if needed
             if self.set.ablation:
                 if self.set.ablation and self.set.TInitAblation <= self.t and self.geo.cellsToAblate is not None:
-                    self.set.nu_bottom = self.set.nu * 600
+                    if self.set.bottom_ecm is not None:
+                        self.set.nu_bottom = self.set.nu * 600
                     self.save_v_model_state(file_name='before_ablation')
                 self.geo.ablate_cells(self.set, self.t)
                 self.geo_n = self.geo.copy()
@@ -351,7 +551,8 @@ class VertexModel:
             logger.info(f"STEP {str(self.set.i_incr)} has converged ...")
 
             # Build X From Y
-            self.geo.build_x_from_y(self.geo_n)
+            if self.set.implicit_method:
+                self.geo.build_x_from_y(self.geo)
 
             # Remodelling
             if abs(self.t - self.tr) >= self.set.RemodelingFrequency:
@@ -362,8 +563,14 @@ class VertexModel:
 
                     # Remodelling
                     remodel_obj = Remodelling(self.geo, self.geo_n, self.geo_0, self.set, self.Dofs)
-                    self.geo, self.geo_n = remodel_obj.remodel_mesh(self.numStep)
+                    if getattr(self, 'remodelled_cells', None) is None:
+                        self.remodelled_cells = []
+                    self.geo, self.geo_n, all_t_new = remodel_obj.remodel_mesh(self.numStep, self.remodelled_cells)
                     self.Dofs.get_dofs(self.geo, self.set)
+
+                    # Save info from changed tetrahedra to
+                    self.remodelled_cells.append(np.unique(all_t_new))
+
 
             # Update last time converged
             self.set.last_t_converged = self.t
@@ -619,3 +826,437 @@ class VertexModel:
                 error += np.abs(initial_recoil - correct_initial_recoil) * 100
 
         return error
+
+    def adjust_percentage_of_scutoids(self):
+        """
+        Adjust the percentage of scutoids in the model.
+        :return:
+        """
+        c_scutoids = self.geo.compute_percentage_of_scutoids(exclude_border_cells=True) / 100
+        c_3d_neighbours = self.geo.compute_average_3d_neighbours()
+
+        # Print initial percentage of scutoids
+        logger.info(f'Percentage of scutoids initially: {c_scutoids}')
+
+        if self.set.percentage_scutoids == 0.0:
+            return
+
+        remodel_obj = Remodelling(self.geo, self.geo, self.geo, self.set, self.Dofs)
+
+        display_volume_fragments(remodel_obj.Geo)
+
+        polygon_distribution = remodel_obj.Geo.compute_polygon_distribution('Bottom')
+        logger.info(f'Polygon distribution bottom: {polygon_distribution}')
+
+        if self.set.OutputFolder is not None:
+            screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
+                       self.set.OutputFolder + '/images')
+
+
+        # Check if the number of scutoids is approximately the desired one
+        while c_scutoids <= self.set.percentage_scutoids:
+            if self.set.min_3d_neighbours is not None and c_3d_neighbours >= self.set.min_3d_neighbours:
+                break
+            c_cell, c_scutoids, non_scutoids, c_3d_neighbours = self.increase_3d_neighbours(c_scutoids, c_3d_neighbours, remodel_obj)
+
+            # If the last cell is reached, break the loop
+            if c_cell == non_scutoids[-1]:
+                break
+
+        self.geo.update_measures()
+        self.geo.init_reference_cell_values(self.set)
+
+    def increase_3d_neighbours(self, c_scutoids, c_3d_neighbours, remodel_obj):
+        """
+        Increase the number of 3D neighbours in the model by performing edge flips on non-scutoid cells.
+        :param c_scutoids:
+        :param remodel_obj:
+        :return:
+        """
+        backup_vars = save_backup_vars(remodel_obj.Geo, remodel_obj.Geo_n, remodel_obj.Geo_0, 0, remodel_obj.Dofs)
+        non_scutoids = remodel_obj.Geo.obtain_non_scutoid_cells()
+        non_scutoids = [cell for cell in non_scutoids if cell.AliveStatus is not None]
+        # Order by volume with higher volume first
+        non_scutoids = sorted(non_scutoids, key=lambda x: x.Vol, reverse=True)
+
+        # Concatenate the rest of the cells that are scutoids if min_3d_neighbours is not set
+        if self.set.min_3d_neighbours is not None:
+            og_non_scutoids = [nc.ID for nc in non_scutoids]
+            list_of_ids = [cell.ID for cell in remodel_obj.Geo.Cells if cell.AliveStatus is not None and cell.ID not in og_non_scutoids]
+            np.random.shuffle(list_of_ids)
+            for cell_id in list_of_ids:
+                if cell_id not in self.geo.BorderCells:
+                    non_scutoids.append(remodel_obj.Geo.Cells[cell_id])
+
+        for c_cell in non_scutoids:
+            if c_cell.ID in remodel_obj.Geo.BorderCells:
+                continue
+            # Get the neighbours of the cell
+            neighbours = c_cell.compute_neighbours(location_filter='Bottom')
+            # Remove border cells from neighbours
+            neighbours = np.setdiff1d(neighbours, self.geo.BorderCells)
+            if len(neighbours) == 0:
+                continue
+
+            # Compute cell volume and pick the neighbour with the higher volume.
+            # These cells will be the ones that will lose neighbours
+            neighbours_vol = [cell.Vol for cell in remodel_obj.Geo.Cells if cell.ID in neighbours]
+
+            # Pick the neighbour with the lowest volume
+            random_neighbour = neighbours[np.argmin(neighbours_vol)]
+            shared_nodes = get_node_neighbours_per_domain(remodel_obj.Geo, c_cell.ID, remodel_obj.Geo.XgBottom,
+                                                          random_neighbour)
+
+            # Filter the shared nodes that are ghost nodes
+            shared_nodes = shared_nodes[np.isin(shared_nodes, remodel_obj.Geo.XgID)]
+            valence_segment, old_tets, old_ys = edge_valence(remodel_obj.Geo, [c_cell.ID, shared_nodes[0]])
+
+            cell_to_split_from_all = np.unique(old_tets)
+            cell_to_split_from_all = cell_to_split_from_all[~np.isin(cell_to_split_from_all, remodel_obj.Geo.XgID)]
+
+            if np.sum(np.isin(shared_nodes, remodel_obj.Geo.BorderCells)) > 0:
+                print('More than 0 border cell')
+                continue
+
+            cell_to_split_from = cell_to_split_from_all[
+                ~np.isin(cell_to_split_from_all, [c_cell.ID, random_neighbour])]
+
+            if len(cell_to_split_from) == 0:
+                continue
+
+            # Display information about the cells in the flip
+            logger.info(
+                f'Cell {c_cell.ID} will win neighbour {random_neighbour} and lose neighbour {cell_to_split_from[0]}')
+
+            # Perform flip
+            all_tnew, ghost_node, ghost_nodes_tried, has_converged, old_tets = remodel_obj.perform_flip(c_cell.ID,
+                                                                                                        random_neighbour,
+                                                                                                        cell_to_split_from[
+                                                                                                            0],
+                                                                                                        shared_nodes[0])
+
+            if has_converged:
+                cells_involved_intercalation = [cell.ID for cell in remodel_obj.Geo.Cells if
+                                                cell.ID in all_tnew.flatten()
+                                                and cell.AliveStatus == 1]
+
+                remodel_obj.Geo = smoothing_cell_surfaces_mesh(remodel_obj.Geo, cells_involved_intercalation,
+                                                               backup_vars, location='Bottom')
+                remodel_obj.Geo.ensure_consistent_tris_order()
+
+                # Converge a single iteration
+                remodel_obj.Geo.update_measures()
+                remodel_obj.reset_preferred_values(backup_vars, cells_involved_intercalation)
+
+                remodel_obj.Set.currentT = self.t
+                remodel_obj.Dofs.get_dofs(remodel_obj.Geo, self.set)
+
+            if has_converged:
+                new_c_scutoids = remodel_obj.Geo.compute_percentage_of_scutoids(exclude_border_cells=True) / 100
+                logger.info(f'Percentage of scutoids: {new_c_scutoids}')
+
+                # Compute 3d neighbours and print it
+                new_c_3d_neighbours = remodel_obj.Geo.compute_average_3d_neighbours()
+                logger.info(f'3D neighbours: {new_c_3d_neighbours}')
+
+                if self.set.min_3d_neighbours is not None and c_3d_neighbours >= new_c_3d_neighbours:
+                    remodel_obj.Geo, _, _, _, remodel_obj.Geo.Dofs = load_backup_vars(backup_vars)
+                    continue
+
+                c_3d_neighbours = new_c_3d_neighbours
+                c_scutoids = new_c_scutoids
+                #
+                # # Count the number of small volume fraction
+                # logger.info('----Before')
+                # old_geo, _, _, _, _ = load_backup_vars(backup_vars)
+                # display_volume_fragments(old_geo, cells_involved_intercalation)
+                # logger.info(f'Other cells...')
+                # display_volume_fragments(old_geo, np.setdiff1d([cell.ID for cell in old_geo.Cells],
+                #                                                cells_involved_intercalation))
+                # logger.info('----After')
+                # display_volume_fragments(remodel_obj.Geo, cells_involved_intercalation)
+                # logger.info(f'Other cells...')
+                # display_volume_fragments(remodel_obj.Geo, np.setdiff1d([cell.ID for cell in remodel_obj.Geo.Cells],
+                #                                                        cells_involved_intercalation))
+
+                polygon_distribution = remodel_obj.Geo.compute_polygon_distribution('Bottom')
+                logger.info(f'Polygon distribution bottom: {polygon_distribution}')
+                # self.numStep += 1
+                if self.set.OutputFolder is not None:
+                    screenshot_(remodel_obj.Geo, self.set, 0, 'after_remodelling_' + str(round(c_scutoids, 2)),
+                                self.set.OutputFolder + '/images')
+
+                self.geo = remodel_obj.Geo
+                # self.save_v_model_state(os.path.join(self.set.OutputFolder, 'data_step_' + str(round(c_scutoids, 2))))
+                break
+            else:
+                remodel_obj.Geo, _, _, _, remodel_obj.Geo.Dofs = load_backup_vars(backup_vars)
+
+        return c_cell, c_scutoids, non_scutoids, c_3d_neighbours
+
+    @abstractmethod
+    def initialize_cells(self, filename):
+        pass
+
+    def deform_tissue(self):
+        """
+        Deform the tissue based on the set parameters.
+        :return:
+        """
+        if self.set.resize_z is not None:
+            middle_point = np.mean([cell.X for cell in self.geo.Cells if cell.AliveStatus is not None], axis=0)
+            volumes = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
+            optimal_deform_array_X_Y = find_optimal_deform_array_X_Y(self.geo.copy(), self.set.resize_z,
+                                                                     middle_point, volumes)
+            logger.info(f'Optimal deform_array_X_Y: {optimal_deform_array_X_Y}')
+
+            for cell in self.geo.Cells:
+                deform_array = np.array(
+                    [optimal_deform_array_X_Y[0], optimal_deform_array_X_Y[0], self.set.resize_z])
+
+                if getattr(cell, 'substrate_cell_top', None) is None and getattr(cell, 'substrate_cell_bottom', None) is None:
+                    cell.X = cell.X + (cell.X - middle_point) * deform_array
+                    if cell.AliveStatus is not None:
+                        cell.Y = cell.Y + (cell.Y - middle_point) * deform_array
+                        for face in cell.Faces:
+                            face.Centre = face.Centre + (face.Centre - middle_point) * deform_array
+
+                    #self.move_cell(self.geo.Cells[cell.substrate_cell_top], deform_array, cell.X, middle_point)
+                    #self.move_cell(self.geo.Cells[cell.substrate_cell_bottom], deform_array, cell.X, middle_point)
+            # Make a copy of the geometry before deformation
+            geo_copy = self.geo.copy()
+            self.geo.resize_tissue()
+
+            # Update the geometry
+            self.geo.update_measures()
+            # Scale the reference values
+            new_lmin = []
+            old_lmin = []
+            for cell, cell_copy in zip(self.geo.Cells, geo_copy.Cells):
+                if cell.AliveStatus is not None:
+                    cell.Vol0 = cell_copy.Vol0 * cell.Vol / cell_copy.Vol
+                    cell.Area0 = cell_copy.Area0 * cell.Area / cell_copy.Area
+                    for face, face_copy in zip(cell.Faces, cell_copy.Faces):
+                        face.Area0 = face_copy.Area0 * face.Area / face_copy.Area
+                        for tri, tri_copy in zip(face.Tris, face_copy.Tris):
+                            # Append the minimum length to the centre and the edge length of the current tri to lmin_values
+                            new_lmin.append(min(tri.LengthsToCentre))
+                            new_lmin.append(tri.EdgeLength)
+
+                            old_lmin.append(min(tri_copy.LengthsToCentre))
+                            old_lmin.append(tri_copy.EdgeLength)
+            # Update the substrate z value
+            self.geo.get_substrate_z()
+
+            volumes_after_deformation = np.array([cell.Vol for cell in self.geo.Cells if cell.AliveStatus is not None])
+            logger.info(f'Volume difference: {np.mean(volumes) - np.mean(volumes_after_deformation)}')
+
+    def move_cell(self, cell, deform_array, location, middle_point):
+        """
+        Move a cell by translating its position based on the deform_array and the location relative to the middle point.
+        :param cell:
+        :param deform_array:
+        :param location:
+        :param middle_point:
+        :return:
+        """
+        cell.X = cell.X + (location - middle_point) * deform_array
+        if cell.AliveStatus is not None:
+            cell.Y = cell.Y + (location - middle_point) * deform_array
+            for face in cell.Faces:
+                face.Centre = face.Centre + (location - middle_point) * deform_array
+
+    def change_tissue_height(self):
+        """
+        Change the tissue height based on the set parameters.
+        :return:
+        """
+        if self.set.resize_z is not None:
+            # Change cell height including ghost nodes, and vertices
+            for cell in self.geo.Cells:
+                cell.X[2] = cell.X[2] * self.set.resize_z
+                if cell.Y is not None:
+                    for vertex in cell.Y:
+                        vertex[2] = vertex[2] * self.set.resize_z
+                    for face in cell.Faces:
+                        face.Centre[2] = face.Centre[2] * self.set.resize_z
+
+            self.geo.resize_tissue()
+
+    def required_purse_string_strength(self, directory, tend=20.1, load_existing=True) -> tuple[float, float, float, float]:
+        """
+        Find the minimum purse string strength needed to start closing the wound.
+        :param load_existing:
+        :param tend: End time of the simulation.
+        :param directory: Directory to save the results.
+        :return:
+        """
+        if os.path.exists(os.path.join(directory, 'purse_string_tension_vs_dy_t_' + str(round(tend, 2)) + '.csv')):
+            print('Purse string strength vs dy file already exists for file '
+                  + directory)
+            # Open the file and read the values
+            purse_string_strength_values = []
+            dy_values = []
+            with open(os.path.join(directory, 'purse_string_tension_vs_dy_t_' + str(round(tend, 2)) + '.csv'), 'r') as f:
+                next(f)  # Skip header
+                for line in f:
+                    ps_strength, dy = line.strip().split(',')
+                    purse_string_strength_values.append(float(ps_strength))
+                    dy_values.append(float(dy))
+        else:
+            output_directory = self.set.OutputFolder
+            if load_existing:
+                run_iteration = find_timepoint_in_model(self, directory, tend)
+            else:
+                run_iteration = True
+            self.set.OutputFolder = output_directory
+            if (self.set.dt / self.set.dt0) <= 1e-6:
+                return np.inf, np.inf, np.inf, np.inf
+
+            if run_iteration and self.t < tend:
+                self.set.tend = tend
+                self.set.Remodelling = False
+                self.set.RemodelStiffness = 2
+                self.set.Remodel_stiffness_wound = 2
+                self.set.purseStringStrength = 0.0
+                self.set.lateralCablesStrength = 0.0
+                self.set.nu_bottom = self.set.nu
+                self.geo.ablate_cells(self.set, 25)
+                #try:
+                self.iterate_over_time()
+                #except Exception as e:
+                #    logger.error(f'Error while running the iteration for purse string strength: {e}')
+                #    return np.inf, np.inf, np.inf, np.inf
+
+                # Copy files from vModel.set.output_folder to c_folder/ar_dir/directory
+                if self.set.OutputFolder and os.path.exists(self.set.OutputFolder):
+                    for f in os.listdir(self.set.OutputFolder):
+                        if os.path.isfile(os.path.join(self.set.OutputFolder, f)):
+                            shutil.copy(os.path.join(self.set.OutputFolder, f), os.path.join(directory, f))
+                        elif os.path.isdir(os.path.join(self.set.OutputFolder, f)):
+                            # Merge subdirectories
+                            sub_dir = os.path.join(self.set.OutputFolder, f)
+                            dest_sub_dir = os.path.join(directory, f)
+                            if not os.path.exists(dest_sub_dir):
+                                os.makedirs(dest_sub_dir)
+                            for sub_f in os.listdir(sub_dir):
+                                shutil.copy(os.path.join(sub_dir, sub_f), os.path.join(dest_sub_dir, sub_f))
+
+            dy_values, purse_string_strength_values = self.required_purse_string_strength_for_timepoint(directory, timepoint=tend)
+
+        purse_string_strength_values = purse_string_strength_values[:len(dy_values)]
+
+        # Plot the results
+        plt.figure()
+        plt.plot(dy_values, purse_string_strength_values, marker='o')
+        plt.axvline(0, color='red', linestyle='--')
+        plt.ylabel('Purse String Strength')
+        plt.xlabel('dy (Change in Wound Area)')
+        plt.yscale('log')
+
+        # Save the figure
+        plt.savefig(os.path.join(directory, 'purse_string_tension_vs_dy_t_' + str(round(tend, 2)) + '.png'))
+        plt.close()
+
+        # Get the purse string strength value that satisfies dy=0
+        purse_string_strength_values = np.array(purse_string_strength_values)
+        dy_values = np.array(dy_values)
+
+        # Only proceed if we have both negative and positive dy values
+        if np.any(dy_values < 0) and np.any(dy_values > 0):
+            # Linear interpolation between the closest points around dy=0
+            idx_pos = np.where(dy_values > 0)[0][0]
+            idx_neg = np.where(dy_values < 0)[0][-1]
+
+            x1, y1 = purse_string_strength_values[idx_neg], dy_values[idx_neg]
+            x2, y2 = purse_string_strength_values[idx_pos], dy_values[idx_pos]
+            purse_string_strength_eq = x1 - y1 * (x2 - x1) / (y2 - y1)
+        else:
+            purse_string_strength_eq = np.inf
+
+        # Find the minimum purse string strength that makes dy < 0
+        for ps_strength, dy in zip(purse_string_strength_values, dy_values):
+            if dy < 0:
+                print(f'Minimum purse string strength to start closing the wound: {ps_strength}')
+                return ps_strength, dy, dy_values[0], purse_string_strength_eq
+
+        return np.inf, np.inf, dy_values[0], purse_string_strength_eq
+
+    def required_purse_string_strength_for_timepoint(self, directory, timepoint) -> tuple[list[int], list[Any]]:
+        """
+        Find the minimum purse string strength needed to start closing the wound.
+        :param directory:
+        :return:
+        """
+        # Save the state before starting the purse string strength exploration as backup
+        backup_vars = save_backup_vars(self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs)
+
+        # Disable output folder to avoid creating files during the purse string strength exploration
+        self.set.OutputFolder = None
+
+        # Compute the initial distance of the wound vertices to the centre of the wound
+        initial_area = self.geo.compute_wound_area(location_filter='Top')
+
+        # What is the purse string strength needed to start closing the wound?
+        purse_string_strength_values = [0]
+        purse_string_strength_values.extend(np.linspace(1e-8, 1e-2, num=1000))
+        self.set.lateralCablesStrength = 0.0
+        self.set.dt = 1e-10
+        self.set.TypeOfPurseString = 3  # Fixed value
+        self.set.Contractility = True
+
+        negative_values_in_a_row = 0
+
+        dy_values = []
+        for ps_strength in purse_string_strength_values:
+            # Set the purse string strength
+            self.set.purseStringStrength = ps_strength
+
+            # Run a single iteration
+            self.single_iteration(post_operations=False)
+
+            # Are the vertices of the wound edge moving closer to the centre of the wound?
+            dy_values.append(self.geo.compute_wound_area(location_filter='Top') - initial_area)
+
+            # Print current purse string strength
+            logger.info(f'Testing purse string strength: {ps_strength}, dy: {dy_values[-1]}')
+
+            if dy_values[-1] < 0:
+                negative_values_in_a_row += 1
+
+            # Restore the backup variables
+            self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs = load_backup_vars(backup_vars)
+
+            if negative_values_in_a_row >= 10:
+                # Stop the exploration if we have 10 negative values in a row
+                logger.info('Stopping purse string strength exploration due to 10 negative dy values in a row.')
+                break
+
+        # Save the results into a csv file
+        with open(os.path.join(directory, 'purse_string_tension_vs_dy_t_' + str(round(timepoint, 2)) + '.csv'), 'w') as f:
+            f.write('purse_string_strength,dy\n')
+            for ps_strength, dy in zip(purse_string_strength_values, dy_values):
+                f.write(f'{ps_strength},{dy}\n')
+        return dy_values, purse_string_strength_values
+
+    def find_lambda_s1_s2_equal_target_gr(self, target_energy=0.01299466280896831):
+        """
+        Find the lmin0 value that makes the average geometric ratio equal to target_gr for all aspect ratios.
+        :param target_energy:
+        :return:
+        """
+
+        def objective(lambdas):
+            geo_copy = self.geo.copy()
+            self.set.lambdaS1 = lambdas[0]
+            self.set.lambdaS2 = lambdas[1]
+            self.set.lambdaS3 = lambdas[0]
+            kg_surface_area = KgSurfaceCellBasedAdhesion(geo_copy)
+            kg_surface_area.compute_work(geo_copy, self.set, None, False)
+            return (kg_surface_area.energy - target_energy) ** 2
+
+        options = {'disp': True, 'ftol': 1e-15, 'gtol': 1e-15}
+        self.geo.update_measures()
+        result = minimize(objective, method='TNC', x0=np.array([self.set.lambdaS1, self.set.lambdaS2]), options=options)
+        logger.info(f'Found lambdaS1: {result.x[0]}, lambdaS2: {result.x[1]}')
+        return result.x[0], result.x[1]

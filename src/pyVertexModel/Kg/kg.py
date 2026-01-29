@@ -32,6 +32,10 @@ class Kg:
     """
 
     def __init__(self, Geo=None):
+        """
+        Initialize the Kg class.
+        :param Geo:
+        """
         self.precision_type = np.float64
         if Geo is not None:
             self.dimg = (Geo.numY + Geo.numF + Geo.nCells) * 3
@@ -64,7 +68,7 @@ class Kg:
 
     def assemble_g(self, g, ge, n_y):
         """
-
+        Assemble the local force vector into the global force vector.
         :param g:
         :param ge:
         :param n_y:
@@ -103,6 +107,13 @@ class Kg:
         return KIJ
 
     def gKSArea(self, y1, y2, y3):
+        """
+        Compute the g and K for the area energy.
+        :param y1:
+        :param y2:
+        :param y3:
+        :return:
+        """
         y1_crossed = self.cross(y1)
         y2_crossed = self.cross(y2)
         y3_crossed = self.cross(y3)

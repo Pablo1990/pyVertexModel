@@ -34,13 +34,18 @@ class KgSubstrate(Kg):
             for numFace in range(len(currentCell.Faces)):
                 current_face = Geo.Cells[c].Faces[numFace]
 
-                if get_interface(current_face.InterfaceType) == get_interface('Bottom'):
+                if get_interface(current_face.InterfaceType) == get_interface('Bottom') or \
+                        (get_interface(current_face.InterfaceType) == get_interface('Top') and Set.substrate_top):
                     c_tris = np.concatenate([tris.Edge for tris in current_face.Tris])
                     c_tris = np.append(c_tris, current_face.globalIds.astype(int))
                     c_tris = np.unique(c_tris)
                     for currentVertex in c_tris:
-                        z0 = Geo.SubstrateZ
-                        kSubstrate = Set.kSubstrate * currentCell.k_substrate_perc
+                        if get_interface(current_face.InterfaceType) == get_interface('Bottom'):
+                            z0 = Geo.SubstrateZ
+                            kSubstrate = Set.kSubstrate * currentCell.k_substrate_perc
+                        elif get_interface(current_face.InterfaceType) == get_interface('Top'):
+                            z0 = Geo.CellHeightOriginal
+                            kSubstrate = Set.kSubstrateTop * currentCell.k_substrate_perc
 
                         if currentVertex <= len(Geo.Cells[c].globalIds):
                             currentVertexYs = currentCell.Y[currentVertex, :]

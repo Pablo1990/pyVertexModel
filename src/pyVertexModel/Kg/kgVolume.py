@@ -50,6 +50,10 @@ class KgVolume(Kg):
             if Geo.remodelling and c not in Geo.AssembleNodes:
                 continue
 
+            vol0_det = Geo.Cells[c].Vol0
+            if vol0_det == 0:
+                vol0_det = 1
+
             Cell = Geo.Cells[c]
             Ys = Cell.Y
             if Cell.AliveStatus == 0:
@@ -57,7 +61,7 @@ class KgVolume(Kg):
             else:
                 lambdaV = Set.lambdaV * Cell.lambda_v_perc
 
-            fact = lambdaV * (Cell.Vol - Cell.Vol0) ** (n - 1) / Cell.Vol0 ** n
+            fact = lambdaV * (Cell.Vol - Cell.Vol0) ** (n - 1) / vol0_det ** n
 
             ge = np.zeros(self.g.shape, dtype=self.precision_type)
             for face in Cell.Faces:
@@ -78,13 +82,11 @@ class KgVolume(Kg):
 
             self.g += ge * fact / 6  # Volume contribution of each triangle is det(Y1,Y2,Y3)/6
             if calculate_K:
-                # Both give the same result
                 self.K = kg_functions.compute_finalK_Volume(ge, self.K, Cell.Vol, Cell.Vol0, n, lambdaV)
-                # self.K = self.compute_finalK_Volume(ge, self.K, Cell.Vol, Cell.Vol0, n)
 
-            self.energy_per_cell[c] = lambdaV / n * ((Cell.Vol - Cell.Vol0) / Cell.Vol0) ** n
+            self.energy_per_cell[c] = lambdaV / n * ((Cell.Vol - Cell.Vol0) / vol0_det) ** n
             Cell.energy_volume = self.energy_per_cell[c]
-            self.energy += lambdaV / n * ((Cell.Vol - Cell.Vol0) / Cell.Vol0) ** n
+            self.energy += lambdaV / n * ((Cell.Vol - Cell.Vol0) / vol0_det) ** n
 
         end = time.time()
         self.timeInSeconds = f"Time at Volume: {end - start} seconds"
