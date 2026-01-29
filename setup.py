@@ -10,4 +10,5 @@ setup(
     packages=['src', 'src.pyVertexModel', 'src.pyVertexModel.Kg', 'pyVertexModel'],
     ext_modules=cythonize(extensions, **ext_options),
     include_dirs=[np.get_include()],
+    zip_safe=False,
 )
