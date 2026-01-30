@@ -104,6 +104,50 @@ def edge_valence_t(tets, nodesEdge):
     return sharedTets.shape[0], sharedTets, tetIds
 
 
+def check_vertex_valence(geo, log_warnings=True):
+    """
+    Check for vertices shared by more than 3 cells (4-fold or higher vertices).
+    These can cause numerical instability and simulation crashes.
+    
+    :param geo: Geometry object
+    :param log_warnings: Whether to log warnings for detected issues
+    :return: Dictionary with problematic vertices and their valences
+    """
+    problematic_vertices = {}
+    
+    # Get all alive cells
+    alive_cells = [cell for cell in geo.Cells if cell.AliveStatus is not None and cell.T is not None and len(cell.T) > 0]
+    
+    if not alive_cells:
+        return problematic_vertices
+    
+    # Collect all tetrahedra with their cell IDs
+    all_tets_with_cells = []
+    for cell in alive_cells:
+        for tet in cell.T:
+            all_tets_with_cells.append((tuple(sorted(tet)), cell.ID))
+    
+    # For each unique vertex, count how many unique cells it belongs to
+    vertex_to_cells = defaultdict(set)
+    for tet, cell_id in all_tets_with_cells:
+        for vertex in tet:
+            vertex_to_cells[vertex].add(cell_id)
+    
+    # Find vertices shared by more than 3 cells
+    for vertex, cells in vertex_to_cells.items():
+        num_cells = len(cells)
+        if num_cells > 3:
+            problematic_vertices[vertex] = {
+                'num_cells': num_cells,
+                'cells': list(cells)
+            }
+            if log_warnings:
+                logger.warning(f"Vertex {vertex} is shared by {num_cells} cells: {list(cells)}. "
+                             f"This can cause numerical instability!")
+    
+    return problematic_vertices
+
+
 def get_node_neighbours(geo, node, main_node=None):
     """
 
@@ -725,7 +769,16 @@ class Geo:
                 # Initialize gIds with the same shape as CellJ.globalIds
                 for numId in np.where(face_ids_i)[0]:
                     match = np.all(np.isin(CellJ.T, Cell.T[numId, :]), axis=1)
-                    g_ids[numId] = CellJ.globalIds[match]
+                    # CRITICAL FIX: Ensure exactly one match to prevent 4-fold vertices
+                    # Multiple matches indicate vertices incorrectly shared by >3 cells
+                    if np.sum(match) == 1:
+                        g_ids[numId] = CellJ.globalIds[match][0]
+                    elif np.sum(match) > 1:
+                        # Log warning but use first match to prevent crash
+                        logger.warning(f"Multiple tet matches ({np.sum(match)}) found in build_global_ids for cell {ci} tet {numId}. "
+                                     f"This indicates a 4-fold vertex bug. Using first match.")
+                        g_ids[numId] = CellJ.globalIds[match][0]
+                    # If no match, g_ids[numId] remains -1 and gets assigned new ID later
 
                 for f in range(len(Cell.Faces)):
                     Face = Cell.Faces[f]
@@ -997,6 +1050,13 @@ class Geo:
                                                                               num_node,
                                                                               c_set), axis=0)
                                     self.numY += 1
+        
+        # CRITICAL FIX: Validate that added tets don't create 4-fold vertices
+        # Check vertex valence after adding all new tetrahedra
+        problematic_vertices = check_vertex_valence(self, log_warnings=True)
+        if problematic_vertices:
+            logger.error(f"WARNING: Added tetrahedra created {len(problematic_vertices)} 4-fold or higher vertices. "
+                        f"This may cause numerical instability!")
 
     def recalculate_ys_from_previous(self, tnew, main_nodes_to_connect, c_set):
         """
@@ -1055,7 +1115,9 @@ class Geo:
             if np.all(~np.isin(num_tet, np.concatenate([self.XgBottom, self.XgTop]))):
                 Ynew.append(YnewlyComputed)
             else:
-                tetsToUse = np.sum(np.isin(allTs, num_tet), axis=1) > 2
+                # Match tetrahedra that share exactly 4 nodes (exact match) to avoid 4-fold vertices
+                # Using > 2 (>=3) can match tets sharing a face, causing vertices to be shared by 4+ cells
+                tetsToUse = np.sum(np.isin(allTs, num_tet), axis=1) == 4
 
                 if any(np.isin(num_tet, self.XgTop)):
                     tetsToUse = tetsToUse & np.any(np.isin(allTs, self.XgTop), axis=1)
@@ -1063,13 +1125,14 @@ class Geo:
                     tetsToUse = tetsToUse & np.any(np.isin(allTs, self.XgBottom), axis=1)
 
                 tetsToUse = tetsToUse & (nGhostNodes_allTs == nGhostNodes_cTet)
-                YnewlyComputed[2] = np.mean(allYs[tetsToUse, 2], axis=0)
-
+                
                 if any(tetsToUse):
+                    YnewlyComputed[2] = np.mean(allYs[tetsToUse, 2], axis=0)
                     Ynew.append(contributionOldYs * np.mean(allYs[tetsToUse, :], axis=0) + (
                             1 - contributionOldYs) * YnewlyComputed)
                 else:
-                    tetsToUse = np.sum(np.isin(allTs, num_tet), axis=1) > 1
+                    # Fallback: try matching exactly 3 nodes (shared face) but limit to proper 3-fold vertices
+                    tetsToUse = np.sum(np.isin(allTs, num_tet), axis=1) == 3
 
                     if any(np.isin(num_tet, self.XgTop)):
                         tetsToUse = tetsToUse & np.any(np.isin(allTs, self.XgTop), axis=1)
@@ -1077,9 +1140,10 @@ class Geo:
                         tetsToUse = tetsToUse & np.any(np.isin(allTs, self.XgBottom), axis=1)
 
                     tetsToUse = tetsToUse & (nGhostNodes_allTs == nGhostNodes_cTet)
-                    YnewlyComputed[2] = np.mean(allYs[tetsToUse, 2], axis=0)
-
-                    if any(tetsToUse):
+                    
+                    # Only use if we find exactly 3 or fewer matching tets (proper 3-fold vertex)
+                    if any(tetsToUse) and np.sum(tetsToUse) <= 3:
+                        YnewlyComputed[2] = np.mean(allYs[tetsToUse, 2], axis=0)
                         Ynew.append(contributionOldYs * np.mean(allYs[tetsToUse, :], axis=0) + (
                                 1 - contributionOldYs) * YnewlyComputed)
                     else:

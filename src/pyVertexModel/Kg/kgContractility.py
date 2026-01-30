@@ -262,6 +262,13 @@ class KgContractility(Kg):
         dim = 3
 
         l_i = np.linalg.norm(y_1 - y_2)
+        
+        # CRITICAL FIX: Clamp edge length to prevent singularity at multi-fold vertices
+        # When edges become very short (especially at 4-fold+ vertices), 1/l_i³ explodes
+        # This causes mechanics to blow up and creates spiky geometries
+        MIN_EDGE_LENGTH = 1e-6
+        if l_i < MIN_EDGE_LENGTH:
+            l_i = MIN_EDGE_LENGTH
 
         kContractility = np.zeros((6, 6), dtype=self.precision_type)
         kContractility[0:3, 0:3] = -(C / l_i0) * (1 / l_i ** 3 * np.outer((y_1 - y_2), (y_1 - y_2))) + (
@@ -282,6 +289,11 @@ class KgContractility(Kg):
         :return:
         """
         l_i = np.linalg.norm(y_1 - y_2)
+        
+        # CRITICAL FIX: Clamp edge length to prevent singularity at multi-fold vertices
+        MIN_EDGE_LENGTH = 1e-6
+        if l_i < MIN_EDGE_LENGTH:
+            l_i = MIN_EDGE_LENGTH
 
         gContractility = np.zeros(6, dtype=self.precision_type)
         gContractility[0:3] = (C / l_i0) * (y_1 - y_2) / l_i

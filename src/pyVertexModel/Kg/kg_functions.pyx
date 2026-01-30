@@ -105,11 +105,21 @@ cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
     cdef np.ndarray Q2 = y3_crossed - y1_crossed
     cdef np.ndarray Q3 = y1_crossed - y2_crossed
 
-    cdef double fact = 1 / np.dot(2, np.linalg.norm(q))
+    # CRITICAL FIX: Check for degenerate triangles at multi-fold vertices
+    # When triangles become collinear (especially at 4-fold+ vertices), ||q||→0
+    # This causes 1/||q|| singularities leading to unbounded forces and spiky geometries
+    cdef double q_norm = np.linalg.norm(q)
+    cdef double MIN_TRIANGLE_AREA = 1e-10
+    
+    if q_norm < MIN_TRIANGLE_AREA:
+        # Return zero gradients for degenerate triangles instead of inf
+        return np.zeros(9), np.zeros((9, 9)), np.zeros((9, 9))
+
+    cdef double fact = 1 / np.dot(2, q_norm)
 
     cdef np.ndarray gs = np.dot(fact,  np.concatenate([np.dot(Q1.transpose(), q), np.dot(Q2.transpose(), q), np.dot(Q3.transpose(), q)]))
 
-    cdef np.ndarray Kss = np.dot(-(2 / np.linalg.norm(q)), np.outer(gs, gs))
+    cdef np.ndarray Kss = np.dot(-(2 / q_norm), np.outer(gs, gs))
 
     cdef np.ndarray Ks = np.dot(fact, np.block([
         [np.dot(Q1.transpose(), Q1), kK(y1_crossed, y2_crossed, y3_crossed, y1, y2, y3),
