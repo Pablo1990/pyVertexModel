@@ -215,15 +215,32 @@ def process_image(img_input="src/pyVertexModel/resources/LblImg_imageSequence.ti
         else:
             img2DLabelled = imgStackLabelled
         
-        # Check if the image is already segmented (has labels > 1)
+        # Check if the image is already segmented (has labels > 1) or needs segmentation
         if np.max(imgStackLabelled) <= 1:
-            # Image is not segmented (binary), perform segmentation
-            imgStackLabelled, num_features = label(imgStackLabelled == 0,
-                                                   structure=[[0, 1, 0], [1, 1, 1], [0, 1, 0]])
+            # Image is binary (0 and 1 only), needs segmentation
+            # Invert so cells are 1 and background is 0, then label
+            imgStackLabelled = (imgStackLabelled > 0).astype(np.uint16)
+            from scipy.ndimage import label as scipy_label
+            imgStackLabelled, num_features = scipy_label(imgStackLabelled)
+            if imgStackLabelled.ndim == 3:
+                img2DLabelled = imgStackLabelled[0, :, :]
+            else:
+                img2DLabelled = imgStackLabelled
+        
+        # For already segmented images (max > 1), we still need to label background regions
+        # This is consistent with the file-loading behavior
+        # Use appropriate structure based on dimensionality
+        if imgStackLabelled.ndim == 3:
+            structure_element = np.array([
+                [[0, 0, 0], [0, 1, 0], [0, 0, 0]],
+                [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
+                [[0, 0, 0], [0, 1, 0], [0, 0, 0]]
+            ])
         else:
-            # Image is already segmented, just label the background
-            imgStackLabelled, num_features = label(imgStackLabelled == 0,
-                                                   structure=[[0, 1, 0], [1, 1, 1], [0, 1, 0]])
+            structure_element = [[0, 1, 0], [1, 1, 1], [0, 1, 0]]
+        
+        imgStackLabelled, num_features = label(imgStackLabelled == 0,
+                                               structure=structure_element)
         
         props = regionprops_table(imgStackLabelled, properties=('centroid', 'label',), )
         
