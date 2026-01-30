@@ -35,7 +35,10 @@ class KgVolume(Kg):
         :param calculate_K:
         :return:
         """
-        n = 4  # 2 or 4 for now.
+        # CRITICAL FIX: Reduced exponent from 4 to 2 to prevent gradient blow-up at multi-fold vertices
+        # With n=4: (Vol-Vol0)^3/Vol0^4 amplifies forces excessively at scutoids
+        # With n=2: (Vol-Vol0)^1/Vol0^2 provides stable, proportional volume control
+        n = 2  # Changed from 4 to 2 for numerical stability at multi-fold vertices
 
         start = time.time()
 
