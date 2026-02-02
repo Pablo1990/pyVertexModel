@@ -543,23 +543,21 @@ def face_centres_to_middle_of_neighbours_vertices(Geo, c_cell, filter_location=N
                 Geo.Cells[c_cell].Y[all_edges, :], axis=0)
 
 
+# Cache for interface type mapping (avoid recreating dict on every call)
+_INTERFACE_TYPE_MAPPING = {0: 'Top', 1: 'CellCell', 2: 'Bottom',
+                           'Top': 0, 'CellCell': 1, 'Bottom': 2}
+
 def get_interface(interface_type):
     """
     Standardize the InterfaceType attribute.
     :return:
     """
-    valueset = [0, 1, 2]
-    catnames = ['Top', 'CellCell', 'Bottom']
-    interface_type_all_values = dict(zip(valueset, catnames))
-
     # Set InterfaceType to the string value
-    interface_type_str = None
-    if interface_type is not None:
-        interface_type_str = next(key for key, value in interface_type_all_values.items()
-                                  if
-                                  value == interface_type or key == interface_type)
-
-    return interface_type_str
+    if interface_type is None:
+        return None
+    
+    # Direct lookup in cached mapping
+    return _INTERFACE_TYPE_MAPPING.get(interface_type)
 
 
 def r2(y, y_predicted):

@@ -231,7 +231,9 @@ class Cell:
             y1 = self.Y[idx0, :] - self.X
             y2 = self.Y[idx1, :] - self.X
             
-            current_v = np.linalg.det(np.array([y1, y2, y3])) / 6
+            # Use dot/cross product instead of det for faster computation
+            # det([y1, y2, y3]) = y1 · (y2 × y3)
+            current_v = np.dot(y1, np.cross(y2, y3)) / 6
             # If the volume is negative, switch two the other option
             if current_v < 0:
                 raise Exception("Negative volume detected. Check the cell geometry." + str(c_face.Tris[t].Edge[0]) + ", " + str(c_face.Tris[t].Edge[1]) + ", " + str(c_face.globalIds) + ", " + str(self.ID))
