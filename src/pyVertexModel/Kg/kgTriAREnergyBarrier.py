@@ -44,13 +44,6 @@ class KgTriAREnergyBarrier(Kg):
                         w2 = np.linalg.norm(y12) ** 2 - np.linalg.norm(y23) ** 2
                         w3 = np.linalg.norm(y23) ** 2 - np.linalg.norm(y31) ** 2
 
-                        # Clamp w values to prevent numerical instability when triangles become degenerate
-                        # This prevents the energy and forces from exploding
-                        max_w = Geo.lmin0 ** 2 * 1e4  # Scale based on typical edge length
-                        w1 = np.clip(w1, -max_w, max_w)
-                        w2 = np.clip(w2, -max_w, max_w)
-                        w3 = np.clip(w3, -max_w, max_w)
-
                         g1 = np.array([y23, y12, y31]).reshape(-1, 1)
                         g2 = np.array([y12, y31, y23]).reshape(-1, 1)
                         g3 = np.array([y31, y23, y12]).reshape(-1, 1)
