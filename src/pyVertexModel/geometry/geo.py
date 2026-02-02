@@ -346,15 +346,12 @@ class Geo:
 
     def init_reference_cell_values(self, c_set):
         """
-        Initializes the average cell properties. This method calculates the average area of all triangles (tris) in the
-        geometry (Geo) structure, and sets the upper and lower area thresholds based on the standard deviation of the areas.
-        It also calculates the minimum edge length and the minimum area of all tris, and sets the initial values for
-        BarrierTri0 and lmin0 based on these calculations. The method also calculates the average edge lengths for tris
-        located at the top, bottom, and lateral sides of the cells. Finally, it initializes an empty list for storing
-        removed debris cells.
-
-        :param c_set: The settings of the simulation
-        :return: None
+        Initialize reference geometric and mechanical baseline values for the tissue.
+        
+        This configures per-tissue reference data used by mechanics and topology updates: it sets AssembleNodes and non_dead_cells, initializes per-cell reference volumes/areas and optional parameter noise, updates the reference minimum edge length (lmin0) and triangle barrier (BarrierTri0), computes average edge lengths by face type, resets RemovedDebrisCells, and determines substrate/ceiling heights.
+        
+        Parameters:
+            c_set: Simulation settings object providing parameters and state (e.g., ref_V0/ref_A0, contributionOldYs, and initial_filename_state) used during initialization.
         """
         logger.info('Initializing reference cell values')
 

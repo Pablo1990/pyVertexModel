@@ -13,6 +13,14 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        """
+        Initialize simulation configuration attributes with sensible defaults.
+        
+        When mat_file is None, populate a comprehensive set of simulation parameters (topology, geometry, mechanics, time stepping, substrate, viscosity, remodeling, solver, boundary/loading, postprocessing, and ablation defaults). When mat_file is provided, load parameter values from the given MATLAB-like structure via read_mat_file(mat_file).
+        
+        Parameters:
+            mat_file (optional): A MATLAB-style struct or object containing saved Set parameters; when provided, values are read and assigned to this instance.
+        """
         self.min_3d_neighbours = None
         self.periodic_boundaries = True
         self.frozen_face_centres = False
@@ -158,8 +166,19 @@ class Set:
 
     def check_for_non_used_parameters(self):
         """
-        Check for non-used parameters and put the alternative to zero
-        :return:
+        Adjust configuration attributes based on feature toggles, disabling unused options and setting related defaults.
+        
+        For each boolean toggle on the Set instance, updates dependent parameters as follows:
+        - If EnergyBarrierA is False, sets `lambdaB` to 0.
+        - If EnergyBarrierAR is False, sets `lambdaR` to 0.
+        - If Bending is False, sets `lambdaBend` to 0.
+        - If Contractility_external is False, sets `cLineTension_external` to 0.
+        - If Contractility is False, sets `cLineTension` to 0.
+        - If brownian_motion is False, sets `brownian_motion_scale` to 0.
+        - If implicit_method is False, sets `tol` to `nu` and `tol0` to `nu/20`.
+        - If Remodelling is True, sets `RemodelStiffness` to 0.9 and `Remodel_stiffness_wound` to 0.7; otherwise sets both to 2.
+        
+        This method mutates the instance's attributes and does not return a value.
         """
         if not self.EnergyBarrierA:
             self.lambdaB = 0
@@ -192,8 +211,9 @@ class Set:
 
     def redirect_output(self):
         """
-        Redirect the output to a log file in the output folder
-        :return:
+        Configure logging to write to a file under the instance's OutputFolder and ensure the required directories exist.
+        
+        If self.OutputFolder is not None, this creates the OutputFolder and an images subdirectory, attaches a FileHandler writing to 'log.out' with DEBUG level and a timestamped formatter, and enables logger propagation. If OutputFolder is None, no logging configuration or filesystem changes are made.
         """
         if self.OutputFolder is not None:
             os.makedirs(self.OutputFolder, exist_ok=True)
@@ -206,6 +226,13 @@ class Set:
             logger.propagate = True
 
     def read_mat_file(self, mat_file):
+        """
+        Populate this object's attributes from a MATLAB-like structured array by mapping each top-level field to an attribute of the same name.
+        
+        Parameters:
+            mat_file: array-like
+                A MATLAB-style structured array (as returned by scipy.io.loadmat for a struct). For each field in `mat_file`, the corresponding attribute on `self` is set to `None` if the field is empty, otherwise to the field's first nested value.
+        """
         for param in mat_file.dtype.fields:
             if len(mat_file[param][0][0]) == 0:
                 setattr(self, param, None)
