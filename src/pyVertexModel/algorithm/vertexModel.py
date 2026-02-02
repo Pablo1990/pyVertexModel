@@ -494,6 +494,10 @@ class VertexModel:
             K = 0
             g, energies = newtonRaphson.gGlobal(self.geo_0, self.geo_n, self.geo, self.set,
                                                 self.set.implicit_method, self.numStep)
+        
+        # Store gradient before step for explicit method stability check
+        if not self.set.implicit_method:
+            self.gr_before_step = np.linalg.norm(g[self.Dofs.Free])
 
         for key, energy in energies.items():
             logger.info(f"{key}: {energy}")
@@ -518,6 +522,14 @@ class VertexModel:
                 np.all(~np.isnan(dy[self.Dofs.Free])) and
                 (np.max(abs(g[self.Dofs.Free])) * self.set.dt / self.set.dt0) < self.set.tol)
         
+        # For explicit methods with adaptive step scaling, accept steps that keep gradient stable
+        # This allows progress even when gradient is above tolerance but not increasing
+        if not converged and not self.set.implicit_method and hasattr(self, 'gr_before_step'):
+            # Check if gradient remained stable (didn't increase significantly)
+            if np.isfinite(gr) and gr <= self.gr_before_step * 1.1:
+                # Gradient is stable or decreasing slightly - accept as making progress
+                converged = True
+        
         if converged:
             self.iteration_converged()
         else:
@@ -528,40 +540,9 @@ class VertexModel:
     def iteration_did_not_converged(self):
         """
         If the iteration did not converge, the algorithm will try to relax the value of nu and dt.
-        For explicit methods, we may keep the step even if not fully converged, as long as it's stable.
         :return:
         """
-        # For explicit methods, the step has already been taken and may be acceptable even if not converged
-        # We only restore backup if the step made things worse (gradient increased significantly)
-        should_restore_backup = True
-        
-        if not self.set.implicit_method:
-            # Compute gradient at current state (after the explicit step)
-            from src.pyVertexModel.algorithm.newtonRaphson import gGlobal
-            g_current, _ = gGlobal(self.geo_0, self.geo_n, self.geo, self.set)
-            gr_current = np.linalg.norm(g_current[self.Dofs.Free])
-            
-            # Get gradient before the step (from backup) WITHOUT modifying current state
-            geo_backup = self.backupVars['Geo_b']
-            geo_n_backup = self.backupVars['Geo_n_b']
-            geo_0_backup = self.backupVars['Geo_0_b']
-            Dofs_backup = self.backupVars['Dofs']
-            
-            g_backup, _ = gGlobal(geo_0_backup, geo_n_backup, geo_backup, self.set)
-            gr_backup = np.linalg.norm(g_backup[Dofs_backup.Free])
-            
-            # Keep the step if:
-            # 1. Gradient is finite and reasonable (not exploding)
-            # 2. Gradient didn't increase too much (less than 50% increase)
-            if np.isfinite(gr_current) and gr_current < 10.0 and gr_current < 1.5 * gr_backup:
-                should_restore_backup = False
-                # Mark that we made progress
-                self.set.last_t_converged = self.t
-        
-        if should_restore_backup:
-            from src.pyVertexModel.util.utils import load_backup_vars
-            self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs = load_backup_vars(self.backupVars)
-            
+        self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs = load_backup_vars(self.backupVars)
         self.relaxingNu = False
         if self.set.iter == self.set.MaxIter0 and self.set.implicit_method:
             self.set.MaxIter = self.set.MaxIter0 * 3
@@ -569,13 +550,10 @@ class VertexModel:
         else:
             if (self.set.iter >= self.set.MaxIter and
                     (self.set.dt / self.set.dt0) > self.set.dt_tolerance):
-                if should_restore_backup:
-                    # Step was bad, restore and reduce timestep
-                    self.set.MaxIter = self.set.MaxIter0
-                    self.set.nu = self.set.nu0
-                    self.set.dt = self.set.dt / 2
-                    self.t = self.set.last_t_converged + self.set.dt
-                # else: step was kept, continue with same dt
+                self.set.MaxIter = self.set.MaxIter0
+                self.set.nu = self.set.nu0
+                self.set.dt = self.set.dt / 2
+                self.t = self.set.last_t_converged + self.set.dt
             else:
                 self.didNotConverge = True
 

@@ -205,9 +205,22 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g, selected_cells=None)
     # Bottom nodes
     g_constrained = constrain_bottom_vertices_x_y(Geo)
 
+    # Adaptive step size scaling to prevent gradient explosion
+    # When gradient is large, reduce the step size to maintain stability
+    gr = np.linalg.norm(g[dof])
+    
+    # Scale factor based on gradient magnitude relative to tolerance
+    # If gr >> tol, we need a smaller step
+    if gr > Set.tol:
+        # Limit the effective step size when gradient is large
+        # This prevents the explicit Euler step from overshooting
+        scale_factor = min(1.0, Set.tol / gr)
+    else:
+        scale_factor = 1.0
+    
     # Update the bottom nodes with the same displacement as the corresponding real nodes
-    dy[dof, 0] = -Set.dt / Set.nu * g[dof]
-    dy[g_constrained, 0] = -Set.dt / Set.nu_bottom * g[g_constrained]
+    dy[dof, 0] = -Set.dt / Set.nu * g[dof] * scale_factor
+    dy[g_constrained, 0] = -Set.dt / Set.nu_bottom * g[g_constrained] * scale_factor
 
     # Update border ghost nodes with the same displacement as the corresponding real nodes
     dy = map_vertices_periodic_boundaries(Geo, dy)
