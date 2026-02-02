@@ -324,11 +324,12 @@ class Geo:
                 self.Cells[c].Area = self.Cells[c].compute_area()
                 self.Cells[c].Vol = self.Cells[c].compute_volume()
 
+        # Unique Ids for each point (vertex, node or face center) used in K
+        self.build_global_ids()
+
         # Initialize reference values
         self.init_reference_cell_values(c_set)
 
-        # Unique Ids for each point (vertex, node or face center) used in K
-        self.build_global_ids()
 
         if c_set.Substrate == 1:
             for c, c_cell in enumerate(self.Cells):
@@ -356,6 +357,7 @@ class Geo:
         :return: None
         """
         logger.info('Initializing reference cell values')
+
         # Assemble nodes from all cells that are not None
         self.AssembleNodes = [i for i, cell in enumerate(self.Cells) if cell.AliveStatus is not None]
 
