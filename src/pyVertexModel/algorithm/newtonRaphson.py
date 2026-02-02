@@ -212,7 +212,7 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g, selected_cells=None)
     # Conservative scaling: always scale down based on gradient
     # This prevents gradient from ever increasing
     MIN_SCALE_FACTOR = 0.1
-    SAFETY_FACTOR = 0.5  # Additional safety margin
+    SAFETY_FACTOR = 0.9  # Safety margin - tuned to balance stability and convergence
     
     if gr > Set.tol:
         # Large gradient: scale based on tol/gr

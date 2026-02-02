@@ -528,10 +528,10 @@ class VertexModel:
         # For explicit methods: STRICT policy - REJECT any step that increases gradient
         # This overrides standard convergence to prevent gradient explosion
         if not self.set.implicit_method and self.gr_before_step > 0:
-            # Allow only 0.1% numerical tolerance - essentially requiring non-increase
-            NUMERICAL_TOLERANCE = 1.001
-            if gr > self.gr_before_step * NUMERICAL_TOLERANCE:
-                # Gradient increased - REJECT step even if standard criterion passed
+            # Allow small numerical tolerance and minimal gradient growth
+            GRADIENT_INCREASE_TOLERANCE = 1.01  # Allow up to 1% increase for numerical stability
+            if gr > self.gr_before_step * GRADIENT_INCREASE_TOLERANCE:
+                # Gradient increased too much - REJECT step even if standard criterion passed
                 converged = False
         
         if converged:
