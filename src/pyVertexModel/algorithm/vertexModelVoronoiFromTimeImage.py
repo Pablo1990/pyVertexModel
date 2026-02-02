@@ -197,81 +197,157 @@ def divide_quartets_neighbours(img_neighbours_all, labelled_img, quartets):
     return img_neighbours_all
 
 
-def process_image(img_filename="src/pyVertexModel/resources/LblImg_imageSequence.tif", redo=False):
+def process_image(img_input="src/pyVertexModel/resources/LblImg_imageSequence.tif", redo=False):
     """
     Process the image and return the 2D labeled image and the 3D labeled image.
-    :param redo:
-    :param img_filename:
-    :return:
+    :param redo: Whether to redo the processing even if cached version exists
+    :param img_input: Either a filename (str) or a numpy array containing the image
+    :return: img2DLabelled, imgStackLabelled
     """
-    # Load the tif file from resources if exists
-    if os.path.exists(img_filename):
-        if img_filename.endswith('.tif'):
-            if os.path.exists(img_filename.replace('.tif', '.xz')) and not redo:
-                imgStackLabelled = pickle.load(lzma.open(img_filename.replace('.tif', '.xz'), "rb"))
-
-                imgStackLabelled = imgStackLabelled['imgStackLabelled']
-                if imgStackLabelled.ndim == 3:
-                    img2DLabelled = imgStackLabelled[0, :, :]
-                else:
-                    img2DLabelled = imgStackLabelled
+    # Check if input is a numpy array or a filename
+    if isinstance(img_input, np.ndarray):
+        # Input is a numpy array, process it directly
+        imgStackLabelled = img_input.copy()
+        
+        # Reordering cells based on the centre of the image
+        if imgStackLabelled.ndim == 3:
+            img2DLabelled = imgStackLabelled[0, :, :]
+        else:
+            img2DLabelled = imgStackLabelled
+        
+        # Check if the image is already segmented (has labels > 1) or needs segmentation
+        if np.max(imgStackLabelled) <= 1:
+            # Image is binary (0 and 1 only), needs segmentation
+            # Invert so cells are 1 and background is 0, then label
+            imgStackLabelled = (imgStackLabelled > 0).astype(np.uint16)
+            from scipy.ndimage import label as scipy_label
+            imgStackLabelled, num_features = scipy_label(imgStackLabelled)
+            if imgStackLabelled.ndim == 3:
+                img2DLabelled = imgStackLabelled[0, :, :]
             else:
-                imgStackLabelled = io.imread(img_filename)
+                img2DLabelled = imgStackLabelled
+        
+        # For already segmented images (max > 1), we still need to label background regions
+        # This is consistent with the file-loading behavior
+        # Use appropriate structure based on dimensionality
+        if imgStackLabelled.ndim == 3:
+            structure_element = np.array([
+                [[0, 0, 0], [0, 1, 0], [0, 0, 0]],
+                [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
+                [[0, 0, 0], [0, 1, 0], [0, 0, 0]]
+            ])
+        else:
+            structure_element = [[0, 1, 0], [1, 1, 1], [0, 1, 0]]
+        
+        imgStackLabelled, num_features = label(imgStackLabelled == 0,
+                                               structure=structure_element)
+        
+        props = regionprops_table(imgStackLabelled, properties=('centroid', 'label',), )
+        
+        # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
+        centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
+        centre_of_image = np.array([img2DLabelled.shape[0] / 2, img2DLabelled.shape[1] / 2])
+        
+        # Sorting cells based on distance to the middle of the image
+        distanceToMiddle = cdist([centre_of_image], centroids)
+        distanceToMiddle = distanceToMiddle[0]
+        sortedId = np.argsort(distanceToMiddle)
+        sorted_ids = np.array(props['label'])[sortedId]
+        
+        oldImgStackLabelled = copy.deepcopy(imgStackLabelled)
+        newCont = 1
+        for numCell in sorted_ids:
+            if numCell != 0:
+                imgStackLabelled[oldImgStackLabelled == numCell] = newCont
+                newCont += 1
+        
+        # Remaining cells that are not in the image
+        for numCell in np.arange(newCont, np.max(img2DLabelled) + 1):
+            imgStackLabelled[oldImgStackLabelled == numCell] = newCont
+            newCont += 1
+        
+        if imgStackLabelled.ndim == 3:
+            img2DLabelled = imgStackLabelled[0, :, :]
+        else:
+            img2DLabelled = imgStackLabelled
+        
+        if imgStackLabelled.ndim == 3:
+            # Transpose the image stack to have the shape (Z, Y, X)
+            imgStackLabelled = np.transpose(imgStackLabelled, (2, 0, 1))
+    
+    elif isinstance(img_input, str):
+        # Input is a filename, load from file
+        img_filename = img_input
+        # Load the tif file from resources if exists
+        if os.path.exists(img_filename):
+            if img_filename.endswith('.tif'):
+                if os.path.exists(img_filename.replace('.tif', '.xz')) and not redo:
+                    imgStackLabelled = pickle.load(lzma.open(img_filename.replace('.tif', '.xz'), "rb"))
 
-                # Reordering cells based on the centre of the image
-                if imgStackLabelled.ndim == 3:
-                    img2DLabelled = imgStackLabelled[0, :, :]
+                    imgStackLabelled = imgStackLabelled['imgStackLabelled']
+                    if imgStackLabelled.ndim == 3:
+                        img2DLabelled = imgStackLabelled[0, :, :]
+                    else:
+                        img2DLabelled = imgStackLabelled
                 else:
-                    img2DLabelled = imgStackLabelled
+                    imgStackLabelled = io.imread(img_filename)
 
-                imgStackLabelled, num_features = label(imgStackLabelled == 0,
-                                                       structure=[[0, 1, 0], [1, 1, 1], [0, 1, 0]])
-                props = regionprops_table(imgStackLabelled, properties=('centroid', 'label',), )
+                    # Reordering cells based on the centre of the image
+                    if imgStackLabelled.ndim == 3:
+                        img2DLabelled = imgStackLabelled[0, :, :]
+                    else:
+                        img2DLabelled = imgStackLabelled
 
-                # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
-                centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
-                centre_of_image = np.array([img2DLabelled.shape[0] / 2, img2DLabelled.shape[1] / 2])
+                    imgStackLabelled, num_features = label(imgStackLabelled == 0,
+                                                           structure=[[0, 1, 0], [1, 1, 1], [0, 1, 0]])
+                    props = regionprops_table(imgStackLabelled, properties=('centroid', 'label',), )
 
-                # Sorting cells based on distance to the middle of the image
-                distanceToMiddle = cdist([centre_of_image], centroids)
-                distanceToMiddle = distanceToMiddle[0]
-                sortedId = np.argsort(distanceToMiddle)
-                sorted_ids = np.array(props['label'])[sortedId]
+                    # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
+                    centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
+                    centre_of_image = np.array([img2DLabelled.shape[0] / 2, img2DLabelled.shape[1] / 2])
 
-                oldImgStackLabelled = copy.deepcopy(imgStackLabelled)
-                # imgStackLabelled = np.zeros_like(imgStackLabelled)
-                newCont = 1
-                for numCell in sorted_ids:
-                    if numCell != 0:
+                    # Sorting cells based on distance to the middle of the image
+                    distanceToMiddle = cdist([centre_of_image], centroids)
+                    distanceToMiddle = distanceToMiddle[0]
+                    sortedId = np.argsort(distanceToMiddle)
+                    sorted_ids = np.array(props['label'])[sortedId]
+
+                    oldImgStackLabelled = copy.deepcopy(imgStackLabelled)
+                    # imgStackLabelled = np.zeros_like(imgStackLabelled)
+                    newCont = 1
+                    for numCell in sorted_ids:
+                        if numCell != 0:
+                            imgStackLabelled[oldImgStackLabelled == numCell] = newCont
+                            newCont += 1
+
+                    # Remaining cells that are not in the image
+                    for numCell in np.arange(newCont, np.max(img2DLabelled) + 1):
                         imgStackLabelled[oldImgStackLabelled == numCell] = newCont
                         newCont += 1
 
-                # Remaining cells that are not in the image
-                for numCell in np.arange(newCont, np.max(img2DLabelled) + 1):
-                    imgStackLabelled[oldImgStackLabelled == numCell] = newCont
-                    newCont += 1
+                    if imgStackLabelled.ndim == 3:
+                        img2DLabelled = imgStackLabelled[0, :, :]
+                    else:
+                        img2DLabelled = imgStackLabelled
 
+                    # Save the labeled image stack as tif
+                    io.imsave(img_filename.replace('.tif', '_labelled.tif'), imgStackLabelled.astype(np.uint16))
+
+                    save_variables({'imgStackLabelled': imgStackLabelled},
+                                   img_filename.replace('.tif', '.xz'))
                 if imgStackLabelled.ndim == 3:
-                    img2DLabelled = imgStackLabelled[0, :, :]
+                    # Transpose the image stack to have the shape (Z, Y, X)
+                    imgStackLabelled = np.transpose(imgStackLabelled, (2, 0, 1))
+            elif img_filename.endswith('.mat'):
+                imgStackLabelled = scipy.io.loadmat(img_filename)['imgStackLabelled']
+                if imgStackLabelled.ndim == 3:
+                    img2DLabelled = imgStackLabelled[:, :, 0]
                 else:
                     img2DLabelled = imgStackLabelled
-
-                # Save the labeled image stack as tif
-                io.imsave(img_filename.replace('.tif', '_labelled.tif'), imgStackLabelled.astype(np.uint16))
-
-                save_variables({'imgStackLabelled': imgStackLabelled},
-                               img_filename.replace('.tif', '.xz'))
-            if imgStackLabelled.ndim == 3:
-                # Transpose the image stack to have the shape (Z, Y, X)
-                imgStackLabelled = np.transpose(imgStackLabelled, (2, 0, 1))
-        elif img_filename.endswith('.mat'):
-            imgStackLabelled = scipy.io.loadmat(img_filename)['imgStackLabelled']
-            if imgStackLabelled.ndim == 3:
-                img2DLabelled = imgStackLabelled[:, :, 0]
-            else:
-                img2DLabelled = imgStackLabelled
+        else:
+            raise ValueError('Image file not found %s' % img_filename)
     else:
-        raise ValueError('Image file not found %s' % img_filename)
+        raise TypeError(f'img_input must be a string (filename) or numpy.ndarray, got {type(img_input)}')
 
     return img2DLabelled, imgStackLabelled
 
@@ -319,13 +395,25 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
                          create_output_folder=create_output_folder)
         self.dilated_cells = None
 
-    def initialize_cells(self, filename):
+    def initialize_cells(self, img_input):
         """
         Initialize the cells from the image.
-        :param filename:
+        :param img_input: Either a filename (str) or a numpy array containing the image
         :return:
         """
-        output_filename = filename.replace('.tif', f'_{self.set.TotalCells}cells_{self.set.CellHeight}.pkl')
+        # Generate a unique output filename based on input type
+        if isinstance(img_input, str):
+            # Input is a filename
+            output_filename = img_input.replace('.tif', f'_{self.set.TotalCells}cells_{self.set.CellHeight}.pkl')
+        elif isinstance(img_input, np.ndarray):
+            # Input is a numpy array - create a generic filename based on array shape and settings
+            output_filename = f'vertex_model_array_{img_input.shape}_{self.set.TotalCells}cells_{self.set.CellHeight}.pkl'
+            # Save it in the output folder if available, otherwise in current directory
+            if hasattr(self.set, 'OutputFolder') and self.set.OutputFolder:
+                output_filename = os.path.join(self.set.OutputFolder, output_filename)
+        else:
+            raise TypeError(f'img_input must be a string (filename) or numpy.ndarray, got {type(img_input)}')
+        
         if exists(output_filename):
             # Check date of the output_filename and if it is older than 1 day from today, redo the file
             # if os.path.getmtime(output_filename) < (time.time() - 24 * 60 * 60):
@@ -337,12 +425,18 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             return
 
         # Load the image and obtain the initial X and tetrahedra
-        Twg, X = self.obtain_initial_x_and_tetrahedra()
+        Twg, X = self.obtain_initial_x_and_tetrahedra(img_input)
         # Build cells
         self.geo.build_cells(self.set, X, Twg)
-        # Save screenshot of the initial state
-        image_file = '/'+ os.path.join(*filename.split('/')[:-1])
-        screenshot_(self.geo, self.set, 0, output_filename.split('/')[-1], image_file)
+        
+        # Save screenshot of the initial state (only if we have a filename)
+        if isinstance(img_input, str):
+            image_file = '/'+ os.path.join(*img_input.split('/')[:-1])
+            screenshot_(self.geo, self.set, 0, output_filename.split('/')[-1], image_file)
+        else:
+            # For numpy array input, try to save screenshot in output folder if available
+            if hasattr(self.set, 'OutputFolder') and self.set.OutputFolder:
+                screenshot_(self.geo, self.set, 0, output_filename.split('/')[-1], self.set.OutputFolder)
 
         # Save state with filename using the number of cells
         save_state(self.geo, output_filename)
@@ -532,17 +626,18 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
         return vertices_info
 
-    def obtain_initial_x_and_tetrahedra(self, img_filename=None):
+    def obtain_initial_x_and_tetrahedra(self, img_input=None):
         """
         Obtain the initial X and tetrahedra for the model.
-        :return:
+        :param img_input: Either a filename (str) or a numpy array containing the image. If None, uses default from settings.
+        :return: Twg, X
         """
         self.geo = Geo()
-        if img_filename is None:
-            img_filename = PROJECT_DIRECTORY + '/' + self.set.initial_filename_state
+        if img_input is None:
+            img_input = PROJECT_DIRECTORY + '/' + self.set.initial_filename_state
 
         selectedPlanes = [0, 0]
-        img2DLabelled, imgStackLabelled = process_image(img_filename)
+        img2DLabelled, imgStackLabelled = process_image(img_input)
 
         # Building the topology of each plane
         trianglesConnectivity = {}

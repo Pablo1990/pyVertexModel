@@ -251,9 +251,11 @@ class VertexModel:
         self.tr = 0
         self.numStep = 1
 
-    def  initialize(self):
+    def  initialize(self, img_input=None):
         """
         Initialize the geometry and the topology of the model.
+        :param img_input: Optional. Either a filename (str) or a numpy array containing the image. 
+                         If None, uses the filename from settings.
         """
         filename = os.path.join(PROJECT_DIRECTORY, self.set.initial_filename_state)
 
@@ -285,7 +287,10 @@ class VertexModel:
                 self.geo = Geo(mat_info['Geo'])
                 self.geo.update_measures()
             else:
-                self.initialize_cells(filename)
+                if img_input is None:
+                    self.initialize_cells(filename)
+                else:
+                    self.initialize_cells(img_input)
 
             # Resize the geometry to a given cell volume average
             self.geo.resize_tissue()
