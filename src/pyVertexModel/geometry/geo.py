@@ -366,7 +366,8 @@ class Geo:
 
         # Update lmin0 with the minimum value in lmin_values
         self.update_lmin0()
-        self.update_lmin0(default_value=find_lmin0_equal_target_gr(self, c_set))
+        if '/Temp/' not in c_set.initial_filename_state:
+            self.update_lmin0(default_value=find_lmin0_equal_target_gr(self, c_set))
 
         # Update BarrierTri0
         self.update_barrier_tri0()
