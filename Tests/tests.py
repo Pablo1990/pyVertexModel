@@ -8,11 +8,11 @@ from src.pyVertexModel.parameters.set import Set
 from src.pyVertexModel.Kg import kg_functions
 
 def load_data(file_name, return_geo=True):
-    test_dir = abspath('Tests/data/%s' % file_name)
+    test_dir = abspath('Tests/Tests_data/%s' % file_name)
     if exists(test_dir):
         mat_info = scipy.io.loadmat(test_dir)
     else:
-        mat_info = scipy.io.loadmat('data/%s' % file_name)
+        mat_info = scipy.io.loadmat('Tests_data/%s' % file_name)
 
     if return_geo:
         if 'Geo' in mat_info.keys():

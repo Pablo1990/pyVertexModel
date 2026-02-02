@@ -309,7 +309,7 @@ class Set:
         self.check_for_non_used_parameters()
 
     def cyst(self):
-        mat_info = scipy.io.loadmat(os.path.join(PROJECT_DIRECTORY, 'Tests/data/Geo_var_cyst.mat'))
+        mat_info = scipy.io.loadmat(os.path.join(PROJECT_DIRECTORY, 'Tests_data/Geo_var_cyst.mat'))
         self.read_mat_file(mat_info['Set'])
         self.InputGeo = 'Bubbles_Cyst'
         self.CellHeight = 15

@@ -266,11 +266,11 @@ class TestVertexModel(Tests):
         vModel_test = VertexModelVoronoiFromTimeImage(set_test)
 
         file_name = 'LblImg_imageSequence.mat'
-        test_dir = 'Tests/data/%s' % file_name
+        test_dir = 'Tests/Tests_data/%s' % file_name
         if exists(test_dir):
             Twg_test, X_test = vModel_test.obtain_initial_x_and_tetrahedra(test_dir)
         else:
-            Twg_test, X_test = vModel_test.obtain_initial_x_and_tetrahedra('data/%s' % file_name)
+            Twg_test, X_test = vModel_test.obtain_initial_x_and_tetrahedra('Tests_data/%s' % file_name)
 
         # Check if the test and expected are the same
         assert_matrix(Twg_test, mat_info_expected['Twg'] - 1)
@@ -453,11 +453,11 @@ class TestVertexModel(Tests):
         """
         # Process image
         file_name = 'LblImg_imageSequence.mat'
-        test_dir = 'Tests/data/%s' % file_name
+        test_dir = 'Tests/Tests_data/%s' % file_name
         if exists(test_dir):
             _, imgStackLabelled_test = process_image(test_dir)
         else:
-            _, imgStackLabelled_test = process_image('data/%s' % file_name)
+            _, imgStackLabelled_test = process_image('Tests_data/%s' % file_name)
 
         # Load expected
         _, _, mat_info_expected = load_data('process_image_wingdisc_expected.mat')
@@ -476,11 +476,11 @@ class TestVertexModel(Tests):
         # Test if initialize geometry function does not change anything
         vModel_test = VertexModelVoronoiFromTimeImage(set_test)
         file_name = 'voronoi_40cells.pkl'
-        test_dir = TEST_DIRECTORY + '/Tests/data/%s' % file_name
+        test_dir = TEST_DIRECTORY + '/Tests/Tests_data/%s' % file_name
         if exists(test_dir):
             vModel_test.set.initial_filename_state = test_dir
         else:
-            vModel_test.set.initial_filename_state = 'data/%s' % file_name
+            vModel_test.set.initial_filename_state = 'Tests_data/%s' % file_name
 
         vModel_test.initialize()
 
