@@ -117,7 +117,7 @@ python main.py
 
 ## Important Notes
 
-- **Version Control**: The `paper` branch contains the polished version used in publications
+- **Version Control**: Check the README for information about stable branches (historically the `paper` branch has contained polished versions for publications)
 - **Results**: Simulations are saved to `Result/` directory (gitignored) with timestamp-based names
 - **Parameters**: Model parameters are configured in `parameters/set.py`
 - **Performance**: Profile code using Cython's profiling directive before optimizing
@@ -132,5 +132,4 @@ python main.py
 
 ## Contact
 
-For issues with the code, create an issue in the repository.
-For other matters, contact Pablo Vicente Munuera (p.munuera@ucl.ac.uk).
+For issues with the code, create an issue in the repository. Check the README or repository settings for current contact information.
