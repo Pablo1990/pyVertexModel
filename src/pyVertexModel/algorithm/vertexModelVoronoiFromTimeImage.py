@@ -4,6 +4,7 @@ import os
 import pickle
 from itertools import combinations
 from os.path import exists
+from typing import Any
 
 import numpy as np
 import scipy
@@ -204,77 +205,8 @@ def process_image(img_input="src/pyVertexModel/resources/LblImg_imageSequence.ti
     :param img_input: Either a filename (str) or a numpy array containing the image
     :return: img2DLabelled, imgStackLabelled
     """
-    # Check if input is a numpy array or a filename
     if isinstance(img_input, np.ndarray):
-        # Input is a numpy array, process it directly
-        imgStackLabelled = img_input.copy()
-        
-        # Reordering cells based on the centre of the image
-        if imgStackLabelled.ndim == 3:
-            img2DLabelled = imgStackLabelled[0, :, :]
-        else:
-            img2DLabelled = imgStackLabelled
-        
-        # Check if the image is already segmented (has labels > 1) or needs segmentation
-        if np.max(imgStackLabelled) <= 1:
-            # Image is binary (0 and 1 only), needs segmentation
-            # Invert so cells are 1 and background is 0, then label
-            imgStackLabelled = (imgStackLabelled > 0).astype(np.uint16)
-            from scipy.ndimage import label as scipy_label
-            imgStackLabelled, num_features = scipy_label(imgStackLabelled)
-            if imgStackLabelled.ndim == 3:
-                img2DLabelled = imgStackLabelled[0, :, :]
-            else:
-                img2DLabelled = imgStackLabelled
-        
-        # For already segmented images (max > 1), we still need to label background regions
-        # This is consistent with the file-loading behavior
-        # Use appropriate structure based on dimensionality
-        if imgStackLabelled.ndim == 3:
-            structure_element = np.array([
-                [[0, 0, 0], [0, 1, 0], [0, 0, 0]],
-                [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
-                [[0, 0, 0], [0, 1, 0], [0, 0, 0]]
-            ])
-        else:
-            structure_element = [[0, 1, 0], [1, 1, 1], [0, 1, 0]]
-        
-        imgStackLabelled, num_features = label(imgStackLabelled == 0,
-                                               structure=structure_element)
-        
-        props = regionprops_table(imgStackLabelled, properties=('centroid', 'label',), )
-        
-        # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
-        centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
-        centre_of_image = np.array([img2DLabelled.shape[0] / 2, img2DLabelled.shape[1] / 2])
-        
-        # Sorting cells based on distance to the middle of the image
-        distanceToMiddle = cdist([centre_of_image], centroids)
-        distanceToMiddle = distanceToMiddle[0]
-        sortedId = np.argsort(distanceToMiddle)
-        sorted_ids = np.array(props['label'])[sortedId]
-        
-        oldImgStackLabelled = copy.deepcopy(imgStackLabelled)
-        newCont = 1
-        for numCell in sorted_ids:
-            if numCell != 0:
-                imgStackLabelled[oldImgStackLabelled == numCell] = newCont
-                newCont += 1
-        
-        # Remaining cells that are not in the image
-        for numCell in np.arange(newCont, np.max(img2DLabelled) + 1):
-            imgStackLabelled[oldImgStackLabelled == numCell] = newCont
-            newCont += 1
-        
-        if imgStackLabelled.ndim == 3:
-            img2DLabelled = imgStackLabelled[0, :, :]
-        else:
-            img2DLabelled = imgStackLabelled
-        
-        if imgStackLabelled.ndim == 3:
-            # Transpose the image stack to have the shape (Z, Y, X)
-            imgStackLabelled = np.transpose(imgStackLabelled, (2, 0, 1))
-    
+        img2DLabelled, imgStackLabelled = sorting_cells_based_on_distance(img_input)
     elif isinstance(img_input, str):
         # Input is a filename, load from file
         img_filename = img_input
@@ -292,49 +224,7 @@ def process_image(img_input="src/pyVertexModel/resources/LblImg_imageSequence.ti
                 else:
                     imgStackLabelled = io.imread(img_filename)
 
-                    # Reordering cells based on the centre of the image
-                    if imgStackLabelled.ndim == 3:
-                        img2DLabelled = imgStackLabelled[0, :, :]
-                    else:
-                        img2DLabelled = imgStackLabelled
-
-                    imgStackLabelled, num_features = label(imgStackLabelled == 0,
-                                                           structure=[[0, 1, 0], [1, 1, 1], [0, 1, 0]])
-                    props = regionprops_table(imgStackLabelled, properties=('centroid', 'label',), )
-
-                    # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
-                    centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
-                    centre_of_image = np.array([img2DLabelled.shape[0] / 2, img2DLabelled.shape[1] / 2])
-
-                    # Sorting cells based on distance to the middle of the image
-                    distanceToMiddle = cdist([centre_of_image], centroids)
-                    distanceToMiddle = distanceToMiddle[0]
-                    sortedId = np.argsort(distanceToMiddle)
-                    sorted_ids = np.array(props['label'])[sortedId]
-
-                    oldImgStackLabelled = copy.deepcopy(imgStackLabelled)
-                    # imgStackLabelled = np.zeros_like(imgStackLabelled)
-                    newCont = 1
-                    for numCell in sorted_ids:
-                        if numCell != 0:
-                            imgStackLabelled[oldImgStackLabelled == numCell] = newCont
-                            newCont += 1
-
-                    # Remaining cells that are not in the image
-                    for numCell in np.arange(newCont, np.max(img2DLabelled) + 1):
-                        imgStackLabelled[oldImgStackLabelled == numCell] = newCont
-                        newCont += 1
-
-                    if imgStackLabelled.ndim == 3:
-                        img2DLabelled = imgStackLabelled[0, :, :]
-                    else:
-                        img2DLabelled = imgStackLabelled
-
-                    # Save the labeled image stack as tif
-                    io.imsave(img_filename.replace('.tif', '_labelled.tif'), imgStackLabelled.astype(np.uint16))
-
-                    save_variables({'imgStackLabelled': imgStackLabelled},
-                                   img_filename.replace('.tif', '.xz'))
+                    img2DLabelled, imgStackLabelled = sorting_cells_based_on_distance(imgStackLabelled, img_filename)
                 if imgStackLabelled.ndim == 3:
                     # Transpose the image stack to have the shape (Z, Y, X)
                     imgStackLabelled = np.transpose(imgStackLabelled, (2, 0, 1))
@@ -349,6 +239,54 @@ def process_image(img_input="src/pyVertexModel/resources/LblImg_imageSequence.ti
     else:
         raise TypeError(f'img_input must be a string (filename) or numpy.ndarray, got {type(img_input)}')
 
+    return img2DLabelled, imgStackLabelled
+
+
+def sorting_cells_based_on_distance(imgStackLabelled, img_filename=None) -> tuple[int | Any, Any]:
+    # Reordering cells based on the centre of the image
+    if imgStackLabelled.ndim == 3:
+        img2DLabelled = imgStackLabelled[0, :, :]
+    else:
+        img2DLabelled = imgStackLabelled
+
+    imgStackLabelled, num_features = label(imgStackLabelled == 0,
+                                           structure=[[0, 1, 0], [1, 1, 1], [0, 1, 0]])
+    props = regionprops_table(imgStackLabelled, properties=('centroid', 'label',), )
+
+    # The centroids are now stored in 'props' as separate arrays 'centroid-0', 'centroid-1', etc.
+    centroids = np.column_stack([props['centroid-0'], props['centroid-1']])
+    centre_of_image = np.array([img2DLabelled.shape[0] / 2, img2DLabelled.shape[1] / 2])
+
+    # Sorting cells based on distance to the middle of the image
+    distanceToMiddle = cdist([centre_of_image], centroids)
+    distanceToMiddle = distanceToMiddle[0]
+    sortedId = np.argsort(distanceToMiddle)
+    sorted_ids = np.array(props['label'])[sortedId]
+
+    oldImgStackLabelled = copy.deepcopy(imgStackLabelled)
+    # imgStackLabelled = np.zeros_like(imgStackLabelled)
+    newCont = 1
+    for numCell in sorted_ids:
+        if numCell != 0:
+            imgStackLabelled[oldImgStackLabelled == numCell] = newCont
+            newCont += 1
+
+    # Remaining cells that are not in the image
+    for numCell in np.arange(newCont, np.max(img2DLabelled) + 1):
+        imgStackLabelled[oldImgStackLabelled == numCell] = newCont
+        newCont += 1
+
+    if imgStackLabelled.ndim == 3:
+        img2DLabelled = imgStackLabelled[0, :, :]
+    else:
+        img2DLabelled = imgStackLabelled
+
+    if img_filename is not None:
+        # Save the labeled image stack as tif
+        io.imsave(img_filename.replace('.tif', '_labelled.tif'), imgStackLabelled.astype(np.uint16))
+
+        save_variables({'imgStackLabelled': imgStackLabelled},
+                       img_filename.replace('.tif', '.xz'))
     return img2DLabelled, imgStackLabelled
 
 
