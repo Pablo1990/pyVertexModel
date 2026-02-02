@@ -1278,6 +1278,11 @@ class VertexModel:
             logger.warning('Output folder already exists, using the existing one.')
             return self.set.OutputFolder
 
+        # Create Temp folder if it doesn't exist
+        if not os.path.exists(os.path.join(PROJECT_DIRECTORY, 'Temp')):
+            os.makedirs(os.path.join(PROJECT_DIRECTORY, 'Temp'))
+            logger.info(f'Created Temp folder at: {os.path.join(PROJECT_DIRECTORY, "Temp")}')
+
         # Create temporary folder in PROJECT_DIRECTORY/Temp/
         temp_dir = tempfile.mkdtemp(dir=os.path.join(PROJECT_DIRECTORY, 'Temp'))
         self.set.OutputFolder = temp_dir
