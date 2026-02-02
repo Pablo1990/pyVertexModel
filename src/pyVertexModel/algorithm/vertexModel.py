@@ -525,14 +525,9 @@ class VertexModel:
                 np.all(~np.isnan(dy[self.Dofs.Free])) and
                 (np.max(abs(g[self.Dofs.Free])) * self.set.dt / self.set.dt0) < self.set.tol)
         
-        # For explicit methods: STRICT policy - REJECT any step that increases gradient
-        # This overrides standard convergence to prevent gradient explosion
-        if not self.set.implicit_method and self.gr_before_step > 0:
-            # Allow small numerical tolerance and minimal gradient growth
-            GRADIENT_INCREASE_TOLERANCE = 1.01  # Allow up to 1% increase for numerical stability
-            if gr > self.gr_before_step * GRADIENT_INCREASE_TOLERANCE:
-                # Gradient increased too much - REJECT step even if standard criterion passed
-                converged = False
+        # For explicit methods: Don't reject based on gradient increase
+        # The adaptive scaling in newton_raphson_iteration_explicit handles stability
+        # Rejection causes geometry restore and dt reduction, making convergence harder
         
         if converged:
             self.iteration_converged()
