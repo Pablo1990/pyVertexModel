@@ -415,7 +415,7 @@ class TestVertexModel(Tests):
         vModel_test.set.tend = vModel_test.t + 20 * vModel_test.set.dt0
 
         # Update tolerance
-        vModel_test.set.dt_tolerance = 1e-1
+        vModel_test.set.dt_tolerance = 0.25
 
         # Run the model
         vModel_test.iterate_over_time()
@@ -435,7 +435,7 @@ class TestVertexModel(Tests):
         vModel_test.set.tend = vModel_test.t + 20 * vModel_test.set.dt0
 
         # Update tolerance
-        vModel_test.set.dt_tolerance = 1e-1
+        vModel_test.set.dt_tolerance = 0.25
 
         # Run the model
         vModel_test.iterate_over_time()
@@ -455,7 +455,7 @@ class TestVertexModel(Tests):
         vModel_test.set.tend = vModel_test.t + 20 * vModel_test.set.dt0
 
         # Update tolerance
-        vModel_test.set.dt_tolerance = 1e-1
+        vModel_test.set.dt_tolerance = 0.25
 
         # Run the model
         vModel_test.iterate_over_time()
