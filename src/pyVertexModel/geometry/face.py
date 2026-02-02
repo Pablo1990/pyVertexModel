@@ -104,10 +104,8 @@ class Face:
             self.build_face_centre(ij, nCells, Cell.X, Cell.Y[face_ids, :], Set.f,
                                    "Bubbles" in Set.InputGeo)
 
-        self.build_edges(Cell.T, face_ids, self.Centre, self.InterfaceType, Cell.X, Cell.Y,
-                         list(range(nCells)))
-
-        self.Area, _ = self.compute_face_area(Cell.Y)
+        self.Area = self.build_edges(Cell.T, face_ids, self.Centre, self.InterfaceType, Cell.X, Cell.Y,
+                                      list(range(nCells)))
         if oldFace is not None and getattr(oldFace, 'ij', None) is not None:
             self.Area0 = oldFace.Area0
         else:
@@ -213,12 +211,14 @@ class Face:
                                                                                                           face_centre)
         self.Tris[len(surf_ids) - 1].EdgeLength_time = [0, self.Tris[len(surf_ids) - 1].EdgeLength]
 
-        _, triAreas = self.compute_face_area(Ys)
+        total_area, triAreas = self.compute_face_area(Ys)
         for i in range(len(self.Tris)):
             self.Tris[i].Area = triAreas[i]
 
         for tri in self.Tris:
             tri.Location = face_interface_type
+        
+        return total_area
 
     def compute_face_area(self, y):
         """
@@ -227,13 +227,17 @@ class Face:
         :return:
         """
         tris_area = np.zeros(len(self.Tris))
+        y3 = self.Centre  # Move outside loop
 
         for t, tri in enumerate(self.Tris):
-            y3 = self.Centre
-            y_tri = np.vstack([y[tri.Edge, :], y3])
-
+            # Avoid vstack by directly computing cross product
+            y0 = y[tri.Edge[0], :]
+            y1 = y[tri.Edge[1], :]
+            
             # Calculate the area of the triangle
-            cross_product = np.cross(y_tri[1, :] - y_tri[0, :], y_tri[0, :] - y_tri[2, :])
+            v1 = y1 - y0
+            v2 = y0 - y3
+            cross_product = np.cross(v1, v2)
             tri_area = 0.5 * np.linalg.norm(cross_product)
             if np.allclose(cross_product, 0):
                 tri_area = 0  # Handle collinear points

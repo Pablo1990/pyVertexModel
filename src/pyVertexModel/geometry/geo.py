@@ -695,7 +695,7 @@ class Geo:
 
     def build_global_ids(self):
         """
-        Build the global ids of the geometry
+        Build the global ids of the geometry with optimized lookups
         :return:
         """
         self.non_dead_cells = np.array([c_cell.ID for c_cell in self.Cells if c_cell.AliveStatus is not None],
@@ -703,6 +703,11 @@ class Geo:
 
         g_ids_tot = 0
         g_ids_tot_f = 0
+        
+        # Pre-build lookup dictionaries for faster matching
+        # Map from tuple(sorted vertices) to (cell_id, vertex_idx, global_id)
+        vertex_lookup = {}
+        face_lookup = {}
 
         for ci in self.non_dead_cells:
             Cell = self.Cells[ci]
@@ -713,37 +718,45 @@ class Geo:
             if len(Cell.T) < 1:
                 continue
 
-            for cj in range(ci):
-                ij = [ci, cj]
-                CellJ = self.Cells[cj]
+            # Check existing vertices in lookup
+            for numId in range(len(Cell.T)):
+                vertex_key = tuple(sorted(Cell.T[numId, :]))
+                if vertex_key in vertex_lookup:
+                    g_ids[numId] = vertex_lookup[vertex_key]
 
-                if CellJ.AliveStatus is None:
-                    continue
+            # Check existing faces in lookup
+            for f in range(len(Cell.Faces)):
+                Face = Cell.Faces[f]
+                face_key = tuple(sorted(Face.ij))
+                if face_key in face_lookup:
+                    g_ids_f[f] = face_lookup[face_key]
 
-                face_ids_i = np.sum(np.isin(Cell.T, ij), axis=1) == 2
-
-                # Initialize gIds with the same shape as CellJ.globalIds
-                for numId in np.where(face_ids_i)[0]:
-                    match = np.all(np.isin(CellJ.T, Cell.T[numId, :]), axis=1)
-                    g_ids[numId] = CellJ.globalIds[match]
-
-                for f in range(len(Cell.Faces)):
-                    Face = Cell.Faces[f]
-
-                    if np.all(np.isin(Face.ij, ij)):
-                        for f2 in range(len(CellJ.Faces)):
-                            FaceJ = CellJ.Faces[f2]
-
-                            if np.all(np.isin(FaceJ.ij, ij)):
-                                g_ids_f[f] = FaceJ.globalIds
-
+            # Assign new global IDs for unmatched vertices
             nz = np.sum(g_ids == -1)
-            g_ids[g_ids == -1] = np.arange(g_ids_tot, g_ids_tot + nz)
+            new_gids = np.arange(g_ids_tot, g_ids_tot + nz)
+            unassigned_mask = g_ids == -1
+            g_ids[unassigned_mask] = new_gids
+            
+            # Update lookup for newly assigned vertices
+            unassigned_indices = np.where(unassigned_mask)[0]
+            for idx, numId in enumerate(unassigned_indices):
+                vertex_key = tuple(sorted(Cell.T[numId, :]))
+                vertex_lookup[vertex_key] = new_gids[idx]
 
             self.Cells[ci].globalIds = g_ids
 
+            # Assign new global IDs for unmatched faces
             nz_f = np.sum(g_ids_f == -1)
-            g_ids_f[g_ids_f == -1] = np.arange(g_ids_tot_f, g_ids_tot_f + nz_f)
+            new_gids_f = np.arange(g_ids_tot_f, g_ids_tot_f + nz_f)
+            unassigned_mask_f = g_ids_f == -1
+            g_ids_f[unassigned_mask_f] = new_gids_f
+            
+            # Update lookup for newly assigned faces
+            unassigned_indices_f = np.where(unassigned_mask_f)[0]
+            for idx, f_id in enumerate(unassigned_indices_f):
+                Face = Cell.Faces[f_id]
+                face_key = tuple(sorted(Face.ij))
+                face_lookup[face_key] = new_gids_f[idx]
 
             for f in range(len(Cell.Faces)):
                 self.Cells[ci].Faces[f].globalIds = g_ids_f[f]

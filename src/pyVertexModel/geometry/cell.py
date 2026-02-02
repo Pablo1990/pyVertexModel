@@ -214,18 +214,23 @@ class Cell:
         :return:
         """
         volumes = np.zeros(len(c_face.Tris))
+        
+        # Pre-compute face center relative to cell center
+        y3 = c_face.Centre - self.X
+        
         for t in range(len(c_face.Tris)):
             idx0 = c_face.Tris[t].Edge[0]
             idx1 = c_face.Tris[t].Edge[1]
-            y1 = self.Y[idx0, :] - self.X
-            y2 = self.Y[idx1, :] - self.X
-            y3 = c_face.Centre - self.X
-
+            
             if c_face.Tris[t].is_degenerated(self.Y):
                 print(
                     f"Warning: Degenerate triangle with identical edge indices ({idx0}) in cell {self.ID}, face {c_face.globalIds}")
                 continue  # Skip this triangle
-
+            
+            # Compute relative positions (reuse y3)
+            y1 = self.Y[idx0, :] - self.X
+            y2 = self.Y[idx1, :] - self.X
+            
             current_v = np.linalg.det(np.array([y1, y2, y3])) / 6
             # If the volume is negative, switch two the other option
             if current_v < 0:

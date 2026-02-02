@@ -358,8 +358,22 @@ def copy_non_mutable_attributes(class_to_change, attr_not_to_change, new_cell):
         # check if attr is mutable
         if attr == attr_not_to_change:
             setattr(new_cell, attr, [])
-        elif isinstance(value, list) or isinstance(value, dict):
-            setattr(new_cell, attr, copy.deepcopy(value))
+        elif isinstance(value, (int, float, str, bool, type(None))):
+            # Immutable types can be directly assigned (no copy needed)
+            setattr(new_cell, attr, value)
+        elif isinstance(value, np.ndarray):
+            # NumPy arrays - use copy() which is faster than deepcopy
+            setattr(new_cell, attr, value.copy())
+        elif isinstance(value, list):
+            # Lists - shallow copy is usually sufficient for lists of primitives
+            # Only use deepcopy if needed for nested structures
+            if value and isinstance(value[0], (list, dict, np.ndarray)):
+                setattr(new_cell, attr, copy.deepcopy(value))
+            else:
+                setattr(new_cell, attr, value.copy())
+        elif isinstance(value, dict):
+            # Dicts - shallow copy is usually sufficient
+            setattr(new_cell, attr, value.copy())
         elif hasattr(value, 'copy'):
             setattr(new_cell, attr, value.copy())
         else:

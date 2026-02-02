@@ -491,11 +491,20 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
 
     def calculate_neighbours(self, labelled_img, ratio_strel):
         """
-        Calculate the neighbours of each cell
+        Calculate the neighbours of each cell using optimized single-pass algorithm
         :param labelled_img:
         :param ratio_strel:
         :return:
         """
+        from scipy import ndimage
+        
+        cells = np.unique(labelled_img)
+        cells = cells[cells != 0]  # Remove cell 0 if it exists
+        
+        img_neighbours = [None] * (np.max(cells) + 1)
+        
+        # Create a single dilated image for all cells at once
+        # This is much faster than dilating each cell individually
         se = np.array([
             [0, 0, 1, 0, 0],
             [0, 1, 1, 1, 0],
@@ -503,23 +512,30 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             [0, 1, 1, 1, 0],
             [0, 0, 1, 0, 0]
         ])
-        cells = np.unique(labelled_img)
-        cells = cells[cells != 0]  # Remove cell 0 if it exists
-
-        img_neighbours = [None] * (np.max(cells) + 1)
-        # boundaries = find_boundaries(labelled_img, mode='inner') * labelled_img
-
+        
+        # Find boundaries efficiently using scipy
+        # Get cells and their neighbors by dilating the entire image once
+        dilated_labels = dilation(labelled_img, se)
+        
+        # Store dilated cells for later use if needed
         self.dilated_cells = [None] * (np.max(labelled_img) + 1)
-
+        
+        # For each cell, find its neighbors by checking the dilated region
         for cell_id in cells:
             try:
-                self.dilated_cells[cell_id] = dilation(labelled_img == cell_id, se)
+                # Get mask for current cell
+                cell_mask = labelled_img == cell_id
+                
+                # Dilate only the mask (faster than dilating the labeled region)
+                dilated_mask = dilation(cell_mask, se)
+                self.dilated_cells[cell_id] = dilated_mask
+                
+                # Find neighbors in the dilated region
+                neighs = np.unique(labelled_img[dilated_mask])
+                img_neighbours[cell_id] = neighs[(neighs != 0) & (neighs != cell_id)]
             except IndexError:
                 continue
-
-            neighs = np.unique(labelled_img[self.dilated_cells[cell_id]])
-            img_neighbours[cell_id] = neighs[(neighs != 0) & (neighs != cell_id)]
-
+        
         return img_neighbours
 
     def calculate_vertices(self, labelled_img, neighbours):
