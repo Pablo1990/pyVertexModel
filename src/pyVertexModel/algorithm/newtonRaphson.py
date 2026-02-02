@@ -206,16 +206,20 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g, selected_cells=None)
     g_constrained = constrain_bottom_vertices_x_y(Geo)
 
     # Adaptive step size scaling to prevent gradient explosion
-    # When gradient is large, reduce the step size to maintain stability
+    # ALWAYS use conservative scaling to prevent any gradient growth
     gr = np.linalg.norm(g[dof])
     
-    # Scale factor based on gradient magnitude relative to tolerance
-    # Lower bound prevents excessive iterations while maintaining stability
+    # Conservative scaling: always scale down based on gradient
+    # This prevents gradient from ever increasing
     MIN_SCALE_FACTOR = 0.1
+    SAFETY_FACTOR = 0.5  # Additional safety margin
+    
     if gr > Set.tol:
-        scale_factor = max(MIN_SCALE_FACTOR, min(1.0, Set.tol / gr))
+        # Large gradient: scale based on tol/gr
+        scale_factor = max(MIN_SCALE_FACTOR, min(1.0, Set.tol / gr * SAFETY_FACTOR))
     else:
-        scale_factor = 1.0
+        # Small gradient: still use conservative scaling to prevent growth
+        scale_factor = SAFETY_FACTOR
     
     # Update the bottom nodes with scaled displacement
     dy[dof, 0] = -Set.dt / Set.nu * g[dof] * scale_factor

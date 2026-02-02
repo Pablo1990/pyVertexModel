@@ -221,6 +221,7 @@ class VertexModel:
         self.X = None
         self.didNotConverge = False
         self.geo = None
+        self.gr_before_step = 0.0  # For explicit method gradient tracking
 
         # Set definition
         if c_set is not None:
@@ -494,12 +495,6 @@ class VertexModel:
             K = 0
             g, energies = newtonRaphson.gGlobal(self.geo_0, self.geo_n, self.geo, self.set,
                                                 self.set.implicit_method, self.numStep)
-        
-        # Store gradient before step for explicit method stability check
-        if not self.set.implicit_method:
-            self.gr_before_step = np.linalg.norm(g[self.Dofs.Free])
-        else:
-            self.gr_before_step = 0.0
 
         for key, energy in energies.items():
             logger.info(f"{key}: {energy}")
@@ -509,6 +504,12 @@ class VertexModel:
                                                                                   self.set.implicit_method)
         if not np.isnan(gr) and post_operations:
             self.post_newton_raphson(dy, g, gr)
+        
+        # Store gradient AFTER step for next iteration's comparison
+        # This must be done AFTER post_newton_raphson to avoid off-by-one error
+        if not self.set.implicit_method:
+            self.gr_before_step = gr
+        
         return gr
 
     def post_newton_raphson(self, dy, g, gr):
@@ -524,13 +525,14 @@ class VertexModel:
                 np.all(~np.isnan(dy[self.Dofs.Free])) and
                 (np.max(abs(g[self.Dofs.Free])) * self.set.dt / self.set.dt0) < self.set.tol)
         
-        # For explicit methods with adaptive step scaling, accept steps that keep gradient stable
-        # This allows progress even when gradient is above tolerance but not increasing
-        if not converged and not self.set.implicit_method and hasattr(self, 'gr_before_step'):
-            # Check if gradient remained stable (didn't increase significantly)
-            if np.isfinite(gr) and gr <= self.gr_before_step * 1.1:
-                # Gradient is stable or decreasing slightly - accept as making progress
-                converged = True
+        # For explicit methods: STRICT policy - REJECT any step that increases gradient
+        # This overrides standard convergence to prevent gradient explosion
+        if not self.set.implicit_method and self.gr_before_step > 0:
+            # Allow only 0.1% numerical tolerance - essentially requiring non-increase
+            NUMERICAL_TOLERANCE = 1.001
+            if gr > self.gr_before_step * NUMERICAL_TOLERANCE:
+                # Gradient increased - REJECT step even if standard criterion passed
+                converged = False
         
         if converged:
             self.iteration_converged()
