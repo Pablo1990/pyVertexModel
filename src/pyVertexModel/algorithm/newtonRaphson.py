@@ -193,7 +193,7 @@ def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g
 
 def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g, selected_cells=None):
     """
-    Explicit update method
+    Explicit update method with adaptive step scaling for stability
     :param selected_cells:
     :param Geo_0:
     :param Geo_n:
@@ -210,15 +210,14 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g, selected_cells=None)
     gr = np.linalg.norm(g[dof])
     
     # Scale factor based on gradient magnitude relative to tolerance
-    # If gr >> tol, we need a smaller step
+    # Lower bound prevents excessive iterations while maintaining stability
+    MIN_SCALE_FACTOR = 0.1
     if gr > Set.tol:
-        # Limit the effective step size when gradient is large
-        # This prevents the explicit Euler step from overshooting
-        scale_factor = min(1.0, Set.tol / gr)
+        scale_factor = max(MIN_SCALE_FACTOR, min(1.0, Set.tol / gr))
     else:
         scale_factor = 1.0
     
-    # Update the bottom nodes with the same displacement as the corresponding real nodes
+    # Update the bottom nodes with scaled displacement
     dy[dof, 0] = -Set.dt / Set.nu * g[dof] * scale_factor
     dy[g_constrained, 0] = -Set.dt / Set.nu_bottom * g[g_constrained] * scale_factor
 

@@ -498,6 +498,8 @@ class VertexModel:
         # Store gradient before step for explicit method stability check
         if not self.set.implicit_method:
             self.gr_before_step = np.linalg.norm(g[self.Dofs.Free])
+        else:
+            self.gr_before_step = 0.0
 
         for key, energy in energies.items():
             logger.info(f"{key}: {energy}")
