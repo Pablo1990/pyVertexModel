@@ -257,90 +257,7 @@ class VertexModel:
         :param img_input: Optional. Either a filename (str) or a numpy array containing the image. 
                          If None, uses the filename from settings.
         """
-        # Use provided input or default to settings
-        if img_input is None:
-            filename = os.path.join(PROJECT_DIRECTORY, self.set.initial_filename_state)
-        elif isinstance(img_input, str):
-            filename = img_input
-        elif isinstance(img_input, np.ndarray):
-            # For numpy array input, directly call initialize_cells
-            self.initialize_cells(img_input)
-            # Resize the geometry to a given cell volume average
-            self.geo.resize_tissue()
-            
-            # Create substrate(s)
-            if self.set.Substrate == 3:
-                # Check if there are 3 layers of cells
-                if self.set.InputGeo.__contains__('Bubbles'):
-                    # Get middle cells by dropping the cells that have XgBottom and XgTop neighbours in T
-                    middle_cells = [c for c in self.geo.Cells if not np.any(np.isin(self.geo.XgBottom, c.T)) and
-                                   not np.any(np.isin(self.geo.XgTop, c.T))]
-                    middle_cells_ids = [mc.ID for mc in middle_cells]
-                    z_middle_cells = stats.mode([c.X[2] for c in middle_cells])
-                    # Add other middle_cells that are not in the top or bottom layers and have the same Z
-                    middle_cells.extend([c for c in self.geo.Cells if c.X[2] == z_middle_cells[0] and c.AliveStatus is not None
-                                         and c.ID not in middle_cells_ids])
-                    middle_cells_ids = [mc.ID for mc in middle_cells]
-
-                    # Get top and bottom cells
-                    top_cells = [c for c in self.geo.Cells if np.any(np.isin(self.geo.XgTop, c.T)) and c.AliveStatus is not None and c.ID not in middle_cells_ids]
-                    bottom_cells = [c for c in self.geo.Cells if np.any(np.isin(self.geo.XgBottom, c.T)) and c.AliveStatus is not None and c.ID not in middle_cells_ids]
-
-                    # Identify the substrate cells for the middle cells
-                    for middle_cell in middle_cells:
-                        # Top substrate cell
-                        node_neighbours = np.unique(get_node_neighbours(self.geo, middle_cell.ID))
-                        middle_cell.substrate_cell_top = self.connect_substrate_cell(middle_cell, node_neighbours, top_cells)
-                        #self.geo.Cells[middle_cell.substrate_cell_top].AliveStatus = 2
-                        middle_cell.substrate_cell_bottom = self.connect_substrate_cell(middle_cell, node_neighbours, bottom_cells)
-                        #self.geo.Cells[middle_cell.substrate_cell_bottom].AliveStatus = 2
-                else:
-                    # Create a substrate cell for each cell
-                    self.geo.create_substrate_cells(self.set, domain='Top')
-
-            # Change tissue height if required
-            #self.deform_tissue()
-            self.change_tissue_height()
-
-            # Add border cells to the shared cells
-            for cell in self.geo.Cells:
-                if cell.ID in self.geo.BorderCells:
-                    for face in cell.Faces:
-                        for tris in face.Tris:
-                            tets_1 = cell.T[tris.Edge[0]]
-                            tets_2 = cell.T[tris.Edge[1]]
-                            shared_cells = np.intersect1d(tets_1, tets_2)
-                            if np.any(np.isin(self.geo.BorderGhostNodes, shared_cells)):
-                                shared_cells_list = list(tris.SharedByCells)
-                                shared_cells_list.append(shared_cells[np.isin(shared_cells, self.geo.BorderGhostNodes)][0])
-                                tris.SharedByCells = np.array(shared_cells_list)
-
-            # Create periodic boundary conditions
-            self.geo.apply_periodic_boundary_conditions(self.set)
-
-            if self.set.ablation:
-                self.geo.cellsToAblate = self.set.cellsToAblate
-
-            self.geo.init_reference_cell_values(self.set)
-
-            if self.set.Substrate == 1:
-                self.Dofs.GetDOFsSubstrate(self.geo, self.set)
-            else:
-                self.Dofs.get_dofs(self.geo, self.set)
-
-            if self.geo_0 is None:
-                self.geo_0 = self.geo.copy(update_measurements=False)
-
-            if self.geo_n is None:
-                self.geo_n = self.geo.copy(update_measurements=False)
-
-            # Adjust percentage of scutoids
-            self.adjust_percentage_of_scutoids()
-            
-            # No need to save screenshot or state for numpy array input in base flow
-            return
-        else:
-            raise TypeError(f'img_input must be a string (filename), numpy.ndarray, or None, got {type(img_input)}')
+        filename = os.path.join(PROJECT_DIRECTORY, self.set.initial_filename_state)
 
         if not os.path.exists(filename):
             logging.error(f'File {filename} not found')
@@ -370,7 +287,10 @@ class VertexModel:
                 self.geo = Geo(mat_info['Geo'])
                 self.geo.update_measures()
             else:
-                self.initialize_cells(filename)
+                if img_input is None:
+                    self.initialize_cells(filename)
+                else:
+                    self.initialize_cells(img_input)
 
             # Resize the geometry to a given cell volume average
             self.geo.resize_tissue()
