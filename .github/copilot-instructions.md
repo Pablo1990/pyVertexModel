@@ -117,7 +117,7 @@ python main.py
 
 ## Important Notes
 
-- **Version Control**: Check the README for information about stable branches (historically the `paper` branch has contained polished versions for publications)
+- **Version Control**: Check the README for information about stable branches. The repository may maintain specific branches for polished versions used in publications.
 - **Results**: Simulations are saved to `Result/` directory (gitignored) with timestamp-based names
 - **Parameters**: Model parameters are configured in `parameters/set.py`
 - **Performance**: Profile code using Cython's profiling directive before optimizing
