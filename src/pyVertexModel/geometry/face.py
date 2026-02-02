@@ -186,13 +186,18 @@ class Face:
         if np.all(Order < 0):
             surf_ids = np.flip(surf_ids)
 
+        # Convert non_dead_cells to set for faster membership testing  
+        non_dead_cells_set = set(non_dead_cells) if isinstance(non_dead_cells, list) else set(non_dead_cells.tolist())
+
         for currentTri in range(len(surf_ids) - 1):
             self.Tris.append(tris.Tris())
             self.Tris[currentTri].Edge = [surf_ids[currentTri], surf_ids[currentTri + 1]]
             currentTris_1 = T[self.Tris[currentTri].Edge[0], :]
             currentTris_2 = T[self.Tris[currentTri].Edge[1], :]
-            self.Tris[currentTri].SharedByCells = np.intersect1d(currentTris_1[np.isin(currentTris_1, non_dead_cells)],
-                                                                 currentTris_2[np.isin(currentTris_2, non_dead_cells)])
+            # Optimize: use vectorized isin with boolean indexing
+            mask1 = np.isin(currentTris_1, non_dead_cells)
+            mask2 = np.isin(currentTris_2, non_dead_cells)
+            self.Tris[currentTri].SharedByCells = np.intersect1d(currentTris_1[mask1], currentTris_2[mask2])
 
             self.Tris[currentTri].EdgeLength, self.Tris[currentTri].LengthsToCentre, self.Tris[currentTri].AspectRatio \
                 = self.Tris[currentTri].compute_tri_length_measurements(Ys, face_centre)
@@ -202,9 +207,10 @@ class Face:
         self.Tris[len(surf_ids) - 1].Edge = [surf_ids[len(surf_ids) - 1], surf_ids[0]]
         currentTris_1 = T[self.Tris[len(surf_ids) - 1].Edge[0], :]
         currentTris_2 = T[self.Tris[len(surf_ids) - 1].Edge[1], :]
-        self.Tris[len(surf_ids) - 1].SharedByCells = np.intersect1d(
-            currentTris_1[np.isin(currentTris_1, non_dead_cells)],
-            currentTris_2[np.isin(currentTris_2, non_dead_cells)])
+        # Optimize: use vectorized isin with boolean indexing
+        mask1 = np.isin(currentTris_1, non_dead_cells)
+        mask2 = np.isin(currentTris_2, non_dead_cells)
+        self.Tris[len(surf_ids) - 1].SharedByCells = np.intersect1d(currentTris_1[mask1], currentTris_2[mask2])
 
         self.Tris[len(surf_ids) - 1].EdgeLength, self.Tris[len(surf_ids) - 1].LengthsToCentre, self.Tris[
             len(surf_ids) - 1].AspectRatio = self.Tris[len(surf_ids) - 1].compute_tri_length_measurements(Ys,
