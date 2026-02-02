@@ -27,7 +27,7 @@ class Set:
         self.export_images = True
         self.cLineTension_external = None
         self.Contractility_external = False
-        self.initial_filename_state = 'Input/wing_disc_150.mat'
+        self.initial_filename_state = None
         self.delay_lateral_cables = 5.8
         self.delay_purse_string = self.delay_lateral_cables
         self.ref_A0 = None
@@ -191,14 +191,19 @@ class Set:
             self.Remodel_stiffness_wound = 2
 
     def redirect_output(self):
-        os.makedirs(self.OutputFolder, exist_ok=True)
-        os.makedirs(self.OutputFolder + '/images', exist_ok=True)
-        handler = logging.FileHandler(os.path.join(self.OutputFolder, 'log.out'))
-        handler.setLevel(logging.DEBUG)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        logger.propagate = True
+        """
+        Redirect the output to a log file in the output folder
+        :return:
+        """
+        if self.OutputFolder is not None:
+            os.makedirs(self.OutputFolder, exist_ok=True)
+            os.makedirs(self.OutputFolder + '/images', exist_ok=True)
+            handler = logging.FileHandler(os.path.join(self.OutputFolder, 'log.out'))
+            handler.setLevel(logging.DEBUG)
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+            logger.propagate = True
 
     def read_mat_file(self, mat_file):
         for param in mat_file.dtype.fields:

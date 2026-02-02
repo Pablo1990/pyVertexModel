@@ -1,6 +1,7 @@
 import logging
 import os
 import shutil
+import tempfile
 from abc import abstractmethod
 from itertools import combinations
 from os.path import exists
@@ -251,7 +252,7 @@ class VertexModel:
         self.tr = 0
         self.numStep = 1
 
-    def  initialize(self, img_input=None):
+    def initialize(self, img_input=None):
         """
         Initialize the geometry and the topology of the model.
         :param img_input: Optional. Either a filename (str) or a numpy array containing the image. 
@@ -434,9 +435,10 @@ class VertexModel:
         updating measures, and checking for convergence.
         :return:
         """
-        temp_dir = os.path.join(self.set.OutputFolder, 'images')
-        if not os.path.exists(temp_dir):
-            os.makedirs(temp_dir)
+        if self.set.OutputFolder is not None:
+            temp_dir = os.path.join(self.set.OutputFolder, 'images')
+            if not os.path.exists(temp_dir):
+                os.makedirs(temp_dir)
 
         if self.set.Substrate == 1:
             self.Dofs.GetDOFsSubstrate(self.geo, self.set)
@@ -620,16 +622,17 @@ class VertexModel:
         :param file_name:
         :return:
         """
-        # Create VTK files for the current state
-        self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
-        self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
-        temp_dir = os.path.join(self.set.OutputFolder, 'images')
-        screenshot(self, temp_dir)
-        # Save Data of the current step
-        if file_name is None:
-            save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
-        else:
-            save_state(self, os.path.join(self.set.OutputFolder, file_name + '.pkl'))
+        if self.set.OutputFolder is not None:
+            # Create VTK files for the current state
+            self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
+            self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
+            temp_dir = os.path.join(self.set.OutputFolder, 'images')
+            screenshot(self, temp_dir)
+            # Save Data of the current step
+            if file_name is None:
+                save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
+            else:
+                save_state(self, os.path.join(self.set.OutputFolder, file_name + '.pkl'))
 
     def reset_noisy_parameters(self):
         """
@@ -1265,3 +1268,29 @@ class VertexModel:
         result = minimize(objective, method='TNC', x0=np.array([self.set.lambdaS1, self.set.lambdaS2]), options=options)
         logger.info(f'Found lambdaS1: {result.x[0]}, lambdaS2: {result.x[1]}')
         return result.x[0], result.x[1]
+
+    def create_temporary_folder(self):
+        """
+        Create temporary folder where store every require file during the simulation.
+        :return:
+        """
+        if self.set.OutputFolder is not None:
+            logger.warning('Output folder already exists, using the existing one.')
+            return self.set.OutputFolder
+
+        # Create temporary folder in PROJECT_DIRECTORY/Temp/
+        temp_dir = tempfile.mkdtemp(dir=os.path.join(PROJECT_DIRECTORY, 'Temp'))
+        self.set.OutputFolder = temp_dir
+        logger.info(f'Created temporary output folder at: {temp_dir}')
+
+        return temp_dir
+
+    def clean_temporary_folder(self):
+        """
+        Clean temporary folder after the simulation.
+        :return:
+        """
+        if self.set.OutputFolder is not None and 'Temp' in self.set.OutputFolder:
+            shutil.rmtree(self.set.OutputFolder)
+            logger.info(f'Removed temporary output folder at: {self.set.OutputFolder}')
+            self.set.OutputFolder = None
