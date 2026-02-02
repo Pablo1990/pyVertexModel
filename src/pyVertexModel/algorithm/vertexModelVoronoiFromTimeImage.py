@@ -496,15 +496,12 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         :param ratio_strel:
         :return:
         """
-        from scipy import ndimage
-        
         cells = np.unique(labelled_img)
         cells = cells[cells != 0]  # Remove cell 0 if it exists
         
         img_neighbours = [None] * (np.max(cells) + 1)
         
-        # Create a single dilated image for all cells at once
-        # This is much faster than dilating each cell individually
+        # Structuring element for dilation
         se = np.array([
             [0, 0, 1, 0, 0],
             [0, 1, 1, 1, 0],
@@ -512,10 +509,6 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
             [0, 1, 1, 1, 0],
             [0, 0, 1, 0, 0]
         ])
-        
-        # Find boundaries efficiently using scipy
-        # Get cells and their neighbors by dilating the entire image once
-        dilated_labels = dilation(labelled_img, se)
         
         # Store dilated cells for later use if needed
         self.dilated_cells = [None] * (np.max(labelled_img) + 1)

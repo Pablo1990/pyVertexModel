@@ -365,9 +365,16 @@ def copy_non_mutable_attributes(class_to_change, attr_not_to_change, new_cell):
             # NumPy arrays - use copy() which is faster than deepcopy
             setattr(new_cell, attr, value.copy())
         elif isinstance(value, list):
-            # Lists - shallow copy is usually sufficient for lists of primitives
-            # Only use deepcopy if needed for nested structures
-            if value and isinstance(value[0], (list, dict, np.ndarray)):
+            # Lists - check if any element is nested (list, dict, or array)
+            # For performance, we only check first few elements as a heuristic
+            has_nested = False
+            check_count = min(3, len(value))  # Check up to first 3 elements
+            for i in range(check_count):
+                if value and isinstance(value[i], (list, dict, np.ndarray)):
+                    has_nested = True
+                    break
+            
+            if has_nested:
                 setattr(new_cell, attr, copy.deepcopy(value))
             else:
                 setattr(new_cell, attr, value.copy())

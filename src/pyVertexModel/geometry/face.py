@@ -186,9 +186,6 @@ class Face:
         if np.all(Order < 0):
             surf_ids = np.flip(surf_ids)
 
-        # Convert non_dead_cells to set for faster membership testing  
-        non_dead_cells_set = set(non_dead_cells) if isinstance(non_dead_cells, list) else set(non_dead_cells.tolist())
-
         for currentTri in range(len(surf_ids) - 1):
             self.Tris.append(tris.Tris())
             self.Tris[currentTri].Edge = [surf_ids[currentTri], surf_ids[currentTri + 1]]
