@@ -29,8 +29,12 @@ class KgTriEnergyBarrier(Kg):
                     Tris = Cell.Faces[f].Tris
 
                     for t in range(len(Tris)):
-                        fact = -((lambda_b * Set.Beta) / barrier_tri0) * np.exp(
-                            lambda_b * (1 - Set.Beta * Face.Tris[t].Area / barrier_tri0))
+                        # Clamp the exponential argument to prevent numerical instability
+                        # when triangles become very small or degenerate
+                        exp_arg = lambda_b * (1 - Set.Beta * Face.Tris[t].Area / barrier_tri0)
+                        exp_arg = np.clip(exp_arg, -100, 100)  # Prevent overflow/underflow
+                        
+                        fact = -((lambda_b * Set.Beta) / barrier_tri0) * np.exp(exp_arg)
                         fact2 = fact * -((lambda_b * Set.Beta) / barrier_tri0)
                         y1 = Ys[Tris[t].Edge[0], :]
                         y2 = Ys[Tris[t].Edge[1], :]
@@ -50,7 +54,7 @@ class KgTriEnergyBarrier(Kg):
                             Ks = (np.dot(gs_, gs_transpose) * fact2) + Ks * fact + Kss * fact
                             self.assemble_k(Ks, np.array(nY, dtype='int'))
 
-                        Cell.energy_tri_area += np.exp(lambda_b * (1 - Set.Beta * Face.Tris[t].Area / barrier_tri0))
+                        Cell.energy_tri_area += np.exp(exp_arg)
 
             self.energy_per_cell[Cell.ID] = Cell.energy_tri_area
 
