@@ -260,8 +260,9 @@ class VertexModel:
         """
         filename = os.path.join(PROJECT_DIRECTORY, self.set.initial_filename_state)
 
-        if not os.path.exists(filename):
+        if not os.path.exists(filename) and img_input is None:
             logging.error(f'File {filename} not found')
+            raise FileNotFoundError(f'File {filename} not found')
 
         base, ext = os.path.splitext(filename)
         if self.set.min_3d_neighbours is None:
