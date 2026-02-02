@@ -13,6 +13,7 @@ logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        self.dt_tolerance = 1e-6
         self.min_3d_neighbours = None
         self.periodic_boundaries = True
         self.frozen_face_centres = False
@@ -179,9 +180,8 @@ class Set:
         if not self.brownian_motion:
             self.brownian_motion_scale = 0
 
-        if self.implicit_method is False:
+        if not self.implicit_method:
             self.tol = self.nu
-            self.tol0 = self.nu/20
 
         if self.Remodelling:
             self.RemodelStiffness = 0.9

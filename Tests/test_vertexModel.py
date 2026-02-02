@@ -12,9 +12,8 @@ from src.pyVertexModel.algorithm.newtonRaphson import newton_raphson
 from src.pyVertexModel.algorithm.vertexModel import create_tetrahedra
 from src.pyVertexModel.algorithm.vertexModelBubbles import build_topo, SeedWithBoundingBox, generate_first_ghost_nodes, \
     delaunay_compute_entities, VertexModelBubbles
-from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import build_triplets_of_neighs, calculate_neighbours, \
-    VertexModelVoronoiFromTimeImage, add_tetrahedral_intercalations, build_2d_voronoi_from_image, \
-    populate_vertices_info, calculate_vertices, get_four_fold_vertices, divide_quartets_neighbours, process_image
+from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import build_triplets_of_neighs, \
+    VertexModelVoronoiFromTimeImage, add_tetrahedral_intercalations, get_four_fold_vertices, divide_quartets_neighbours, process_image
 from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 from src.pyVertexModel.util.utils import save_backup_vars
 
@@ -239,21 +238,6 @@ class TestVertexModel(Tests):
         # Check if triplets of neighbours are correct
         assert_matrix(triplets_of_neighs_test, mat_info['neighboursVertices'])
 
-    def test_calculate_neighbours(self):
-        """
-        Test the calculate_neighbours function.
-        :return:
-        """
-        # Load data
-        _, _, mat_info = load_data('calculate_neighbours_wingdisc.mat')
-
-        neighbours_test = calculate_neighbours(mat_info['labelledImg'], 2)
-
-        neighbours_expected = [np.concatenate(neighbours[0]) for neighbours in mat_info['imgNeighbours']]
-
-        # Check if the cells are initialized correctly
-        np.testing.assert_equal(neighbours_test[1:], neighbours_expected)
-
     def test_obtain_initial_x_and_tetrahedra(self):
         """
         Test the obtain_initial_x_and_tetrahedra function.
@@ -325,83 +309,6 @@ class TestVertexModel(Tests):
 
         # Check if the test and expected are the same
         assert_matrix(Twg, mat_info_expected['Twg'])
-
-    def test_build_2d_voronoi_from_image(self):
-        """
-        Test the build_2d_voronoi_from_image function.
-        :return:
-        """
-        # Load data
-        _, _, mat_info = load_data('build_2d_voronoi_from_image_wingdisc.mat')
-        labelled_img = mat_info['labelledImg']
-        watershed_img = mat_info['watershedImg']
-        main_cells = mat_info['mainCells'][0]
-
-        # Test if initialize geometry function does not change anything
-        (triangles_connectivity, neighbours_network, cell_edges, vertices_location, border_cells,
-         border_of_border_cells_and_main_cells) = build_2d_voronoi_from_image(labelled_img, watershed_img, main_cells)
-
-        # Load expected
-        _, _, mat_info_expected = load_data('build_2d_voronoi_from_image_wingdisc_expected.mat')
-
-        # Assert
-        np.testing.assert_equal(triangles_connectivity, mat_info_expected['trianglesConnectivity'])
-        np.testing.assert_equal(neighbours_network, mat_info_expected['neighboursNetwork'])
-        np.testing.assert_equal([cell_edge+1 for cell_edge in cell_edges if cell_edge is not None], [cell_edge[0] for cell_edge in mat_info_expected['cellEdges']])
-        np.testing.assert_equal(border_cells, np.concatenate(mat_info_expected['borderCells']))
-        np.testing.assert_equal(border_of_border_cells_and_main_cells, mat_info_expected['borderOfborderCellsAndMainCells'][0])
-
-    def test_populate_vertices_info(self):
-        """
-        Test the populate_vertices_info function.
-        :return:
-        """
-        # Load data
-        _, _, mat_info = load_data('populate_vertices_info_wingdisc.mat')
-
-        # Load data
-        border_cells_and_main_cells = [border_cell[0] for border_cell in mat_info['borderCellsAndMainCells']]
-        labelled_img = mat_info['labelledImg']
-        img_neighbours_all = [np.concatenate(neighbours[0]) for neighbours in mat_info['imgNeighbours']]
-        main_cells = mat_info['mainCells'][0]
-        ratio = 2
-
-        img_neighbours_all.insert(0, None)
-
-        vertices_info_test = populate_vertices_info(border_cells_and_main_cells, img_neighbours_all, labelled_img,
-                                                    main_cells, ratio)
-
-        vertices_info_expected_per_cell = [np.concatenate(vertices[0]) for vertices in mat_info['verticesInfo']['PerCell'][0][0] if len(vertices[0][0]) > 0]
-        vertices_info_expected_edges = [np.concatenate(vertices[0]) for vertices in mat_info['verticesInfo']['edges'][0][0] if len(vertices[0][0]) > 0]
-
-        # Assert
-        np.testing.assert_equal([vertices + 1 for vertices in vertices_info_test['PerCell'] if vertices is not None], vertices_info_expected_per_cell)
-        np.testing.assert_equal([np.concatenate(edges) + 1 for edges in vertices_info_test['edges'] if edges is not None], vertices_info_expected_edges)
-        np.testing.assert_equal(vertices_info_test['connectedCells'], mat_info['verticesInfo']['connectedCells'][0][0])
-
-    def test_calculate_vertices(self):
-        """
-        Test the calculate_vertices function.
-        :return:
-        """
-        # Load data
-        _, _, mat_info = load_data('calculate_vertices_wingdisc.mat')
-
-        # Load data
-        labelled_img = mat_info['labelledImg']
-        img_neighbours_all = [np.concatenate(neighbours[0]) for neighbours in mat_info['neighbours']]
-        ratio = 2
-
-        img_neighbours_all.insert(0, None)
-
-        # Test if initialize geometry function does not change anything
-        vertices_info_test = calculate_vertices(labelled_img, img_neighbours_all, ratio)
-
-        # Load expected
-        _, _, mat_info_expected = load_data('calculate_vertices_wingdisc_expected.mat')
-
-        # Assert
-        assert_matrix(vertices_info_test['connectedCells'], mat_info_expected['verticesInfo']['connectedCells'][0][0])
 
     def test_get_four_fold_vertices(self):
         """
@@ -495,4 +402,64 @@ class TestVertexModel(Tests):
         # Check if energies are the same
         assert_array1D(g_test, mat_info['g'])
         assert_matrix(K_test, mat_info['K'])
+
+    def test_weird_bug_should_not_happen(self):
+        """
+        Test for a weird bug that should not happen.
+        :return:
+        """
+        # Load data
+        vModel_test = load_data('vertices_going_wild.pkl')
+
+        # Run for 20 iterations. dt should not decrease to 1e-1
+        vModel_test.set.tend = vModel_test.t + 20 * vModel_test.set.dt0
+
+        # Update tolerance
+        vModel_test.set.dt_tolerance = 1e-1
+
+        # Run the model
+        vModel_test.iterate_over_time()
+
+        # Check if it did not converge
+        self.assertFalse(vModel_test.didNotConverge)
+
+    def test_vertices_shouldnt_be_going_wild(self):
+        """
+        Test for another weird bug that should not happen.
+        :return:
+        """
+        # Load data
+        vModel_test = load_data('vertices_going_wild_2.pkl')
+
+        # Run for 10 iterations. dt should not decrease to 1e-1
+        vModel_test.set.tend = vModel_test.t + 20 * vModel_test.set.dt0
+
+        # Update tolerance
+        vModel_test.set.dt_tolerance = 1e-1
+
+        # Run the model
+        vModel_test.iterate_over_time()
+
+        # Check if it did not converge
+        self.assertFalse(vModel_test.didNotConverge)
+
+    def test_vertices_shouldnt_be_going_wild_3(self):
+        """
+        Test for another weird bug that should not happen.
+        :return:
+        """
+        # Load data
+        vModel_test = load_data('vertices_going_wild_3.pkl')
+
+        # Run for 10 iterations. dt should not decrease to 1e-1
+        vModel_test.set.tend = vModel_test.t + 20 * vModel_test.set.dt0
+
+        # Update tolerance
+        vModel_test.set.dt_tolerance = 1e-1
+
+        # Run the model
+        vModel_test.iterate_over_time()
+
+        # Check if it did not converge
+        self.assertFalse(vModel_test.didNotConverge)
 

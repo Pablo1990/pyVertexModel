@@ -429,9 +429,10 @@ class VertexModel:
         updating measures, and checking for convergence.
         :return:
         """
-        temp_dir = os.path.join(self.set.OutputFolder, 'images')
-        if not os.path.exists(temp_dir):
-            os.makedirs(temp_dir)
+        if self.set.OutputFolder is not None:
+            temp_dir = os.path.join(self.set.OutputFolder, 'images')
+            if not os.path.exists(temp_dir):
+                os.makedirs(temp_dir)
 
         if self.set.Substrate == 1:
             self.Dofs.GetDOFsSubstrate(self.geo, self.set)
@@ -533,7 +534,7 @@ class VertexModel:
             self.set.nu = 10 * self.set.nu0
         else:
             if (self.set.iter >= self.set.MaxIter and
-                    (self.set.dt / self.set.dt0) > 1e-6):
+                    (self.set.dt / self.set.dt0) > self.set.dt_tolerance):
                 self.set.MaxIter = self.set.MaxIter0
                 self.set.nu = self.set.nu0
                 self.set.dt = self.set.dt / 2
@@ -615,16 +616,17 @@ class VertexModel:
         :param file_name:
         :return:
         """
-        # Create VTK files for the current state
-        self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
-        self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
-        temp_dir = os.path.join(self.set.OutputFolder, 'images')
-        screenshot(self, temp_dir)
-        # Save Data of the current step
-        if file_name is None:
-            save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
-        else:
-            save_state(self, os.path.join(self.set.OutputFolder, file_name + '.pkl'))
+        if self.set.OutputFolder is not None:
+            # Create VTK files for the current state
+            self.geo.create_vtk_cell(self.set, self.numStep, 'Edges')
+            self.geo.create_vtk_cell(self.set, self.numStep, 'Cells')
+            temp_dir = os.path.join(self.set.OutputFolder, 'images')
+            screenshot(self, temp_dir)
+            # Save Data of the current step
+            if file_name is None:
+                save_state(self, os.path.join(self.set.OutputFolder, 'data_step_' + str(self.numStep) + '.pkl'))
+            else:
+                save_state(self, os.path.join(self.set.OutputFolder, file_name + '.pkl'))
 
     def reset_noisy_parameters(self):
         """
