@@ -502,7 +502,7 @@ class TestVertexModel(Tests):
         :return:
         """
         import scipy.io
-        from src.pyVertexModel.parameters.set import Set
+        from pyVertexModel.parameters.set import Set
         
         # Load an existing image as a numpy array
         mat_data = scipy.io.loadmat('resources/LblImg_imageSequence.mat')
@@ -553,7 +553,7 @@ class TestVertexModel(Tests):
         :return:
         """
         import scipy.io
-        from src.pyVertexModel.parameters.set import Set
+        from pyVertexModel.parameters.set import Set
         
         # Load an existing image as a numpy array
         mat_data = scipy.io.loadmat('resources/LblImg_imageSequence.mat')
