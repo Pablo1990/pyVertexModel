@@ -3,9 +3,9 @@ import numpy as np
 
 from Tests.test_geo import check_if_cells_are_the_same
 from Tests.tests import Tests, load_data, assert_array1D
-from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
-from src.pyVertexModel.geometry.geo import Geo
-from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, y_flip_nm_recursive, post_flip
+from pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
+from pyVertexModel.geometry.geo import Geo
+from pyVertexModel.mesh_remodelling.flip import y_flip_nm, y_flip_nm_recursive, post_flip
 
 
 class TestFlip(Tests):

@@ -15,15 +15,15 @@ from scipy import stats
 from scipy.optimize import minimize
 from skimage.measure import regionprops
 
-from src import logger, PROJECT_DIRECTORY
-from src.pyVertexModel.Kg.kg import add_noise_to_parameter
-from src.pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
-from src.pyVertexModel.algorithm import newtonRaphson
-from src.pyVertexModel.geometry import degreesOfFreedom
-from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain, edge_valence, get_node_neighbours
-from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling, smoothing_cell_surfaces_mesh
-from src.pyVertexModel.parameters.set import Set
-from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars, copy_non_mutable_attributes, \
+from pyVertexModel import logger, PROJECT_DIRECTORY
+from pyVertexModel.Kg.kg import add_noise_to_parameter
+from pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
+from pyVertexModel.algorithm import newtonRaphson
+from pyVertexModel.geometry import degreesOfFreedom
+from pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain, edge_valence, get_node_neighbours
+from pyVertexModel.mesh_remodelling.remodelling import Remodelling, smoothing_cell_surfaces_mesh
+from pyVertexModel.parameters.set import Set
+from pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars, copy_non_mutable_attributes, \
     screenshot, screenshot_, load_state, find_optimal_deform_array_X_Y, find_timepoint_in_model
 
 logger = logging.getLogger("pyVertexModel")

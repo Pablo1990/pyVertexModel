@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from src.pyVertexModel.analysis.analyse_simulation import fit_ablation_equation, recoil_model
+from pyVertexModel.analysis.analyse_simulation import fit_ablation_equation, recoil_model
 
 input_folders = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/data/'
 

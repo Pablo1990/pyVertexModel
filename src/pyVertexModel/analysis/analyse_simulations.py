@@ -3,8 +3,8 @@ import os
 import numpy as np
 import pandas as pd
 
-from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation, create_video
-from src.pyVertexModel.util.utils import plot_figure_with_line
+from pyVertexModel.analysis.analyse_simulation import analyse_simulation, create_video
+from pyVertexModel.util.utils import plot_figure_with_line
 
 folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/same_recoil_wound_area_results/c/'
 

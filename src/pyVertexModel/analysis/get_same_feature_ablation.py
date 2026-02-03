@@ -3,9 +3,9 @@ import gc
 import os
 import numpy as np
 import pandas as pd
-from src import PROJECT_DIRECTORY
-from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
-from src.pyVertexModel.util.utils import load_state
+from pyVertexModel import PROJECT_DIRECTORY
+from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
+from pyVertexModel.util.utils import load_state
 
 original_wing_disc_height = 15.0
 set_of_resize_z = np.array([0.0001, 0.001, 0.01, 0.1, 0.5, 1.0, 2.0]) * original_wing_disc_height

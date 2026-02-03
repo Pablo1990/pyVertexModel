@@ -5,8 +5,8 @@ import networkx as nx
 import numpy as np
 from scipy.spatial import Delaunay
 
-from src.pyVertexModel.geometry.geo import edge_valence_t
-from src.pyVertexModel.util.utils import ismember_rows
+from pyVertexModel.geometry.geo import edge_valence_t
+from pyVertexModel.util.utils import ismember_rows
 
 logger = logging.getLogger("pyVertexModel")
 

@@ -1,9 +1,9 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QCheckBox, QComboBox, QLabel, \
     QStackedLayout, QFileDialog, QFormLayout, QLineEdit, QGroupBox
 
-from src.pyVertexModel.algorithm.vertexModelBubbles import VertexModelBubbles
-from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
-from src.pyVertexModel.util.utils import load_state
+from pyVertexModel.algorithm.vertexModelBubbles import VertexModelBubbles
+from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
+from pyVertexModel.util.utils import load_state
 
 
 class MainWindow(QMainWindow):
