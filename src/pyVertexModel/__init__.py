@@ -1,11 +1,14 @@
 import logging
 import os
 import warnings
+from pathlib import Path
 
 from ._version import __version__
 
-# PROJECT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PROJECT_DIRECTORY = os.getenv('PROJECT_DIR', os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+# Get the project root directory (two levels up from this __init__.py file)
+# This file is at: src/pyVertexModel/__init__.py
+# We want the project root directory (the parent of 'src')
+PROJECT_DIRECTORY = os.getenv('PROJECT_DIR', str(Path(__file__).parent.parent.parent))
 
 # get the logger instance
 logger = logging.getLogger("pyVertexModel")
