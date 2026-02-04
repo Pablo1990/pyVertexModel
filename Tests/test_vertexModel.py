@@ -7,16 +7,16 @@ from scipy.spatial import Delaunay
 from Tests import TEST_DIRECTORY
 from Tests.test_geo import check_if_cells_are_the_same
 from Tests.tests import Tests, assert_matrix, load_data, assert_array1D
-from src.pyVertexModel.algorithm import newtonRaphson
-from src.pyVertexModel.algorithm.newtonRaphson import newton_raphson
-from src.pyVertexModel.algorithm.vertexModel import create_tetrahedra
-from src.pyVertexModel.algorithm.vertexModelBubbles import build_topo, SeedWithBoundingBox, generate_first_ghost_nodes, \
+from pyVertexModel.algorithm import newtonRaphson
+from pyVertexModel.algorithm.newtonRaphson import newton_raphson
+from pyVertexModel.algorithm.vertexModel import create_tetrahedra
+from pyVertexModel.algorithm.vertexModelBubbles import build_topo, SeedWithBoundingBox, generate_first_ghost_nodes, \
     delaunay_compute_entities, VertexModelBubbles
-from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import build_triplets_of_neighs, \
+from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import build_triplets_of_neighs, \
     VertexModelVoronoiFromTimeImage, add_tetrahedral_intercalations, \
     get_four_fold_vertices, divide_quartets_neighbours, process_image
-from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
-from src.pyVertexModel.util.utils import save_backup_vars
+from pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
+from pyVertexModel.util.utils import save_backup_vars
 
 
 class TestVertexModel(Tests):
@@ -502,7 +502,7 @@ class TestVertexModel(Tests):
         :return:
         """
         import scipy.io
-        from src.pyVertexModel.parameters.set import Set
+        from pyVertexModel.parameters.set import Set
         
         # Load an existing image as a numpy array
         mat_data = scipy.io.loadmat('resources/LblImg_imageSequence.mat')
@@ -553,7 +553,7 @@ class TestVertexModel(Tests):
         :return:
         """
         import scipy.io
-        from src.pyVertexModel.parameters.set import Set
+        from pyVertexModel.parameters.set import Set
         
         # Load an existing image as a numpy array
         mat_data = scipy.io.loadmat('resources/LblImg_imageSequence.mat')

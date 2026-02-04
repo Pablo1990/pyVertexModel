@@ -6,8 +6,8 @@ from datetime import datetime
 import numpy as np
 import scipy
 
-from src import PROJECT_DIRECTORY
-from src.pyVertexModel.util.utils import copy_non_mutable_attributes
+from pyVertexModel import PROJECT_DIRECTORY
+from pyVertexModel.util.utils import copy_non_mutable_attributes
 
 logger = logging.getLogger("pyVertexModel")
 

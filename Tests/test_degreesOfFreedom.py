@@ -2,7 +2,7 @@ import numpy as np
 
 from Tests import test_kg
 from Tests.tests import Tests
-from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
+from pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 
 
 class TestDofs(Tests):

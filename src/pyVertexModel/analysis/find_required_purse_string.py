@@ -3,10 +3,10 @@ import os
 import sys
 import pandas as pd
 
-from src import PROJECT_DIRECTORY
-from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
-from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
-from src.pyVertexModel.util.utils import load_state, plot_figure_with_line
+from pyVertexModel import PROJECT_DIRECTORY
+from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
+from pyVertexModel.analysis.analyse_simulation import analyse_simulation
+from pyVertexModel.util.utils import load_state, plot_figure_with_line
 
 plot_figures = True
 

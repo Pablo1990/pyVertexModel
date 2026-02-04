@@ -3,9 +3,9 @@ import scipy.io
 import numpy as np
 from os.path import exists, abspath
 
-from src.pyVertexModel.geometry.geo import Geo
-from src.pyVertexModel.parameters.set import Set
-from src.pyVertexModel.Kg import kg_functions
+from pyVertexModel.geometry.geo import Geo
+from pyVertexModel.parameters.set import Set
+from pyVertexModel.Kg import kg_functions
 
 def load_data(file_name, return_geo=True):
     test_dir = abspath('Tests/data/%s' % file_name)

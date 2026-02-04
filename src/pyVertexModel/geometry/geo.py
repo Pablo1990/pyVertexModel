@@ -8,11 +8,11 @@ from numpy import setdiff1d
 from scipy.optimize import minimize
 from scipy.spatial import ConvexHull
 
-from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
-from src.pyVertexModel.geometry import face, cell
-from src.pyVertexModel.geometry.cell import Cell, compute_y
-from src.pyVertexModel.geometry.face import build_edge_based_on_tetrahedra
-from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes, calculate_polygon_area, \
+from pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
+from pyVertexModel.geometry import face, cell
+from pyVertexModel.geometry.cell import Cell, compute_y
+from pyVertexModel.geometry.face import build_edge_based_on_tetrahedra
+from pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes, calculate_polygon_area, \
     get_interface
 
 logger = logging.getLogger("pyVertexModel")

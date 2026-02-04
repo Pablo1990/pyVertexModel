@@ -1,11 +1,11 @@
 import os
 import numpy as np
 
-from src.pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
-from src.pyVertexModel.Kg.kgVolume import KgVolume
-from src.pyVertexModel.algorithm.vertexModel import VertexModel
-from src.pyVertexModel.analysis.analyse_simulation import create_video
-from src.pyVertexModel.util.utils import load_state, screenshot
+from pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
+from pyVertexModel.Kg.kgVolume import KgVolume
+from pyVertexModel.algorithm.vertexModel import VertexModel
+from pyVertexModel.analysis.analyse_simulation import create_video
+from pyVertexModel.util.utils import load_state, screenshot
 
 all_files = False
 if all_files:

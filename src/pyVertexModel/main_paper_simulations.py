@@ -5,10 +5,10 @@ import sys
 
 import numpy as np
 
-from src import PROJECT_DIRECTORY
-from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
-from src.pyVertexModel.analysis.analyse_simulation import analyse_simulation
-from src.pyVertexModel.util.utils import load_state
+from pyVertexModel import PROJECT_DIRECTORY
+from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
+from pyVertexModel.analysis.analyse_simulation import analyse_simulation
+from pyVertexModel.util.utils import load_state
 
 logger = logging.getLogger("pyVertexModel")
 

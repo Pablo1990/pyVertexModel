@@ -2,8 +2,8 @@ import numpy as np
 import pyvista as pv
 import matplotlib
 
-from src.pyVertexModel.geometry.geo import Geo
-from src.pyVertexModel.util.utils import load_state
+from pyVertexModel.geometry.geo import Geo
+from pyVertexModel.util.utils import load_state
 
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt

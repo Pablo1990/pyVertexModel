@@ -3,8 +3,8 @@ import os
 import numpy as np
 import optuna
 
-from src import PROJECT_DIRECTORY
-from src.pyVertexModel.util.space_exploration import objective, plot_optuna_all, load_simulations, create_study_name
+from pyVertexModel import PROJECT_DIRECTORY
+from pyVertexModel.util.space_exploration import objective, plot_optuna_all, load_simulations, create_study_name
 
 ## Create a study object and optimize the objective function
 original_wing_disc_height = 15 # in microns
