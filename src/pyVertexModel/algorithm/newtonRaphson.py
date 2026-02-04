@@ -279,9 +279,16 @@ def newton_raphson_iteration_rk2(Geo_0, Geo_n, Geo, Set, dof, dy, g, selected_ce
     
     # Step 1: k1 is already computed (passed as g)
     k1 = g.copy()
+    gr_k1 = np.linalg.norm(k1[dof])
     
-    # For RK2, we can use full timestep without damping since method is more stable
-    scale_factor = 1.0
+    # For RK2, use moderate damping for stability
+    # RK2 is more stable than Euler, so we can be less conservative
+    if gr_k1 > Set.tol:
+        # Moderate damping when gradient is large
+        scale_factor = min(1.0, Set.tol / gr_k1 * 0.8)
+    else:
+        # Light damping when gradient is small
+        scale_factor = 0.9
     
     # Step 2: Save current geometry state (needed to restore after midpoint evaluation)
     Geo_backup = Geo.copy()
