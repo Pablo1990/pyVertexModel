@@ -10,6 +10,8 @@ from ._version import __version__
 # We want the project root directory (the parent of 'src')
 PROJECT_DIRECTORY = os.getenv('PROJECT_DIR', str(Path(__file__).parent.parent.parent))
 
+__all__ = ["PROJECT_DIRECTORY"]
+
 # get the logger instance
 logger = logging.getLogger("pyVertexModel")
 
