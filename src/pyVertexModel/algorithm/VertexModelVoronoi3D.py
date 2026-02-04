@@ -1,8 +1,14 @@
 import numpy as np
 from scipy.spatial import Delaunay, Voronoi
 
-from pyVertexModel.algorithm.vertexModel import VertexModel, create_tetrahedra, add_faces_and_vertices_to_x
-from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import generate_neighbours_network
+from pyVertexModel.algorithm.vertexModel import (
+    VertexModel,
+    add_faces_and_vertices_to_x,
+    create_tetrahedra,
+)
+from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import (
+    generate_neighbours_network,
+)
 
 
 def relax_points(X):

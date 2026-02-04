@@ -10,7 +10,10 @@ from pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
 from pyVertexModel.Kg.kgTriEnergyBarrier import KgTriEnergyBarrier
 from pyVertexModel.Kg.kgViscosity import KgViscosity
 from pyVertexModel.Kg.kgVolume import KgVolume
-from pyVertexModel.util.utils import face_centres_to_middle_of_neighbours_vertices, get_interface
+from pyVertexModel.util.utils import (
+    face_centres_to_middle_of_neighbours_vertices,
+    get_interface,
+)
 
 logger = logging.getLogger("pyVertexModel")
 

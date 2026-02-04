@@ -13,7 +13,7 @@ import seaborn as sns
 
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
-from scipy.optimize import fsolve, minimize, curve_fit
+from scipy.optimize import curve_fit, fsolve, minimize
 
 
 def find_optimal_deform_array_X_Y(geo, deform_array_Z, middle_point, volumes):

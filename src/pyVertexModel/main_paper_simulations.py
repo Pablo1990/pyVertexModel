@@ -6,7 +6,9 @@ import sys
 import numpy as np
 
 from pyVertexModel import PROJECT_DIRECTORY
-from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
+from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import (
+    VertexModelVoronoiFromTimeImage,
+)
 from pyVertexModel.analysis.analyse_simulation import analyse_simulation
 from pyVertexModel.util.utils import load_state
 

@@ -8,7 +8,12 @@ from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 
 from pyVertexModel.algorithm.vertexModel import VertexModel, logger
-from pyVertexModel.util.utils import load_state, load_variables, save_variables, screenshot
+from pyVertexModel.util.utils import (
+    load_state,
+    load_variables,
+    save_variables,
+    screenshot,
+)
 
 
 def analyse_simulation(folder):

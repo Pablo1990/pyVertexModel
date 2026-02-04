@@ -12,16 +12,24 @@ from typing import Any
 import numpy as np
 import scipy
 from scipy.ndimage import label
-from scipy.spatial.distance import squareform, pdist, cdist
+from scipy.spatial.distance import cdist, pdist, squareform
 from skimage import io
 from skimage.measure import regionprops_table
 from skimage.morphology import dilation
 
-from pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrahedra_from_information, \
-    calculate_cell_height_on_model
+from pyVertexModel.algorithm.vertexModel import (
+    VertexModel,
+    calculate_cell_height_on_model,
+    generate_tetrahedra_from_information,
+)
 from pyVertexModel.geometry.geo import Geo
-from pyVertexModel.util.utils import ismember_rows, save_variables, save_state, load_state, screenshot_
-
+from pyVertexModel.util.utils import (
+    ismember_rows,
+    load_state,
+    save_state,
+    save_variables,
+    screenshot_,
+)
 
 logger = logging.getLogger("pyVertexModel")
 PROJECT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))

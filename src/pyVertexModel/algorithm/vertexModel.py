@@ -15,15 +15,32 @@ from scipy import stats
 from scipy.optimize import minimize
 from skimage.measure import regionprops
 
-from pyVertexModel.Kg.kg import add_noise_to_parameter
-from pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
 from pyVertexModel.algorithm import newtonRaphson
 from pyVertexModel.geometry import degreesOfFreedom
-from pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain, edge_valence, get_node_neighbours
-from pyVertexModel.mesh_remodelling.remodelling import Remodelling, smoothing_cell_surfaces_mesh
+from pyVertexModel.geometry.geo import (
+    Geo,
+    edge_valence,
+    get_node_neighbours,
+    get_node_neighbours_per_domain,
+)
+from pyVertexModel.Kg.kg import add_noise_to_parameter
+from pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
+from pyVertexModel.mesh_remodelling.remodelling import (
+    Remodelling,
+    smoothing_cell_surfaces_mesh,
+)
 from pyVertexModel.parameters.set import Set
-from pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars, copy_non_mutable_attributes, \
-    screenshot, screenshot_, load_state, find_optimal_deform_array_X_Y, find_timepoint_in_model
+from pyVertexModel.util.utils import (
+    copy_non_mutable_attributes,
+    find_optimal_deform_array_X_Y,
+    find_timepoint_in_model,
+    load_backup_vars,
+    load_state,
+    save_backup_vars,
+    save_state,
+    screenshot,
+    screenshot_,
+)
 
 logger = logging.getLogger("pyVertexModel")
 PROJECT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
