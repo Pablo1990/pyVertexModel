@@ -7,10 +7,9 @@ import scipy.io
 import numpy as np
 from os.path import exists, abspath
 
-from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
-from src.pyVertexModel.geometry.geo import Geo
-from src.pyVertexModel.parameters.set import Set
-from src.pyVertexModel.util.utils import load_state
+from pyVertexModel.geometry.geo import Geo
+from pyVertexModel.parameters.set import Set
+from pyVertexModel.Kg import kg_functions
 
 def load_data(file_name, return_geo=True):
     test_dir = abspath('Tests/Tests_data/%s' % file_name)

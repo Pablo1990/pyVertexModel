@@ -1,19 +1,27 @@
 import os
+
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.cm as cm
 from scipy import stats
 
-from src import PROJECT_DIRECTORY
-from src.pyVertexModel.Kg.kgContractility import KgContractility
-from src.pyVertexModel.Kg.kgSubstrate import KgSubstrate
-from src.pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
-from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
-from src.pyVertexModel.Kg.kgVolume import KgVolume
-from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
-from src.pyVertexModel.geometry.cell import compute_2d_circularity
-from src.pyVertexModel.util.utils import load_state, save_variables, load_variables, screenshot
+from pyVertexModel import PROJECT_DIRECTORY
+from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import (
+    VertexModelVoronoiFromTimeImage,
+)
+from pyVertexModel.geometry.cell import compute_2d_circularity
+from pyVertexModel.Kg.kgContractility import KgContractility
+from pyVertexModel.Kg.kgSubstrate import KgSubstrate
+from pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
+from pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
+from pyVertexModel.Kg.kgVolume import KgVolume
+from pyVertexModel.util.utils import (
+    load_state,
+    load_variables,
+    save_variables,
+    screenshot,
+)
 
 
 def compute_aspect_ratios(cell):

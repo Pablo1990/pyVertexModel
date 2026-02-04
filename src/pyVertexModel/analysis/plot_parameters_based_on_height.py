@@ -1,11 +1,11 @@
 # Equation of the relationship between lambda_S1 and lambda_S2 based on the cell height
 import os
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
-from src import PROJECT_DIRECTORY
-from src.pyVertexModel.util.utils import lambda_s1_curve, lambda_s2_curve
+from pyVertexModel import PROJECT_DIRECTORY
+from pyVertexModel.util.utils import lambda_s1_curve, lambda_s2_curve
 
 # Define the original wing disc height
 original_wing_disc_height = 15.0 # in microns

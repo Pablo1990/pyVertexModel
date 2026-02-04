@@ -1,10 +1,10 @@
 import numpy as np
 
 from Tests.tests import Tests, load_data, assert_matrix, assert_array1D
-from src.pyVertexModel.algorithm.vertexModelBubbles import extrapolate_ys_faces_ellipsoid
-from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
-from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain
-from src.pyVertexModel.util.utils import load_state, ismember_rows
+from pyVertexModel.algorithm.vertexModelBubbles import extrapolate_ys_faces_ellipsoid
+from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
+from pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain
+from pyVertexModel.util.utils import load_state, ismember_rows
 from Tests.tests import Tests, load_data, assert_matrix
 
 

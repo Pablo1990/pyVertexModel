@@ -2,15 +2,18 @@ import logging
 
 import numpy as np
 
-from src.pyVertexModel.Kg.kgContractility import KgContractility
-from src.pyVertexModel.Kg.kgContractility_external import KgContractilityExternal
-from src.pyVertexModel.Kg.kgSubstrate import KgSubstrate
-from src.pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
-from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
-from src.pyVertexModel.Kg.kgTriEnergyBarrier import KgTriEnergyBarrier
-from src.pyVertexModel.Kg.kgViscosity import KgViscosity
-from src.pyVertexModel.Kg.kgVolume import KgVolume
-from src.pyVertexModel.util.utils import face_centres_to_middle_of_neighbours_vertices, get_interface
+from pyVertexModel.Kg.kgContractility import KgContractility
+from pyVertexModel.Kg.kgContractility_external import KgContractilityExternal
+from pyVertexModel.Kg.kgSubstrate import KgSubstrate
+from pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
+from pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
+from pyVertexModel.Kg.kgTriEnergyBarrier import KgTriEnergyBarrier
+from pyVertexModel.Kg.kgViscosity import KgViscosity
+from pyVertexModel.Kg.kgVolume import KgVolume
+from pyVertexModel.util.utils import (
+    face_centres_to_middle_of_neighbours_vertices,
+    get_interface,
+)
 
 logger = logging.getLogger("pyVertexModel")
 

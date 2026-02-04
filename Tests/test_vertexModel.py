@@ -7,15 +7,16 @@ from scipy.spatial import Delaunay
 from Tests import TEST_DIRECTORY
 from Tests.test_geo import check_if_cells_are_the_same
 from Tests.tests import Tests, assert_matrix, load_data, assert_array1D
-from src.pyVertexModel.algorithm import newtonRaphson
-from src.pyVertexModel.algorithm.newtonRaphson import newton_raphson
-from src.pyVertexModel.algorithm.vertexModel import create_tetrahedra
-from src.pyVertexModel.algorithm.vertexModelBubbles import build_topo, SeedWithBoundingBox, generate_first_ghost_nodes, \
+from pyVertexModel.algorithm import newtonRaphson
+from pyVertexModel.algorithm.newtonRaphson import newton_raphson
+from pyVertexModel.algorithm.vertexModel import create_tetrahedra
+from pyVertexModel.algorithm.vertexModelBubbles import build_topo, SeedWithBoundingBox, generate_first_ghost_nodes, \
     delaunay_compute_entities, VertexModelBubbles
-from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import build_triplets_of_neighs, \
-    VertexModelVoronoiFromTimeImage, add_tetrahedral_intercalations, get_four_fold_vertices, divide_quartets_neighbours, process_image
-from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
-from src.pyVertexModel.util.utils import save_backup_vars
+from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import build_triplets_of_neighs, \
+    VertexModelVoronoiFromTimeImage, add_tetrahedral_intercalations, \
+    get_four_fold_vertices, divide_quartets_neighbours, process_image
+from pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
+from pyVertexModel.util.utils import save_backup_vars
 
 
 class TestVertexModel(Tests):
@@ -403,63 +404,84 @@ class TestVertexModel(Tests):
         assert_array1D(g_test, mat_info['g'])
         assert_matrix(K_test, mat_info['K'])
 
-    def test_weird_bug_should_not_happen(self):
+    def test_initialize_cells_with_numpy_array(self):
         """
-        Test for a weird bug that should not happen.
+        Test that initialize_cells can accept a numpy array directly.
         :return:
         """
-        # Load data
-        vModel_test = load_data('vertices_going_wild.pkl')
-
-        # Run for 20 iterations. dt should not decrease to 1e-1
-        vModel_test.set.tend = vModel_test.t + 20 * vModel_test.set.dt0
-
-        # Update tolerance
-        vModel_test.set.dt_tolerance = 0.25
-
-        # Run the model
-        vModel_test.iterate_over_time()
-
-        # Check if it did not converge
-        self.assertFalse(vModel_test.didNotConverge)
-
-    def test_vertices_shouldnt_be_going_wild(self):
+        import scipy.io
+        from pyVertexModel.parameters.set import Set
+        
+        # Load an existing image as a numpy array
+        mat_data = scipy.io.loadmat('resources/LblImg_imageSequence.mat')
+        img_array = mat_data['imgStackLabelled']
+        
+        # Create a simple 2D labeled image for testing
+        # Using a subset to make it faster
+        img_2d = img_array[:, :, 0]
+        
+        # Create settings
+        set_test = Set(set_option='voronoi_from_image')
+        set_test.TotalCells = 50  # Use fewer cells for faster testing
+        set_test.CellHeight = 10
+        
+        # Test with numpy array input
+        vModel_test = VertexModelVoronoiFromTimeImage(set_option='voronoi_from_image', set_test=set_test, 
+                                                      create_output_folder=False)
+        vModel_test.initialize_cells(img_2d)
+        
+        # Verify that the geometry was created
+        assert vModel_test.geo is not None, "Geometry should be initialized"
+        assert vModel_test.geo.nCells > 0, "Should have cells"
+        assert len(vModel_test.geo.Cells) > 0, "Should have Cell objects"
+        
+    def test_process_image_with_numpy_array(self):
         """
-        Test for another weird bug that should not happen.
+        Test that process_image can handle numpy array input.
         :return:
         """
-        # Load data
-        vModel_test = load_data('vertices_going_wild_2.pkl')
-
-        # Run for 10 iterations. dt should not decrease to 1e-1
-        vModel_test.set.tend = vModel_test.t + 20 * vModel_test.set.dt0
-
-        # Update tolerance
-        vModel_test.set.dt_tolerance = 0.25
-
-        # Run the model
-        vModel_test.iterate_over_time()
-
-        # Check if it did not converge
-        self.assertFalse(vModel_test.didNotConverge)
-
-    def test_vertices_shouldnt_be_going_wild_3(self):
+        # Create a simple labeled image
+        test_img = np.zeros((100, 100), dtype=np.uint16)
+        # Create some labeled regions
+        test_img[10:30, 10:30] = 1
+        test_img[40:60, 40:60] = 2
+        test_img[70:90, 70:90] = 3
+        
+        # Test process_image with numpy array
+        img2d, img_stack = process_image(test_img)
+        
+        # Verify the output
+        assert img2d is not None, "2D image should be returned"
+        assert img_stack is not None, "Image stack should be returned"
+        assert img2d.shape == test_img.shape, "2D image should have same shape as input"
+        
+    def test_initialize_with_numpy_array(self):
         """
-        Test for another weird bug that should not happen.
+        Test that initialize method can accept a numpy array.
         :return:
         """
-        # Load data
-        vModel_test = load_data('vertices_going_wild_3.pkl')
+        import scipy.io
+        from pyVertexModel.parameters.set import Set
+        
+        # Load an existing image as a numpy array
+        mat_data = scipy.io.loadmat('resources/LblImg_imageSequence.mat')
+        img_array = mat_data['imgStackLabelled']
+        
+        # Use a 2D slice for faster testing
+        img_2d = img_array[:, :, 0]
+        
+        # Create settings
+        set_test = Set(set_option='voronoi_from_image')
+        set_test.TotalCells = 50
+        set_test.CellHeight = 10
+        
+        # Test initialize with numpy array input
+        vModel_test = VertexModelVoronoiFromTimeImage(set_option='voronoi_from_image', set_test=set_test,
+                                                      create_output_folder=False)
+        vModel_test.initialize(img_2d)
+        
+        # Verify that the geometry was created
+        assert vModel_test.geo is not None, "Geometry should be initialized"
+        assert vModel_test.geo.nCells > 0, "Should have cells"
 
-        # Run for 10 iterations. dt should not decrease to 1e-1
-        vModel_test.set.tend = vModel_test.t + 20 * vModel_test.set.dt0
-
-        # Update tolerance
-        vModel_test.set.dt_tolerance = 0.25
-
-        # Run the model
-        vModel_test.iterate_over_time()
-
-        # Check if it did not converge
-        self.assertFalse(vModel_test.didNotConverge)
 

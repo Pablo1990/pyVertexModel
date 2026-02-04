@@ -8,12 +8,16 @@ from numpy import setdiff1d
 from scipy.optimize import minimize
 from scipy.spatial import ConvexHull
 
-from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
-from src.pyVertexModel.geometry import face, cell
-from src.pyVertexModel.geometry.cell import Cell, compute_y
-from src.pyVertexModel.geometry.face import build_edge_based_on_tetrahedra
-from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes, calculate_polygon_area, \
-    get_interface
+from pyVertexModel.geometry import cell, face
+from pyVertexModel.geometry.cell import Cell, compute_y
+from pyVertexModel.geometry.face import build_edge_based_on_tetrahedra
+from pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
+from pyVertexModel.util.utils import (
+    calculate_polygon_area,
+    copy_non_mutable_attributes,
+    get_interface,
+    ismember_rows,
+)
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -324,11 +328,12 @@ class Geo:
                 self.Cells[c].Area = self.Cells[c].compute_area()
                 self.Cells[c].Vol = self.Cells[c].compute_volume()
 
+        # Unique Ids for each point (vertex, node or face center) used in K
+        self.build_global_ids()
+
         # Initialize reference values
         self.init_reference_cell_values(c_set)
 
-        # Unique Ids for each point (vertex, node or face center) used in K
-        self.build_global_ids()
 
         if c_set.Substrate == 1:
             for c, c_cell in enumerate(self.Cells):
@@ -345,17 +350,15 @@ class Geo:
 
     def init_reference_cell_values(self, c_set):
         """
-        Initializes the average cell properties. This method calculates the average area of all triangles (tris) in the
-        geometry (Geo) structure, and sets the upper and lower area thresholds based on the standard deviation of the areas.
-        It also calculates the minimum edge length and the minimum area of all tris, and sets the initial values for
-        BarrierTri0 and lmin0 based on these calculations. The method also calculates the average edge lengths for tris
-        located at the top, bottom, and lateral sides of the cells. Finally, it initializes an empty list for storing
-        removed debris cells.
-
-        :param c_set: The settings of the simulation
-        :return: None
+        Initialize reference geometric and mechanical baseline values for the tissue.
+        
+        This configures per-tissue reference data used by mechanics and topology updates: it sets AssembleNodes and non_dead_cells, initializes per-cell reference volumes/areas and optional parameter noise, updates the reference minimum edge length (lmin0) and triangle barrier (BarrierTri0), computes average edge lengths by face type, resets RemovedDebrisCells, and determines substrate/ceiling heights.
+        
+        Parameters:
+            c_set: Simulation settings object providing parameters and state (e.g., ref_V0/ref_A0, contributionOldYs, and initial_filename_state) used during initialization.
         """
         logger.info('Initializing reference cell values')
+
         # Assemble nodes from all cells that are not None
         self.AssembleNodes = [i for i, cell in enumerate(self.Cells) if cell.AliveStatus is not None]
 
@@ -364,7 +367,8 @@ class Geo:
 
         # Update lmin0 with the minimum value in lmin_values
         self.update_lmin0()
-        self.update_lmin0(default_value=find_lmin0_equal_target_gr(self, c_set))
+        if '/Temp/' not in c_set.initial_filename_state:
+            self.update_lmin0(default_value=find_lmin0_equal_target_gr(self, c_set))
 
         # Update BarrierTri0
         self.update_barrier_tri0()

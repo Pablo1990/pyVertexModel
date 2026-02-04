@@ -7,8 +7,13 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 
-from src.pyVertexModel.algorithm.vertexModel import VertexModel, logger
-from src.pyVertexModel.util.utils import load_state, load_variables, save_variables, screenshot
+from pyVertexModel.algorithm.vertexModel import VertexModel, logger
+from pyVertexModel.util.utils import (
+    load_state,
+    load_variables,
+    save_variables,
+    screenshot,
+)
 
 
 def analyse_simulation(folder):

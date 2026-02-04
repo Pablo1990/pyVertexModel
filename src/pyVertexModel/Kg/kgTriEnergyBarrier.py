@@ -2,9 +2,9 @@ import time
 
 import numpy as np
 
-from src.pyVertexModel.Kg import kg_functions
-from src.pyVertexModel.Kg.kg import Kg
-from src.pyVertexModel.util.utils import get_interface
+from pyVertexModel.Kg import kg_functions
+from pyVertexModel.Kg.kg import Kg
+from pyVertexModel.util.utils import get_interface
 
 
 class KgTriEnergyBarrier(Kg):
