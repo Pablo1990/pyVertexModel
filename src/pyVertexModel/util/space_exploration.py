@@ -8,8 +8,13 @@ import plotly
 
 from pyVertexModel import PROJECT_DIRECTORY
 from pyVertexModel.algorithm.vertexModel import VertexModel
-from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
-from pyVertexModel.analysis.analyse_simulation import analyse_edge_recoil, analyse_simulation
+from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import (
+    VertexModelVoronoiFromTimeImage,
+)
+from pyVertexModel.analysis.analyse_simulation import (
+    analyse_edge_recoil,
+    analyse_simulation,
+)
 from pyVertexModel.parameters.set import Set
 from pyVertexModel.util.utils import load_state, load_variables, save_variables
 

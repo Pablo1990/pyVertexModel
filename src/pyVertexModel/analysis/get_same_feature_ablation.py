@@ -1,10 +1,14 @@
 # DFS version with relaxed ANY-neighbour connectivity rule
 import gc
 import os
+
 import numpy as np
 import pandas as pd
+
 from pyVertexModel import PROJECT_DIRECTORY
-from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
+from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import (
+    VertexModelVoronoiFromTimeImage,
+)
 from pyVertexModel.util.utils import load_state
 
 original_wing_disc_height = 15.0

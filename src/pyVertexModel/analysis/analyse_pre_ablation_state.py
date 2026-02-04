@@ -4,7 +4,9 @@ import sys
 import numpy as np
 import pandas as pd
 
-from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
+from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import (
+    VertexModelVoronoiFromTimeImage,
+)
 from pyVertexModel.analysis.analyse_simulation import analyse_edge_recoil
 from pyVertexModel.util.utils import load_state, plot_figure_with_line
 

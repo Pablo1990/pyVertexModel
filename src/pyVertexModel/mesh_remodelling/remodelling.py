@@ -3,12 +3,26 @@ import logging
 import numpy as np
 import pandas as pd
 
-from pyVertexModel.algorithm.newtonRaphson import gGlobal, newton_raphson_iteration_explicit, \
-    constrain_bottom_vertices_x_y
-from pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
-from pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
-from pyVertexModel.util.utils import ismember_rows, save_backup_vars, load_backup_vars, compute_distance_3d, \
-    laplacian_smoothing, screenshot_, get_interface
+from pyVertexModel.algorithm.newtonRaphson import (
+    constrain_bottom_vertices_x_y,
+    gGlobal,
+    newton_raphson_iteration_explicit,
+)
+from pyVertexModel.geometry.geo import (
+    edge_valence,
+    get_node_neighbours,
+    get_node_neighbours_per_domain,
+)
+from pyVertexModel.mesh_remodelling.flip import post_flip, y_flip_nm
+from pyVertexModel.util.utils import (
+    compute_distance_3d,
+    get_interface,
+    ismember_rows,
+    laplacian_smoothing,
+    load_backup_vars,
+    save_backup_vars,
+    screenshot_,
+)
 
 logger = logging.getLogger("pyVertexModel")
 

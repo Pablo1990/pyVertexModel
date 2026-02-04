@@ -6,8 +6,8 @@ import vtk
 from numpy.ma.extras import setxor1d
 from sklearn.decomposition import PCA
 
-from pyVertexModel.Kg.kg import add_noise_to_parameter
 from pyVertexModel.geometry import face
+from pyVertexModel.Kg.kg import add_noise_to_parameter
 from pyVertexModel.util.utils import copy_non_mutable_attributes, get_interface
 
 

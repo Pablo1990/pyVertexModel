@@ -4,12 +4,12 @@ import os
 import numpy as np
 import optuna
 import pandas as pd
-from matplotlib import pyplot as plt
 import seaborn as sns
+from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 
 from pyVertexModel import PROJECT_DIRECTORY
-from pyVertexModel.util.space_exploration import plot_optuna_all, create_study_name
+from pyVertexModel.util.space_exploration import create_study_name, plot_optuna_all
 
 ## Create a study object and optimize the objective function
 original_wing_disc_height = 15 # in microns

@@ -3,7 +3,10 @@ import time
 
 import numpy as np
 
-from pyVertexModel.Kg.kgContractility import KgContractility, compute_energy_contractility
+from pyVertexModel.Kg.kgContractility import (
+    KgContractility,
+    compute_energy_contractility,
+)
 from pyVertexModel.util.utils import get_interface
 
 

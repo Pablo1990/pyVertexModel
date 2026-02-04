@@ -1,10 +1,13 @@
 ## Find the required purse string tension to start closing the wound for different cell heights
 import os
 import sys
+
 import pandas as pd
 
 from pyVertexModel import PROJECT_DIRECTORY
-from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
+from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import (
+    VertexModelVoronoiFromTimeImage,
+)
 from pyVertexModel.analysis.analyse_simulation import analyse_simulation
 from pyVertexModel.util.utils import load_state, plot_figure_with_line
 
