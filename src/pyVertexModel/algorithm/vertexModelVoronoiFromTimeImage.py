@@ -24,7 +24,7 @@ from pyVertexModel.util.utils import ismember_rows, save_variables, save_state, 
 
 
 logger = logging.getLogger("pyVertexModel")
-PROJECT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 
 def build_quartets_of_neighs_2d(neighbours):
@@ -278,7 +278,7 @@ def sorting_cells_based_on_distance(imgStackLabelled, img_filename=None) -> tupl
             newCont += 1
 
     # Remaining cells that are not in the image
-    for numCell in np.arange(newCont, np.max(img2DLabelled) + 1):
+    for numCell in range(newCont, np.max(img2DLabelled) + 1):
         imgStackLabelled[oldImgStackLabelled == numCell] = newCont
         newCont += 1
 

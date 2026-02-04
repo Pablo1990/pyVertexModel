@@ -26,7 +26,7 @@ from pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_v
     screenshot, screenshot_, load_state, find_optimal_deform_array_X_Y, find_timepoint_in_model
 
 logger = logging.getLogger("pyVertexModel")
-PROJECT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 
 def display_volume_fragments(geo, selected_cells=None):
