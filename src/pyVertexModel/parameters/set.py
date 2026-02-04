@@ -37,6 +37,7 @@ class Set:
         self.dt = None
         self.dt0 = None
         self.implicit_method = False
+        self.integrator = 'euler'  # Time integrator: 'euler' or 'rk2' (midpoint method)
         self.TypeOfPurseString = None
         self.Contractility_TimeVariability = None
         self.Contractility_Variability_LateralCables = None
