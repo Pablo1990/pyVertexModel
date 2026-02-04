@@ -194,20 +194,143 @@ These files are generated during build and should NOT be committed:
 
 ## Common Pitfalls and Solutions
 
-### 1. ModuleNotFoundError: No module named 'pyVertexModel'
-**Solution**: Run `pip install -e .` after building Cython extensions
+This section documents errors encountered during validation and the exact steps to resolve them.
 
-### 2. ImportError with kg_functions
-**Solution**: Run `python setup.py build_ext --inplace` to build Cython extensions
+### 1. ModuleNotFoundError: No module named 'pyVertexModel'
+
+**Error Message**:
+```
+ImportError while importing test module '/home/runner/work/pyVertexModel/pyVertexModel/Tests/test_cell.py'.
+...
+Tests/tests.py:6: in <module>
+    from pyVertexModel.geometry.geo import Geo
+E   ModuleNotFoundError: No module named 'pyVertexModel'
+```
+
+**Root Cause**: Package not installed in editable mode. Tests cannot import the module even after building Cython extensions.
+
+**Solution**:
+```bash
+pip install -e .
+```
+
+**Prevention**: ALWAYS run `pip install -e .` after `python setup.py build_ext --inplace` during initial setup.
+
+### 2. ImportError with kg_functions (Cython extension not built)
+
+**Error Message**:
+```
+ImportError: cannot import name 'kg_functions' from 'pyVertexModel.Kg'
+```
+
+**Root Cause**: Cython extensions not compiled. The `.so` file doesn't exist in `src/pyVertexModel/Kg/`.
+
+**Solution**:
+```bash
+python setup.py build_ext --inplace
+```
+
+**Verification**: Check that these files exist after building:
+- `src/pyVertexModel/Kg/kg_functions.c` (generated C code)
+- `src/pyVertexModel/Kg/kg_functions.cpython-*.so` (compiled extension)
+
+**Prevention**: ALWAYS build Cython extensions before running tests or the application.
 
 ### 3. Tests fail with FileNotFoundError for .mat files
-**Expected**: Test data files are not in the repository. Tests looking for files in `data/` or `Tests/data/` will fail. Use `-k "not filename"` to skip these tests or focus on tests that don't require data.
+
+**Error Message**:
+```
+FileNotFoundError: [Errno 2] No such file or directory: 'data/Geo_3x3_dofs_expected.mat'
+```
+
+**Root Cause**: Test data files (`.mat` format) are gitignored and NOT in the repository. Tests in `Tests/tests.py` use `load_data()` which looks for files in `Tests/data/` or `data/` directories.
+
+**Expected Behavior**: 
+- 50 tests pass (those not requiring data)
+- 128 tests fail with FileNotFoundError (require .mat files)
+
+**Solution (for testing code changes)**:
+```bash
+# Run only tests that don't require data files
+pytest Tests/ -k "not filename" -v
+
+# OR run specific tests that work
+pytest Tests/test_utils.py::TestUtils::test_assert_matrix -v
+```
+
+**Note**: This is EXPECTED behavior in development. CI handles this with `-k "not filename"` filter.
 
 ### 4. Tox configuration error
-**Known Issue**: Tox shows "SetupCfg failed loading" error. Use pytest directly instead.
+
+**Error Message**:
+```
+ROOT: HandledError| SetupCfg failed loading /home/runner/work/pyVertexModel/pyVertexModel/setup.cfg due to section tox:tox not found
+```
+
+**Root Cause**: Legacy tox configuration in `pyproject.toml` uses `legacy_tox_ini` format which has compatibility issues with empty `setup.cfg`.
+
+**Solution**: Use pytest directly instead of tox:
+```bash
+pytest Tests/ -k "not filename" -v
+```
+
+**Workaround for CI**: The CI workflow installs pytest directly and doesn't use tox.
 
 ### 5. Ruff deprecated settings warning
-**Not a problem**: Configuration uses deprecated top-level settings but still works. Auto-fix and checking function normally.
+
+**Warning Message**:
+```
+warning: The top-level linter settings are deprecated in favour of their counterparts in the `lint` section. Please update the following options in `pyproject.toml`:
+  - 'ignore' -> 'lint.ignore'
+  - 'select' -> 'lint.select'
+  - 'per-file-ignores' -> 'lint.per-file-ignores'
+```
+
+**Root Cause**: `pyproject.toml` uses deprecated top-level ruff configuration format.
+
+**Impact**: None - this is just a warning. Ruff continues to work correctly with auto-fix enabled.
+
+**Solution**: No action needed. The warning is informational only. If you want to fix it:
+1. Move `[tool.ruff]` settings under `[tool.ruff.lint]` in `pyproject.toml`
+2. This is a cosmetic change and doesn't affect functionality
+
+### 6. Build artifacts in git status
+
+**Issue**: After building, `git status` shows modified files:
+```
+modified:   src/pyVertexModel/Kg/kg_functions.c
+modified:   src/pyVertexModel/Kg/kg_functions.cpython-*.so
+```
+
+**Root Cause**: Build artifacts are generated but properly gitignored.
+
+**Verification**:
+```bash
+git status --ignored | grep "kg_functions"
+# Should show these files as ignored
+```
+
+**Solution**: No action needed - files are correctly gitignored. Do NOT commit these files.
+
+### 7. Clean build issues
+
+**Problem**: Need to rebuild from scratch or test clean build.
+
+**Solution**:
+```bash
+# Clean all build artifacts
+rm -rf build/ src/pyVertexModel/Kg/*.so src/pyVertexModel/Kg/*.c
+
+# Uninstall package (if needed for testing)
+pip uninstall -y pyVertexModel
+
+# Then rebuild from scratch
+pip install -r requirements.txt
+python setup.py build_ext --inplace
+pip install -e .
+```
+
+**Use Case**: Testing build process, troubleshooting import issues, or after modifying `setup.py`.
 
 ## Code Conventions
 
