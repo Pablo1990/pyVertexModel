@@ -2,12 +2,12 @@ import numpy as np
 
 from Tests.test_geo import check_if_cells_are_the_same
 from Tests.tests import Tests
-from src.pyVertexModel.geometry.cell import Cell
-from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
-from src.pyVertexModel.geometry.face import Face
-from src.pyVertexModel.geometry.geo import Geo
-from src.pyVertexModel.geometry.tris import Tris
-from src.pyVertexModel.util.utils import save_backup_vars, load_backup_vars
+from pyVertexModel.geometry.cell import Cell
+from pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
+from pyVertexModel.geometry.face import Face
+from pyVertexModel.geometry.geo import Geo
+from pyVertexModel.geometry.tris import Tris
+from pyVertexModel.util.utils import save_backup_vars, load_backup_vars
 
 
 class TestUtils(Tests):

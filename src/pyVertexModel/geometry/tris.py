@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.pyVertexModel.util.utils import copy_non_mutable_attributes
+from pyVertexModel.util.utils import copy_non_mutable_attributes
 
 
 def compute_tri_aspect_ratio(side_lengths):

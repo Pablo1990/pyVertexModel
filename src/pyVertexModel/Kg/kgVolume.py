@@ -2,8 +2,8 @@ import time
 
 import numpy as np
 
-from src.pyVertexModel.Kg import kg_functions
-from src.pyVertexModel.Kg.kg import Kg
+from pyVertexModel.Kg import kg_functions
+from pyVertexModel.Kg.kg import Kg
 
 
 def compute_final_k_volume(ge, K, Vol, Vol0, n):

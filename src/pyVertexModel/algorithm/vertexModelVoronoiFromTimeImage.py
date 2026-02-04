@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import logging
 import lzma
 import os
 import pickle
@@ -16,11 +17,14 @@ from skimage import io
 from skimage.measure import regionprops_table
 from skimage.morphology import dilation
 
-from src import PROJECT_DIRECTORY, logger
-from src.pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrahedra_from_information, \
+from pyVertexModel.algorithm.vertexModel import VertexModel, generate_tetrahedra_from_information, \
     calculate_cell_height_on_model
-from src.pyVertexModel.geometry.geo import Geo
-from src.pyVertexModel.util.utils import ismember_rows, save_variables, save_state, load_state, screenshot_
+from pyVertexModel.geometry.geo import Geo
+from pyVertexModel.util.utils import ismember_rows, save_variables, save_state, load_state, screenshot_
+
+
+logger = logging.getLogger("pyVertexModel")
+PROJECT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def build_quartets_of_neighs_2d(neighbours):

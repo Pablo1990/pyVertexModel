@@ -2,7 +2,7 @@ import os
 
 import pandas as pd
 
-from src import PROJECT_DIRECTORY
+from pyVertexModel import PROJECT_DIRECTORY
 
 folder_to_average = 'final_results_noise_'
 noise_type = '_0.2'
