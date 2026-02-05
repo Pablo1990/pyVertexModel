@@ -382,19 +382,19 @@ class TestGeo(Tests):
         :return:
         """
         # Load data
-        vModel_test = load_data('vertices_correct_1.pkl')
+        vModel_test = load_data('geometry_correct_1.pkl')
 
         # Check if geometry is correct
         self.assertTrue(vModel_test.geo.geometry_is_correct())
 
         # Load data
-        vModel_test = load_data('vertices_correct_2.pkl')
+        vModel_test = load_data('geometry_correct_2.pkl')
 
         # Check if geometry is correct
         self.assertTrue(vModel_test.geo.geometry_is_correct())
 
         # Load data
-        vModel_test = load_data('vertices_correct_3.pkl')
+        vModel_test = load_data('geometry_correct_3.pkl')
 
         # Check if geometry is correct
         self.assertTrue(vModel_test.geo.geometry_is_correct())
