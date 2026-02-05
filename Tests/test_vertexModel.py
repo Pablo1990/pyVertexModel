@@ -491,7 +491,7 @@ class TestVertexModel(Tests):
         :return:
         """
         # Load data
-        vModel_test = load_data('vertices_going_wild.pkl')
+        vModel_test = load_data('vertices_going_wild_1.pkl')
 
         # Run for 20 iterations. dt should not decrease to 1e-1
         vModel_test.set.tend = vModel_test.t + 20 * vModel_test.set.dt0
