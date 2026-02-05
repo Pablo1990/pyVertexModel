@@ -376,3 +376,51 @@ class TestGeo(Tests):
         # Check if node neighbours are the same
         assert_array1D(node_neighbours_test, np.concatenate(node_neighbours_expected))
 
+    def test_geometry_is_correct(self):
+        """
+        Test the function geometry_is_correct
+        :return:
+        """
+        # Load data
+        vModel_test = load_data('vertices_correct_1.pkl')
+
+        # Check if geometry is correct
+        self.assertTrue(vModel_test.geo.geometry_is_correct())
+
+        # Load data
+        vModel_test = load_data('vertices_correct_2.pkl')
+
+        # Check if geometry is correct
+        self.assertTrue(vModel_test.geo.geometry_is_correct())
+
+        # Load data
+        vModel_test = load_data('vertices_correct_3.pkl')
+
+        # Check if geometry is correct
+        self.assertTrue(vModel_test.geo.geometry_is_correct())
+
+    def test_geometry_is_incorrect(self):
+        """
+        Test the function geometry_is_correct
+        :return:
+        """
+        # Load data
+        vModel_test = load_data('vertices_going_wild_1.pkl')
+
+        # Check if geometry is correct
+        self.assertFalse(vModel_test.geo.geometry_is_correct())
+
+        # Another test with a different geometry
+        vModel_test = load_data('vertices_going_wild_2.pkl')
+
+        # Check if geometry is correct
+        self.assertFalse(vModel_test.geo.geometry_is_correct())
+
+        # Another test with a different geometry
+        vModel_test = load_data('vertices_going_wild_3.pkl')
+
+        # Check if geometry is correct
+        self.assertFalse(vModel_test.geo.geometry_is_correct())
+
+
+
