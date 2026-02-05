@@ -561,13 +561,16 @@ class VertexModel:
         :return:
         """
         # Standard convergence criterion
-        converged = ((gr * self.set.dt / self.set.dt0) < self.set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
-                np.all(~np.isnan(dy[self.Dofs.Free])) and
-                (np.max(abs(g[self.Dofs.Free])) * self.set.dt / self.set.dt0) < self.set.tol)
-        
-        # For explicit methods: Don't reject based on gradient increase
-        # The adaptive scaling in newton_raphson_iteration_explicit handles stability
-        # Rejection causes geometry restore and dt reduction, making convergence harder
+        if self.set.implicit_method:
+            converged = ((gr * self.set.dt / self.set.dt0) < self.set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
+                    np.all(~np.isnan(dy[self.Dofs.Free])) and
+                    (np.max(abs(g[self.Dofs.Free])) * self.set.dt / self.set.dt0) < self.set.tol)
+        else:
+            # For explicit methods: Don't reject based on gradient increase
+            # The adaptive scaling in newton_raphson_iteration_explicit handles stability
+            # Rejection causes geometry restore and dt reduction, making convergence harder
+            converged = (np.all(~np.isnan(g[self.Dofs.Free])) and np.all(~np.isnan(dy[self.Dofs.Free])) and
+                         (np.max(abs(g[self.Dofs.Free])) < self.set.tol or self.set.dt <= self.set.dt0 * self.set.dt_tolerance))
         
         if converged:
             self.iteration_converged()
