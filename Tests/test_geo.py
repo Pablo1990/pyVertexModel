@@ -422,5 +422,11 @@ class TestGeo(Tests):
         # Check if geometry is correct
         self.assertFalse(vModel_test.geo.geometry_is_correct())
 
+        # Another test with a different geometry
+        vModel_test = load_data('vertices_going_wild_4.pkl')
+
+        # Check if geometry is correct
+        self.assertFalse(vModel_test.geo.geometry_is_correct())
+
 
 
