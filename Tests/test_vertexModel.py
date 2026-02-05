@@ -485,3 +485,62 @@ class TestVertexModel(Tests):
         assert vModel_test.geo.nCells > 0, "Should have cells"
 
 
+    def test_weird_bug_should_not_happen(self):
+        """
+        Test for a weird bug that should not happen.
+        :return:
+        """
+        # Load data
+        vModel_test = load_data('vertices_going_wild.pkl')
+
+        # Run for 20 iterations. dt should not decrease to 1e-1
+        vModel_test.set.tend = vModel_test.t + 20 * vModel_test.set.dt0
+
+        # Update tolerance
+        vModel_test.set.dt_tolerance = 0.25
+
+        # Run the model
+        vModel_test.iterate_over_time()
+
+        # Check if it did not converge
+        self.assertFalse(vModel_test.didNotConverge)
+
+    def test_vertices_shouldnt_be_going_wild(self):
+        """
+        Test for another weird bug that should not happen.
+        :return:
+        """
+        # Load data
+        vModel_test = load_data('vertices_going_wild_2.pkl')
+
+        # Run for 10 iterations. dt should not decrease to 1e-1
+        vModel_test.set.tend = vModel_test.t + 20 * vModel_test.set.dt0
+
+        # Update tolerance
+        vModel_test.set.dt_tolerance = 0.25
+
+        # Run the model
+        vModel_test.iterate_over_time()
+
+        # Check if it did not converge
+        self.assertFalse(vModel_test.didNotConverge)
+
+    def test_vertices_shouldnt_be_going_wild_3(self):
+        """
+        Test for another weird bug that should not happen.
+        :return:
+        """
+        # Load data
+        vModel_test = load_data('vertices_going_wild_3.pkl')
+
+        # Run for 10 iterations. dt should not decrease to 1e-1
+        vModel_test.set.tend = vModel_test.t + 20 * vModel_test.set.dt0
+
+        # Update tolerance
+        vModel_test.set.dt_tolerance = 0.25
+
+        # Run the model
+        vModel_test.iterate_over_time()
+
+        # Check if it did not converge
+        self.assertFalse(vModel_test.didNotConverge)
