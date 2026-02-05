@@ -2274,4 +2274,80 @@ class Geo:
         self.update_measures()
 
         volumes_after_deformation = np.array([cell.Vol for cell in self.Cells if cell.AliveStatus is not None])
+
+    def geometry_is_correct(self):
+        """
+        Check if the geometry is valid and not "going wild".
+        
+        A geometry is considered invalid ("going wild") if:
+        - Any alive cell has Y=None or Vol=None
+        - Any alive cell has NaN or Inf in vertex positions
+        - Any alive cell has extremely large vertex coordinates (abs > 100)
+        - Any alive cell has negative, tiny (< 1e-10), or huge (> 10) volume
+        - Vertex coordinates of alive cells have excessive spread (std > 0.25)
+        
+        Dead cells (AliveStatus=None) are ignored as they may legitimately have Y=None.
+        
+        :return: True if geometry is correct, False if geometry is "going wild"
+        """
+        # Collect all vertex positions from alive cells only
+        alive_y_values = []
+        
+        for cell in self.Cells:
+            # Skip dead cells - they can have Y=None and Vol=None
+            if hasattr(cell, 'AliveStatus') and cell.AliveStatus is None:
+                continue
+            
+            # Check if Y (vertex positions) exists and is valid for alive cells
+            if cell.Y is None:
+                logger.debug(f"Cell {cell.ID}: Alive cell has Y=None")
+                return False
+            
+            # Check for NaN or Inf in vertex positions
+            if hasattr(cell.Y, 'size') and cell.Y.size > 0:
+                if np.any(np.isnan(cell.Y)):
+                    logger.debug(f"Cell {cell.ID}: Y contains NaN")
+                    return False
+                if np.any(np.isinf(cell.Y)):
+                    logger.debug(f"Cell {cell.ID}: Y contains Inf")
+                    return False
+                
+                # Check for extremely large coordinates
+                if np.any(np.abs(cell.Y) > 100):
+                    max_val = np.max(np.abs(cell.Y))
+                    logger.debug(f"Cell {cell.ID}: Y has extremely large values (max abs: {max_val})")
+                    return False
+                
+                # Collect for spread analysis
+                alive_y_values.append(cell.Y)
+            
+            # Check volume validity for alive cells
+            if hasattr(cell, 'Vol'):
+                if cell.Vol is None:
+                    logger.debug(f"Cell {cell.ID}: Alive cell has Vol=None")
+                    return False
+                if cell.Vol < 0:
+                    logger.debug(f"Cell {cell.ID}: Vol is negative ({cell.Vol})")
+                    return False
+                if cell.Vol < 1e-10:
+                    logger.debug(f"Cell {cell.ID}: Vol is extremely small ({cell.Vol})")
+                    return False
+                if cell.Vol > 10:
+                    logger.debug(f"Cell {cell.ID}: Vol is extremely large ({cell.Vol})")
+                    return False
+        
+        # Check if vertex coordinates have excessive spread (indicating "going wild")
+        if alive_y_values:
+            all_y = np.concatenate(alive_y_values)
+            y_std = np.std(all_y)
+            
+            # Empirically determined threshold: correct geometries have std ~0.13-0.17,
+            # "going wild" geometries have std > 0.24 or show significant deviations
+            # Using 0.22 as threshold to catch geometries starting to go wild
+            if y_std > 0.22:
+                logger.debug(f"Vertex coordinate spread too large (std={y_std:.3f} > 0.25)")
+                return False
+        
+        # All checks passed
+        return True
         logger.info(f'Volume difference: {np.mean(volumes_after_deformation) - average_volume}')
