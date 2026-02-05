@@ -496,7 +496,7 @@ class VertexModel:
             gr = self.single_iteration()
 
             if np.isnan(gr):
-                break
+                self.didNotConverge = True
 
         self.save_v_model_state()
 
