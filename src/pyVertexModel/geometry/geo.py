@@ -2277,76 +2277,170 @@ class Geo:
 
     def geometry_is_correct(self):
         """
-        Check if the geometry is valid and not "going wild".
+        Check if the geometry is structurally valid using vertex model expert criteria.
         
-        A geometry is considered invalid ("going wild") if:
-        - Any alive cell has Y=None or Vol=None
-        - Any alive cell has NaN or Inf in vertex positions
-        - Any alive cell has extremely large vertex coordinates (abs > 100)
-        - Any alive cell has negative, tiny (< 1e-10), or huge (> 10) volume
-        - Vertex coordinates of alive cells have excessive spread (std > 0.25)
+        This function validates the vertex model geometry structure by checking:
+        1. Cell volumes (positive, not degenerate)
+        2. Cell Y coordinates (no None, NaN, or Inf)
+        3. Face areas (positive, not too small)
+        4. Triangle degeneracy (no collapsed triangles)
+        5. Face planarity (critical for detecting "spiky cells")
         
         Dead cells (AliveStatus=None) are ignored as they may legitimately have Y=None.
         
-        :return: True if geometry is correct, False if geometry is "going wild"
+        Returns:
+            bool: True if geometry is structurally valid, False if invalid/going wild
         """
-        # Collect all vertex positions from alive cells only
-        alive_y_values = []
         
-        for cell in self.Cells:
-            # Skip dead cells - they can have Y=None and Vol=None
-            if hasattr(cell, 'AliveStatus') and cell.AliveStatus is None:
-                continue
-            
-            # Check if Y (vertex positions) exists and is valid for alive cells
+        # Get alive cells only
+        alive_cells = [c for c in self.Cells if hasattr(c, 'AliveStatus') and c.AliveStatus is not None]
+        
+        if not alive_cells:
+            logger.debug("No alive cells found")
+            return False
+        
+        # 1. Check cell Y coordinates
+        for cell_idx, cell in enumerate(alive_cells):
             if cell.Y is None:
-                logger.debug(f"Cell {cell.ID}: Alive cell has Y=None")
+                logger.debug(f"Cell {cell_idx} has Y=None")
                 return False
             
-            # Check for NaN or Inf in vertex positions
-            if hasattr(cell.Y, 'size') and cell.Y.size > 0:
-                if np.any(np.isnan(cell.Y)):
-                    logger.debug(f"Cell {cell.ID}: Y contains NaN")
-                    return False
-                if np.any(np.isinf(cell.Y)):
-                    logger.debug(f"Cell {cell.ID}: Y contains Inf")
-                    return False
-                
-                # Check for extremely large coordinates
-                if np.any(np.abs(cell.Y) > 100):
-                    max_val = np.max(np.abs(cell.Y))
-                    logger.debug(f"Cell {cell.ID}: Y has extremely large values (max abs: {max_val})")
-                    return False
-                
-                # Collect for spread analysis
-                alive_y_values.append(cell.Y)
+            # Check for NaN or Inf
+            if np.any(np.isnan(cell.Y)) or np.any(np.isinf(cell.Y)):
+                logger.debug(f"Cell {cell_idx} has NaN or Inf in Y coordinates")
+                return False
+        
+        # 2. Check cell volumes (should be positive and reasonable)
+        for cell_idx, cell in enumerate(alive_cells):
+            if not hasattr(cell, 'Vol') or cell.Vol is None:
+                logger.debug(f"Cell {cell_idx} has no volume")
+                return False
             
-            # Check volume validity for alive cells
-            if hasattr(cell, 'Vol'):
-                if cell.Vol is None:
-                    logger.debug(f"Cell {cell.ID}: Alive cell has Vol=None")
-                    return False
-                if cell.Vol < 0:
-                    logger.debug(f"Cell {cell.ID}: Vol is negative ({cell.Vol})")
-                    return False
-                if cell.Vol < 1e-10:
-                    logger.debug(f"Cell {cell.ID}: Vol is extremely small ({cell.Vol})")
-                    return False
-                if cell.Vol > 10:
-                    logger.debug(f"Cell {cell.ID}: Vol is extremely large ({cell.Vol})")
+            if cell.Vol <= 0:
+                logger.debug(f"Cell {cell_idx} has non-positive volume: {cell.Vol}")
+                return False
+            
+            if cell.Vol < 1e-10:
+                logger.debug(f"Cell {cell_idx} has tiny volume: {cell.Vol}")
+                return False
+        
+        # 3. Check face areas (should be positive and not too small)
+        for cell_idx, cell in enumerate(alive_cells):
+            if not hasattr(cell, 'Faces'):
+                continue
+                
+            for face_idx, face in enumerate(cell.Faces):
+                if hasattr(face, 'Area') and face.Area is not None:
+                    if face.Area < 0:
+                        logger.debug(f"Cell {cell_idx}, Face {face_idx} has negative area: {face.Area}")
+                        return False
+                    
+                    if face.Area < 1e-12:
+                        logger.debug(f"Cell {cell_idx}, Face {face_idx} has degenerate area: {face.Area}")
+                        return False
+        
+        # 4. Check triangle areas and degeneracy
+        for cell_idx, cell in enumerate(alive_cells):
+            if not hasattr(cell, 'Faces'):
+                continue
+                
+            for face_idx, face in enumerate(cell.Faces):
+                if not hasattr(face, 'Tris'):
+                    continue
+                    
+                for tri_idx, tri in enumerate(face.Tris):
+                    # Check for degenerate triangles (same edge vertices)
+                    if hasattr(tri, 'Edge') and tri.Edge is not None:
+                        if len(tri.Edge) >= 2 and tri.Edge[0] == tri.Edge[1]:
+                            logger.debug(f"Cell {cell_idx}, Face {face_idx}, Tri {tri_idx} is degenerate (same vertices)")
+                            return False
+                    
+                    # Check triangle area
+                    if hasattr(tri, 'Area') and tri.Area is not None:
+                        if tri.Area < 0:
+                            logger.debug(f"Cell {cell_idx}, Face {face_idx}, Tri {tri_idx} has negative area")
+                            return False
+        
+        # 4b. Check for excessive degenerate/tiny triangles
+        # Some tiny triangles are normal, but too many indicate geometric issues
+        tiny_triangle_count = 0
+        total_triangles = 0
+        
+        for cell_idx, cell in enumerate(alive_cells):
+            if not hasattr(cell, 'Faces'):
+                continue
+                
+            for face_idx, face in enumerate(cell.Faces):
+                if not hasattr(face, 'Tris'):
+                    continue
+                    
+                for tri in face.Tris:
+                    total_triangles += 1
+                    
+                    # Count tiny triangles
+                    if hasattr(tri, 'Area') and tri.Area is not None and tri.Area < 1e-10:
+                        tiny_triangle_count += 1
+        
+        # If more than 0.2% of triangles are tiny, geometry is problematic
+        # Empirically: correct geometries have ~0.05% tiny triangles, going_wild_1 has ~0.29%
+        if total_triangles > 0:
+            tiny_ratio = tiny_triangle_count / total_triangles
+            if tiny_ratio > 0.002:  # 0.2% threshold
+                logger.debug(f"Too many tiny triangles: {tiny_triangle_count}/{total_triangles} ({tiny_ratio*100:.2f}%)")
+                return False
+        
+        # 5. Check face planarity (CRITICAL for detecting "spiky cells")
+        # In a proper vertex model, faces should be approximately planar.
+        # Non-planar faces indicate vertices sticking out, creating spikes.
+        planarity_threshold = 0.08  # Eigenvalue ratio threshold
+        non_planar_count = 0
+        
+        for cell_idx, cell in enumerate(alive_cells):
+            if not hasattr(cell, 'Faces'):
+                continue
+                
+            for face_idx, face in enumerate(cell.Faces):
+                if not hasattr(face, 'Tris'):
+                    continue
+                    
+                # Get all unique vertices in the face
+                vertices = set()
+                for tri in face.Tris:
+                    if hasattr(tri, 'Edge') and tri.Edge is not None:
+                        vertices.add(tri.Edge[0])
+                        vertices.add(tri.Edge[1])
+                
+                if len(vertices) < 3:
+                    continue
+                
+                # Get vertex coordinates
+                try:
+                    vertex_coords = np.array([cell.Y[v] for v in vertices])
+                    
+                    # Check planarity using PCA
+                    # For planar faces, the smallest eigenvalue should be very small
+                    if len(vertex_coords) >= 3:
+                        centered = vertex_coords - np.mean(vertex_coords, axis=0)
+                        cov = np.cov(centered.T)
+                        eigenvalues = np.linalg.eigvalsh(cov)
+                        
+                        # Smallest eigenvalue relative to largest
+                        # This detects non-planar faces that create "spiky cells"
+                        if eigenvalues[2] > 1e-15:  # Avoid division by zero
+                            planarity_ratio = eigenvalues[0] / eigenvalues[2]
+                            
+                            if planarity_ratio > planarity_threshold:
+                                non_planar_count += 1
+                                logger.debug(f"Cell {cell_idx}, Face {face_idx} is non-planar (ratio={planarity_ratio:.4f} > {planarity_threshold})")
+                
+                except (IndexError, ValueError) as e:
+                    logger.debug(f"Cell {cell_idx}, Face {face_idx}: Error checking planarity: {e}")
                     return False
         
-        # Check if vertex coordinates have excessive spread (indicating "going wild")
-        if alive_y_values:
-            all_y = np.concatenate(alive_y_values)
-            y_std = np.std(all_y)
-            
-            # Empirically determined threshold: correct geometries have std ~0.13-0.17,
-            # "going wild" geometries have std > 0.24 or show significant deviations
-            # Using 0.22 as threshold to catch geometries starting to go wild
-            if y_std > 0.22:
-                logger.debug(f"Vertex coordinate spread too large (std={y_std:.3f} > 0.25)")
-                return False
+        # Any non-planar faces indicate geometry is going wild
+        if non_planar_count > 0:
+            logger.debug(f"Found {non_planar_count} non-planar faces")
+            return False
         
         # All checks passed
         return True
