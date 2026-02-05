@@ -217,19 +217,18 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g, selected_cells=None)
     # ALWAYS use conservative scaling to prevent any gradient growth
     gr = np.linalg.norm(g[dof])
     
-    # Simplified adaptive scaling
-    # Key insight: explosion happens after gradient drops below tolerance
-    # So we need MORE conservative scaling for small gradients, not less
+    # Adaptive step scaling based on gradient magnitude
+    # Balance between stability (prevent explosion) and efficiency (allow progress)
     MIN_SCALE_FACTOR = 0.1
     
     if gr > Set.tol:
-        # Large gradient: adaptive scaling based on tol/gr
-        SAFETY_FACTOR = 0.5
+        # Large gradient: conservative adaptive scaling
+        SAFETY_FACTOR = 0.6
         scale_factor = max(MIN_SCALE_FACTOR, min(1.0, Set.tol / gr * SAFETY_FACTOR))
     else:
-        # Small gradient: EXTRA conservative to prevent explosion
-        # This is counterintuitive but critical - small gradients can explode fastest
-        scale_factor = 0.75
+        # Small gradient: use nearly full step since gradient is already controlled
+        # 0.95 allows faster progress while still providing small safety margin
+        scale_factor = 0.95
     
     # Store gradient for monitoring
     Set.last_gr = gr
