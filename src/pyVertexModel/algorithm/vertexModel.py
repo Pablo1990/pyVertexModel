@@ -528,7 +528,7 @@ class VertexModel:
             # up-to-date
             self.geo.update_measures()
 
-        if self.set.implicit_method is True:
+        if self.set.implicit_method:
             g, K, _, energies = newtonRaphson.KgGlobal(self.geo_0, self.geo_n, self.geo, self.set,
                                                        self.set.implicit_method)
         else:
