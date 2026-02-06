@@ -488,6 +488,7 @@ class TestVertexModel(Tests):
     def test_weird_bug_should_not_happen(self):
         """
         Test for a weird bug that should not happen.
+        Uses FIRE algorithm for stable, fast convergence.
         :return:
         """
         # Load data
@@ -498,6 +499,9 @@ class TestVertexModel(Tests):
 
         # Update tolerance
         vModel_test.set.dt_tolerance = 0.25
+
+        # Use FIRE algorithm for better stability and convergence
+        vModel_test.set.integrator = 'fire'
 
         # Run the model
         vModel_test.iterate_over_time()
