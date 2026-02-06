@@ -45,7 +45,18 @@ class Set:
         self.dt = None
         self.dt0 = None
         self.implicit_method = False
-        self.integrator = 'euler'  # Time integrator: 'euler' or 'rk2' (midpoint method)
+        self.integrator = 'euler'  # Time integrator: 'euler', 'rk2' (midpoint method), or 'fire' (FIRE algorithm)
+        
+        # FIRE Algorithm parameters (Bitzek et al., 2006)
+        # These parameters control the adaptive optimization when integrator='fire'
+        self.fire_dt_max = None      # Maximum timestep (will be set to 10*dt if None)
+        self.fire_dt_min = None      # Minimum timestep (will be set to 0.02*dt if None)
+        self.fire_N_min = 5          # Steps before acceleration (recommended: 5)
+        self.fire_f_inc = 1.1        # dt increase factor (recommended: 1.1)
+        self.fire_f_dec = 0.5        # dt decrease factor (recommended: 0.5)
+        self.fire_alpha_start = 0.1  # Initial damping coefficient (recommended: 0.1)
+        self.fire_f_alpha = 0.99     # α decrease factor (recommended: 0.99)
+        
         self.TypeOfPurseString = None
         self.Contractility_TimeVariability = None
         self.Contractility_Variability_LateralCables = None

@@ -126,10 +126,12 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t, implicit_meth
             Energy, K, dyr, g, gr, ig, auxgr, dy = newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof,
                                                                             dy, g, gr0, ig, numStep, t)
     else:
-        # Choose explicit integrator: Euler or RK2
+        # Choose explicit integrator: Euler, RK2, or FIRE
         integrator = getattr(Set, 'integrator', 'euler')  # Default to Euler for backward compatibility
         if integrator == 'rk2':
             Geo, dy, dyr = newton_raphson_iteration_rk2(Geo_0, Geo_n, Geo, Set, dof, dy, g)
+        elif integrator == 'fire':
+            Geo, dy, dyr = newton_raphson_iteration_fire(Geo_0, Geo_n, Geo, Set, dof, dy, g)
         else:
             Geo, dy, dyr = newton_raphson_iteration_explicit(Geo, Set, dof, dy, g)
 
@@ -347,6 +349,137 @@ def newton_raphson_iteration_rk2(Geo_0, Geo_n, Geo, Set, dof, dy, g, selected_ce
     
     Geo.update_measures()
     Set.iter = Set.MaxIter
+    
+    return Geo, dy, dyr
+
+
+def newton_raphson_iteration_fire(Geo_0, Geo_n, Geo, Set, dof, dy, g, selected_cells=None):
+    """
+    FIRE (Fast Inertial Relaxation Engine) algorithm for energy minimization.
+    
+    Based on Bitzek et al., Phys. Rev. Lett. 97, 170201 (2006).
+    
+    FIRE is an adaptive optimization method that:
+    - Uses velocity-based integration with adaptive damping
+    - Monitors power P = F·v to detect approach to energy minimum
+    - Automatically adjusts timestep and damping for optimal convergence
+    - Prevents oscillations and overshooting that cause spiky cells
+    
+    Algorithm:
+        1. Compute forces F = -gradient
+        2. Update velocities: v = (1-α)v + α|v|·F̂  (mixed MD + steepest descent)
+        3. Integrate positions: y_new = y + dt·v + 0.5·dt²·F
+        4. Check power P = F·v:
+           - If P > 0 for N_min steps: increase dt, decrease α (accelerate)
+           - If P ≤ 0: reset v=0, decrease dt, reset α (recover from overshoot)
+    
+    This method adapts to system stiffness automatically and typically converges
+    faster than explicit Euler while being much more stable.
+    
+    :param Geo_0: Initial geometry
+    :param Geo_n: Geometry at previous timestep
+    :param Geo: Current geometry (will be updated)
+    :param Set: Simulation settings with FIRE parameters
+    :param dof: Degrees of freedom (free indices)
+    :param dy: Displacement vector (will be updated)
+    :param g: Current gradient
+    :param selected_cells: Optional cell selection
+    :return: Updated Geo, dy, dyr
+    """
+    # Bottom nodes constraints
+    g_constrained = constrain_bottom_vertices_x_y(Geo)
+    
+    # Initialize FIRE parameters if not set
+    if Set.fire_dt_max is None:
+        Set.fire_dt_max = 10.0 * Set.dt
+    if Set.fire_dt_min is None:
+        Set.fire_dt_min = 0.02 * Set.dt
+    
+    # Initialize FIRE state variables if not present
+    if not hasattr(Geo, '_fire_velocity'):
+        # Initialize velocity to zero
+        Geo._fire_velocity = np.zeros((Geo.numF + Geo.numY + Geo.nCells, 3))
+        Geo._fire_dt = Set.dt
+        Geo._fire_alpha = Set.fire_alpha_start
+        Geo._fire_n_positive = 0
+        logger.info("FIRE algorithm initialized")
+    
+    # Forces are negative gradient
+    F = -g.copy()
+    
+    # Extract free DOF velocities and forces
+    v_flat = Geo._fire_velocity.flatten()[dof]
+    F_flat = F[dof]
+    
+    # Compute power P = F · v
+    P = np.dot(F_flat, v_flat)
+    
+    # FIRE algorithm state machine
+    if P > 0:
+        # System is moving toward minimum
+        Geo._fire_n_positive += 1
+        
+        # Update velocity with mixing: v = (1-α)v + α|v|·F̂
+        v_mag = np.linalg.norm(v_flat)
+        if v_mag > 1e-10:
+            F_mag = np.linalg.norm(F_flat)
+            if F_mag > 1e-10:
+                F_hat = F_flat / F_mag
+                v_flat = (1.0 - Geo._fire_alpha) * v_flat + Geo._fire_alpha * v_mag * F_hat
+        
+        # If P > 0 for N_min consecutive steps, accelerate
+        if Geo._fire_n_positive > Set.fire_N_min:
+            # Increase timestep (up to maximum)
+            Geo._fire_dt = min(Geo._fire_dt * Set.fire_f_inc, Set.fire_dt_max)
+            # Decrease damping (approach pure MD)
+            Geo._fire_alpha *= Set.fire_f_alpha
+            logger.debug(f"FIRE accelerating: dt={Geo._fire_dt:.4f}, α={Geo._fire_alpha:.4f}")
+    else:
+        # System overshot minimum, need to recover
+        logger.debug(f"FIRE reset: P={P:.3e} < 0")
+        Geo._fire_n_positive = 0
+        # Reset velocity to zero
+        v_flat = np.zeros_like(v_flat)
+        # Decrease timestep (down to minimum)
+        Geo._fire_dt = max(Geo._fire_dt * Set.fire_f_dec, Set.fire_dt_min)
+        # Reset damping to initial value
+        Geo._fire_alpha = Set.fire_alpha_start
+    
+    # Velocity-Verlet integration: y_new = y + dt*v + 0.5*dt²*F
+    dt_fire = Geo._fire_dt
+    dy_flat = dt_fire * v_flat + 0.5 * dt_fire * dt_fire * F_flat
+    
+    # Update velocity for next step: v_new ≈ v + dt*F
+    # (Exact Verlet would need F at new position, but this approximation is fine)
+    v_flat = v_flat + dt_fire * F_flat
+    
+    # Store updated velocity back in reshaped form
+    Geo._fire_velocity.flatten()[dof] = v_flat
+    
+    # Also update constrained DOFs if any
+    if len(g_constrained) > 0:
+        # For constrained nodes, use simple damped update
+        F_constrained = -g[g_constrained]
+        dy_constrained = dt_fire * F_constrained * 0.5  # More conservative for boundaries
+        dy.flatten()[g_constrained] = dy_constrained
+    
+    # Build full displacement vector
+    dy[dof, 0] = dy_flat
+    dy = map_vertices_periodic_boundaries(Geo, dy)
+    dyr = np.linalg.norm(dy[dof, 0])
+    dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
+    
+    # Update geometry
+    Geo.update_vertices(dy_reshaped, selected_cells)
+    if Set.frozen_face_centres or Set.frozen_face_centres_border_cells:
+        for cell in Geo.Cells:
+            if cell.AliveStatus is not None and ((cell.ID in Geo.BorderCells and Set.frozen_face_centres_border_cells) or Set.frozen_face_centres):
+                face_centres_to_middle_of_neighbours_vertices(Geo, cell.ID)
+    
+    Geo.update_measures()
+    Set.iter = Set.MaxIter
+    
+    logger.debug(f"FIRE: dt={Geo._fire_dt:.4f}, α={Geo._fire_alpha:.4f}, P={P:.3e}, |v|={np.linalg.norm(v_flat):.3e}")
     
     return Geo, dy, dyr
 
