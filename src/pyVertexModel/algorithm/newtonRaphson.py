@@ -133,7 +133,7 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t, implicit_meth
         # Choose explicit integrator: Euler, RK2, or FIRE
         integrator = getattr(Set, 'integrator', 'euler')  # Default to Euler for backward compatibility
         if integrator == 'fire':
-            Geo, converged, fire_iterations, final_gradient_norm = fire_minimization_loop(Geo_0, Geo_n, Geo, Set, dof, dy, g, t)
+            Geo, converged, fire_iterations, final_gradient_norm = fire_minimization_loop(Geo_0, Geo_n, Geo, Set, dof, dy, g, t, numStep)
         else:
             Geo, dy, dyr = newton_raphson_iteration_explicit(Geo, Set, dof, dy, g)
 
@@ -266,7 +266,7 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g, selected_cells=None)
 
     return Geo, dy, dyr
 
-def check_if_FIRE_converged(F_flat, Set, dy_flat, v_flat, iteration_count):
+def check_if_FIRE_converged(Geo, F_flat, Set, dy_flat, v_flat, iteration_count):
     """
     Realistic FIRE convergence for vertex models.
 
@@ -318,7 +318,7 @@ def check_if_FIRE_converged(F_flat, Set, dy_flat, v_flat, iteration_count):
 
     # Log progress every 10 iterations
     if iteration_count % 10 == 0:
-        logger.info(f"FIRE iter {iteration_count}: maxF={max_force:.3e}, |v|={v_mag:.3e}, dt={Set._fire_dt:.4f}")
+        logger.info(f"FIRE iter {iteration_count}: maxF={max_force:.3e}, |v|={v_mag:.3e}, dt={Geo._fire_dt:.4f}")
 
     return converged, reason
 
@@ -348,20 +348,36 @@ def newton_raphson_iteration_fire(Geo, Set, dof, dy, g, selected_cells=None):
 
     # Initialize FIRE parameters if not set
     if not hasattr(Set, 'fire_initialized'):
-        # Standard FIRE parameters
-        Set.fire_alpha_start = getattr(Set, 'fire_alpha_start', 0.1)
-        Set.fire_f_inc = getattr(Set, 'fire_f_inc', 1.1)
-        Set.fire_f_dec = getattr(Set, 'fire_f_dec', 0.5)
-        Set.fire_f_alpha = getattr(Set, 'fire_f_alpha', 0.99)
-        Set.fire_N_min = getattr(Set, 'fire_N_min', 5)
-        Set.fire_dt_max = getattr(Set, 'fire_dt_max', 10.0 * Set.dt)
-        Set.fire_dt_min = getattr(Set, 'fire_dt_min', 0.02 * Set.dt)
+        if Set.ablation:
+            # Standard FIRE parameters - OPTIMIZED FOR SPEED and WITHOUT TIME DEPENDENCE
+            Set.fire_alpha_start = getattr(Set, 'fire_alpha_start', 0.2)  # More aggressive mixing
+            Set.fire_f_inc = getattr(Set, 'fire_f_inc', 1.25)  # Faster dt increase
+            Set.fire_f_dec = getattr(Set, 'fire_f_dec', 0.2)  # More aggressive dt reduction on failure
+            Set.fire_f_alpha = getattr(Set, 'fire_f_alpha', 0.97)  # Faster α decay
+            Set.fire_N_min = getattr(Set, 'fire_N_min', 2)  # Accelerate sooner
+            Set.fire_dt_max = getattr(Set, 'fire_dt_max', 20.0)  # Large max dt for fast minimization
+            Set.fire_dt_min = getattr(Set, 'fire_dt_min', 1e-8)  # Very small min dt
 
-        # Convergence tolerances
-        Set.fire_force_tol = getattr(Set, 'fire_force_tol', 1e-6)
-        Set.fire_disp_tol = getattr(Set, 'fire_disp_tol', 1e-8)
-        Set.fire_vel_tol = getattr(Set, 'fire_vel_tol', 1e-10)
-        Set.fire_max_iterations = getattr(Set, 'fire_max_iterations', 1000)
+            # Convergence tolerances - PRACTICAL FOR VERTEX MODELS
+            Set.fire_force_tol = getattr(Set, 'fire_force_tol', 1e-6)  # Tight for steady-state
+            Set.fire_disp_tol = getattr(Set, 'fire_disp_tol', 1e-10)  # Tight displacement
+            Set.fire_vel_tol = getattr(Set, 'fire_vel_tol', 1e-12)  # Tight velocity
+            Set.fire_max_iterations = getattr(Set, 'fire_max_iterations', 500)  # Allow more iterations for tight convergence
+        else:
+            # Standard FIRE parameters - TUNED FOR SPEED OVER PRECISION
+            Set.fire_alpha_start = getattr(Set, 'fire_alpha_start', 0.15)  # Moderate mixing
+            Set.fire_f_inc = getattr(Set, 'fire_f_inc', 1.15)  # Moderate dt increase
+            Set.fire_f_dec = getattr(Set, 'fire_f_dec', 0.25)  # Quick recovery on bad steps
+            Set.fire_f_alpha = getattr(Set, 'fire_f_alpha', 0.98)  # Moderate α decay
+            Set.fire_N_min = getattr(Set, 'fire_N_min', 2)  # Accelerate quickly
+            Set.fire_dt_max = getattr(Set, 'fire_dt_max', 5.0 * Set.dt)  # Limited max dt (prevent overshoot)
+            Set.fire_dt_min = getattr(Set, 'fire_dt_min', 1e-6 * Set.dt)  # Very small min dt
+
+            # Convergence tolerances - PRACTICAL FOR DYNAMICAL SIMULATIONS
+            Set.fire_force_tol = getattr(Set, 'fire_force_tol', 5e-3)  # Loose tolerance (0.5% of typical forces)
+            Set.fire_disp_tol = getattr(Set, 'fire_disp_tol', 1e-6)  # Moderate displacement
+            Set.fire_vel_tol = getattr(Set, 'fire_vel_tol', 1e-8)  # Moderate velocity
+            Set.fire_max_iterations = getattr(Set, 'fire_max_iterations', 30)  # STRICT LIMIT for dynamics
 
         Set.fire_initialized = True
         logger.info("FIRE parameters initialized")
@@ -472,7 +488,7 @@ def newton_raphson_iteration_fire(Geo, Set, dof, dy, g, selected_cells=None):
     # ============================================
 
     converged, reason = check_if_FIRE_converged(
-        F_flat, Set, dy_flat, v_flat, Geo._fire_iteration_count
+        Geo, F_flat, Set, dy_flat, v_flat, Geo._fire_iteration_count
     )
 
     logger.debug(f"FIRE: dt={Geo._fire_dt:.4f}, α={Geo._fire_alpha:.4f}, "
@@ -485,7 +501,7 @@ def newton_raphson_iteration_fire(Geo, Set, dof, dy, g, selected_cells=None):
     return Geo, dy, dyr, converged
 
 
-def fire_minimization_loop(Geo_0, Geo_n, Geo, Set, dof, dy, g, t, selected_cells=None):
+def fire_minimization_loop(Geo_0, Geo_n, Geo, Set, dof, dy, g, t, num_step, selected_cells=None):
     """
     Complete FIRE minimization loop for one timestep.
 
@@ -530,7 +546,7 @@ def fire_minimization_loop(Geo_0, Geo_n, Geo, Set, dof, dy, g, t, selected_cells
 
         # Recompute gradient for next iteration
         # (This depends on your gradient computation function)
-        # g = compute_gradient(Geo)  # You'll need to implement this
+        g, energies = gGlobal(Geo_0, Geo_n, Geo, Set, Set.implicit_method, num_step)
 
         # Optional: Break if stuck
         if fire_iterations > 50 and Geo._fire_n_positive == 0:

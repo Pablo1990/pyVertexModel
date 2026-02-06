@@ -106,7 +106,7 @@ class TestNewtonRaphson(Tests):
         t_test = mat_info['t'][0][0]
 
         Set.iter = 1000000
-        geo_test, g_test, k_test, energy_test, set_test, gr_test, dyr_test, dy_test = (
+        geo_test, g_test, k_test, energy_test, set_test, gr_test, dyr_test, dy_test, _ = (
             newton_raphson(geo_0_test,
                            geo_n_test,
                            geo_test,
@@ -143,7 +143,7 @@ class TestNewtonRaphson(Tests):
         t_test = mat_info['t'][0][0]
 
         Set.iter = 1000000
-        geo_test, g_test, k_test, energy_test, set_test, gr_test, dyr_test, dy_test = (
+        geo_test, g_test, k_test, energy_test, set_test, gr_test, dyr_test, dy_test, _ = (
             newton_raphson(geo_0_test,
                            geo_n_test,
                            geo_test,
