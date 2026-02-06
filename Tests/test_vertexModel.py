@@ -503,15 +503,15 @@ class TestVertexModel(Tests):
         # Use FIRE algorithm for better stability and convergence
         vModel_test.set.integrator = 'fire'
         
-        # Initialize FIRE parameters if not already present
-        if not hasattr(vModel_test.set, 'fire_dt_max') or vModel_test.set.fire_dt_max is None:
-            vModel_test.set.fire_dt_max = 10 * vModel_test.set.dt0
-            vModel_test.set.fire_dt_min = 0.02 * vModel_test.set.dt0
-            vModel_test.set.fire_N_min = 5
-            vModel_test.set.fire_f_inc = 1.1
-            vModel_test.set.fire_f_dec = 0.5
-            vModel_test.set.fire_alpha_start = 0.1
-            vModel_test.set.fire_f_alpha = 0.99
+        # Initialize FIRE parameters tuned for edge case geometries
+        # More lenient parameters to handle near-zero power cases
+        vModel_test.set.fire_dt_max = 10 * vModel_test.set.dt0
+        vModel_test.set.fire_dt_min = 0.1 * vModel_test.set.dt0  # Higher minimum (was 0.02)
+        vModel_test.set.fire_N_min = 3  # Accelerate sooner (was 5)
+        vModel_test.set.fire_f_inc = 1.2  # Faster acceleration (was 1.1)
+        vModel_test.set.fire_f_dec = 0.7  # Less aggressive decrease (was 0.5)
+        vModel_test.set.fire_alpha_start = 0.15  # More damping initially (was 0.1)
+        vModel_test.set.fire_f_alpha = 0.98  # Slower damping reduction (was 0.99)
 
         # Run the model
         vModel_test.iterate_over_time()
