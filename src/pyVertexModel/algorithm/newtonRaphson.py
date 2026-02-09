@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 
 import numpy as np
-from numpy import bool
 
 from pyVertexModel.Kg.kgContractility import KgContractility
 from pyVertexModel.Kg.kgContractility_external import KgContractilityExternal
@@ -347,43 +346,6 @@ def newton_raphson_iteration_fire(Geo, Set, dof, dy, g, selected_cells=None):
 
     # Bottom nodes constraints
     g_constrained = constrain_bottom_vertices_x_y(Geo)
-
-    # Initialize FIRE parameters if not set
-    if not hasattr(Set, 'fire_initialized'):
-        if not Set.ablation:
-            # Standard FIRE parameters - OPTIMIZED FOR SPEED and WITHOUT TIME DEPENDENCE
-            Set.fire_alpha_start = getattr(Set, 'fire_alpha_start', 0.2)  # More aggressive mixing
-            Set.fire_f_inc = getattr(Set, 'fire_f_inc', 1.25)  # Faster dt increase
-            Set.fire_f_dec = getattr(Set, 'fire_f_dec', 0.2)  # More aggressive dt reduction on failure
-            Set.fire_f_alpha = getattr(Set, 'fire_f_alpha', 0.97)  # Faster α decay
-            Set.fire_N_min = getattr(Set, 'fire_N_min', 2)  # Accelerate sooner
-            Set.fire_dt_max = getattr(Set, 'fire_dt_max', 20.0)  # Large max dt for fast minimization
-            Set.fire_dt_min = getattr(Set, 'fire_dt_min', 1e-8)  # Very small min dt
-
-            # Convergence tolerances - PRACTICAL FOR VERTEX MODELS
-            Set.fire_force_tol = getattr(Set, 'fire_force_tol', 1e-6)  # Tight for steady-state
-            Set.fire_disp_tol = getattr(Set, 'fire_disp_tol', 1e-10)  # Tight displacement
-            Set.fire_vel_tol = getattr(Set, 'fire_vel_tol', 1e-12)  # Tight velocity
-            Set.fire_max_iterations = getattr(Set, 'fire_max_iterations', 500)  # Allow more iterations for tight convergence
-            logger.info("FIRE parameters initialized for steady-state minimization")
-        else:
-            # Standard FIRE parameters - TUNED FOR SPEED OVER PRECISION
-            Set.fire_alpha_start = getattr(Set, 'fire_alpha_start', 0.15)  # Moderate mixing
-            Set.fire_f_inc = getattr(Set, 'fire_f_inc', 1.15)  # Moderate dt increase
-            Set.fire_f_dec = getattr(Set, 'fire_f_dec', 0.25)  # Quick recovery on bad steps
-            Set.fire_f_alpha = getattr(Set, 'fire_f_alpha', 0.98)  # Moderate α decay
-            Set.fire_N_min = getattr(Set, 'fire_N_min', 2)  # Accelerate quickly
-            Set.fire_dt_max = getattr(Set, 'fire_dt_max', 5.0 * Set.dt)  # Limited max dt (prevent overshoot)
-            Set.fire_dt_min = getattr(Set, 'fire_dt_min', 1e-6 * Set.dt)  # Very small min dt
-
-            # Convergence tolerances - PRACTICAL FOR DYNAMICAL SIMULATIONS
-            Set.fire_force_tol = getattr(Set, 'fire_force_tol', 5e-3)  # Loose tolerance (0.5% of typical forces)
-            Set.fire_disp_tol = getattr(Set, 'fire_disp_tol', 1e-6)  # Moderate displacement
-            Set.fire_vel_tol = getattr(Set, 'fire_vel_tol', 1e-8)  # Moderate velocity
-            Set.fire_max_iterations = getattr(Set, 'fire_max_iterations', 30)  # STRICT LIMIT for dynamics
-            logger.info("FIRE parameters initialized for dynamic simulation")
-
-        Set.fire_initialized = True
 
     # Initialize FIRE state variables if not present
     if not hasattr(Geo, '_fire_velocity'):

@@ -56,7 +56,23 @@ class Set:
         self.fire_f_dec = 0.5        # dt decrease factor (recommended: 0.5)
         self.fire_alpha_start = 0.1  # Initial damping coefficient (recommended: 0.1)
         self.fire_f_alpha = 0.99     # α decrease factor (recommended: 0.99)
-        
+
+        # Standard FIRE parameters - OPTIMIZED FOR SPEED and WITHOUT TIME DEPENDENCE
+        self.fire_alpha_start = 0.2  # More aggressive mixing
+        self.fire_f_inc = getattr(self, 'fire_f_inc', 1.25)  # Faster dt increase
+        self.fire_f_dec = getattr(self, 'fire_f_dec', 0.2)  # More aggressive dt reduction on failure
+        self.fire_f_alpha = getattr(self, 'fire_f_alpha', 0.97)  # Faster α decay
+        self.fire_N_min = getattr(self, 'fire_N_min', 2)  # Accelerate sooner
+        self.fire_dt_max = getattr(self, 'fire_dt_max', 20.0)  # Large max dt for fast minimization
+        self.fire_dt_min = getattr(self, 'fire_dt_min', 1e-8)  # Very small min dt
+
+        # Convergence tolerances - PRACTICAL FOR VERTEX MODELS
+        self.fire_force_tol = getattr(self, 'fire_force_tol', 1e-6)  # Tight for steady-state
+        self.fire_disp_tol = getattr(self, 'fire_disp_tol', 1e-10)  # Tight displacement
+        self.fire_vel_tol = getattr(self, 'fire_vel_tol', 1e-12)  # Tight velocity
+        self.fire_max_iterations = getattr(self, 'fire_max_iterations', 500)  # Allow more iterations for tight convergence
+
+        # Additional parameters
         self.TypeOfPurseString = None
         self.Contractility_TimeVariability = None
         self.Contractility_Variability_LateralCables = None
@@ -381,13 +397,14 @@ class Set:
         self.check_for_non_used_parameters()
 
     def wing_disc_equilibrium(self):
+        self.integrator = 'fire'
         self.nu_bottom = self.nu
         self.model_name = 'dWL1'
         self.initial_filename_state = 'Input/images/' + self.model_name + '.tif'
         #self.initial_filename_state = 'Input/images/dWP1_150cells_15_scutoids_1.0.pkl'
         self.percentage_scutoids = 0.0
         self.tend = 20
-        self.Nincr = self.tend * 100
+        self.Nincr = self.tend * 4
         self.CellHeight = 1 * 15 #np.array([0.0001, 0.001, 0.01, 0.1, 0.5, 1, 2.0]) * original_wing_disc_height
         #self.resize_z = 0.01
         self.min_3d_neighbours = None # 10
@@ -482,6 +499,21 @@ class Set:
         self.myosin_pool = (3e-5 + 7e-5) * myosin_pool_multiplier
         self.purseStringStrength = 3e-5
         self.lateralCablesStrength = 7e-5
+
+        # fire parameters for faster convergence to equilibrium after ablation
+        self.fire_alpha_start = getattr(self, 'fire_alpha_start', 0.15)  # Moderate mixing
+        self.fire_f_inc = getattr(self, 'fire_f_inc', 1.15)  # Moderate dt increase
+        self.fire_f_dec = getattr(self, 'fire_f_dec', 0.25)  # Quick recovery on bad steps
+        self.fire_f_alpha = getattr(self, 'fire_f_alpha', 0.98)  # Moderate α decay
+        self.fire_N_min = getattr(self, 'fire_N_min', 2)  # Accelerate quickly
+        self.fire_dt_max = getattr(self, 'fire_dt_max', 5.0 * self.dt)  # Limited max dt (prevent overshoot)
+        self.fire_dt_min = getattr(self, 'fire_dt_min', 1e-6 * self.dt)  # Very small min dt
+
+        # Convergence tolerances - PRACTICAL FOR DYNAMICAL SIMULATIONS
+        self.fire_force_tol = getattr(self, 'fire_force_tol', 5e-3)  # Loose tolerance (0.5% of typical forces)
+        self.fire_disp_tol = getattr(self, 'fire_disp_tol', 1e-6)  # Moderate displacement
+        self.fire_vel_tol = getattr(self, 'fire_vel_tol', 1e-8)  # Moderate velocity
+        self.fire_max_iterations = getattr(self, 'fire_max_iterations', 30)  # STRICT LIMIT for dynamics
 
     def menu_input(self, inputMode=None, batchMode=None):
         if inputMode == 7:
