@@ -10,8 +10,6 @@ from ._version import __version__
 # We want the project root directory (the parent of 'src')
 PROJECT_DIRECTORY = os.getenv('PROJECT_DIR', str(Path(__file__).parent.parent.parent))
 
-__all__ = ["PROJECT_DIRECTORY"]
-
 # get the logger instance
 logger = logging.getLogger("pyVertexModel")
 
@@ -19,9 +17,11 @@ formatter = logging.Formatter(
     "%(levelname)s [%(asctime)s] pyVertexModel: %(message)s",
     datefmt="%Y/%m/%d %I:%M:%S %p",
 )
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
+# Check if logger already has a console handler to avoid adding multiple handlers
+if not any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers):
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
 
 logger.setLevel(logging.DEBUG)
 logger.propagate = False
@@ -35,4 +35,4 @@ def warning_handler(message, category, filename, lineno, file=None, line=None):
 # Set the warnings' showwarning function to the handler
 warnings.showwarning = warning_handler
 
-__all__ = ['__version__', 'PROJECT_DIRECTORY', 'logger']
+__all__ = ['__version__', 'PROJECT_DIRECTORY']
