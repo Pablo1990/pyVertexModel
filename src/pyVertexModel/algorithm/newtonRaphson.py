@@ -134,6 +134,8 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t, implicit_meth
         integrator = getattr(Set, 'integrator', 'euler')  # Default to Euler for backward compatibility
         if integrator == 'fire':
             Geo, converged, fire_iterations, final_gradient_norm = fire_minimization_loop(Geo_0, Geo_n, Geo, Set, dof, dy, g, t, numStep)
+            gr = 0
+            dyr = 0
         else:
             Geo, dy, dyr = newton_raphson_iteration_explicit(Geo, Set, dof, dy, g)
 
@@ -348,7 +350,7 @@ def newton_raphson_iteration_fire(Geo, Set, dof, dy, g, selected_cells=None):
 
     # Initialize FIRE parameters if not set
     if not hasattr(Set, 'fire_initialized'):
-        if Set.ablation:
+        if not Set.ablation:
             # Standard FIRE parameters - OPTIMIZED FOR SPEED and WITHOUT TIME DEPENDENCE
             Set.fire_alpha_start = getattr(Set, 'fire_alpha_start', 0.2)  # More aggressive mixing
             Set.fire_f_inc = getattr(Set, 'fire_f_inc', 1.25)  # Faster dt increase
@@ -363,6 +365,7 @@ def newton_raphson_iteration_fire(Geo, Set, dof, dy, g, selected_cells=None):
             Set.fire_disp_tol = getattr(Set, 'fire_disp_tol', 1e-10)  # Tight displacement
             Set.fire_vel_tol = getattr(Set, 'fire_vel_tol', 1e-12)  # Tight velocity
             Set.fire_max_iterations = getattr(Set, 'fire_max_iterations', 500)  # Allow more iterations for tight convergence
+            logger.info("FIRE parameters initialized for steady-state minimization")
         else:
             # Standard FIRE parameters - TUNED FOR SPEED OVER PRECISION
             Set.fire_alpha_start = getattr(Set, 'fire_alpha_start', 0.15)  # Moderate mixing
@@ -378,9 +381,9 @@ def newton_raphson_iteration_fire(Geo, Set, dof, dy, g, selected_cells=None):
             Set.fire_disp_tol = getattr(Set, 'fire_disp_tol', 1e-6)  # Moderate displacement
             Set.fire_vel_tol = getattr(Set, 'fire_vel_tol', 1e-8)  # Moderate velocity
             Set.fire_max_iterations = getattr(Set, 'fire_max_iterations', 30)  # STRICT LIMIT for dynamics
+            logger.info("FIRE parameters initialized for dynamic simulation")
 
         Set.fire_initialized = True
-        logger.info("FIRE parameters initialized")
 
     # Initialize FIRE state variables if not present
     if not hasattr(Geo, '_fire_velocity'):
