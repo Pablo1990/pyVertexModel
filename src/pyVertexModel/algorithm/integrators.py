@@ -573,18 +573,18 @@ def check_if_fire_converged(geo, f_flat, c_set, dy_flat, v_flat, iteration_count
     """
     # 1. Force-based convergence (most important)
     max_force = np.max(np.abs(f_flat))
-    force_tol = getattr(c_set, 'fire_force_tol', 1e-6)  # Default: 1e-6
+    force_tol = c_set.fire_force_tol
 
     # 2. Displacement-based (secondary)
     max_disp = np.max(np.abs(dy_flat))
-    disp_tol = getattr(c_set, 'fire_disp_tol', 1e-8)  # Default: 1e-8
+    disp_tol = c_set.fire_disp_tol
 
     # 3. Velocity-based (system at rest)
     v_mag = np.linalg.norm(v_flat)
-    vel_tol = getattr(c_set, 'fire_vel_tol', 1e-10)  # Default: 1e-10
+    vel_tol = c_set.fire_vel_tol
 
     # 4. Maximum iterations
-    max_iter = getattr(c_set, 'fire_max_iterations', 1000)
+    max_iter = c_set.fire_max_iterations
 
     converged = False
     reason = ""
