@@ -714,7 +714,7 @@ def single_iteration_fire(geo, c_set, dof, dy, g, selected_cells=None):
     # Also update constrained DOFs if any
     if len(g_constrained) > 0:
         F_constrained = -g[g_constrained]
-        dy_constrained = geo._fire_dt * F_constrained * 0.5  # More conservative for boundaries
+        dy_constrained = geo._fire_dt * F_constrained * (c_set.nu / c_set.nu_bottom)  # More conservative for constrained
         dy.flatten()[g_constrained] = dy_constrained
 
     # Build full displacement vector
