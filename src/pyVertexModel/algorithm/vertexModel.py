@@ -246,7 +246,6 @@ class VertexModel:
         self.X = None
         self.didNotConverge = False
         self.geo = None
-        self.gr_before_step = 0.0  # For explicit method gradient tracking
 
         # Set definition
         if c_set is not None:
@@ -544,11 +543,6 @@ class VertexModel:
                                                                                   self.set.implicit_method)
         if not np.isnan(gr) and post_operations:
             self.post_newton_raphson(dy, g, gr, fire_converged)
-        
-        # Store gradient AFTER step for next iteration's comparison
-        # This must be done AFTER post_newton_raphson to avoid off-by-one error
-        if not self.set.implicit_method:
-            self.gr_before_step = gr
         
         return gr
 

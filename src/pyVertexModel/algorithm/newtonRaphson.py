@@ -222,34 +222,9 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g, selected_cells=None)
     # ALWAYS use conservative scaling to prevent any gradient growth
     gr = np.linalg.norm(g[dof])
     
-    # Adaptive step scaling based on gradient magnitude
-    # Balance between stability (prevent explosion) and efficiency (allow progress)
-    MIN_SCALE_FACTOR = 0.1
-    
-    if gr > Set.tol:
-        # Large gradient: adaptive scaling to prevent explosion
-        # SAFETY_FACTOR = 0.6 chosen empirically:
-        # - 0.5 was too conservative, causing test timeouts
-        # - 0.6 provides 40% safety margin while allowing reasonable progress
-        # - Tested on scutoid geometries where gradient starts at 4-5× tolerance
-        SAFETY_FACTOR = 0.6
-        scale_factor = max(MIN_SCALE_FACTOR, min(1.0, Set.tol / gr * SAFETY_FACTOR))
-    else:
-        # Small gradient (gr < tol): use nearly full step
-        # Counterintuitive but correct reasoning:
-        # - When gr < tol, the system is already in a good state
-        # - Conservative scaling (0.75) causes slow progress without benefit
-        # - 0.95 provides 5% safety margin while enabling efficient convergence
-        # - Empirically tested: gradient stays stable at ~0.04 with this value
-        # - If gradient increases, next iteration will catch it with adaptive scaling
-        scale_factor = 0.95
-    
-    # Store gradient for monitoring
-    Set.last_gr = gr
-    
     # Update the bottom nodes with scaled displacement
-    dy[dof, 0] = -Set.dt / Set.nu * g[dof] * scale_factor
-    dy[g_constrained, 0] = -Set.dt / Set.nu_bottom * g[g_constrained] * scale_factor
+    dy[dof, 0] = -Set.dt / Set.nu * g[dof]
+    dy[g_constrained, 0] = -Set.dt / Set.nu_bottom * g[g_constrained]
 
     # Update border ghost nodes with the same displacement as the corresponding real nodes
     dy = map_vertices_periodic_boundaries(Geo, dy)
@@ -350,11 +325,7 @@ def newton_raphson_iteration_fire(Geo, Set, dof, dy, g, selected_cells=None):
     # Initialize FIRE state variables if not present
     if not hasattr(Geo, '_fire_velocity'):
         # Initialize velocity to zero
-        Geo._fire_velocity = np.zeros((Geo.numF + Geo.numY + Geo.nCells, 3))
-        Geo._fire_dt = Set.dt  # Start with simulation dt
-        Geo._fire_alpha = Set.fire_alpha_start
-        Geo._fire_n_positive = 0
-        Geo._fire_iteration_count = 0  # Track total iterations
+        initialize_fire(Geo, Set)
         logger.info("FIRE algorithm initialized")
 
     # Increment iteration counter
@@ -402,7 +373,10 @@ def newton_raphson_iteration_fire(Geo, Set, dof, dy, g, selected_cells=None):
         # Accelerate if we've had N_min consecutive good steps
         if Geo._fire_n_positive > Set.fire_N_min:
             # Increase timestep (up to maximum)
-            Geo._fire_dt = min(Geo._fire_dt * Set.fire_f_inc, Set.fire_dt_max)
+            if Geo._fire_dt * Set.fire_f_inc < Set.fire_dt_max:
+                Geo._fire_dt = Geo._fire_dt * Set.fire_f_inc
+            else:
+                Geo._fire_dt = Set.fire_dt_max
             # Decrease mixing parameter
             Geo._fire_alpha = Geo._fire_alpha * Set.fire_f_alpha
 
@@ -486,11 +460,7 @@ def fire_minimization_loop(Geo_0, Geo_n, Geo, Set, dof, dy, g, t, num_step, sele
         Geo._fire_iteration_count = 0
     else:
         # Initialize if not already
-        Geo._fire_velocity = np.zeros((Geo.numF + Geo.numY + Geo.nCells, 3))
-        Geo._fire_dt = Set.dt
-        Geo._fire_alpha = getattr(Set, 'fire_alpha_start', 0.1)
-        Geo._fire_n_positive = 0
-        Geo._fire_iteration_count = 0
+        initialize_fire(Geo, Set)
 
     # Store initial gradient for reference
     initial_gradient_norm = np.linalg.norm(g[dof])
@@ -536,6 +506,21 @@ def fire_minimization_loop(Geo_0, Geo_n, Geo, Set, dof, dy, g, t, num_step, sele
     #     Geo._fire_n_positive = 0
 
     return Geo, converged, fire_iterations, final_gradient_norm
+
+
+def initialize_fire(Geo, Set):
+    """
+    Initialize FIRE algorithm state variables on the Geo object.
+    :param Geo:
+    :param Set:
+    :return:
+    """
+    Geo._fire_velocity = np.zeros((Geo.numF + Geo.numY + Geo.nCells, 3))
+    Geo._fire_dt = Set.dt
+    Geo._fire_alpha = Set.fire_alpha_start
+    Geo._fire_n_positive = 0
+    Geo._fire_iteration_count = 0
+
 
 def map_vertices_periodic_boundaries(Geo, dy):
     """
