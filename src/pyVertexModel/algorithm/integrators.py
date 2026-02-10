@@ -93,10 +93,6 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
 
     return geo, c_set, has_converged
 
-def fast_inertial_relaxation_engine():
-
-    Geo, converged, fire_iterations, final_gradient_norm = fire_minimization_loop(Geo, Set, dof, dy, g, t, numStep)
-
 def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t, implicit_method=True):
     """
     Newton-Raphson method
@@ -125,7 +121,6 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t, implicit_meth
     auxgr[0] = gr
     ig = 0
     Energy = 0
-    fire_converged = True
 
     if implicit_method is True:
         while (gr > Set.tol or dyr > Set.tol) and Set.iter < Set.MaxIter:
@@ -137,7 +132,7 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t, implicit_meth
     logger.info(f"Step: {numStep}, Iter: 0 ||gr||= {gr} ||dyr||= {dyr} dt/dt0={Set.dt / Set.dt0:.3g}")
     logger.info(f"New gradient norm: {gr:.3e}")
 
-    return Geo, g, K, Energy, Set, gr, dyr, dy, fire_converged
+    return Geo, g, K, Energy, Set, gr, dyr, dy
 
 
 def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g, gr0, ig, numStep, t):
@@ -759,7 +754,7 @@ def single_iteration_fire(geo, c_set, dof, dy, g, selected_cells=None):
     return geo, dy, dyr, converged
 
 
-def fire_minimization_loop(geo, c_set, dof, dy, g, t, num_step, selected_cells=None):
+def fire_minimization_loop(geo, c_set, dof, g, t, num_step, selected_cells=None):
     """
     Complete FIRE minimization loop for one timestep.
 
@@ -773,6 +768,7 @@ def fire_minimization_loop(geo, c_set, dof, dy, g, t, num_step, selected_cells=N
         final_gradient_norm: Norm of gradient at convergence
     """
     logger.info(f"Starting FIRE minimization for timestep t={t}")
+    dy = np.zeros(((geo.numY + geo.numF + geo.nCells) * 3, 1), dtype=np.float64)
 
     # Reset FIRE iteration counter for this minimization
     if hasattr(geo, '_fire_velocity'):
@@ -788,7 +784,7 @@ def fire_minimization_loop(geo, c_set, dof, dy, g, t, num_step, selected_cells=N
     # Main minimization loop
     converged = False
     fire_iterations = 0
-    max_iterations = getattr(c_set, 'fire_max_iterations', 1000)
+    max_iterations = c_set.fire_max_iterations
 
     while not converged and fire_iterations < max_iterations:
         # One FIRE iteration
@@ -807,6 +803,11 @@ def fire_minimization_loop(geo, c_set, dof, dy, g, t, num_step, selected_cells=N
             logger.warning("FIRE: No positive P steps for 50 iterations, likely stuck")
             break
 
+        # Check for NaNs as a safety
+        if np.any(np.isnan(g[dof])) or np.any(np.isnan(dy[dof])):
+            logger.error("FIRE: NaN detected in gradient or displacement!")
+            converged = False
+
     # Final statistics
     final_gradient_norm = np.linalg.norm(g[dof]) if hasattr(geo, '_fire_velocity') else float('inf')
 
@@ -824,7 +825,7 @@ def fire_minimization_loop(geo, c_set, dof, dy, g, t, num_step, selected_cells=N
         geo._fire_alpha = c_set.fire_alpha_start
         geo._fire_n_positive = 0
 
-    return geo, converged, fire_iterations, final_gradient_norm
+    return geo, converged, final_gradient_norm
 
 
 def initialize_fire(geo, c_set):

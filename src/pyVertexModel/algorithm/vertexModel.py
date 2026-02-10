@@ -537,18 +537,21 @@ class VertexModel:
             logger.info(f"{key}: {energy}")
 
         if self.set.integrator == 'fire':
-            integrators.fire_minimization_loop(,
+            self.geo, converged, gr = integrators.fire_minimization_loop(self.geo, self.set, self.Dofs.Free, g, self.t,
+                                                                         self.numStep)
+            if converged:
+                self.iteration_converged()
         else:
-            self.geo, g, __, __, self.set, gr, dyr, dy, fire_converged = integrators.newton_raphson(self.geo_0, self.geo_n, self.geo,
+            self.geo, g, __, __, self.set, gr, dyr, dy = integrators.newton_raphson(self.geo_0, self.geo_n, self.geo,
                                                                                       self.Dofs, self.set, K, g,
                                                                                       self.numStep, self.t,
                                                                                       self.set.implicit_method)
             if not np.isnan(gr) and post_operations:
-                self.post_newton_raphson(dy, g, gr, fire_converged)
+                self.post_newton_raphson(dy, g, gr)
         
         return gr
 
-    def post_newton_raphson(self, dy, g, gr, fire_converged=False):
+    def post_newton_raphson(self, dy, g, gr):
         """
         Post Newton Raphson operations.
         :param dy:
@@ -561,15 +564,6 @@ class VertexModel:
             converged = ((gr * self.set.dt / self.set.dt0) < self.set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
                     np.all(~np.isnan(dy[self.Dofs.Free])) and
                     (np.max(abs(g[self.Dofs.Free])) * self.set.dt / self.set.dt0) < self.set.tol)
-        elif self.set.integrator == 'fire':
-            # For FIRE, ONLY trust FIRE's own convergence check
-            converged = fire_converged
-
-            # Optional: Still check for NaNs as a safety
-            if np.any(np.isnan(g[self.Dofs.Free])) or np.any(np.isnan(dy[self.Dofs.Free])):
-                logger.error("FIRE: NaN detected in gradient or displacement!")
-                converged = False
-
         else:
             # For explicit methods: Don't reject based on gradient increase
             # The adaptive scaling in newton_raphson_iteration_explicit handles stability
