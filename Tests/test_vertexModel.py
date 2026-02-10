@@ -7,8 +7,8 @@ from scipy.spatial import Delaunay
 from Tests import TEST_DIRECTORY
 from Tests.test_geo import check_if_cells_are_the_same
 from Tests.tests import Tests, assert_matrix, load_data, assert_array1D
-from pyVertexModel.algorithm import newtonRaphson
-from pyVertexModel.algorithm.newtonRaphson import newton_raphson
+from pyVertexModel.algorithm import integrators
+from pyVertexModel.algorithm.integrators import newton_raphson
 from pyVertexModel.algorithm.vertexModel import create_tetrahedra
 from pyVertexModel.algorithm.vertexModelBubbles import build_topo, SeedWithBoundingBox, generate_first_ghost_nodes, \
     delaunay_compute_entities, VertexModelBubbles
@@ -397,8 +397,7 @@ class TestVertexModel(Tests):
 
         vModel_test.set = set_test
 
-        g_test, K_test, energies_test, _ = newtonRaphson.KgGlobal(vModel_test.geo_0, vModel_test.geo, vModel_test.geo,
-                                                    vModel_test.set)
+        g_test, K_test, energies_test, _ = newtonRaphson.KgGlobal(vModel_test.geo, vModel_test.set, vModel_test.geo)
 
         # Check if energies are the same
         assert_array1D(g_test, mat_info['g'])

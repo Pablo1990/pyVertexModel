@@ -15,7 +15,7 @@ from scipy import stats
 from scipy.optimize import minimize
 from skimage.measure import regionprops
 
-from pyVertexModel.algorithm import newtonRaphson
+from pyVertexModel.algorithm import integrators
 from pyVertexModel.geometry import degreesOfFreedom
 from pyVertexModel.geometry.geo import (
     Geo,
@@ -528,21 +528,23 @@ class VertexModel:
             self.geo.update_measures()
 
         if self.set.implicit_method:
-            g, K, _, energies = newtonRaphson.KgGlobal(self.geo_0, self.geo_n, self.geo, self.set,
-                                                       self.set.implicit_method)
+            g, K, _, energies = integrators.KgGlobal(self.geo, self.set, self.geo_n, self.set.implicit_method)
         else:
             K = 0
-            g, energies = newtonRaphson.gGlobal(self.geo_0, self.geo_n, self.geo, self.set,
-                                                self.set.implicit_method, self.numStep)
+            g, energies = integrators.g_global(self.geo, self.set, self.geo_n, self.set.implicit_method, self.numStep)
 
         for key, energy in energies.items():
             logger.info(f"{key}: {energy}")
-        self.geo, g, __, __, self.set, gr, dyr, dy, fire_converged = newtonRaphson.newton_raphson(self.geo_0, self.geo_n, self.geo,
-                                                                                  self.Dofs, self.set, K, g,
-                                                                                  self.numStep, self.t,
-                                                                                  self.set.implicit_method)
-        if not np.isnan(gr) and post_operations:
-            self.post_newton_raphson(dy, g, gr, fire_converged)
+
+        if self.set.integrator == 'fire':
+            integrators.fire_minimization_loop(,
+        else:
+            self.geo, g, __, __, self.set, gr, dyr, dy, fire_converged = integrators.newton_raphson(self.geo_0, self.geo_n, self.geo,
+                                                                                      self.Dofs, self.set, K, g,
+                                                                                      self.numStep, self.t,
+                                                                                      self.set.implicit_method)
+            if not np.isnan(gr) and post_operations:
+                self.post_newton_raphson(dy, g, gr, fire_converged)
         
         return gr
 

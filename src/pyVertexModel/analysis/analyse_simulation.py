@@ -12,7 +12,6 @@ from pyVertexModel.util.utils import (
     load_state,
     load_variables,
     save_variables,
-    screenshot,
 )
 
 

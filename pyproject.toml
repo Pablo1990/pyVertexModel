@@ -27,6 +27,8 @@ dependencies = [
     "scikit-learn",
     "matplotlib",
     "seaborn",
+    "opencv-python>=4.13.0.92",
+    "openpyxl>=3.1.5",
 ]
 
 [tool.setuptools_scm]
