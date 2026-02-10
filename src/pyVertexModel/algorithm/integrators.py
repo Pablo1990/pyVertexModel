@@ -64,7 +64,7 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
     for n_id, nu_factor in enumerate(np.linspace(10, 1, 3)):
         c_set.nu0 = original_nu0 * nu_factor
         c_set.nu = original_nu * nu_factor
-        g, k, _, _ = KgGlobal(geo_0, geo_n, geo, c_set)
+        g, k, _, _ = KgGlobal(geo, c_set, geo_n)
 
         dy = np.zeros(((geo.numY + geo.numF + geo.nCells) * 3, 1), dtype=np.float64)
         dyr = np.linalg.norm(dy[dofs.remodel, 0])
@@ -93,6 +93,9 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
 
     return geo, c_set, has_converged
 
+def fast_inertial_relaxation_engine():
+
+    Geo, converged, fire_iterations, final_gradient_norm = fire_minimization_loop(Geo, Set, dof, dy, g, t, numStep)
 
 def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t, implicit_method=True):
     """
@@ -129,14 +132,7 @@ def newton_raphson(Geo_0, Geo_n, Geo, Dofs, Set, K, g, numStep, t, implicit_meth
             Energy, K, dyr, g, gr, ig, auxgr, dy = newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, auxgr, dof,
                                                                             dy, g, gr0, ig, numStep, t)
     else:
-        # Choose explicit integrator: Euler, RK2, or FIRE
-        integrator = getattr(Set, 'integrator', 'euler')  # Default to Euler for backward compatibility
-        if integrator == 'fire':
-            Geo, converged, fire_iterations, final_gradient_norm = fire_minimization_loop(Geo_0, Geo_n, Geo, Set, dof, dy, g, t, numStep)
-            gr = 0
-            dyr = 0
-        else:
-            Geo, dy, dyr = newton_raphson_iteration_explicit(Geo, Set, dof, dy, g)
+        Geo, dy, dyr = newton_raphson_iteration_explicit(Geo, Set, dof, dy, g)
 
     logger.info(f"Step: {numStep}, Iter: 0 ||gr||= {gr} ||dyr||= {dyr} dt/dt0={Set.dt / Set.dt0:.3g}")
     logger.info(f"New gradient norm: {gr:.3e}")
@@ -176,11 +172,11 @@ def newton_raphson_iteration(Dofs, Geo, Geo_0, Geo_n, K, Set, aux_gr, dof, dy, g
     """
     dy[dof, 0] = ml_divide(K, dof, g)
 
-    alpha = line_search(Geo_0, Geo_n, Geo, dof, Set, g, dy)
+    alpha = line_search(Geo, dof, Set, g, dy, Geo_n)
     dy_reshaped = np.reshape(dy * alpha, (Geo.numF + Geo.numY + Geo.nCells, 3))
     Geo.update_vertices(dy_reshaped)
     Geo.update_measures()
-    g, K, energy_total, _ = KgGlobal(Geo_0, Geo_n, Geo, Set)
+    g, K, energy_total, _ = KgGlobal(Geo, Set, Geo_n)
 
     dyr = np.linalg.norm(dy[dof, 0])
     gr = np.linalg.norm(g[dof])
@@ -242,284 +238,7 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g, selected_cells=None)
 
     return Geo, dy, dyr
 
-def check_if_FIRE_converged(Geo, F_flat, Set, dy_flat, v_flat, iteration_count):
-    """
-    Realistic FIRE convergence for vertex models.
 
-    Args:
-        F_flat: Force vector (negative gradient)
-        Set: Simulation settings object
-        dy_flat: Displacement vector
-        v_flat: Velocity vector
-        iteration_count: Current FIRE iteration number
-
-    Returns:
-        converged: Boolean indicating if minimization converged
-        reason: String explaining convergence reason
-    """
-    # 1. Force-based convergence (most important)
-    max_force = np.max(np.abs(F_flat))
-    force_tol = getattr(Set, 'fire_force_tol', 1e-6)  # Default: 1e-6
-
-    # 2. Displacement-based (secondary)
-    max_disp = np.max(np.abs(dy_flat))
-    disp_tol = getattr(Set, 'fire_disp_tol', 1e-8)  # Default: 1e-8
-
-    # 3. Velocity-based (system at rest)
-    v_mag = np.linalg.norm(v_flat)
-    vel_tol = getattr(Set, 'fire_vel_tol', 1e-10)  # Default: 1e-10
-
-    # 4. Maximum iterations
-    max_iter = getattr(Set, 'fire_max_iterations', 1000)
-
-    converged = False
-    reason = ""
-
-    # Check maximum iterations first
-    if iteration_count >= max_iter:
-        converged = True
-        reason = f"Reached max iterations ({max_iter})"
-        logger.warning(f"FIRE: {reason} - maxF={max_force:.3e}")
-        return converged, reason
-
-    # Primary: Force convergence
-    if max_force < force_tol:
-        converged = True
-        reason = f"Max force {max_force:.2e} < {force_tol:.0e}"
-
-    # Secondary: Small velocities AND small displacements
-    elif v_mag < vel_tol and max_disp < disp_tol:
-        converged = True
-        reason = f"System at rest: |v|={v_mag:.2e}, max disp={max_disp:.2e}"
-
-    # Log progress every 10 iterations
-    if iteration_count % 10 == 0:
-        logger.info(f"FIRE iter {iteration_count}: maxF={max_force:.3e}, |v|={v_mag:.3e}, dt={Geo._fire_dt:.4f}")
-
-    return converged, reason
-
-
-def newton_raphson_iteration_fire(Geo, Set, dof, dy, g, selected_cells=None):
-    """
-    CORRECTED FIRE algorithm with inner loop support.
-
-    This function handles ONE FIRE iteration. For proper minimization,
-    it should be called repeatedly until convergence within a timestep.
-
-    Algorithm (per iteration):
-    1. Compute forces: F = -∇E
-    2. MD integration: v = v + dt*F, x = x + dt*v
-    3. Compute power: P = F·v
-    4. If P > 0: apply velocity mixing, potentially accelerate
-    5. If P <= 0: reset velocities, decrease dt
-
-    This is the standard FIRE from Bitzek et al. (2006).
-    """
-    # ============================================
-    # INITIALIZATION & STATE MANAGEMENT
-    # ============================================
-
-    # Bottom nodes constraints
-    g_constrained = constrain_bottom_vertices_x_y(Geo)
-
-    # Initialize FIRE state variables if not present
-    if not hasattr(Geo, '_fire_velocity'):
-        # Initialize velocity to zero
-        initialize_fire(Geo, Set)
-        logger.info("FIRE algorithm initialized")
-
-    # Increment iteration counter
-    Geo._fire_iteration_count += 1
-
-    # ============================================
-    # FORCE COMPUTATION
-    # ============================================
-
-    # Forces are negative gradient (F = -∇E = -g)
-    F = -g.copy()
-
-    # Extract free DOF velocities and forces
-    v_flat = Geo._fire_velocity.flatten()[dof]
-    F_flat = F[dof]
-
-    # ============================================
-    # STEP 1: MD INTEGRATION
-    # ============================================
-
-    # Velocity update (Euler): v_new = v_old + dt*F
-    v_flat = v_flat + Geo._fire_dt * F_flat
-
-    # Position update (Euler): x_new = x_old + dt*v_new
-    dy_flat = Geo._fire_dt * v_flat
-
-    # ============================================
-    # STEP 2: FIRE ADAPTATION
-    # ============================================
-
-    # Compute power P = F·v (using velocities AFTER integration)
-    P = np.dot(F_flat, v_flat)
-
-    if P > 1e-16:  # GOOD: moving downhill (add small tolerance)
-        Geo._fire_n_positive += 1
-
-        # Apply FIRE velocity mixing: v = (1-α)v + α*|v|*(F/|F|)
-        v_mag = np.linalg.norm(v_flat)
-        F_mag = np.linalg.norm(F_flat)
-
-        if v_mag > 1e-10 and F_mag > 1e-10:
-            F_hat = F_flat / F_mag
-            v_flat = (1.0 - Geo._fire_alpha) * v_flat + Geo._fire_alpha * v_mag * F_hat
-
-        # Accelerate if we've had N_min consecutive good steps
-        if Geo._fire_n_positive > Set.fire_N_min:
-            # Increase timestep (up to maximum)
-            if Geo._fire_dt * Set.fire_f_inc < Set.fire_dt_max:
-                Geo._fire_dt = Geo._fire_dt * Set.fire_f_inc
-            else:
-                Geo._fire_dt = Set.fire_dt_max
-            # Decrease mixing parameter
-            Geo._fire_alpha = Geo._fire_alpha * Set.fire_f_alpha
-
-    else:  # BAD: overshoot or oscillation
-        logger.debug(f"FIRE reset: P={P:.3e} <= 0")
-        Geo._fire_n_positive = 0
-        # RESET velocities to zero (critical!)
-        v_flat = np.zeros_like(v_flat)
-        # Decrease timestep
-        Geo._fire_dt = max(Geo._fire_dt * Set.fire_f_dec, Set.fire_dt_min)
-        # Reset mixing parameter
-        Geo._fire_alpha = Set.fire_alpha_start
-
-    # ============================================
-    # STEP 3: UPDATE GEOMETRY
-    # ============================================
-
-    # Store updated velocity
-    Geo._fire_velocity.flatten()[dof] = v_flat
-
-    # Also update constrained DOFs if any
-    if len(g_constrained) > 0:
-        F_constrained = -g[g_constrained]
-        dy_constrained = Geo._fire_dt * F_constrained * 0.5  # More conservative for boundaries
-        dy.flatten()[g_constrained] = dy_constrained
-
-    # Build full displacement vector
-    dy[dof, 0] = dy_flat
-    dy = map_vertices_periodic_boundaries(Geo, dy)
-    dyr = np.linalg.norm(dy[dof, 0])
-    dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
-
-    # Update geometry
-    Geo.update_vertices(dy_reshaped, selected_cells)
-    if Set.frozen_face_centres or Set.frozen_face_centres_border_cells:
-        for cell in Geo.Cells:
-            if cell.AliveStatus is not None and (
-                    (cell.ID in Geo.BorderCells and Set.frozen_face_centres_border_cells)
-                    or Set.frozen_face_centres
-            ):
-                face_centres_to_middle_of_neighbours_vertices(Geo, cell.ID)
-
-    Geo.update_measures()
-    Set.iter = Set.MaxIter
-
-    # ============================================
-    # CONVERGENCE CHECK
-    # ============================================
-
-    converged, reason = check_if_FIRE_converged(
-        Geo, F_flat, Set, dy_flat, v_flat, Geo._fire_iteration_count
-    )
-
-    logger.debug(f"FIRE: dt={Geo._fire_dt:.4f}, α={Geo._fire_alpha:.4f}, "
-                 f"P={P:.3e}, |v|={np.linalg.norm(v_flat):.3e}, "
-                 f"iter={Geo._fire_iteration_count}")
-
-    if converged:
-        logger.info(f"FIRE converged: {reason}")
-
-    return Geo, dy, dyr, converged
-
-
-def fire_minimization_loop(Geo_0, Geo_n, Geo, Set, dof, dy, g, t, num_step, selected_cells=None):
-    """
-    Complete FIRE minimization loop for one timestep.
-
-    This function runs FIRE repeatedly until convergence or max iterations.
-    It should be called ONCE per simulation timestep.
-
-    Returns:
-        Geo: Minimized geometry
-        converged: Whether minimization converged
-        iterations: Number of FIRE iterations performed
-        final_gradient_norm: Norm of gradient at convergence
-    """
-    logger.info(f"Starting FIRE minimization for timestep t={t}")
-
-    # Reset FIRE iteration counter for this minimization
-    if hasattr(Geo, '_fire_velocity'):
-        Geo._fire_iteration_count = 0
-    else:
-        # Initialize if not already
-        initialize_fire(Geo, Set)
-
-    # Store initial gradient for reference
-    initial_gradient_norm = np.linalg.norm(g[dof])
-    logger.info(f"Initial gradient norm: {initial_gradient_norm:.3e}")
-
-    # Main minimization loop
-    converged = False
-    fire_iterations = 0
-    max_iterations = getattr(Set, 'fire_max_iterations', 1000)
-
-    while not converged and fire_iterations < max_iterations:
-        # One FIRE iteration
-        Geo, dy, dyr, converged = newton_raphson_iteration_fire(
-            Geo, Set, dof, dy, g, selected_cells
-        )
-
-        fire_iterations += 1
-
-        # Recompute gradient for next iteration
-        # (This depends on your gradient computation function)
-        g, energies = gGlobal(Geo_0, Geo_n, Geo, Set, Set.implicit_method, num_step)
-
-        # Optional: Break if stuck
-        if fire_iterations > 50 and Geo._fire_n_positive == 0:
-            logger.warning("FIRE: No positive P steps for 50 iterations, likely stuck")
-            break
-
-    # Final statistics
-    final_gradient_norm = np.linalg.norm(g[dof]) if hasattr(Geo, '_fire_velocity') else float('inf')
-
-    if converged:
-        logger.info(f"FIRE minimization successful: {fire_iterations} iterations, "
-                    f"gradient reduced from {initial_gradient_norm:.3e} to {final_gradient_norm:.3e}")
-    else:
-        logger.warning(f"FIRE minimization incomplete: {fire_iterations} iterations, "
-                       f"gradient {final_gradient_norm:.3e}, force tolerance {Set.fire_force_tol:.1e}")
-
-    # Reset FIRE state for next timestep (optional - comment out to maintain momentum)
-    # if hasattr(Geo, '_fire_velocity'):
-    #     Geo._fire_velocity[:] = 0  # Reset velocities
-    #     Geo._fire_dt = Set.dt      # Reset timestep
-    #     Geo._fire_alpha = Set.fire_alpha_start
-    #     Geo._fire_n_positive = 0
-
-    return Geo, converged, fire_iterations, final_gradient_norm
-
-
-def initialize_fire(Geo, Set):
-    """
-    Initialize FIRE algorithm state variables on the Geo object.
-    :param Geo:
-    :param Set:
-    :return:
-    """
-    Geo._fire_velocity = np.zeros((Geo.numF + Geo.numY + Geo.nCells, 3))
-    Geo._fire_dt = Set.dt
-    Geo._fire_alpha = Set.fire_alpha_start
-    Geo._fire_n_positive = 0
-    Geo._fire_iteration_count = 0
 
 
 def map_vertices_periodic_boundaries(Geo, dy):
@@ -634,11 +353,10 @@ def ml_divide(K, dof, g):
     return -np.linalg.solve(K[np.ix_(dof, dof)], g[dof])
 
 
-def line_search(Geo_0, Geo_n, geo, dof, Set, gc, dy):
+def line_search(geo, dof, Set, gc, dy, geo_n):
     """
     Line search to find the best alpha to minimize the energy
-    :param Geo_0:   Initial geometry.
-    :param Geo_n:   Geometry at the previous time step
+    :param geo_n:   Geometry at the previous time step
     :param geo:     Current geometry
     :param Dofs:    Dofs object
     :param Set:     Set object
@@ -654,7 +372,10 @@ def line_search(Geo_0, Geo_n, geo, dof, Set, gc, dy):
     Geo_copy.update_vertices(dy_reshaped)
     Geo_copy.update_measures()
 
-    g, _ = gGlobal(Geo_0, Geo_n, Geo_copy, Set)
+    if Set.implicit_method:
+        g, _ = g_global(Geo_copy, Set, geo_n)
+    else:
+        g, _ = g_global(Geo_copy, Set, None, False)
 
     gr0 = np.linalg.norm(gc[dof])
     gr = np.linalg.norm(g[dof])
@@ -679,10 +400,9 @@ def line_search(Geo_0, Geo_n, geo, dof, Set, gc, dy):
     return alpha
 
 
-def KgGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
+def KgGlobal(Geo, Set, Geo_n=None, implicit_method=True):
     """
     Compute the global Jacobian matrix and the global gradient
-    :param Geo_0:
     :param Geo_n:
     :param Geo:
     :param Set:
@@ -705,20 +425,6 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
     g += kg_Vol.g
     energy_total += kg_Vol.energy
     energies["Volume"] = kg_Vol.energy
-
-    # # TODO: Plane Elasticity
-    # if Set.InPlaneElasticity:
-    #     gt, Kt, EBulk = KgBulk(geo_0, Geo, Set)
-    #     K += Kt
-    #     g += gt
-    #     E += EBulk
-    #     Energies["Bulk"] = EBulk
-
-    # Bending Energy
-    # TODO
-
-    # Propulsion Forces
-    # TODO
 
     # Contractility
     if Set.Contractility:
@@ -764,7 +470,7 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
         energy_total += kg_TriAR.energy
         energies["TriEnergyBarrierAR"] = kg_TriAR.energy
 
-    if implicit_method is True:
+    if implicit_method:
         # Viscous Energy
         kg_Viscosity = KgViscosity(Geo)
         kg_Viscosity.compute_work(Geo, Set, Geo_n)
@@ -776,95 +482,360 @@ def KgGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True):
     return g, K, energy_total, energies
 
 
-def gGlobal(Geo_0, Geo_n, Geo, Set, implicit_method=True, num_step=None):
+def g_global(geo, c_set, geo_n=None, implicit_method=True, num_step=None):
     """
     Compute the global gradient
-    :param Geo_0:
-    :param Geo_n:
-    :param Geo:
-    :param Set:
+    :param num_step:
+    :param geo_n:
+    :param geo:
+    :param c_set:
     :param implicit_method:
     :return:
     """
-    g = np.zeros((Geo.numY + Geo.numF + Geo.nCells) * 3, dtype=np.float64)
+    g = np.zeros((geo.numY + geo.numF + geo.nCells) * 3, dtype=np.float64)
     energies = {}
 
     # Surface Energy
-    if Set.lambdaS1 > 0:
-        kg_SA = KgSurfaceCellBasedAdhesion(Geo)
-        kg_SA.compute_work(Geo, Set, None, False)
+    if c_set.lambdaS1 > 0:
+        kg_SA = KgSurfaceCellBasedAdhesion(geo)
+        kg_SA.compute_work(geo, c_set, None, False)
         g += kg_SA.g
-        Geo.create_vtk_cell(Set, num_step, 'Arrows_surface', -kg_SA.g)
+        geo.create_vtk_cell(c_set, num_step, 'Arrows_surface', -kg_SA.g)
         energies["Surface"] = kg_SA.energy
 
     # Volume Energy
-    if Set.lambdaV > 0:
-        kg_Vol = KgVolume(Geo)
-        kg_Vol.compute_work(Geo, Set, None, False)
+    if c_set.lambdaV > 0:
+        kg_Vol = KgVolume(geo)
+        kg_Vol.compute_work(geo, c_set, None, False)
         g += kg_Vol.g[:]
-        Geo.create_vtk_cell(Set, num_step, 'Arrows_volume', -kg_Vol.g)
+        geo.create_vtk_cell(c_set, num_step, 'Arrows_volume', -kg_Vol.g)
         energies["Volume"] = kg_Vol.energy
 
     if implicit_method:
         # Viscous Energy
-        kg_Viscosity = KgViscosity(Geo)
-        kg_Viscosity.compute_work(Geo, Set, Geo_n, False)
+        kg_Viscosity = KgViscosity(geo)
+        kg_Viscosity.compute_work(geo, c_set, geo_n, False)
         g += kg_Viscosity.g
-        Geo.create_vtk_cell(Set, num_step, 'Arrows_viscosity', -kg_Viscosity.g)
+        geo.create_vtk_cell(c_set, num_step, 'Arrows_viscosity', -kg_Viscosity.g)
         energies["Viscosity"] = kg_Viscosity.energy
 
-    # # TODO: Plane Elasticity
-    # if Set.InPlaneElasticity:
-    #     gt, Kt, EBulk = KgBulk(geo_0, Geo, Set)
-    #     K += Kt
-    #     g += gt
-    #     E += EBulk
-    #     Energies["Bulk"] = EBulk
-
-    # Bending Energy
-    # TODO
-
     # Triangle Energy Barrier
-    if Set.EnergyBarrierA:
-        kg_Tri = KgTriEnergyBarrier(Geo)
-        kg_Tri.compute_work(Geo, Set, None, False)
+    if c_set.EnergyBarrierA:
+        kg_Tri = KgTriEnergyBarrier(geo)
+        kg_Tri.compute_work(geo, c_set, None, False)
         g += kg_Tri.g
-        Geo.create_vtk_cell(Set, num_step, 'Arrows_tri', -kg_Tri.g)
+        geo.create_vtk_cell(c_set, num_step, 'Arrows_tri', -kg_Tri.g)
         energies["TriEnergyBarrier"] = kg_Tri.energy
 
     # Triangle Energy Barrier Aspect Ratio
-    if Set.EnergyBarrierAR:
-        kg_TriAR = KgTriAREnergyBarrier(Geo)
-        kg_TriAR.compute_work(Geo, Set, None, False)
+    if c_set.EnergyBarrierAR:
+        kg_TriAR = KgTriAREnergyBarrier(geo)
+        kg_TriAR.compute_work(geo, c_set, None, False)
         g += kg_TriAR.g
-        Geo.create_vtk_cell(Set, num_step, 'Arrows_tri_ar', -kg_TriAR.g)
+        geo.create_vtk_cell(c_set, num_step, 'Arrows_tri_ar', -kg_TriAR.g)
         energies["TriEnergyBarrierAR"] = kg_TriAR.energy
 
-    # Propulsion Forces
-    # TODO
-
     # Contractility
-    if Set.Contractility:
-        kg_lt = KgContractility(Geo)
-        kg_lt.compute_work(Geo, Set, None, False)
+    if c_set.Contractility:
+        kg_lt = KgContractility(geo)
+        kg_lt.compute_work(geo, c_set, None, False)
         g += kg_lt.g
-        Geo.create_vtk_cell(Set, num_step, 'Arrows_contractility', -kg_lt.g)
+        geo.create_vtk_cell(c_set, num_step, 'Arrows_contractility', -kg_lt.g)
         energies["Contractility"] = kg_lt.energy
 
     # Contractility as external force
-    if Set.Contractility_external:
-        kg_ext = KgContractilityExternal(Geo)
-        kg_ext.compute_work(Geo, Set, None, False)
+    if c_set.Contractility_external:
+        kg_ext = KgContractilityExternal(geo)
+        kg_ext.compute_work(geo, c_set, None, False)
         g += kg_ext.g
-        Geo.create_vtk_cell(Set, num_step, 'Arrows_contractility_external', -kg_ext.g)
+        geo.create_vtk_cell(c_set, num_step, 'Arrows_contractility_external', -kg_ext.g)
         energies["Contractility_external"] = kg_ext.energy
 
     # Substrate
-    if Set.Substrate == 2:
-        kg_subs = KgSubstrate(Geo)
-        kg_subs.compute_work(Geo, Set, None, False)
+    if c_set.Substrate == 2:
+        kg_subs = KgSubstrate(geo)
+        kg_subs.compute_work(geo, c_set, None, False)
         g += kg_subs.g
-        Geo.create_vtk_cell(Set, num_step, 'Arrows_substrate', -kg_subs.g)
+        geo.create_vtk_cell(c_set, num_step, 'Arrows_substrate', -kg_subs.g)
         energies["Substrate"] = kg_subs.energy
 
     return g, energies
+
+def check_if_fire_converged(geo, f_flat, c_set, dy_flat, v_flat, iteration_count):
+    """
+    Realistic FIRE convergence for vertex models.
+
+    Args:
+        f_flat: Force vector (negative gradient)
+        c_set: Simulation settings object
+        dy_flat: Displacement vector
+        v_flat: Velocity vector
+        iteration_count: Current FIRE iteration number
+
+    Returns:
+        converged: Boolean indicating if minimization converged
+        reason: String explaining convergence reason
+    """
+    # 1. Force-based convergence (most important)
+    max_force = np.max(np.abs(f_flat))
+    force_tol = getattr(c_set, 'fire_force_tol', 1e-6)  # Default: 1e-6
+
+    # 2. Displacement-based (secondary)
+    max_disp = np.max(np.abs(dy_flat))
+    disp_tol = getattr(c_set, 'fire_disp_tol', 1e-8)  # Default: 1e-8
+
+    # 3. Velocity-based (system at rest)
+    v_mag = np.linalg.norm(v_flat)
+    vel_tol = getattr(c_set, 'fire_vel_tol', 1e-10)  # Default: 1e-10
+
+    # 4. Maximum iterations
+    max_iter = getattr(c_set, 'fire_max_iterations', 1000)
+
+    converged = False
+    reason = ""
+
+    # Check maximum iterations first
+    if iteration_count >= max_iter:
+        converged = True
+        reason = f"Reached max iterations ({max_iter})"
+        logger.warning(f"FIRE: {reason} - maxF={max_force:.3e}")
+        return converged, reason
+
+    # Primary: Force convergence
+    if max_force < force_tol:
+        converged = True
+        reason = f"Max force {max_force:.2e} < {force_tol:.0e}"
+
+    # Secondary: Small velocities AND small displacements
+    elif v_mag < vel_tol and max_disp < disp_tol:
+        converged = True
+        reason = f"System at rest: |v|={v_mag:.2e}, max disp={max_disp:.2e}"
+
+    # Log progress every 10 iterations
+    if iteration_count % 10 == 0:
+        logger.info(f"FIRE iter {iteration_count}: maxF={max_force:.3e}, |v|={v_mag:.3e}, dt={geo._fire_dt:.4f}")
+
+    return converged, reason
+
+
+def single_iteration_fire(geo, c_set, dof, dy, g, selected_cells=None):
+    """
+    CORRECTED FIRE algorithm with inner loop support.
+
+    This function handles ONE FIRE iteration. For proper minimization,
+    it should be called repeatedly until convergence within a timestep.
+
+    Algorithm (per iteration):
+    1. Compute forces: F = -∇E
+    2. MD integration: v = v + dt*F, x = x + dt*v
+    3. Compute power: P = F·v
+    4. If P > 0: apply velocity mixing, potentially accelerate
+    5. If P <= 0: reset velocities, decrease dt
+
+    This is the standard FIRE from Bitzek et al. (2006).
+    """
+    # ============================================
+    # INITIALIZATION & STATE MANAGEMENT
+    # ============================================
+
+    # Bottom nodes constraints
+    g_constrained = constrain_bottom_vertices_x_y(geo)
+
+    # Initialize FIRE state variables if not present
+    if not hasattr(geo, '_fire_velocity'):
+        # Initialize velocity to zero
+        initialize_fire(geo, c_set)
+        logger.info("FIRE algorithm initialized")
+
+    # Increment iteration counter
+    geo._fire_iteration_count += 1
+
+    # ============================================
+    # FORCE COMPUTATION
+    # ============================================
+
+    # Forces are negative gradient (F = -∇E = -g)
+    F = -g.copy()
+
+    # Extract free DOF velocities and forces
+    v_flat = geo._fire_velocity.flatten()[dof]
+    F_flat = F[dof]
+
+    # ============================================
+    # STEP 1: MD INTEGRATION
+    # ============================================
+
+    # Velocity update (Euler): v_new = v_old + dt*F
+    v_flat = v_flat + geo._fire_dt * F_flat
+
+    # Position update (Euler): x_new = x_old + dt*v_new
+    dy_flat = geo._fire_dt * v_flat
+
+    # ============================================
+    # STEP 2: FIRE ADAPTATION
+    # ============================================
+
+    # Compute power P = F·v (using velocities AFTER integration)
+    P = np.dot(F_flat, v_flat)
+
+    if P > 1e-16:  # GOOD: moving downhill (add small tolerance)
+        geo._fire_n_positive += 1
+
+        # Apply FIRE velocity mixing: v = (1-α)v + α*|v|*(F/|F|)
+        v_mag = np.linalg.norm(v_flat)
+        F_mag = np.linalg.norm(F_flat)
+
+        if v_mag > 1e-10 and F_mag > 1e-10:
+            F_hat = F_flat / F_mag
+            v_flat = (1.0 - geo._fire_alpha) * v_flat + geo._fire_alpha * v_mag * F_hat
+
+        # Accelerate if we've had N_min consecutive good steps
+        if geo._fire_n_positive > c_set.fire_N_min:
+            # Increase timestep (up to maximum)
+            if geo._fire_dt * c_set.fire_f_inc < c_set.fire_dt_max:
+                geo._fire_dt = geo._fire_dt * c_set.fire_f_inc
+            else:
+                geo._fire_dt = c_set.fire_dt_max
+            # Decrease mixing parameter
+            geo._fire_alpha = geo._fire_alpha * c_set.fire_f_alpha
+
+    else:  # BAD: overshoot or oscillation
+        logger.debug(f"FIRE reset: P={P:.3e} <= 0")
+        geo._fire_n_positive = 0
+        # RESET velocities to zero (critical!)
+        v_flat = np.zeros_like(v_flat)
+        # Decrease timestep
+        geo._fire_dt = max(geo._fire_dt * c_set.fire_f_dec, c_set.fire_dt_min)
+        # Reset mixing parameter
+        geo._fire_alpha = c_set.fire_alpha_start
+
+    # ============================================
+    # STEP 3: UPDATE GEOMETRY
+    # ============================================
+
+    # Store updated velocity
+    geo._fire_velocity.flatten()[dof] = v_flat
+
+    # Also update constrained DOFs if any
+    if len(g_constrained) > 0:
+        F_constrained = -g[g_constrained]
+        dy_constrained = geo._fire_dt * F_constrained * 0.5  # More conservative for boundaries
+        dy.flatten()[g_constrained] = dy_constrained
+
+    # Build full displacement vector
+    dy[dof, 0] = dy_flat
+    dy = map_vertices_periodic_boundaries(geo, dy)
+    dyr = np.linalg.norm(dy[dof, 0])
+    dy_reshaped = np.reshape(dy, (geo.numF + geo.numY + geo.nCells, 3))
+
+    # Update geometry
+    geo.update_vertices(dy_reshaped, selected_cells)
+    if c_set.frozen_face_centres or c_set.frozen_face_centres_border_cells:
+        for cell in geo.Cells:
+            if cell.AliveStatus is not None and (
+                    (cell.ID in geo.BorderCells and c_set.frozen_face_centres_border_cells)
+                    or c_set.frozen_face_centres
+            ):
+                face_centres_to_middle_of_neighbours_vertices(geo, cell.ID)
+
+    geo.update_measures()
+    c_set.iter = c_set.MaxIter
+
+    # ============================================
+    # CONVERGENCE CHECK
+    # ============================================
+
+    converged, reason = check_if_fire_converged(
+        geo, F_flat, c_set, dy_flat, v_flat, geo._fire_iteration_count
+    )
+
+    logger.debug(f"FIRE: dt={geo._fire_dt:.4f}, α={geo._fire_alpha:.4f}, "
+                 f"P={P:.3e}, |v|={np.linalg.norm(v_flat):.3e}, "
+                 f"iter={geo._fire_iteration_count}")
+
+    if converged:
+        logger.info(f"FIRE converged: {reason}")
+
+    return geo, dy, dyr, converged
+
+
+def fire_minimization_loop(geo, c_set, dof, dy, g, t, num_step, selected_cells=None):
+    """
+    Complete FIRE minimization loop for one timestep.
+
+    This function runs FIRE repeatedly until convergence or max iterations.
+    It should be called ONCE per simulation timestep.
+
+    Returns:
+        Geo: Minimized geometry
+        converged: Whether minimization converged
+        iterations: Number of FIRE iterations performed
+        final_gradient_norm: Norm of gradient at convergence
+    """
+    logger.info(f"Starting FIRE minimization for timestep t={t}")
+
+    # Reset FIRE iteration counter for this minimization
+    if hasattr(geo, '_fire_velocity'):
+        geo._fire_iteration_count = 0
+    else:
+        # Initialize if not already
+        initialize_fire(geo, c_set)
+
+    # Store initial gradient for reference
+    initial_gradient_norm = np.linalg.norm(g[dof])
+    logger.info(f"Initial gradient norm: {initial_gradient_norm:.3e}")
+
+    # Main minimization loop
+    converged = False
+    fire_iterations = 0
+    max_iterations = getattr(c_set, 'fire_max_iterations', 1000)
+
+    while not converged and fire_iterations < max_iterations:
+        # One FIRE iteration
+        geo, dy, dyr, converged = single_iteration_fire(
+            geo, c_set, dof, dy, g, selected_cells
+        )
+
+        fire_iterations += 1
+
+        # Recompute gradient for next iteration
+        # (This depends on your gradient computation function)
+        g, energies = g_global(geo, c_set, None, False, num_step)
+
+        # Optional: Break if stuck
+        if fire_iterations > 50 and geo._fire_n_positive == 0:
+            logger.warning("FIRE: No positive P steps for 50 iterations, likely stuck")
+            break
+
+    # Final statistics
+    final_gradient_norm = np.linalg.norm(g[dof]) if hasattr(geo, '_fire_velocity') else float('inf')
+
+    if converged:
+        logger.info(f"FIRE minimization successful: {fire_iterations} iterations, "
+                    f"gradient reduced from {initial_gradient_norm:.3e} to {final_gradient_norm:.3e}")
+    else:
+        logger.warning(f"FIRE minimization incomplete: {fire_iterations} iterations, "
+                       f"gradient {final_gradient_norm:.3e}, force tolerance {c_set.fire_force_tol:.1e}")
+
+    # Reset FIRE state for next timestep (optional - comment out to maintain momentum)
+    if hasattr(geo, '_fire_velocity'):
+        geo._fire_velocity[:] = 0  # Reset velocities
+        geo._fire_dt = c_set.dt      # Reset timestep
+        geo._fire_alpha = c_set.fire_alpha_start
+        geo._fire_n_positive = 0
+
+    return geo, converged, fire_iterations, final_gradient_norm
+
+
+def initialize_fire(geo, c_set):
+    """
+    Initialize FIRE algorithm state variables on the Geo object.
+    :param geo:
+    :param c_set:
+    :return:
+    """
+    geo._fire_velocity = np.zeros((geo.numF + geo.numY + geo.nCells, 3))
+    geo._fire_dt = c_set.dt
+    geo._fire_alpha = c_set.fire_alpha_start
+    geo._fire_n_positive = 0
+    geo._fire_iteration_count = 0
