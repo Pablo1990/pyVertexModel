@@ -1,7 +1,7 @@
 import numpy as np
 
-from src.pyVertexModel.geometry import tris
-from src.pyVertexModel.util.utils import copy_non_mutable_attributes, get_interface
+from pyVertexModel.geometry import tris
+from pyVertexModel.util.utils import copy_non_mutable_attributes, get_interface
 
 
 def get_key(dictionary, target_value):

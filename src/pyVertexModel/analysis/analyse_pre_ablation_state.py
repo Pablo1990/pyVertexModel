@@ -4,9 +4,11 @@ import sys
 import numpy as np
 import pandas as pd
 
-from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
-from src.pyVertexModel.analysis.analyse_simulation import analyse_edge_recoil
-from src.pyVertexModel.util.utils import load_state, plot_figure_with_line
+from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import (
+    VertexModelVoronoiFromTimeImage,
+)
+from pyVertexModel.analysis.analyse_simulation import analyse_edge_recoil
+from pyVertexModel.util.utils import load_state, plot_figure_with_line
 
 folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/to_calculate_ps_recoil/c/'
 

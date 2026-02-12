@@ -1,16 +1,16 @@
 import numpy as np
 
 from Tests.tests import Tests, load_data, assert_array1D, assert_matrix
-from src.pyVertexModel.Kg import kg_functions
-from src.pyVertexModel.Kg.kgContractility import KgContractility
-from src.pyVertexModel.Kg.kgSubstrate import KgSubstrate
-from src.pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
-from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
-from src.pyVertexModel.Kg.kgTriEnergyBarrier import KgTriEnergyBarrier
-from src.pyVertexModel.Kg.kgViscosity import KgViscosity
-from src.pyVertexModel.Kg.kgVolume import KgVolume
-from src.pyVertexModel.algorithm.newtonRaphson import KgGlobal
-from src.pyVertexModel.geometry.geo import Geo
+from pyVertexModel.Kg import kg_functions
+from pyVertexModel.Kg.kgContractility import KgContractility
+from pyVertexModel.Kg.kgSubstrate import KgSubstrate
+from pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
+from pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
+from pyVertexModel.Kg.kgTriEnergyBarrier import KgTriEnergyBarrier
+from pyVertexModel.Kg.kgViscosity import KgViscosity
+from pyVertexModel.Kg.kgVolume import KgVolume
+from pyVertexModel.algorithm.integrators import KgGlobal
+from pyVertexModel.geometry.geo import Geo
 
 
 def test_kg_global_filename(filename):
@@ -18,7 +18,7 @@ def test_kg_global_filename(filename):
     geo_n_test = Geo(mat_info['Geo_n'])
     geo_0_test = Geo(mat_info['Geo_0'])
     # Compute the global K, and g
-    g, K, E, _ = KgGlobal(geo_0_test, geo_n_test, geo_test, set_test)
+    g, K, E, _ = KgGlobal(geo_test, set_test, geo_n_test)
     # Get the expected results from the mat file
     g_expected = mat_info['g'][:, 0]
     k_expected = mat_info['K']
@@ -140,7 +140,7 @@ class Test(Tests):
         geo_n_test = Geo(mat_info['Geo_n'])
         geo_0_test = Geo(mat_info['Geo_0'])
 
-        g, K, E, _ = KgGlobal(geo_0_test, geo_n_test, geo_test, set_test)
+        g, K, E, _ = KgGlobal(geo_test, set_test, geo_n_test)
 
         g_expected = (mat_expected['gs_full'] + mat_expected['gv_full'] + mat_expected['gf_full'] +
                       mat_expected['gBA_full'] + mat_expected['gBAR_full'] + mat_expected['gC_full'] +

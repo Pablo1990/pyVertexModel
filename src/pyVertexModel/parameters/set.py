@@ -6,13 +6,21 @@ from datetime import datetime
 import numpy as np
 import scipy
 
-from src import PROJECT_DIRECTORY
-from src.pyVertexModel.util.utils import copy_non_mutable_attributes
+from pyVertexModel import PROJECT_DIRECTORY
+from pyVertexModel.util.utils import copy_non_mutable_attributes
 
 logger = logging.getLogger("pyVertexModel")
 
 class Set:
     def __init__(self, mat_file=None):
+        """
+        Initialize simulation configuration attributes with sensible defaults.
+        
+        When mat_file is None, populate a comprehensive set of simulation parameters (topology, geometry, mechanics, time stepping, substrate, viscosity, remodeling, solver, boundary/loading, postprocessing, and ablation defaults). When mat_file is provided, load parameter values from the given MATLAB-like structure via read_mat_file(mat_file).
+        
+        Parameters:
+            mat_file (optional): A MATLAB-style struct or object containing saved Set parameters; when provided, values are read and assigned to this instance.
+        """
         self.dt_tolerance = 1e-6
         self.min_3d_neighbours = None
         self.periodic_boundaries = True
@@ -28,7 +36,7 @@ class Set:
         self.export_images = True
         self.cLineTension_external = None
         self.Contractility_external = False
-        self.initial_filename_state = 'Input/wing_disc_150.mat'
+        self.initial_filename_state = None
         self.delay_lateral_cables = 5.8
         self.delay_purse_string = self.delay_lateral_cables
         self.ref_A0 = None
@@ -37,6 +45,28 @@ class Set:
         self.dt = None
         self.dt0 = None
         self.implicit_method = False
+        self.integrator = 'euler'  # Time integrator: 'euler', 'rk2' (midpoint method), or 'fire' (FIRE algorithm)
+        
+        # FIRE Algorithm parameters (Bitzek et al., 2006)
+        # These parameters control the adaptive optimization when integrator='fire'
+        self.fire_dt_max = None      # Maximum timestep (will be set to 10*dt if None)
+        self.fire_dt_min = None      # Minimum timestep (will be set to 0.02*dt if None)
+        self.fire_N_min = 5          # Steps before acceleration (recommended: 5)
+        self.fire_f_inc = 1.1        # dt increase factor (recommended: 1.1)
+        self.fire_f_dec = 0.5        # dt decrease factor (recommended: 0.5)
+        self.fire_alpha_start = 0.1  # Initial damping coefficient (recommended: 0.1)
+        self.fire_f_alpha = 0.99     # α decrease factor (recommended: 0.99)
+
+        self.fire_dt_max = 0.5 # Large max dt for fast minimization
+        self.fire_dt_min = 1e-8 # Very small min dt
+
+        # Convergence tolerances - PRACTICAL FOR VERTEX MODELS
+        self.fire_force_tol = 1e-6  # Tight for steady-state
+        self.fire_disp_tol = 1e-8  # Tight displacement
+        self.fire_vel_tol = 1e-10  # Tight velocity
+        self.fire_max_iterations = 100  # Allow more iterations for tight convergence
+
+        # Additional parameters
         self.TypeOfPurseString = None
         self.Contractility_TimeVariability = None
         self.Contractility_Variability_LateralCables = None
@@ -159,8 +189,19 @@ class Set:
 
     def check_for_non_used_parameters(self):
         """
-        Check for non-used parameters and put the alternative to zero
-        :return:
+        Adjust configuration attributes based on feature toggles, disabling unused options and setting related defaults.
+        
+        For each boolean toggle on the Set instance, updates dependent parameters as follows:
+        - If EnergyBarrierA is False, sets `lambdaB` to 0.
+        - If EnergyBarrierAR is False, sets `lambdaR` to 0.
+        - If Bending is False, sets `lambdaBend` to 0.
+        - If Contractility_external is False, sets `cLineTension_external` to 0.
+        - If Contractility is False, sets `cLineTension` to 0.
+        - If brownian_motion is False, sets `brownian_motion_scale` to 0.
+        - If implicit_method is False, sets `tol` to `nu` and `tol0` to `nu/20`.
+        - If Remodelling is True, sets `RemodelStiffness` to 0.9 and `Remodel_stiffness_wound` to 0.7; otherwise sets both to 2.
+        
+        This method mutates the instance's attributes and does not return a value.
         """
         if not self.EnergyBarrierA:
             self.lambdaB = 0
@@ -191,16 +232,29 @@ class Set:
             self.Remodel_stiffness_wound = 2
 
     def redirect_output(self):
-        os.makedirs(self.OutputFolder, exist_ok=True)
-        os.makedirs(self.OutputFolder + '/images', exist_ok=True)
-        handler = logging.FileHandler(os.path.join(self.OutputFolder, 'log.out'))
-        handler.setLevel(logging.DEBUG)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        logger.propagate = True
+        """
+        Configure logging to write to a file under the instance's OutputFolder and ensure the required directories exist.
+        
+        If self.OutputFolder is not None, this creates the OutputFolder and an images subdirectory, attaches a FileHandler writing to 'log.out' with DEBUG level and a timestamped formatter, and enables logger propagation. If OutputFolder is None, no logging configuration or filesystem changes are made.
+        """
+        if self.OutputFolder is not None:
+            os.makedirs(self.OutputFolder, exist_ok=True)
+            os.makedirs(self.OutputFolder + '/images', exist_ok=True)
+            handler = logging.FileHandler(os.path.join(self.OutputFolder, 'log.out'))
+            handler.setLevel(logging.DEBUG)
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+            logger.propagate = True
 
     def read_mat_file(self, mat_file):
+        """
+        Populate this object's attributes from a MATLAB-like structured array by mapping each top-level field to an attribute of the same name.
+        
+        Parameters:
+            mat_file: array-like
+                A MATLAB-style structured array (as returned by scipy.io.loadmat for a struct). For each field in `mat_file`, the corresponding attribute on `self` is set to `None` if the field is empty, otherwise to the field's first nested value.
+        """
         for param in mat_file.dtype.fields:
             if len(mat_file[param][0][0]) == 0:
                 setattr(self, param, None)
@@ -337,13 +391,14 @@ class Set:
         self.check_for_non_used_parameters()
 
     def wing_disc_equilibrium(self):
+        self.integrator = 'fire'
         self.nu_bottom = self.nu
         self.model_name = 'dWL1'
         self.initial_filename_state = 'Input/images/' + self.model_name + '.tif'
         #self.initial_filename_state = 'Input/images/dWP1_150cells_15_scutoids_1.0.pkl'
         self.percentage_scutoids = 0.0
         self.tend = 20
-        self.Nincr = self.tend * 100
+        self.Nincr = self.tend * 10
         self.CellHeight = 1 * 15 #np.array([0.0001, 0.001, 0.01, 0.1, 0.5, 1, 2.0]) * original_wing_disc_height
         #self.resize_z = 0.01
         self.min_3d_neighbours = None # 10

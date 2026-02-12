@@ -1,10 +1,10 @@
 import numpy as np
 
 from Tests.tests import Tests, load_data, assert_matrix, assert_array1D
-from src.pyVertexModel.algorithm.vertexModelBubbles import extrapolate_ys_faces_ellipsoid
-from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
-from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain
-from src.pyVertexModel.util.utils import load_state, ismember_rows
+from pyVertexModel.algorithm.vertexModelBubbles import extrapolate_ys_faces_ellipsoid
+from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
+from pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain
+from pyVertexModel.util.utils import load_state, ismember_rows
 from Tests.tests import Tests, load_data, assert_matrix
 
 
@@ -375,4 +375,58 @@ class TestGeo(Tests):
 
         # Check if node neighbours are the same
         assert_array1D(node_neighbours_test, np.concatenate(node_neighbours_expected))
+
+    def test_geometry_is_correct(self):
+        """
+        Test the function geometry_is_correct
+        :return:
+        """
+        # Load data
+        vModel_test = load_data('geometry_correct_1.pkl')
+
+        # Check if geometry is correct
+        self.assertTrue(vModel_test.geo.geometry_is_correct())
+
+        # Load data
+        vModel_test = load_data('geometry_correct_2.pkl')
+
+        # Check if geometry is correct
+        self.assertTrue(vModel_test.geo.geometry_is_correct())
+
+        # Load data
+        vModel_test = load_data('geometry_correct_3.pkl')
+
+        # Check if geometry is correct
+        self.assertTrue(vModel_test.geo.geometry_is_correct())
+
+    def test_geometry_is_incorrect(self):
+        """
+        Test the function geometry_is_correct
+        :return:
+        """
+        # Load data
+        vModel_test = load_data('vertices_going_wild_1.pkl')
+
+        # Check if geometry is correct
+        self.assertFalse(vModel_test.geo.geometry_is_correct())
+
+        # Another test with a different geometry
+        vModel_test = load_data('vertices_going_wild_2.pkl')
+
+        # Check if geometry is correct
+        self.assertFalse(vModel_test.geo.geometry_is_correct())
+
+        # Another test with a different geometry
+        vModel_test = load_data('vertices_going_wild_3.pkl')
+
+        # Check if geometry is correct
+        self.assertFalse(vModel_test.geo.geometry_is_correct())
+
+        # Another test with a different geometry
+        vModel_test = load_data('vertices_going_wild_4.pkl')
+
+        # Check if geometry is correct
+        self.assertFalse(vModel_test.geo.geometry_is_correct())
+
+
 
