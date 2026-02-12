@@ -683,6 +683,18 @@ def plot_figure_with_line(best_average_values, scutoids, current_path, x_axis_na
     plt.xticks(fontsize=20, fontweight='bold')
     plt.yticks(fontsize=20, fontweight='bold')
 
+    # Make yticks in scientific notation
+    plt.ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
+
+    # From 0 ylim always
+    plt.ylim(0, None)
+
+    if y_axis_label == 'Purse string strength (t=' + str(0.1) + ')':
+        plt.ylim(0, 1.2e-3)
+
+    if y_axis_name == 'top_closure_velocity':
+        plt.ylim(0, 4.0)
+
     # plt.title(f'Boxplot of {param} correlations with {scutoids*100}% scutoids')
     plt.xlabel(x_axis_label, fontsize=20, fontweight='bold')
     plt.ylabel(y_axis_label, fontsize=20, fontweight='bold')

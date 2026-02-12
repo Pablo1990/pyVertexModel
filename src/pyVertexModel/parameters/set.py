@@ -62,9 +62,9 @@ class Set:
 
         # Convergence tolerances - PRACTICAL FOR VERTEX MODELS
         self.fire_force_tol = 1e-6  # Tight for steady-state
-        self.fire_disp_tol = 1e-10  # Tight displacement
-        self.fire_vel_tol = 1e-12  # Tight velocity
-        self.fire_max_iterations = 500  # Allow more iterations for tight convergence
+        self.fire_disp_tol = 1e-8  # Tight displacement
+        self.fire_vel_tol = 1e-10  # Tight velocity
+        self.fire_max_iterations = 100  # Allow more iterations for tight convergence
 
         # Additional parameters
         self.TypeOfPurseString = None
@@ -398,7 +398,7 @@ class Set:
         #self.initial_filename_state = 'Input/images/dWP1_150cells_15_scutoids_1.0.pkl'
         self.percentage_scutoids = 0.0
         self.tend = 20
-        self.Nincr = self.tend * 4
+        self.Nincr = self.tend * 10
         self.CellHeight = 1 * 15 #np.array([0.0001, 0.001, 0.01, 0.1, 0.5, 1, 2.0]) * original_wing_disc_height
         #self.resize_z = 0.01
         self.min_3d_neighbours = None # 10
