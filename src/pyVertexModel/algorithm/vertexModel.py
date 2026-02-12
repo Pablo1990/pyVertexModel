@@ -1177,6 +1177,9 @@ class VertexModel:
             else:
                 run_iteration = True
             self.set.OutputFolder = output_directory
+            self.set.integrator = 'euler'
+            self.set.dt_tolerance = 1e-11
+
             if (self.set.dt / self.set.dt0) <= 1e-6:
                 return np.inf, np.inf, np.inf, np.inf
 
@@ -1209,6 +1212,9 @@ class VertexModel:
                             for sub_f in os.listdir(sub_dir):
                                 shutil.copy(os.path.join(sub_dir, sub_f), os.path.join(dest_sub_dir, sub_f))
 
+            if self.t < tend:
+                print(f'Could not reach the end time of the simulation for purse string strength exploration. Current time: {self.t}')
+                return np.inf, np.inf, np.inf, np.inf
             dy_values, purse_string_strength_values = self.required_purse_string_strength_for_timepoint(directory, timepoint=tend)
 
         purse_string_strength_values = purse_string_strength_values[:len(dy_values)]
