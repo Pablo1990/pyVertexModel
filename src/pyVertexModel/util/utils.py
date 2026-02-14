@@ -358,8 +358,29 @@ def copy_non_mutable_attributes(class_to_change, attr_not_to_change, new_cell):
         # check if attr is mutable
         if attr == attr_not_to_change:
             setattr(new_cell, attr, [])
-        elif isinstance(value, list) or isinstance(value, dict):
-            setattr(new_cell, attr, copy.deepcopy(value))
+        elif isinstance(value, (int, float, str, bool, type(None))):
+            # Immutable types can be directly assigned (no copy needed)
+            setattr(new_cell, attr, value)
+        elif isinstance(value, np.ndarray):
+            # NumPy arrays - use copy() which is faster than deepcopy
+            setattr(new_cell, attr, value.copy())
+        elif isinstance(value, list):
+            # Lists - check if any element is nested (list, dict, or array)
+            # For performance, we only check first few elements as a heuristic
+            has_nested = False
+            check_count = min(3, len(value))  # Check up to first 3 elements
+            for i in range(check_count):
+                if value and isinstance(value[i], (list, dict, np.ndarray)):
+                    has_nested = True
+                    break
+            
+            if has_nested:
+                setattr(new_cell, attr, copy.deepcopy(value))
+            else:
+                setattr(new_cell, attr, value.copy())
+        elif isinstance(value, dict):
+            # Dicts - shallow copy is usually sufficient
+            setattr(new_cell, attr, value.copy())
         elif hasattr(value, 'copy'):
             setattr(new_cell, attr, value.copy())
         else:
@@ -529,23 +550,21 @@ def face_centres_to_middle_of_neighbours_vertices(Geo, c_cell, filter_location=N
                 Geo.Cells[c_cell].Y[all_edges, :], axis=0)
 
 
+# Cache for interface type mapping (avoid recreating dict on every call)
+_INTERFACE_TYPE_MAPPING = {0: 'Top', 1: 'CellCell', 2: 'Bottom',
+                           'Top': 0, 'CellCell': 1, 'Bottom': 2}
+
 def get_interface(interface_type):
     """
     Standardize the InterfaceType attribute.
     :return:
     """
-    valueset = [0, 1, 2]
-    catnames = ['Top', 'CellCell', 'Bottom']
-    interface_type_all_values = dict(zip(valueset, catnames))
-
     # Set InterfaceType to the string value
-    interface_type_str = None
-    if interface_type is not None:
-        interface_type_str = next(key for key, value in interface_type_all_values.items()
-                                  if
-                                  value == interface_type or key == interface_type)
-
-    return interface_type_str
+    if interface_type is None:
+        return None
+    
+    # Direct lookup in cached mapping
+    return _INTERFACE_TYPE_MAPPING.get(interface_type)
 
 
 def r2(y, y_predicted):
