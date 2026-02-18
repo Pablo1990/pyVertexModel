@@ -18,10 +18,10 @@ cpdef np.ndarray assembleg(double[:] g, double[:] ge, np.ndarray nY):
     cdef int cont = 0
     cdef int col
 
+    # Remove zero-checking for better performance - addition with 0 is cheap
     for I in range(len(nY)):
         for col in range(nY[I] * dim, (nY[I] + 1) * dim):
-            if ge[cont] != 0:
-                g[col] = g[col] + ge[cont]
+            g[col] = g[col] + ge[cont]
             cont = cont + 1
 
     return np.array(g, dtype=np.float64)
@@ -31,19 +31,23 @@ cpdef np.ndarray assembleg(double[:] g, double[:] ge, np.ndarray nY):
 @cython.nonecheck(False)
 @cython.boundscheck(False)
 cpdef np.ndarray assembleK(double[:, :] K, double[:, :] Ke, nY: np.ndarray):
-    #TODO: IMPROVE LIKE ASSEMBLE_G
     cdef int dim = 3
-    cdef np.ndarray idofg = np.zeros(len(nY) * dim, dtype=int)
-    cdef int I
-    for I in range(len(nY)):
-        idofg[(I * dim): ((I + 1) * dim)] = np.arange(nY[I] * dim, (nY[I] + 1) * dim)
-
-    # Update the matrix K using sparse matrix addition
-    cdef int i, j
-    for i in range(len(nY) * dim):
-        for j in range(len(nY) * dim):
-            if Ke[i, j] != 0:
-                K[idofg[i], idofg[j]] = K[idofg[i], idofg[j]] + Ke[i, j]
+    cdef int len_nY = len(nY)
+    cdef int total_dofs = len_nY * dim
+    cdef int[:] idofg = np.zeros(total_dofs, dtype=np.int32)
+    cdef int I, i, j, gi, gj
+    
+    # Build index mapping once - more efficient than arange
+    for I in range(len_nY):
+        for i in range(dim):
+            idofg[I * dim + i] = nY[I] * dim + i
+    
+    # Optimized assembly: remove zero-checking and use direct indexing
+    for i in range(total_dofs):
+        gi = idofg[i]
+        for j in range(total_dofs):
+            gj = idofg[j]
+            K[gi, gj] = K[gi, gj] + Ke[i, j]
 
     return np.array(K)
 
@@ -105,11 +109,15 @@ cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
     cdef np.ndarray Q2 = y3_crossed - y1_crossed
     cdef np.ndarray Q3 = y1_crossed - y2_crossed
 
-    cdef double fact = 1 / np.dot(2, np.linalg.norm(q))
+    # Cache norm computation - only compute once
+    cdef double norm_q = np.linalg.norm(q)
+    cdef double fact = 1.0 / (2.0 * norm_q)
 
+    # Vectorized computation of gs components
     cdef np.ndarray gs = np.dot(fact,  np.concatenate([np.dot(Q1.transpose(), q), np.dot(Q2.transpose(), q), np.dot(Q3.transpose(), q)]))
 
-    cdef np.ndarray Kss = np.dot(-(2 / np.linalg.norm(q)), np.outer(gs, gs))
+    # Reuse cached norm_q instead of recomputing
+    cdef np.ndarray Kss = np.dot(-(2.0 / norm_q), np.outer(gs, gs))
 
     cdef np.ndarray Ks = np.dot(fact, np.block([
         [np.dot(Q1.transpose(), Q1), kK(y1_crossed, y2_crossed, y3_crossed, y1, y2, y3),

@@ -13,7 +13,7 @@ def add_noise_to_parameter(avg_parameter, noise):
     """
     if noise == 0:
         return avg_parameter
-    
+
     min_value = avg_parameter - avg_parameter * noise
     max_value = avg_parameter + avg_parameter * noise
 
@@ -63,8 +63,9 @@ class Kg:
             idofg[(index * self.dim): ((index + 1) * self.dim)] = np.arange(n_y[index] * self.dim,
                                                                             (n_y[index] + 1) * self.dim)
 
-        indices = np.meshgrid(idofg, idofg)
-        self.K[indices[0], indices[1]] += k_e
+        # Use np.ix_ for efficient indexing instead of meshgrid
+        # This avoids creating O(n^2) temporary arrays
+        self.K[np.ix_(idofg, idofg)] += k_e
 
     def assemble_g(self, g, ge, n_y):
         """
@@ -124,11 +125,14 @@ class Kg:
         Q2 = y3_crossed - y1_crossed
         Q3 = y1_crossed - y2_crossed
 
-        fact = 1 / np.dot(2, np.linalg.norm(q))
+        # Cache norm computation - only compute once
+        norm_q = np.linalg.norm(q)
+        fact = 1.0 / (2.0 * norm_q)
         gs = np.dot(fact,
                     np.concatenate([np.dot(Q1.transpose(), q), np.dot(Q2.transpose(), q), np.dot(Q3.transpose(), q)]))
 
-        Kss = np.dot(-(2 / np.linalg.norm(q)), np.outer(gs, gs))
+        # Reuse cached norm_q instead of recomputing
+        Kss = np.dot(-(2.0 / norm_q), np.outer(gs, gs))
 
         Ks = np.dot(fact, np.block([
             [np.dot(Q1.transpose(), Q1), self.kK(y1_crossed, y2_crossed, y3_crossed, y1, y2, y3),
