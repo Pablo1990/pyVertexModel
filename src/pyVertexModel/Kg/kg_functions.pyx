@@ -135,30 +135,38 @@ cpdef tuple gKSArea(np.ndarray y1, np.ndarray y2, np.ndarray y3):
 @cython.nonecheck(False)
 @cython.boundscheck(False)
 cpdef np.ndarray compute_finalK_SurfaceEnergy(np.ndarray ge, np.ndarray K, double Area0):
+    """
+    Compute final K for surface energy using optimized outer product.
+    This is equivalent to K += ge * ge.T / Area0^2
+    """
     cdef Py_ssize_t i, j
     cdef Py_ssize_t n = ge.shape[0]
     cdef double[:] ge_view = ge
     cdef double[:, :] K_view = K
+    cdef double factor = 1.0 / (Area0 * Area0)
 
+    # Remove zero-checking - outer product is fast enough
     for i in range(n):
-        if ge_view[i] != 0:
-            for j in range(n):
-                if ge_view[j] != 0:
-                    K_view[i, j] += ge_view[i] * ge_view[j] / (Area0 ** 2)
+        for j in range(n):
+            K_view[i, j] += ge_view[i] * ge_view[j] * factor
 
     return np.asarray(K_view)
 
 cpdef np.ndarray compute_finalK_Volume(np.ndarray ge, np.ndarray K, double Vol, double Vol0, int n_dim, double lambdaV):
+    """
+    Compute final K for volume energy using optimized outer product.
+    Pre-compute the scalar factor to avoid repeated calculations.
+    """
     cdef Py_ssize_t i, j
     cdef Py_ssize_t n = ge.shape[0]
     cdef double[:] ge_view = ge
     cdef double[:, :] K_view = K
+    cdef double factor = lambdaV / 36.0 * (Vol - Vol0) ** (n_dim - 2) / (Vol0 ** n_dim)
 
+    # Remove zero-checking - outer product is fast enough
     for i in range(n):
-        if ge_view[i] != 0:
-            for j in range(n):
-                if ge_view[j] != 0:
-                    K_view[i, j] += lambdaV * ge_view[i] * ge_view[j] / 6 / 6 * (Vol - Vol0) ** (n_dim - 2) / Vol0 ** n_dim
+        for j in range(n):
+            K_view[i, j] += ge_view[i] * ge_view[j] * factor
 
     return np.asarray(K_view)
 
