@@ -8,6 +8,7 @@ import pickle
 
 import matplotlib
 import numpy as np
+import pandas as pd
 import pyvista as pv
 import seaborn as sns
 
@@ -569,36 +570,39 @@ def lambda_total_model(x, a, b, c):
     :param c:
     :return:
     """
-    return a + b * (np.log(x) + c ) ** 2
+    return a + b * (np.log1p(x) + c)
 
 
-def lambda_s1_normalised_curve(x, k, c, l_max):
+def lambda_s1_normalised_curve(x, k, p, l_max, l_min):
     """
     Compute the lambda_s1 normalised curve.
     :param x: aspect ratio.
     :param k:
-    :param c:
+    :param p:
     :param l_max:
+    :param l_min:
     :return:
     """
-    return 0.5 + ((l_max - 0.5) / (1 + np.exp(-k * np.log(x) + c)))
+    return l_min + ((l_max - l_min) / (1 + np.exp(-k * np.log(x) - p)))
 
 
-def lambda_s2_normalised_curve(x, p, q, l_max):
+def lambda_s2_normalised_curve(x, k, p, l_max, l_min):
     """
     Compute the lambda_s2 normalised curve.
     :param x:
+    :param k:
     :param p:
-    :param q:
     :param l_max:
+    :param l_min:
     :return:
     """
-    return 1 - lambda_s1_normalised_curve(x, p, q, l_max)
+    return 1 - lambda_s1_normalised_curve(x, k, p, l_max, l_min)
 
 
-def lambda_s1_curve(x, a=1.49e-4, b=1.15e-5, c=3.44, k=2.09, p=0.31, l_max=0.92):
+def lambda_s1_curve(x, a=-8.53e-4, b=8.75e-3, c=0.09, k=1.64, p=1.01, l_max=0.98, l_min=0.47):
     """
 
+    :param l_min:
     :param c:
     :param x:
     :param a:
@@ -608,12 +612,13 @@ def lambda_s1_curve(x, a=1.49e-4, b=1.15e-5, c=3.44, k=2.09, p=0.31, l_max=0.92)
     :param l_max:
     :return:
     """
-    return lambda_total_model(x, a, b, c) * lambda_s1_normalised_curve(x, k, p, l_max)
+    return lambda_total_model(x, a, b, c) * lambda_s1_normalised_curve(x, k, p, l_max, l_min)
 
-
-def lambda_s2_curve(x, a=1.49e-4, b=1.15e-5, c=3.44, k=2.09, p=0.31, l_max=0.92):
+def lambda_s2_curve(x, a=-8.53e-4, b=8.75e-3, c=0.09, k=1.64, p=1.01, l_max=0.98, l_min=0.47):
     """
 
+    :param alpha:
+    :param l_min:
     :param c:
     :param k:
     :param x:
@@ -623,7 +628,7 @@ def lambda_s2_curve(x, a=1.49e-4, b=1.15e-5, c=3.44, k=2.09, p=0.31, l_max=0.92)
     :param l_max:
     :return:
     """
-    return lambda_total_model(x, a, b, c) * lambda_s2_normalised_curve(x, k, p, l_max)
+    return lambda_total_model(x, a, b, c) * lambda_s2_normalised_curve(x, k, p, l_max, l_min)
 
 def purse_string_strength_curve(x, a, b):
     """
@@ -758,6 +763,45 @@ def plot_figure_with_line(best_average_values, scutoids, current_path, x_axis_na
         plt.savefig(os.path.join(current_path, f'boxplot_{x_axis_name}_{y_axis_name}_scutoids_{scutoids:.2f}.png'))
     plt.close()
 
+def plot_feature_over_time(dataframe, y_axis_name, y_axis_label, current_path):
+    """
+    Plot a feature over time.
+    :param dataframe:
+    :param y_axis_name:
+    :param y_axis_label:
+    :param current_path:
+    :return:
+    """
+    # Create new dataframe with time and the feature to plot. Feature to plot is contained in y_axis_name column and time is at the end of the column name, after the last underscore. For example, if y_axis_name is 'Purse_string_strength_dy0_1', the time is at the end of the column name, after the last underscore, which is '1'.
+    reduced_df = dataframe[[col for col in dataframe.columns if col.startswith(y_axis_name)]].copy()
+    reduced_df['folder'] = dataframe['folder']
+    new_df = pd.DataFrame({'t': [], y_axis_name: [], 'model': []})
+    time_array = reduced_df.columns[:-1].str.split('_').str[-1].astype(float)
+
+    # Iterate over the rows
+    for row_index, row in reduced_df.iterrows():
+        if not row.folder.startswith('60_mins_') or row.folder.startswith('60_mins_Rok'):
+            continue
+        feature_array = np.array(row[:-1])
+        model_name = row.folder.replace('60_mins_', '')
+        temp_df = pd.DataFrame({'t': time_array, y_axis_name: feature_array, 'model': model_name})
+        # Filter values with time lower than the 'last_area_time_top' column for each row
+        temp_df = temp_df[temp_df['t'] < dataframe.loc[row_index, 'last_area_time_top']]
+        # Append the temp_df to the new_df
+        new_df = pd.concat([new_df, temp_df], ignore_index=True)
+
+    # Plot
+    plt.figure(figsize=(10, 6))
+    # Differentiate using the model name
+    sns.lineplot(data=new_df, x='t', y=y_axis_name, marker='o', hue='model', palette='tab10')
+    plt.ylim(50, 150)
+    plt.xlabel('Time (min.)', fontsize=20, fontweight='bold')
+    plt.ylabel(y_axis_label, fontsize=20, fontweight='bold')
+    plt.xticks(fontsize=20, fontweight='bold')
+    plt.yticks(fontsize=20, fontweight='bold')
+    plt.tight_layout()
+    plt.savefig(os.path.join(current_path, f'{y_axis_name}_over_time.png'))
+    plt.close()
 
 def find_timepoint_in_model(v_model, input_directory, correct_time_to_find) -> bool:
     """
