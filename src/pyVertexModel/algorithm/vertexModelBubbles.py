@@ -6,8 +6,8 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.spatial import Delaunay
 
-from src.pyVertexModel.algorithm.vertexModel import VertexModel
-from src.pyVertexModel.util.utils import save_state
+from pyVertexModel.algorithm.vertexModel import VertexModel
+from pyVertexModel.util.utils import save_state
 
 logger = logging.getLogger("pyVertexModel")
 

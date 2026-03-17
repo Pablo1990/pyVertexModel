@@ -1,6 +1,7 @@
 import logging
 import os
 import shutil
+import tempfile
 from abc import abstractmethod
 from itertools import combinations
 from os.path import exists
@@ -14,20 +15,35 @@ from scipy import stats
 from scipy.optimize import minimize
 from skimage.measure import regionprops
 
-from src import logger, PROJECT_DIRECTORY
-from src.pyVertexModel.Kg.kg import add_noise_to_parameter
-from src.pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
-from src.pyVertexModel.algorithm import newtonRaphson
-from src.pyVertexModel.geometry import degreesOfFreedom
-from src.pyVertexModel.geometry.geo import Geo, get_node_neighbours_per_domain, edge_valence, get_node_neighbours
-from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling, smoothing_cell_surfaces_mesh
-from src.pyVertexModel.parameters.set import Set
-from src.pyVertexModel.util.utils import save_state, save_backup_vars, load_backup_vars, copy_non_mutable_attributes, \
-    screenshot, screenshot_, load_state, find_optimal_deform_array_X_Y, find_timepoint_in_model
+from pyVertexModel.algorithm import integrators
+from pyVertexModel.geometry import degreesOfFreedom
+from pyVertexModel.geometry.geo import (
+    Geo,
+    edge_valence,
+    get_node_neighbours,
+    get_node_neighbours_per_domain,
+)
+from pyVertexModel.Kg.kg import add_noise_to_parameter
+from pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
+from pyVertexModel.mesh_remodelling.remodelling import (
+    Remodelling,
+    smoothing_cell_surfaces_mesh,
+)
+from pyVertexModel.parameters.set import Set
+from pyVertexModel.util.utils import (
+    copy_non_mutable_attributes,
+    find_optimal_deform_array_X_Y,
+    find_timepoint_in_model,
+    load_backup_vars,
+    load_state,
+    save_backup_vars,
+    save_state,
+    screenshot,
+    screenshot_,
+)
 
 logger = logging.getLogger("pyVertexModel")
-
-
+PROJECT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 
 def display_volume_fragments(geo, selected_cells=None):
@@ -206,8 +222,17 @@ class VertexModel:
 
     def __init__(self, set_option='wing_disc', c_set=None, create_output_folder=True, update_derived_parameters=True):
         """
-        Vertex Model class.
-        :param c_set:
+        Initialize a VertexModel instance and configure simulation settings and outputs.
+        
+        Parameters:
+            set_option (str): Name of a preset configuration to apply when no Set instance is provided.
+            c_set (Set | None): Preconstructed Set object to use for configuration. If None, a new Set is created and the preset named by `set_option` is applied.
+            create_output_folder (bool): If True and the Set defines an OutputFolder, redirect stdout/stderr to that folder.
+            update_derived_parameters (bool): If True and a new Set is created, call its `update_derived_parameters` method to compute dependent parameters.
+        
+        Notes:
+            - If `set_option` does not correspond to a preset on a newly created Set, ValueError is raised.
+            - If the Set has `ablation` enabled, its `wound_default()` method is invoked during initialization.
         """
         self.remodelled_cells = None
         self.colormap_lim = None
@@ -251,14 +276,23 @@ class VertexModel:
         self.tr = 0
         self.numStep = 1
 
-    def  initialize(self):
+    def initialize(self, img_input=None):
         """
-        Initialize the geometry and the topology of the model.
+        Initialize or load the model geometry and topology from settings, a file, or an image input.
+        
+        If a saved state matching current settings exists it is loaded; otherwise the model is built from the provided image or filename, the tissue is resized, substrates and periodic boundary conditions are set up, reference values and degrees of freedom are initialized, copies for convergence tracking are prepared, scutoid percentage is adjusted, and an initial screenshot and state file are saved.
+        
+        Parameters:
+            img_input: Optional image source for initialization; either a filename (str) or a numpy array. If None, the filename specified in the model settings is used.
+        
+        Raises:
+            FileNotFoundError: If the configured initial filename does not exist and img_input is None.
         """
         filename = os.path.join(PROJECT_DIRECTORY, self.set.initial_filename_state)
 
-        if not os.path.exists(filename):
+        if not os.path.exists(filename) and img_input is None:
             logging.error(f'File {filename} not found')
+            raise FileNotFoundError(f'File {filename} not found')
 
         base, ext = os.path.splitext(filename)
         if self.set.min_3d_neighbours is None:
@@ -285,7 +319,10 @@ class VertexModel:
                 self.geo = Geo(mat_info['Geo'])
                 self.geo.update_measures()
             else:
-                self.initialize_cells(filename)
+                if img_input is None:
+                    self.initialize_cells(filename)
+                else:
+                    self.initialize_cells(img_input)
 
             # Resize the geometry to a given cell volume average
             self.geo.resize_tissue()
@@ -425,9 +462,12 @@ class VertexModel:
 
     def iterate_over_time(self):
         """
-        Iterate the model over time. This includes updating the degrees of freedom, applying boundary conditions,
-        updating measures, and checking for convergence.
-        :return:
+        Advance the vertex model through time until the configured end time or until the solver fails to converge, performing per-step updates and saving model state.
+        
+        Prepares degrees of freedom and backup state, then repeatedly performs simulation iterations via single_iteration. Saves model state (and image files when OutputFolder is set) before starting and after finishing the time loop.
+        
+        Returns:
+            bool: `True` if the simulation did not converge before completion, `False` otherwise.
         """
         if self.set.OutputFolder is not None:
             temp_dir = os.path.join(self.set.OutputFolder, 'images')
@@ -455,7 +495,7 @@ class VertexModel:
             gr = self.single_iteration()
 
             if np.isnan(gr):
-                break
+                self.didNotConverge = True
 
         self.save_v_model_state()
 
@@ -487,22 +527,28 @@ class VertexModel:
             # up-to-date
             self.geo.update_measures()
 
-        if self.set.implicit_method is True:
-            g, K, _, energies = newtonRaphson.KgGlobal(self.geo_0, self.geo_n, self.geo, self.set,
-                                                       self.set.implicit_method)
+        if self.set.implicit_method:
+            g, K, _, energies = integrators.KgGlobal(self.geo, self.set, self.geo_n, self.set.implicit_method)
         else:
             K = 0
-            g, energies = newtonRaphson.gGlobal(self.geo_0, self.geo_n, self.geo, self.set,
-                                                self.set.implicit_method, self.numStep)
+            g, energies = integrators.g_global(self.geo, self.set, self.geo_n, self.set.implicit_method, self.numStep)
 
         for key, energy in energies.items():
             logger.info(f"{key}: {energy}")
-        self.geo, g, __, __, self.set, gr, dyr, dy = newtonRaphson.newton_raphson(self.geo_0, self.geo_n, self.geo,
-                                                                                  self.Dofs, self.set, K, g,
-                                                                                  self.numStep, self.t,
-                                                                                  self.set.implicit_method)
-        if not np.isnan(gr) and post_operations:
-            self.post_newton_raphson(dy, g, gr)
+
+        if self.set.integrator == 'fire':
+            self.geo, converged, gr = integrators.fire_minimization_loop(self.geo, self.set, self.Dofs.Free, g, self.t,
+                                                                         self.numStep)
+            if converged:
+                self.iteration_converged()
+        else:
+            self.geo, g, __, __, self.set, gr, dyr, dy = integrators.newton_raphson(self.geo_0, self.geo_n, self.geo,
+                                                                                      self.Dofs, self.set, K, g,
+                                                                                      self.numStep, self.t,
+                                                                                      self.set.implicit_method)
+            if not np.isnan(gr) and post_operations:
+                self.post_newton_raphson(dy, g, gr)
+        
         return gr
 
     def post_newton_raphson(self, dy, g, gr):
@@ -513,9 +559,19 @@ class VertexModel:
         :param gr:
         :return:
         """
-        if ((gr * self.set.dt / self.set.dt0) < self.set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
-                np.all(~np.isnan(dy[self.Dofs.Free])) and
-                (np.max(abs(g[self.Dofs.Free])) * self.set.dt / self.set.dt0) < self.set.tol):
+        # Standard convergence criterion
+        if self.set.implicit_method:
+            converged = ((gr * self.set.dt / self.set.dt0) < self.set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
+                    np.all(~np.isnan(dy[self.Dofs.Free])) and
+                    (np.max(abs(g[self.Dofs.Free])) * self.set.dt / self.set.dt0) < self.set.tol)
+        else:
+            # For explicit methods: Don't reject based on gradient increase
+            # The adaptive scaling in newton_raphson_iteration_explicit handles stability
+            # Rejection causes geometry restore and dt reduction, making convergence harder
+            converged = (np.all(~np.isnan(g[self.Dofs.Free])) and np.all(~np.isnan(dy[self.Dofs.Free])) and
+                         (np.max(abs(g[self.Dofs.Free])) < self.set.tol or self.set.dt <= self.set.dt0 * self.set.dt_tolerance))
+        
+        if converged:
             self.iteration_converged()
         else:
             self.iteration_did_not_converged()
@@ -527,20 +583,23 @@ class VertexModel:
         If the iteration did not converge, the algorithm will try to relax the value of nu and dt.
         :return:
         """
-        self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs = load_backup_vars(self.backupVars)
-        self.relaxingNu = False
-        if self.set.iter == self.set.MaxIter0 and self.set.implicit_method:
-            self.set.MaxIter = self.set.MaxIter0 * 3
-            self.set.nu = 10 * self.set.nu0
-        else:
-            if (self.set.iter >= self.set.MaxIter and
-                    (self.set.dt / self.set.dt0) > self.set.dt_tolerance):
-                self.set.MaxIter = self.set.MaxIter0
-                self.set.nu = self.set.nu0
-                self.set.dt = self.set.dt / 2
-                self.t = self.set.last_t_converged + self.set.dt
+        if self.set.integrator != 'fire':
+            self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs = load_backup_vars(self.backupVars)
+            self.relaxingNu = False
+            if self.set.iter == self.set.MaxIter0 and self.set.implicit_method:
+                self.set.MaxIter = self.set.MaxIter0 * 3
+                self.set.nu = 10 * self.set.nu0
             else:
-                self.didNotConverge = True
+                if (self.set.iter >= self.set.MaxIter and
+                        (self.set.dt / self.set.dt0) > self.set.dt_tolerance):
+                    self.set.MaxIter = self.set.MaxIter0
+                    self.set.nu = self.set.nu0
+                    self.set.dt = self.set.dt / 2
+                    self.t = self.set.last_t_converged + self.set.dt
+                else:
+                    self.didNotConverge = True
+        else:
+            logger.warning("FIRE did not converge")
 
     def iteration_converged(self):
         """
@@ -612,9 +671,12 @@ class VertexModel:
 
     def save_v_model_state(self, file_name=None):
         """
-        Save the state of the vertex model.
-        :param file_name:
-        :return:
+        Persist current model output files (VTK exports, a screenshot, and a saved state) into the configured output folder.
+        
+        If no output folder is configured on the model (`self.set.OutputFolder` is None) this function does nothing. When an output folder is present, VTK files for edges and cells are exported, a screenshot is written to an "images" subdirectory, and the model state is saved as a `.pkl` file.
+        
+        Parameters:
+            file_name (str | None): Optional base name (without extension) for the saved state file. If omitted, the state is saved as `data_step_{numStep}.pkl`.
         """
         if self.set.OutputFolder is not None:
             # Create VTK files for the current state
@@ -630,8 +692,11 @@ class VertexModel:
 
     def reset_noisy_parameters(self):
         """
-        Reset noisy parameters.
-        :return:
+        Reinitialize per-cell stochastic multipliers for mechanical and adhesion parameters.
+        
+        For every cell in the current geometry, set the following *_perc attributes to 1 plus noise generated by add_noise_to_parameter using self.set.noise_random:
+        - lambda_s1_perc, lambda_s2_perc, lambda_s3_perc, lambda_v_perc, lambda_r_perc,
+        - c_line_tension_perc, k_substrate_perc, lambda_b_perc.
         """
         for cell in self.geo.Cells:
             cell.lambda_s1_perc = add_noise_to_parameter(1, self.set.noise_random)
@@ -1112,6 +1177,9 @@ class VertexModel:
             else:
                 run_iteration = True
             self.set.OutputFolder = output_directory
+            self.set.integrator = 'euler'
+            self.set.dt_tolerance = 1e-11
+
             if (self.set.dt / self.set.dt0) <= 1e-6:
                 return np.inf, np.inf, np.inf, np.inf
 
@@ -1144,6 +1212,9 @@ class VertexModel:
                             for sub_f in os.listdir(sub_dir):
                                 shutil.copy(os.path.join(sub_dir, sub_f), os.path.join(dest_sub_dir, sub_f))
 
+            if self.t < tend:
+                print(f'Could not reach the end time of the simulation for purse string strength exploration. Current time: {self.t}')
+                return np.inf, np.inf, np.inf, np.inf
             dy_values, purse_string_strength_values = self.required_purse_string_strength_for_timepoint(directory, timepoint=tend)
 
         purse_string_strength_values = purse_string_strength_values[:len(dy_values)]
@@ -1243,9 +1314,13 @@ class VertexModel:
 
     def find_lambda_s1_s2_equal_target_gr(self, target_energy=0.01299466280896831):
         """
-        Find the lmin0 value that makes the average geometric ratio equal to target_gr for all aspect ratios.
-        :param target_energy:
-        :return:
+        Finds values for lambdaS1 and lambdaS2 that make the model's surface adhesion energy equal to the given target.
+        
+        Parameters:
+            target_energy (float): Target adhesion energy value to match.
+        
+        Returns:
+            tuple(float, float): The optimized (lambdaS1, lambdaS2) values that minimize the squared deviation from target_energy.
         """
 
         def objective(lambdas):
@@ -1262,3 +1337,39 @@ class VertexModel:
         result = minimize(objective, method='TNC', x0=np.array([self.set.lambdaS1, self.set.lambdaS2]), options=options)
         logger.info(f'Found lambdaS1: {result.x[0]}, lambdaS2: {result.x[1]}')
         return result.x[0], result.x[1]
+
+    def create_temporary_folder(self):
+        """
+        Create a temporary output folder under PROJECT_DIRECTORY/Temp and assign it to self.set.OutputFolder.
+        
+        If an output folder already exists on the model, the existing path is returned unchanged. Otherwise a new temporary directory is created inside PROJECT_DIRECTORY/Temp, assigned to self.set.OutputFolder, and its path is returned.
+        
+        Returns:
+            str: Filesystem path of the temporary output directory (existing or newly created).
+        """
+        if self.set.OutputFolder is not None:
+            logger.warning('Output folder already exists, using the existing one.')
+            return self.set.OutputFolder
+
+        # Create Temp folder if it doesn't exist
+        if not os.path.exists(os.path.join(PROJECT_DIRECTORY, 'Temp')):
+            os.makedirs(os.path.join(PROJECT_DIRECTORY, 'Temp'))
+            logger.info(f'Created Temp folder at: {os.path.join(PROJECT_DIRECTORY, "Temp")}')
+
+        # Create temporary folder in PROJECT_DIRECTORY/Temp/
+        temp_dir = tempfile.mkdtemp(dir=os.path.join(PROJECT_DIRECTORY, 'Temp'))
+        self.set.OutputFolder = temp_dir
+        logger.info(f'Created temporary output folder at: {temp_dir}')
+
+        return temp_dir
+
+    def clean_temporary_folder(self):
+        """
+        Remove the model's temporary OutputFolder and clear its reference.
+        
+        If self.set.OutputFolder is set and its path contains "Temp", delete that directory and set self.set.OutputFolder to None.
+        """
+        if self.set.OutputFolder is not None and 'Temp' in self.set.OutputFolder:
+            shutil.rmtree(self.set.OutputFolder)
+            logger.info(f'Removed temporary output folder at: {self.set.OutputFolder}')
+            self.set.OutputFolder = None

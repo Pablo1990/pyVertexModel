@@ -2,8 +2,8 @@ import os
 
 import pandas as pd
 
-from src import PROJECT_DIRECTORY
-from src.pyVertexModel.util.utils import plot_figure_with_line
+from pyVertexModel import PROJECT_DIRECTORY
+from pyVertexModel.util.utils import plot_figure_with_line
 
 ## Obtain the best parameters per resize_z and percentage of scutoids
 

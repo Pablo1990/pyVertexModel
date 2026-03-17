@@ -1,7 +1,7 @@
 # Get stats from the space exploration study
 import optuna
 
-from src.pyVertexModel.util.space_exploration import plot_optuna_all
+from pyVertexModel.util.space_exploration import plot_optuna_all
 
 output_directory = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/'
 #error_type = '_gr_all_parameters_'

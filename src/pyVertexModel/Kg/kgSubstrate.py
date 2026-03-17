@@ -2,8 +2,8 @@ import time
 
 import numpy as np
 
-from src.pyVertexModel.Kg.kg import Kg
-from src.pyVertexModel.util.utils import get_interface
+from pyVertexModel.Kg.kg import Kg
+from pyVertexModel.util.utils import get_interface
 
 
 class KgSubstrate(Kg):

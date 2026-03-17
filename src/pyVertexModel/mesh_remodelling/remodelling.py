@@ -3,12 +3,26 @@ import logging
 import numpy as np
 import pandas as pd
 
-from src.pyVertexModel.algorithm.newtonRaphson import gGlobal, newton_raphson_iteration_explicit, \
-    constrain_bottom_vertices_x_y
-from src.pyVertexModel.geometry.geo import edge_valence, get_node_neighbours_per_domain, get_node_neighbours
-from src.pyVertexModel.mesh_remodelling.flip import y_flip_nm, post_flip
-from src.pyVertexModel.util.utils import ismember_rows, save_backup_vars, load_backup_vars, compute_distance_3d, \
-    laplacian_smoothing, screenshot_, get_interface
+from pyVertexModel.algorithm.integrators import (
+    constrain_bottom_vertices_x_y,
+    g_global,
+    newton_raphson_iteration_explicit,
+)
+from pyVertexModel.geometry.geo import (
+    edge_valence,
+    get_node_neighbours,
+    get_node_neighbours_per_domain,
+)
+from pyVertexModel.mesh_remodelling.flip import post_flip, y_flip_nm
+from pyVertexModel.util.utils import (
+    compute_distance_3d,
+    get_interface,
+    ismember_rows,
+    laplacian_smoothing,
+    load_backup_vars,
+    save_backup_vars,
+    screenshot_,
+)
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -309,7 +323,7 @@ class Remodelling:
         backup_vars = save_backup_vars(self.Geo, self.Geo_n, self.Geo_0, num_step, self.Dofs)
         # self.Geo.create_vtk_cell(self.Geo_0, self.Set, num_step)
 
-        g, energies = gGlobal(self.Geo, self.Geo, self.Geo, self.Set, self.Set.implicit_method)
+        g, energies = g_global(self.Geo, self.Set, self.Geo, self.Set.implicit_method)
         gr = np.linalg.norm(g[self.Dofs.Free])
         logger.info(f'|gr| before remodelling: {gr}')
         for key, energy in energies.items():
@@ -492,14 +506,14 @@ class Remodelling:
 
         # Check if the remodelling will converge
         dy = np.zeros(((best_geo.numY + best_geo.numF + best_geo.nCells) * 3, 1), dtype=np.float64)
-        g, energies = gGlobal(best_geo, best_geo, best_geo, self.Set, self.Set.implicit_method)
+        g, energies = g_global(best_geo, self.Set, best_geo, self.Set.implicit_method)
         previous_gr = np.linalg.norm(g[self.Dofs.Free])
 
         try:
             for n_iter in range(n_iter_max):
                 best_geo, dy, dyr = newton_raphson_iteration_explicit(best_geo, self.Set, self.Dofs.Free, dy, g)
 
-                g, energies = gGlobal(best_geo, best_geo, best_geo, self.Set, self.Set.implicit_method)
+                g, energies = g_global(best_geo, self.Set, best_geo, self.Set.implicit_method)
                 for key, energy in energies.items():
                     logger.info(f"{key}: {energy}")
                 g_constrained = constrain_bottom_vertices_x_y(best_geo)
@@ -549,7 +563,7 @@ class Remodelling:
 
         # Check if the remodelling has improved the gr and the energy
         # Compute the new energy
-        g, energies = gGlobal(self.Geo, self.Geo, self.Geo, self.Set, self.Set.implicit_method)
+        g, energies = g_global(self.Geo, self.Set, self.Geo, self.Set.implicit_method)
         self.Dofs.get_dofs(self.Geo, self.Set)
         gr = np.linalg.norm(g[self.Dofs.Free])
         logger.info(f'|gr| after remodelling without changes: {gr}')

@@ -7,8 +7,12 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 
-from src.pyVertexModel.algorithm.vertexModel import VertexModel, logger
-from src.pyVertexModel.util.utils import load_state, load_variables, save_variables, screenshot
+from pyVertexModel.algorithm.vertexModel import VertexModel, logger
+from pyVertexModel.util.utils import (
+    load_state,
+    load_variables,
+    save_variables,
+)
 
 
 def analyse_simulation(folder):
@@ -413,6 +417,7 @@ def analyse_edge_recoil(file_name_v_model, type_of_ablation='recoil_edge_info_ap
                 v_model.set.RemodelingFrequency = 100
             v_model.set.ablation = False
             v_model.set.export_images = False
+            v_model.set.integrator = 'euler'
             v_model.set.purseStringStrength = 0
             v_model.set.lateralCablesStrength = 0
             if v_model.set.export_images and not os.path.exists(v_model.set.OutputFolder + '/images'):

@@ -6,9 +6,9 @@ import vtk
 from numpy.ma.extras import setxor1d
 from sklearn.decomposition import PCA
 
-from src.pyVertexModel.Kg.kg import add_noise_to_parameter
-from src.pyVertexModel.geometry import face
-from src.pyVertexModel.util.utils import copy_non_mutable_attributes, get_interface
+from pyVertexModel.geometry import face
+from pyVertexModel.Kg.kg import add_noise_to_parameter
+from pyVertexModel.util.utils import copy_non_mutable_attributes, get_interface
 
 
 def compute_2d_circularity(area, perimeter):

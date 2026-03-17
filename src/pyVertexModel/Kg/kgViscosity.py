@@ -2,7 +2,7 @@ import time
 
 import numpy as np
 
-from src.pyVertexModel.Kg.kg import Kg
+from pyVertexModel.Kg.kg import Kg
 
 
 class KgViscosity(Kg):

@@ -1,7 +1,7 @@
 import numpy as np
 
 from Tests.tests import load_data, Tests, assert_array1D
-from src.pyVertexModel.geometry.tris import Tris
+from pyVertexModel.geometry.tris import Tris
 
 
 class TestTris(Tests):

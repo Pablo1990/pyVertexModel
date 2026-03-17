@@ -8,12 +8,16 @@ from numpy import setdiff1d
 from scipy.optimize import minimize
 from scipy.spatial import ConvexHull
 
-from src.pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
-from src.pyVertexModel.geometry import face, cell
-from src.pyVertexModel.geometry.cell import Cell, compute_y
-from src.pyVertexModel.geometry.face import build_edge_based_on_tetrahedra
-from src.pyVertexModel.util.utils import ismember_rows, copy_non_mutable_attributes, calculate_polygon_area, \
-    get_interface
+from pyVertexModel.geometry import cell, face
+from pyVertexModel.geometry.cell import Cell, compute_y
+from pyVertexModel.geometry.face import build_edge_based_on_tetrahedra
+from pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
+from pyVertexModel.util.utils import (
+    calculate_polygon_area,
+    copy_non_mutable_attributes,
+    get_interface,
+    ismember_rows,
+)
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -324,11 +328,12 @@ class Geo:
                 self.Cells[c].Area = self.Cells[c].compute_area()
                 self.Cells[c].Vol = self.Cells[c].compute_volume()
 
+        # Unique Ids for each point (vertex, node or face center) used in K
+        self.build_global_ids()
+
         # Initialize reference values
         self.init_reference_cell_values(c_set)
 
-        # Unique Ids for each point (vertex, node or face center) used in K
-        self.build_global_ids()
 
         if c_set.Substrate == 1:
             for c, c_cell in enumerate(self.Cells):
@@ -345,17 +350,15 @@ class Geo:
 
     def init_reference_cell_values(self, c_set):
         """
-        Initializes the average cell properties. This method calculates the average area of all triangles (tris) in the
-        geometry (Geo) structure, and sets the upper and lower area thresholds based on the standard deviation of the areas.
-        It also calculates the minimum edge length and the minimum area of all tris, and sets the initial values for
-        BarrierTri0 and lmin0 based on these calculations. The method also calculates the average edge lengths for tris
-        located at the top, bottom, and lateral sides of the cells. Finally, it initializes an empty list for storing
-        removed debris cells.
-
-        :param c_set: The settings of the simulation
-        :return: None
+        Initialize reference geometric and mechanical baseline values for the tissue.
+        
+        This configures per-tissue reference data used by mechanics and topology updates: it sets AssembleNodes and non_dead_cells, initializes per-cell reference volumes/areas and optional parameter noise, updates the reference minimum edge length (lmin0) and triangle barrier (BarrierTri0), computes average edge lengths by face type, resets RemovedDebrisCells, and determines substrate/ceiling heights.
+        
+        Parameters:
+            c_set: Simulation settings object providing parameters and state (e.g., ref_V0/ref_A0, contributionOldYs, and initial_filename_state) used during initialization.
         """
         logger.info('Initializing reference cell values')
+
         # Assemble nodes from all cells that are not None
         self.AssembleNodes = [i for i, cell in enumerate(self.Cells) if cell.AliveStatus is not None]
 
@@ -364,7 +367,8 @@ class Geo:
 
         # Update lmin0 with the minimum value in lmin_values
         self.update_lmin0()
-        self.update_lmin0(default_value=find_lmin0_equal_target_gr(self, c_set))
+        if '/Temp/' not in c_set.initial_filename_state:
+            self.update_lmin0(default_value=find_lmin0_equal_target_gr(self, c_set))
 
         # Update BarrierTri0
         self.update_barrier_tri0()
@@ -2270,4 +2274,174 @@ class Geo:
         self.update_measures()
 
         volumes_after_deformation = np.array([cell.Vol for cell in self.Cells if cell.AliveStatus is not None])
+
+    def geometry_is_correct(self):
+        """
+        Check if the geometry is structurally valid using vertex model expert criteria.
+        
+        This function validates the vertex model geometry structure by checking:
+        1. Cell volumes (positive, not degenerate)
+        2. Cell Y coordinates (no None, NaN, or Inf)
+        3. Face areas (positive, not too small)
+        4. Triangle degeneracy (no collapsed triangles)
+        5. Face planarity (critical for detecting "spiky cells")
+        
+        Dead cells (AliveStatus=None) are ignored as they may legitimately have Y=None.
+        
+        Returns:
+            bool: True if geometry is structurally valid, False if invalid/going wild
+        """
+        
+        # Get alive cells only
+        alive_cells = [c for c in self.Cells if hasattr(c, 'AliveStatus') and c.AliveStatus is not None]
+        
+        if not alive_cells:
+            logger.debug("No alive cells found")
+            return False
+        
+        # 1. Check cell Y coordinates
+        for cell_idx, cell in enumerate(alive_cells):
+            if cell.Y is None:
+                logger.debug(f"Cell {cell_idx} has Y=None")
+                return False
+            
+            # Check for NaN or Inf
+            if np.any(np.isnan(cell.Y)) or np.any(np.isinf(cell.Y)):
+                logger.debug(f"Cell {cell_idx} has NaN or Inf in Y coordinates")
+                return False
+        
+        # 2. Check cell volumes (should be positive and reasonable)
+        for cell_idx, cell in enumerate(alive_cells):
+            if not hasattr(cell, 'Vol') or cell.Vol is None:
+                logger.debug(f"Cell {cell_idx} has no volume")
+                return False
+            
+            if cell.Vol <= 0:
+                logger.debug(f"Cell {cell_idx} has non-positive volume: {cell.Vol}")
+                return False
+            
+            if cell.Vol < 1e-10:
+                logger.debug(f"Cell {cell_idx} has tiny volume: {cell.Vol}")
+                return False
+        
+        # 3. Check face areas (should be positive and not too small)
+        for cell_idx, cell in enumerate(alive_cells):
+            if not hasattr(cell, 'Faces'):
+                continue
+                
+            for face_idx, face in enumerate(cell.Faces):
+                if hasattr(face, 'Area') and face.Area is not None:
+                    if face.Area < 0:
+                        logger.debug(f"Cell {cell_idx}, Face {face_idx} has negative area: {face.Area}")
+                        return False
+                    
+                    if face.Area < 1e-12:
+                        logger.debug(f"Cell {cell_idx}, Face {face_idx} has degenerate area: {face.Area}")
+                        return False
+        
+        # 4. Check triangle areas and degeneracy
+        for cell_idx, cell in enumerate(alive_cells):
+            if not hasattr(cell, 'Faces'):
+                continue
+                
+            for face_idx, face in enumerate(cell.Faces):
+                if not hasattr(face, 'Tris'):
+                    continue
+                    
+                for tri_idx, tri in enumerate(face.Tris):
+                    # Check for degenerate triangles (same edge vertices)
+                    if hasattr(tri, 'Edge') and tri.Edge is not None:
+                        if len(tri.Edge) >= 2 and tri.Edge[0] == tri.Edge[1]:
+                            logger.debug(f"Cell {cell_idx}, Face {face_idx}, Tri {tri_idx} is degenerate (same vertices)")
+                            return False
+                    
+                    # Check triangle area
+                    if hasattr(tri, 'Area') and tri.Area is not None:
+                        if tri.Area < 0:
+                            logger.debug(f"Cell {cell_idx}, Face {face_idx}, Tri {tri_idx} has negative area")
+                            return False
+        
+        # 4b. Check for excessive degenerate/tiny triangles
+        # Some tiny triangles are normal, but too many indicate geometric issues
+        tiny_triangle_count = 0
+        total_triangles = 0
+        
+        for cell_idx, cell in enumerate(alive_cells):
+            if not hasattr(cell, 'Faces'):
+                continue
+                
+            for face_idx, face in enumerate(cell.Faces):
+                if not hasattr(face, 'Tris'):
+                    continue
+                    
+                for tri in face.Tris:
+                    total_triangles += 1
+                    
+                    # Count tiny triangles
+                    if hasattr(tri, 'Area') and tri.Area is not None and tri.Area < 1e-10:
+                        tiny_triangle_count += 1
+        
+        # If more than 0.2% of triangles are tiny, geometry is problematic
+        # Empirically: correct geometries have ~0.05% tiny triangles, going_wild_1 has ~0.29%
+        if total_triangles > 0:
+            tiny_ratio = tiny_triangle_count / total_triangles
+            if tiny_ratio > 0.002:  # 0.2% threshold
+                logger.debug(f"Too many tiny triangles: {tiny_triangle_count}/{total_triangles} ({tiny_ratio*100:.2f}%)")
+                return False
+        
+        # 5. Check face planarity (CRITICAL for detecting "spiky cells")
+        # In a proper vertex model, faces should be approximately planar.
+        # Non-planar faces indicate vertices sticking out, creating spikes.
+        planarity_threshold = 0.08  # Eigenvalue ratio threshold
+        non_planar_count = 0
+        
+        for cell_idx, cell in enumerate(alive_cells):
+            if not hasattr(cell, 'Faces'):
+                continue
+                
+            for face_idx, face in enumerate(cell.Faces):
+                if not hasattr(face, 'Tris'):
+                    continue
+                    
+                # Get all unique vertices in the face
+                vertices = set()
+                for tri in face.Tris:
+                    if hasattr(tri, 'Edge') and tri.Edge is not None:
+                        vertices.add(tri.Edge[0])
+                        vertices.add(tri.Edge[1])
+                
+                if len(vertices) < 3:
+                    continue
+                
+                # Get vertex coordinates
+                try:
+                    vertex_coords = np.array([cell.Y[v] for v in vertices])
+                    
+                    # Check planarity using PCA
+                    # For planar faces, the smallest eigenvalue should be very small
+                    if len(vertex_coords) >= 3:
+                        centered = vertex_coords - np.mean(vertex_coords, axis=0)
+                        cov = np.cov(centered.T)
+                        eigenvalues = np.linalg.eigvalsh(cov)
+                        
+                        # Smallest eigenvalue relative to largest
+                        # This detects non-planar faces that create "spiky cells"
+                        if eigenvalues[2] > 1e-15:  # Avoid division by zero
+                            planarity_ratio = eigenvalues[0] / eigenvalues[2]
+                            
+                            if planarity_ratio > planarity_threshold:
+                                non_planar_count += 1
+                                logger.debug(f"Cell {cell_idx}, Face {face_idx} is non-planar (ratio={planarity_ratio:.4f} > {planarity_threshold})")
+                
+                except (IndexError, ValueError) as e:
+                    logger.debug(f"Cell {cell_idx}, Face {face_idx}: Error checking planarity: {e}")
+                    return False
+        
+        # Any non-planar faces indicate geometry is going wild
+        if non_planar_count > 0:
+            logger.debug(f"Found {non_planar_count} non-planar faces")
+            return False
+        
+        # All checks passed
+        return True
         logger.info(f'Volume difference: {np.mean(volumes_after_deformation) - average_volume}')

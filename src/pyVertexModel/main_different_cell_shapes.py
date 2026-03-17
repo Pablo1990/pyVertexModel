@@ -3,8 +3,10 @@ import sys
 
 import numpy as np
 
-from src import logger, PROJECT_DIRECTORY
-from src.pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
+from pyVertexModel import PROJECT_DIRECTORY, logger
+from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import (
+    VertexModelVoronoiFromTimeImage,
+)
 
 original_wing_disc_height = 15.0 # in microns
 set_of_resize_z = np.array([0.0001, 0.001, 0.01, 0.1, 0.5, 1.0, 2.0]) * original_wing_disc_height

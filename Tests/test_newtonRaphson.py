@@ -2,11 +2,11 @@ import numpy as np
 
 from Tests.test_geo import check_if_cells_are_the_same
 from Tests.tests import load_data, Tests, assert_array1D, assert_matrix
-from src.pyVertexModel.algorithm.newtonRaphson import line_search, newton_raphson, newton_raphson_iteration, ml_divide, \
+from pyVertexModel.algorithm.integrators import line_search, newton_raphson, newton_raphson_iteration, ml_divide, \
     solve_remodeling_step
-from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
-from src.pyVertexModel.geometry.geo import Geo
-from src.pyVertexModel.parameters.set import Set
+from pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
+from pyVertexModel.geometry.geo import Geo
+from pyVertexModel.parameters.set import Set
 
 
 class TestNewtonRaphson(Tests):
@@ -106,7 +106,7 @@ class TestNewtonRaphson(Tests):
         t_test = mat_info['t'][0][0]
 
         Set.iter = 1000000
-        geo_test, g_test, k_test, energy_test, set_test, gr_test, dyr_test, dy_test = (
+        geo_test, g_test, k_test, energy_test, set_test, gr_test, dyr_test, dy_test, _ = (
             newton_raphson(geo_0_test,
                            geo_n_test,
                            geo_test,
@@ -143,7 +143,7 @@ class TestNewtonRaphson(Tests):
         t_test = mat_info['t'][0][0]
 
         Set.iter = 1000000
-        geo_test, g_test, k_test, energy_test, set_test, gr_test, dyr_test, dy_test = (
+        geo_test, g_test, k_test, energy_test, set_test, gr_test, dyr_test, dy_test, _ = (
             newton_raphson(geo_0_test,
                            geo_n_test,
                            geo_test,
@@ -177,7 +177,7 @@ class TestNewtonRaphson(Tests):
         g_test = mat_info['g'][:, 0]
         dy_test = mat_info['dy'][:, 0]
         set_test = Set(mat_info['Set'])
-        alpha = line_search(geo_0_test, geo_n_test, geo_test, dofs_test.Free, set_test, g_test, dy_test)
+        alpha = line_search(geo_test, dofs_test.Free, set_test, g_test, dy_test, geo_n_test)
 
         np.testing.assert_almost_equal(alpha, 1)
 
@@ -202,7 +202,7 @@ class TestNewtonRaphson(Tests):
         g_test = mat_info['g'][:, 0]
         dy_test = mat_info['dy']
         set_test = Set(mat_info['Set'])
-        alpha = line_search(geo_0_test, geo_n_test, geo_test, dofs_test.Free, set_test, g_test, dy_test)
+        alpha = line_search(geo_test, dofs_test.Free, set_test, g_test, dy_test, geo_n_test)
 
         np.testing.assert_almost_equal(alpha, mat_info['alpha'][0][0])
 

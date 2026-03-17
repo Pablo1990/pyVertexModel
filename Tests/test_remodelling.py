@@ -2,9 +2,9 @@ import numpy as np
 
 from Tests.test_geo import check_if_cells_are_the_same
 from Tests.tests import Tests, load_data, assert_matrix
-from src.pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
-from src.pyVertexModel.geometry.geo import Geo
-from src.pyVertexModel.mesh_remodelling.remodelling import Remodelling
+from pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
+from pyVertexModel.geometry.geo import Geo
+from pyVertexModel.mesh_remodelling.remodelling import Remodelling
 
 
 class TestRemodelling(Tests):
