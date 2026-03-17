@@ -391,7 +391,7 @@ class Set:
         self.check_for_non_used_parameters()
 
     def wing_disc_equilibrium(self):
-        self.integrator = 'fire'
+        self.integrator = 'euler'
         self.nu_bottom = self.nu
         self.model_name = 'dWL1'
         self.initial_filename_state = 'Input/images/' + self.model_name + '.tif'
