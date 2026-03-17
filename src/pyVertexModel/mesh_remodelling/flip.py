@@ -401,6 +401,14 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, endNode, ghost_n
                         logger.warning("Degenerate triangles found after flip remodelling. Skipping this combination.")
                         continue
 
+                    # Check that no cell has an unrealistically large volume after the flip,
+                    # which would indicate overlapping cells or other geometric inconsistencies
+                    new_volumes = np.array([cell.Vol for cell in Geo_new.Cells if cell.AliveStatus == 1])
+                    old_volumes = np.array([cell.Vol for cell in Geo.Cells if cell.AliveStatus == 1])
+                    if np.any(new_volumes > old_volumes.mean() * 100):
+                        logger.warning("Unrealistic cell volumes found after flip remodelling. Skipping this combination.")
+                        continue
+
                     new_tets_tree = new_tets
                     Geo_final = Geo_new
                     valence_segment = current_valence_segment
