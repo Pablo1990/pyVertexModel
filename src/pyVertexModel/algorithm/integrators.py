@@ -642,6 +642,8 @@ def single_iteration_fire(geo, c_set, dof, dy, g, selected_cells=None):
         initialize_fire(geo, c_set)
         logger.info("FIRE algorithm initialized")
 
+    geo._fire_velocity = np.zeros((geo.numF + geo.numY + geo.nCells, 3))
+
     # Increment iteration counter
     geo._fire_iteration_count += 1
 
@@ -769,6 +771,7 @@ def fire_minimization_loop(geo, c_set, dof, g, t, num_step, selected_cells=None)
     """
     logger.info(f"Starting FIRE minimization for timestep t={t}")
     dy = np.zeros(((geo.numY + geo.numF + geo.nCells) * 3, 1), dtype=np.float64)
+    geo._fire_velocity = np.zeros((geo.numF + geo.numY + geo.nCells, 3))
 
     # Reset FIRE iteration counter for this minimization
     if hasattr(geo, '_fire_velocity'):
@@ -835,7 +838,6 @@ def initialize_fire(geo, c_set):
     :param c_set:
     :return:
     """
-    geo._fire_velocity = np.zeros((geo.numF + geo.numY + geo.nCells, 3))
     geo._fire_dt = c_set.dt
     geo._fire_alpha = c_set.fire_alpha_start
     geo._fire_n_positive = 0
