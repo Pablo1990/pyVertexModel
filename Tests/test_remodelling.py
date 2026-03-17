@@ -360,3 +360,52 @@ class TestFaceCentreReset(unittest.TestCase):
             "post_intercalation must return False when update_measures() raises, not crash",
         )
 
+
+
+class TestFlipNmErrorHandling(unittest.TestCase):
+    """
+    Unit test for the error handling in flip_nm().
+    flip_nm() must catch exceptions from y_flip_nm() and return
+    hasConverged=False instead of propagating the exception.
+    """
+
+    def _make_remodelling(self):
+        geo = MagicMock()
+        geo_n = MagicMock()
+        geo_0 = MagicMock()
+        c_set = MagicMock()
+        c_set.implicit_method = False
+        dofs = MagicMock()
+        dofs.Free = np.array([0, 1, 2])
+
+        remodelling = Remodelling.__new__(Remodelling)
+        remodelling.Geo = geo
+        remodelling.Geo_n = geo_n
+        remodelling.Geo_0 = geo_0
+        remodelling.Set = c_set
+        remodelling.Dofs = dofs
+        return remodelling
+
+    def test_flip_nm_returns_false_when_y_flip_nm_raises(self):
+        """
+        flip_nm must catch exceptions raised by y_flip_nm (e.g. a
+        ValueError from do_flip32 when input vertices are collinear) and
+        return hasConverged=False with t_new=None instead of crashing.
+        """
+        remodelling = self._make_remodelling()
+        remodelling.Geo.copy.return_value = MagicMock()
+
+        with patch("pyVertexModel.mesh_remodelling.remodelling.y_flip_nm",
+                   side_effect=ValueError("Degenerate flip32 configuration: collinear points")):
+            has_converged, t_new = remodelling.flip_nm(
+                segment_to_change=np.array([0, 1]),
+                cell_to_intercalate_with=2,
+                old_tets=np.array([[0, 1, 2, 3]]),
+                old_ys=np.zeros((4, 3)),
+                cell_to_split_from=3,
+            )
+
+        self.assertFalse(has_converged,
+                         "flip_nm must return hasConverged=False when y_flip_nm raises")
+        self.assertIsNone(t_new,
+                          "flip_nm must return t_new=None when y_flip_nm raises")
