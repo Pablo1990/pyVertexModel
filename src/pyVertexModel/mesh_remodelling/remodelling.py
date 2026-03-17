@@ -162,14 +162,17 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
                     Geo.Cells[node_in_tet].Y[
                         ismember_rows(Geo.Cells[node_in_tet].T, tet_to_check)[0]] = avg_point
 
-    # Move the faces that share the ghost node closer to the reference point
+    # Reset face centres to the mean of their edge vertices for faces that share the ghost node.
+    # Interpolating toward the reference point can push the centre outside the polygon, leading
+    # to incorrect volume calculations and energy spikes.  The mean of edge vertices is always
+    # inside the convex polygon and gives a geometrically valid starting point.
     for current_cell in cell_nodes_shared:
         for face_id, face in enumerate(Geo.Cells[current_cell].Faces):
             if get_interface(face.InterfaceType) == get_interface(interface_type) and np.all(np.isin(face.ij, Tnew)):
-                face_centre = face.Centre
-                weight = close_to_new_point
-                Geo.Cells[current_cell].Faces[face_id].Centre = (
-                        ref_point_closer[0] * (1 - weight) + face_centre * weight)
+                if face.Tris:
+                    all_edges = np.unique(np.concatenate([tri.Edge for tri in face.Tris]))
+                    Geo.Cells[current_cell].Faces[face_id].Centre = np.mean(
+                        Geo.Cells[current_cell].Y[all_edges, :], axis=0)
 
     #move_scutoid_vertex(Geo, cell_nodes_shared, close_to_new_point, ref_point_closer)
 
@@ -456,14 +459,26 @@ class Remodelling:
                 # Smoothing the cell surfaces mesh
                 location_intercalation = "Top" if ghostNode in geo_copy.XgTop else "Bottom"
                 geo_copy = smoothing_cell_surfaces_mesh(geo_copy, cells_involved_intercalation, backup_vars, location=location_intercalation)
-                #screenshot_(geo_copy, self.Set, 0, 'after_remodelling_2_', self.Set.OutputFolder + '/images')
+
+                # Reset face centres to the mean of their edge vertices after all geometry
+                # modifications (vertex movement + smoothing + Z-snapping).  Laplacian
+                # smoothing and Z-snapping can place face centres outside their polygon,
+                # which produces incorrect volume/area calculations and large energy gradients.
+                for cell_id in cells_involved_intercalation:
+                    for face_id, face in enumerate(geo_copy.Cells[cell_id].Faces):
+                        if face.Tris:
+                            all_edges = np.unique(np.concatenate([tri.Edge for tri in face.Tris]))
+                            geo_copy.Cells[cell_id].Faces[face_id].Centre = np.mean(
+                                geo_copy.Cells[cell_id].Y[all_edges, :], axis=0)
 
                 self.Geo = geo_copy
-                self.Geo.update_measures()
-                self.reset_preferred_values(backup_vars, cells_involved_intercalation)
-
-                has_converged = self.check_if_will_converge(self.Geo.copy())
-                #has_converged = True
+                try:
+                    self.Geo.update_measures()
+                    self.reset_preferred_values(backup_vars, cells_involved_intercalation)
+                    has_converged = self.check_if_will_converge(self.Geo.copy())
+                except Exception as e:
+                    logger.warning(f"Geometry validation failed in post_intercalation: {e}")
+                    has_converged = False
             else:
                 self.Geo.update_measures()
                 self.reset_preferred_values(backup_vars, cells_involved_intercalation)
@@ -521,9 +536,11 @@ class Remodelling:
 
                 logger.info(f"Previous gr: {previous_gr}, current gr: {gr}, dyr: {dyr}")
 
-                # Check for NaN or Inf in gradient or displacement - these indicate numerical failure
-                if (np.any(np.isnan(g[self.Dofs.Free])) or np.any(np.isinf(g[self.Dofs.Free])) or
-                        np.any(np.isnan(dy[self.Dofs.Free])) or np.any(np.isinf(dy[self.Dofs.Free]))):
+                # Check for NaN or Inf in gradient or displacement - these indicate numerical failure.
+                # np.isfinite returns False for both NaN and Inf, so one check handles both.
+                g_free = g[self.Dofs.Free]
+                dy_free = dy[self.Dofs.Free]
+                if not np.all(np.isfinite(g_free)) or not np.all(np.isfinite(dy_free)):
                     return False
 
                 # Detect divergence: if gradient grows significantly from one iteration to the next,
@@ -545,9 +562,9 @@ class Remodelling:
                     surface_area_bottom < average_area_bottom * 0.01):
                     return False
 
-            if (gr < self.Set.tol and
-                    np.all(~np.isnan(g[self.Dofs.Free])) and np.all(~np.isinf(g[self.Dofs.Free])) and
-                    np.all(~np.isnan(dy[self.Dofs.Free])) and np.all(~np.isinf(dy[self.Dofs.Free]))):
+            g_free = g[self.Dofs.Free]
+            dy_free = dy[self.Dofs.Free]
+            if gr < self.Set.tol and np.all(np.isfinite(g_free)) and np.all(np.isfinite(dy_free)):
                 return True
             else:
                 return False
