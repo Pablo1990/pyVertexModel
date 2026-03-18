@@ -154,9 +154,9 @@ else:
         load_state(vModel, os.path.join(c_folder, ar_dir, directory, 'before_ablation.pkl'))
         t_ablation = vModel.t
         # Only set integrator/tolerance if the model doesn't already have them from the saved state
-        if not getattr(vModel.set, 'integrator', None):
+        if not hasattr(vModel.set, 'integrator'):
             vModel.set.integrator = 'euler'
-        if not getattr(vModel.set, 'dt_tolerance', None):
+        if not hasattr(vModel.set, 'dt_tolerance'):
             vModel.set.dt_tolerance = 1e-1
 
         # Run the required purse string strength analysis
