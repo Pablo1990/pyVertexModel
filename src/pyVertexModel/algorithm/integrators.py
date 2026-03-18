@@ -773,12 +773,8 @@ def fire_minimization_loop(geo, c_set, dof, g, t, num_step, selected_cells=None)
     dy = np.zeros(((geo.numY + geo.numF + geo.nCells) * 3, 1), dtype=np.float64)
     geo._fire_velocity = np.zeros((geo.numF + geo.numY + geo.nCells, 3))
 
-    # Reset FIRE iteration counter for this minimization
-    if hasattr(geo, '_fire_velocity'):
-        geo._fire_iteration_count = 0
-    else:
-        # Initialize if not already
-        initialize_fire(geo, c_set)
+    # Always (re-)initialize FIRE state for this minimization step
+    initialize_fire(geo, c_set)
 
     # Store initial gradient for reference
     initial_gradient_norm = np.linalg.norm(g[dof])

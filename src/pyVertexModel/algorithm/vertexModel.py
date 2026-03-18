@@ -248,6 +248,11 @@ class VertexModel:
         self.geo = None
 
         # Set definition
+        # Allow a Set object to be passed as the first positional argument for backward compatibility
+        if isinstance(set_option, Set):
+            c_set = set_option
+            set_option = 'wing_disc'
+
         if c_set is not None:
             self.set = c_set
         else:
@@ -288,6 +293,14 @@ class VertexModel:
         Raises:
             FileNotFoundError: If the configured initial filename does not exist and img_input is None.
         """
+        if self.set.initial_filename_state is None:
+            # No saved state file configured: go straight to initialize_cells
+            if img_input is None:
+                self.initialize_cells(None)
+            else:
+                self.initialize_cells(img_input)
+            return
+
         filename = os.path.join(PROJECT_DIRECTORY, self.set.initial_filename_state)
 
         if not os.path.exists(filename) and img_input is None:
