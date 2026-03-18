@@ -1,3 +1,4 @@
+import os
 from os.path import exists
 
 import numpy as np
@@ -384,7 +385,7 @@ class TestVertexModel(Tests):
         # Test if initialize geometry function does not change anything
         vModel_test = VertexModelVoronoiFromTimeImage(set_test)
         file_name = 'voronoi_40cells.pkl'
-        test_dir = TEST_DIRECTORY + '/Tests/Tests_data/%s' % file_name
+        test_dir = os.path.join(TEST_DIRECTORY, 'Tests_data', file_name)
         if exists(test_dir):
             vModel_test.set.initial_filename_state = test_dir
         else:
@@ -397,7 +398,7 @@ class TestVertexModel(Tests):
 
         vModel_test.set = set_test
 
-        g_test, K_test, energies_test, _ = newtonRaphson.KgGlobal(vModel_test.geo, vModel_test.set, vModel_test.geo)
+        g_test, K_test, energies_test, _ = integrators.KgGlobal(vModel_test.geo, vModel_test.set, vModel_test.geo)
 
         # Check if energies are the same
         assert_array1D(g_test, mat_info['g'])
@@ -491,7 +492,7 @@ class TestVertexModel(Tests):
         :return:
         """
         # Load data
-        vModel_test = load_data('vertices_going_wild_1.pkl')
+        _, _, vModel_test = load_data('vertices_going_wild_1.pkl')
 
         # Run for 20 iterations. dt should not decrease to 1e-1
         vModel_test.set.tend = vModel_test.t + 20 * vModel_test.set.dt0
@@ -524,9 +525,9 @@ class TestVertexModel(Tests):
         :return:
         """
         # Load data
-        vModel_test = load_data('vertices_going_wild_2.pkl')
+        _, _, vModel_test = load_data('vertices_going_wild_2.pkl')
 
-        # Run for 10 iterations. dt should not decrease to 1e-1
+        # Run for 20 iterations. dt should not decrease to 1e-1
         vModel_test.set.tend = vModel_test.t + 20 * vModel_test.set.dt0
 
         # Update tolerance
@@ -544,9 +545,9 @@ class TestVertexModel(Tests):
         :return:
         """
         # Load data
-        vModel_test = load_data('vertices_going_wild_3.pkl')
+        _, _, vModel_test = load_data('vertices_going_wild_3.pkl')
 
-        # Run for 10 iterations. dt should not decrease to 1e-1
+        # Run for 20 iterations. dt should not decrease to 1e-1
         vModel_test.set.tend = vModel_test.t + 20 * vModel_test.set.dt0
 
         # Update tolerance

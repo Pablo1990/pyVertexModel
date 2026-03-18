@@ -382,19 +382,19 @@ class TestGeo(Tests):
         :return:
         """
         # Load data
-        vModel_test = load_data('geometry_correct_1.pkl')
+        _, _, vModel_test = load_data('geometry_correct_1.pkl')
 
         # Check if geometry is correct
         self.assertTrue(vModel_test.geo.geometry_is_correct())
 
         # Load data
-        vModel_test = load_data('geometry_correct_2.pkl')
+        _, _, vModel_test = load_data('geometry_correct_2.pkl')
 
         # Check if geometry is correct
         self.assertTrue(vModel_test.geo.geometry_is_correct())
 
         # Load data
-        vModel_test = load_data('geometry_correct_3.pkl')
+        _, _, vModel_test = load_data('geometry_correct_3.pkl')
 
         # Check if geometry is correct
         self.assertTrue(vModel_test.geo.geometry_is_correct())
@@ -405,25 +405,25 @@ class TestGeo(Tests):
         :return:
         """
         # Load data
-        vModel_test = load_data('vertices_going_wild_1.pkl')
+        _, _, vModel_test = load_data('vertices_going_wild_1.pkl')
 
         # Check if geometry is correct
         self.assertFalse(vModel_test.geo.geometry_is_correct())
 
         # Another test with a different geometry
-        vModel_test = load_data('vertices_going_wild_2.pkl')
+        _, _, vModel_test = load_data('vertices_going_wild_2.pkl')
 
         # Check if geometry is correct
         self.assertFalse(vModel_test.geo.geometry_is_correct())
 
         # Another test with a different geometry
-        vModel_test = load_data('vertices_going_wild_3.pkl')
+        _, _, vModel_test = load_data('vertices_going_wild_3.pkl')
 
         # Check if geometry is correct
         self.assertFalse(vModel_test.geo.geometry_is_correct())
 
         # Another test with a different geometry
-        vModel_test = load_data('vertices_going_wild_4.pkl')
+        _, _, vModel_test = load_data('vertices_going_wild_4.pkl')
 
         # Check if geometry is correct
         self.assertFalse(vModel_test.geo.geometry_is_correct())

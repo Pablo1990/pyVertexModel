@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 import warnings
 from pathlib import Path
 
@@ -18,7 +19,8 @@ formatter = logging.Formatter(
     datefmt="%Y/%m/%d %I:%M:%S %p",
 )
 # Check if logger already has a console handler to avoid adding multiple handlers
-if not any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers):
+if not any(isinstance(h, logging.StreamHandler) and getattr(h, 'stream', None) in (sys.stdout, sys.stderr)
+           for h in logger.handlers):
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)

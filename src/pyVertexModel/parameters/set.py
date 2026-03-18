@@ -187,6 +187,29 @@ class Set:
         else:
             self.read_mat_file(mat_file)
 
+    def __setstate__(self, state):
+        """Ensure backward compatibility when loading older pickle files."""
+        self.__dict__.update(state)
+        # New attributes not present in older pickled instances get their defaults
+        defaults = {
+            'integrator': 'euler',
+            'dt_tolerance': 1e-6,
+            'fire_max_iterations': 100,
+            'fire_alpha_start': 0.1,
+            'fire_dt_max': 0.5,
+            'fire_dt_min': 1e-8,
+            'fire_N_min': 5,
+            'fire_f_inc': 1.1,
+            'fire_f_dec': 0.5,
+            'fire_f_alpha': 0.99,
+            'fire_force_tol': 1e-6,
+            'fire_disp_tol': 1e-8,
+            'fire_vel_tol': 1e-10,
+        }
+        for key, value in defaults.items():
+            if not hasattr(self, key):
+                setattr(self, key, value)
+
     def check_for_non_used_parameters(self):
         """
         Adjust configuration attributes based on feature toggles, disabling unused options and setting related defaults.

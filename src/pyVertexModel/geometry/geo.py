@@ -2300,85 +2300,97 @@ class Geo:
             return False
         
         # 1. Check cell Y coordinates
-        for cell_idx, cell in enumerate(alive_cells):
-            if cell.Y is None:
-                logger.debug(f"Cell {cell_idx} has Y=None")
+        for c_cell in alive_cells:
+            if c_cell.Y is None:
+                logger.debug(f"Cell {c_cell.ID} has Y=None")
                 return False
-            
+
             # Check for NaN or Inf
-            if np.any(np.isnan(cell.Y)) or np.any(np.isinf(cell.Y)):
-                logger.debug(f"Cell {cell_idx} has NaN or Inf in Y coordinates")
+            if np.any(np.isnan(c_cell.Y)) or np.any(np.isinf(c_cell.Y)):
+                logger.debug(f"Cell {c_cell.ID} has NaN or Inf in Y coordinates")
                 return False
         
         # 2. Check cell volumes (should be positive and reasonable)
-        for cell_idx, cell in enumerate(alive_cells):
-            if not hasattr(cell, 'Vol') or cell.Vol is None:
-                logger.debug(f"Cell {cell_idx} has no volume")
+        for c_cell in alive_cells:
+            if not hasattr(c_cell, 'Vol') or c_cell.Vol is None:
+                logger.debug(f"Cell {c_cell.ID} has no volume")
                 return False
-            
-            if cell.Vol <= 0:
-                logger.debug(f"Cell {cell_idx} has non-positive volume: {cell.Vol}")
+
+            if not np.isfinite(c_cell.Vol):
+                logger.debug(f"Cell {c_cell.ID} has non-finite volume: {c_cell.Vol}")
                 return False
-            
-            if cell.Vol < 1e-10:
-                logger.debug(f"Cell {cell_idx} has tiny volume: {cell.Vol}")
+
+            if c_cell.Vol <= 0:
+                logger.debug(f"Cell {c_cell.ID} has non-positive volume: {c_cell.Vol}")
                 return False
-        
+
+            if c_cell.Vol < 1e-10:
+                logger.debug(f"Cell {c_cell.ID} has tiny volume: {c_cell.Vol}")
+                return False
+
         # 3. Check face areas (should be positive and not too small)
-        for cell_idx, cell in enumerate(alive_cells):
-            if not hasattr(cell, 'Faces'):
+        for c_cell in alive_cells:
+            if not hasattr(c_cell, 'Faces'):
                 continue
-                
-            for face_idx, face in enumerate(cell.Faces):
-                if hasattr(face, 'Area') and face.Area is not None:
-                    if face.Area < 0:
-                        logger.debug(f"Cell {cell_idx}, Face {face_idx} has negative area: {face.Area}")
+
+            for c_face in c_cell.Faces:
+                if hasattr(c_face, 'Area') and c_face.Area is not None:
+                    if not np.isfinite(c_face.Area):
+                        logger.debug(f"Cell {c_cell.ID}, Face has non-finite area: {c_face.Area}")
                         return False
-                    
-                    if face.Area < 1e-12:
-                        logger.debug(f"Cell {cell_idx}, Face {face_idx} has degenerate area: {face.Area}")
+
+                    if c_face.Area < 0:
+                        logger.debug(f"Cell {c_cell.ID}, Face has negative area: {c_face.Area}")
                         return False
-        
+
+                    if c_face.Area < 1e-12:
+                        logger.debug(f"Cell {c_cell.ID}, Face has degenerate area: {c_face.Area}")
+                        return False
+
         # 4. Check triangle areas and degeneracy
-        for cell_idx, cell in enumerate(alive_cells):
-            if not hasattr(cell, 'Faces'):
+        for c_cell in alive_cells:
+            if not hasattr(c_cell, 'Faces'):
                 continue
-                
-            for face_idx, face in enumerate(cell.Faces):
-                if not hasattr(face, 'Tris'):
+
+            for c_face in c_cell.Faces:
+                if not hasattr(c_face, 'Tris'):
                     continue
-                    
-                for tri_idx, tri in enumerate(face.Tris):
+
+                for tri_idx, tri in enumerate(c_face.Tris):
                     # Check for degenerate triangles (same edge vertices)
                     if hasattr(tri, 'Edge') and tri.Edge is not None:
                         if len(tri.Edge) >= 2 and tri.Edge[0] == tri.Edge[1]:
-                            logger.debug(f"Cell {cell_idx}, Face {face_idx}, Tri {tri_idx} is degenerate (same vertices)")
+                            logger.debug(f"Cell {c_cell.ID}, Tri {tri_idx} is degenerate (same vertices)")
                             return False
-                    
+
                     # Check triangle area
                     if hasattr(tri, 'Area') and tri.Area is not None:
-                        if tri.Area < 0:
-                            logger.debug(f"Cell {cell_idx}, Face {face_idx}, Tri {tri_idx} has negative area")
+                        if not np.isfinite(tri.Area):
+                            logger.debug(f"Cell {c_cell.ID}, Tri {tri_idx} has non-finite area")
                             return False
-        
+
+                        if tri.Area < 0:
+                            logger.debug(f"Cell {c_cell.ID}, Tri {tri_idx} has negative area")
+                            return False
+
         # 4b. Check for excessive degenerate/tiny triangles
         # Some tiny triangles are normal, but too many indicate geometric issues
         tiny_triangle_count = 0
         total_triangles = 0
-        
-        for cell_idx, cell in enumerate(alive_cells):
-            if not hasattr(cell, 'Faces'):
+
+        for c_cell in alive_cells:
+            if not hasattr(c_cell, 'Faces'):
                 continue
-                
-            for face_idx, face in enumerate(cell.Faces):
-                if not hasattr(face, 'Tris'):
+
+            for c_face in c_cell.Faces:
+                if not hasattr(c_face, 'Tris'):
                     continue
-                    
-                for tri in face.Tris:
+
+                for tri in c_face.Tris:
                     total_triangles += 1
-                    
-                    # Count tiny triangles
-                    if hasattr(tri, 'Area') and tri.Area is not None and tri.Area < 1e-10:
+
+                    # Count tiny triangles (skip non-finite values)
+                    if hasattr(tri, 'Area') and tri.Area is not None and np.isfinite(tri.Area) and tri.Area < 1e-10:
                         tiny_triangle_count += 1
         
         # If more than 0.2% of triangles are tiny, geometry is problematic
@@ -2394,47 +2406,47 @@ class Geo:
         # Non-planar faces indicate vertices sticking out, creating spikes.
         planarity_threshold = 0.08  # Eigenvalue ratio threshold
         non_planar_count = 0
-        
-        for cell_idx, cell in enumerate(alive_cells):
-            if not hasattr(cell, 'Faces'):
+
+        for c_cell in alive_cells:
+            if not hasattr(c_cell, 'Faces'):
                 continue
-                
-            for face_idx, face in enumerate(cell.Faces):
-                if not hasattr(face, 'Tris'):
+
+            for c_face in c_cell.Faces:
+                if not hasattr(c_face, 'Tris'):
                     continue
-                    
+
                 # Get all unique vertices in the face
                 vertices = set()
-                for tri in face.Tris:
+                for tri in c_face.Tris:
                     if hasattr(tri, 'Edge') and tri.Edge is not None:
                         vertices.add(tri.Edge[0])
                         vertices.add(tri.Edge[1])
-                
+
                 if len(vertices) < 3:
                     continue
-                
+
                 # Get vertex coordinates
                 try:
-                    vertex_coords = np.array([cell.Y[v] for v in vertices])
-                    
+                    vertex_coords = np.array([c_cell.Y[v] for v in vertices])
+
                     # Check planarity using PCA
                     # For planar faces, the smallest eigenvalue should be very small
                     if len(vertex_coords) >= 3:
                         centered = vertex_coords - np.mean(vertex_coords, axis=0)
                         cov = np.cov(centered.T)
                         eigenvalues = np.linalg.eigvalsh(cov)
-                        
+
                         # Smallest eigenvalue relative to largest
                         # This detects non-planar faces that create "spiky cells"
                         if eigenvalues[2] > 1e-15:  # Avoid division by zero
                             planarity_ratio = eigenvalues[0] / eigenvalues[2]
-                            
+
                             if planarity_ratio > planarity_threshold:
                                 non_planar_count += 1
-                                logger.debug(f"Cell {cell_idx}, Face {face_idx} is non-planar (ratio={planarity_ratio:.4f} > {planarity_threshold})")
-                
+                                logger.debug(f"Cell {c_cell.ID}, Face is non-planar (ratio={planarity_ratio:.4f} > {planarity_threshold})")
+
                 except (IndexError, ValueError) as e:
-                    logger.debug(f"Cell {cell_idx}, Face {face_idx}: Error checking planarity: {e}")
+                    logger.debug(f"Cell {c_cell.ID}: Error checking planarity: {e}")
                     return False
         
         # Any non-planar faces indicate geometry is going wild
