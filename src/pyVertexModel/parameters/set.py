@@ -12,7 +12,7 @@ from pyVertexModel.util.utils import copy_non_mutable_attributes
 logger = logging.getLogger("pyVertexModel")
 
 class Set:
-    def __init__(self, mat_file=None):
+    def __init__(self, mat_file=None, set_option=None):
         """
         Initialize simulation configuration attributes with sensible defaults.
         
@@ -20,6 +20,7 @@ class Set:
         
         Parameters:
             mat_file (optional): A MATLAB-style struct or object containing saved Set parameters; when provided, values are read and assigned to this instance.
+            set_option (str, optional): Name of a preset configuration method to call after initialization (e.g. 'wing_disc', 'cyst'). Ignored if mat_file is provided.
         """
         self.dt_tolerance = 1e-6
         self.min_3d_neighbours = None
@@ -184,6 +185,9 @@ class Set:
             self.VTK_iter = False
             self.SaveWorkspace = False
             self.SaveSetting = False
+
+            if set_option is not None and hasattr(self, set_option):
+                getattr(self, set_option)()
         else:
             self.read_mat_file(mat_file)
 
@@ -259,7 +263,12 @@ class Set:
             if len(mat_file[param][0][0]) == 0:
                 setattr(self, param, None)
             else:
-                setattr(self, param, mat_file[param][0][0][0][0])
+                value = mat_file[param][0][0][0][0]
+                # Convert numpy integer/float scalars to Python native types to avoid
+                # integer overflow when used in arithmetic (e.g., uint8 * 600).
+                if hasattr(value, 'item'):
+                    value = value.item()
+                setattr(self, param, value)
 
     def define_if_not_defined(self, param, value):
         """
@@ -294,6 +303,7 @@ class Set:
         self.define_if_not_defined("MaxIter0", self.MaxIter)
         self.define_if_not_defined("contributionOldFaceCentre", self.contributionOldYs)
         self.define_if_not_defined("nu_bottom", self.nu * 600)
+        self.define_if_not_defined("ref_A0", 0.99)
 
         current_datetime = datetime.now()
         new_outputFolder = ''.join([PROJECT_DIRECTORY, '/Result/', str(current_datetime.strftime("%m-%d_%H%M%S_")),
@@ -508,3 +518,33 @@ class Set:
         copy_non_mutable_attributes(self, '', set_copy)
 
         return set_copy
+
+    # Default values for attributes added after initial release, to maintain
+    # backward compatibility when loading old .pkl files.
+    _DEFAULTS = {
+        'integrator': 'euler',
+        'dt_tolerance': 1e-6,
+        'fire_dt_max': 0.5,
+        'fire_dt_min': 1e-8,
+        'fire_N_min': 5,
+        'fire_f_inc': 1.1,
+        'fire_f_dec': 0.5,
+        'fire_alpha_start': 0.1,
+        'fire_f_alpha': 0.99,
+        'fire_force_tol': 1e-6,
+        'fire_disp_tol': 1e-8,
+        'fire_vel_tol': 1e-10,
+        'fire_max_iterations': 100,
+        # Defaults for attributes not stored in legacy .mat files:
+        'noise_random': 0,
+        'model_name': '',
+        'percentage_scutoids': 0,
+        'purseStringStrength': 0,
+        'lateralCablesStrength': 0,
+        'export_images': True,
+    }
+
+    def __getattr__(self, name):
+        if name in Set._DEFAULTS:
+            return Set._DEFAULTS[name]
+        raise AttributeError(f"'Set' object has no attribute '{name}'")

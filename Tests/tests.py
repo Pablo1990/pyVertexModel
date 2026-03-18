@@ -1,9 +1,11 @@
+import os
 import unittest
 from os.path import exists, abspath
 
 import numpy as np
 import scipy.io
 
+from Tests import TEST_DIRECTORY
 from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import VertexModelVoronoiFromTimeImage
 from pyVertexModel.geometry.geo import Geo
 from pyVertexModel.parameters.set import Set
@@ -11,16 +13,15 @@ from pyVertexModel.util.utils import load_state
 
 
 def load_data(file_name, return_geo=True):
-    test_dir = abspath('Tests/Tests_data/%s' % file_name)
+    test_dir = os.path.join(TEST_DIRECTORY, 'Tests_data', file_name)
     if file_name.endswith('.mat'):
-        if exists(test_dir):
-            mat_info = scipy.io.loadmat(test_dir)
-        else:
-            mat_info = scipy.io.loadmat('Tests_data/%s' % file_name)
+        mat_info = scipy.io.loadmat(test_dir)
 
         if return_geo:
             if 'Geo' in mat_info.keys():
                 geo_test = Geo(mat_info['Geo'])
+                geo_test.update_lmin0()
+                geo_test.update_barrier_tri0()
             else:
                 geo_test = None
 
@@ -37,10 +38,7 @@ def load_data(file_name, return_geo=True):
         return geo_test, set_test, mat_info
     elif file_name.endswith('.pkl'):
         v_model = VertexModelVoronoiFromTimeImage(create_output_folder=False)
-        if exists(test_dir):
-            load_state(v_model, test_dir)
-        else:
-            load_state(v_model, 'Tests_data/%s' % file_name)
+        load_state(v_model, test_dir)
 
         # Set parameters to avoid file output during tests
         v_model.set.OutputFolder = None

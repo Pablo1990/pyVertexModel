@@ -1,3 +1,4 @@
+import os
 from os.path import exists
 
 import numpy as np
@@ -189,8 +190,8 @@ class TestVertexModel(Tests):
         check_if_cells_are_the_same(geo_original, v_model_test.geo)
 
         # Save backup variables
-        geo_test.Cells[0].Y[0, 0] = np.Inf
-        geo_test.Cells[0].Faces[0].Centre[0] = np.Inf
+        geo_test.Cells[0].Y[0, 0] = np.inf
+        geo_test.Cells[0].Faces[0].Centre[0] = np.inf
         v_model_test.backupVars = save_backup_vars(geo_test, geo_test, geo_test, 0, DegreesOfFreedom(mat_info['Dofs']))
         v_model_test.set.iter = 1000000
         v_model_test.set.MaxIter0 = v_model_test.set.iter
@@ -198,12 +199,12 @@ class TestVertexModel(Tests):
 
         v_model_test.iteration_did_not_converged()
 
-        geo_test.Cells[0].Y[0, 0] = -np.Inf
-        geo_test.Cells[0].Faces[0].Centre[0] = -np.Inf
+        geo_test.Cells[0].Y[0, 0] = -np.inf
+        geo_test.Cells[0].Faces[0].Centre[0] = -np.inf
 
         # Check if the cells are initialized correctly
-        np.testing.assert_equal(v_model_test.geo.Cells[0].Y[0, 0], np.Inf)
-        np.testing.assert_equal(v_model_test.geo.Cells[0].Faces[0].Centre[0], np.Inf)
+        np.testing.assert_equal(v_model_test.geo.Cells[0].Y[0, 0], np.inf)
+        np.testing.assert_equal(v_model_test.geo.Cells[0].Faces[0].Centre[0], np.inf)
 
     def test_newton_raphson_cyst(self):
         """
@@ -251,11 +252,8 @@ class TestVertexModel(Tests):
         vModel_test = VertexModelVoronoiFromTimeImage(set_test)
 
         file_name = 'LblImg_imageSequence.mat'
-        test_dir = 'Tests/Tests_data/%s' % file_name
-        if exists(test_dir):
-            Twg_test, X_test = vModel_test.obtain_initial_x_and_tetrahedra(test_dir)
-        else:
-            Twg_test, X_test = vModel_test.obtain_initial_x_and_tetrahedra('Tests_data/%s' % file_name)
+        test_dir = os.path.join(TEST_DIRECTORY, 'Tests_data', file_name)
+        Twg_test, X_test = vModel_test.obtain_initial_x_and_tetrahedra(test_dir)
 
         # Check if the test and expected are the same
         assert_matrix(Twg_test, mat_info_expected['Twg'] - 1)
@@ -361,11 +359,8 @@ class TestVertexModel(Tests):
         """
         # Process image
         file_name = 'LblImg_imageSequence.mat'
-        test_dir = 'Tests/Tests_data/%s' % file_name
-        if exists(test_dir):
-            _, imgStackLabelled_test = process_image(test_dir)
-        else:
-            _, imgStackLabelled_test = process_image('Tests_data/%s' % file_name)
+        test_dir = os.path.join(TEST_DIRECTORY, 'Tests_data', file_name)
+        _, imgStackLabelled_test = process_image(test_dir)
 
         # Load expected
         _, _, mat_info_expected = load_data('process_image_wingdisc_expected.mat')
@@ -384,11 +379,8 @@ class TestVertexModel(Tests):
         # Test if initialize geometry function does not change anything
         vModel_test = VertexModelVoronoiFromTimeImage(set_test)
         file_name = 'voronoi_40cells.pkl'
-        test_dir = TEST_DIRECTORY + '/Tests/Tests_data/%s' % file_name
-        if exists(test_dir):
-            vModel_test.set.initial_filename_state = test_dir
-        else:
-            vModel_test.set.initial_filename_state = 'Tests_data/%s' % file_name
+        test_dir = os.path.join(TEST_DIRECTORY, 'Tests_data', file_name)
+        vModel_test.set.initial_filename_state = test_dir
 
         vModel_test.initialize()
 
