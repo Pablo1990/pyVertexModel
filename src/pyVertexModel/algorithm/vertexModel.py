@@ -541,6 +541,8 @@ class VertexModel:
                                                                          self.numStep)
             if converged:
                 self.iteration_converged()
+            else:
+                self.iteration_did_not_converged()
         else:
             self.geo, g, __, __, self.set, gr, dyr, dy = integrators.newton_raphson(self.geo_0, self.geo_n, self.geo,
                                                                                       self.Dofs, self.set, K, g,
@@ -591,7 +593,7 @@ class VertexModel:
                 self.set.nu = 10 * self.set.nu0
             else:
                 if (self.set.iter >= self.set.MaxIter and
-                        (self.set.dt / self.set.dt0) > self.set.dt_tolerance):
+                        (self.set.dt / self.set.dt0) > getattr(self.set, 'dt_tolerance', 1e-6)):
                     self.set.MaxIter = self.set.MaxIter0
                     self.set.nu = self.set.nu0
                     self.set.dt = self.set.dt / 2
@@ -599,7 +601,10 @@ class VertexModel:
                 else:
                     self.didNotConverge = True
         else:
-            logger.warning("FIRE did not converge")
+            # FIRE did not converge within its iteration budget: restore geometry and mark failure
+            logger.warning("FIRE minimization did not converge; restoring backup geometry")
+            self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs = load_backup_vars(self.backupVars)
+            self.didNotConverge = True
 
     def iteration_converged(self):
         """

@@ -73,7 +73,7 @@ def solve_remodeling_step(geo_0, geo_n, geo, dofs, c_set):
             f'Local Problem ->Iter: 0, ||gr||= {gr:.3e} ||dyr||= {dyr:.3e}  nu/nu0={c_set.nu / c_set.nu0:.3e}  '
             f'dt/dt0={c_set.dt / c_set.dt0:.3g}')
 
-        geo, g, k, energy, c_set, gr, dyr, dy, _ = newton_raphson(geo_0, geo_n, geo, dofs, c_set, k, g, -1, -1)
+        geo, g, k, energy, c_set, gr, dyr, dy = newton_raphson(geo_0, geo_n, geo, dofs, c_set, k, g, -1, -1)
 
         if gr > c_set.tol or dyr > c_set.tol or np.any(np.isnan(g[dofs.Free])) or np.any(np.isnan(dy[dofs.Free])):
             logger.info(f'Local Problem did not converge after {c_set.iter} iterations.')
@@ -591,7 +591,7 @@ def check_if_fire_converged(geo, f_flat, c_set, dy_flat, v_flat, iteration_count
 
     # Check maximum iterations first
     if iteration_count >= max_iter:
-        converged = True
+        converged = False
         reason = f"Reached max iterations ({max_iter})"
         logger.warning(f"FIRE: {reason} - maxF={max_force:.3e}")
         return converged, reason
@@ -638,11 +638,8 @@ def single_iteration_fire(geo, c_set, dof, dy, g, selected_cells=None):
 
     # Initialize FIRE state variables if not present
     if not hasattr(geo, '_fire_velocity'):
-        # Initialize velocity to zero
         initialize_fire(geo, c_set)
         logger.info("FIRE algorithm initialized")
-
-    geo._fire_velocity = np.zeros((geo.numF + geo.numY + geo.nCells, 3))
 
     # Increment iteration counter
     geo._fire_iteration_count += 1
@@ -654,8 +651,9 @@ def single_iteration_fire(geo, c_set, dof, dy, g, selected_cells=None):
     # Forces are negative gradient (F = -∇E = -g)
     F = -g.copy()
 
-    # Extract free DOF velocities and forces
-    v_flat = geo._fire_velocity.flatten()[dof]
+    # Extract free DOF velocities and forces using reshape for a writable view
+    velocity_view = geo._fire_velocity.reshape(-1)
+    v_flat = velocity_view[dof].copy()
     F_flat = F[dof]
 
     # ============================================
@@ -710,14 +708,14 @@ def single_iteration_fire(geo, c_set, dof, dy, g, selected_cells=None):
     # STEP 3: UPDATE GEOMETRY
     # ============================================
 
-    # Store updated velocity
-    geo._fire_velocity.flatten()[dof] = v_flat
+    # Store updated velocity back into geo._fire_velocity through the view
+    velocity_view[dof] = v_flat
 
     # Also update constrained DOFs if any
     if len(g_constrained) > 0:
         F_constrained = -g[g_constrained]
         dy_constrained = geo._fire_dt * F_constrained * (c_set.nu / c_set.nu_bottom)  # More conservative for constrained
-        dy.flatten()[g_constrained] = dy_constrained
+        dy.reshape(-1)[g_constrained] = dy_constrained
 
     # Build full displacement vector
     dy[dof, 0] = dy_flat
@@ -771,14 +769,11 @@ def fire_minimization_loop(geo, c_set, dof, g, t, num_step, selected_cells=None)
     """
     logger.info(f"Starting FIRE minimization for timestep t={t}")
     dy = np.zeros(((geo.numY + geo.numF + geo.nCells) * 3, 1), dtype=np.float64)
-    geo._fire_velocity = np.zeros((geo.numF + geo.numY + geo.nCells, 3))
 
-    # Reset FIRE iteration counter for this minimization
-    if hasattr(geo, '_fire_velocity'):
-        geo._fire_iteration_count = 0
-    else:
-        # Initialize if not already
-        initialize_fire(geo, c_set)
+    # Initialize FIRE state variables (always re-initialize for a new minimization)
+    initialize_fire(geo, c_set)
+    geo._fire_velocity = np.zeros((geo.numF + geo.numY + geo.nCells, 3))
+    geo._fire_iteration_count = 0
 
     # Store initial gradient for reference
     initial_gradient_norm = np.linalg.norm(g[dof])
@@ -821,12 +816,9 @@ def fire_minimization_loop(geo, c_set, dof, g, t, num_step, selected_cells=None)
         logger.warning(f"FIRE minimization incomplete: {fire_iterations} iterations, "
                        f"gradient {final_gradient_norm:.3e}, force tolerance {c_set.fire_force_tol:.1e}")
 
-    # Reset FIRE state for next timestep (optional - comment out to maintain momentum)
-    if hasattr(geo, '_fire_velocity'):
-        geo._fire_velocity[:] = 0  # Reset velocities
-        geo._fire_dt = c_set.dt      # Reset timestep
-        geo._fire_alpha = c_set.fire_alpha_start
-        geo._fire_n_positive = 0
+    # Reset FIRE state for next timestep
+    initialize_fire(geo, c_set)
+    geo._fire_velocity[:] = 0
 
     return geo, converged, final_gradient_norm
 

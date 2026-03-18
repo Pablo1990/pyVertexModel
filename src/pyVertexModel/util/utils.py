@@ -694,7 +694,7 @@ def plot_figure_with_line(best_average_values, scutoids, current_path, x_axis_na
     # From 0 ylim always
     plt.ylim(0, None)
 
-    if y_axis_label == 'Purse string strength (t=' + str(0.1) + ')':
+    if 'Purse string strength' in y_axis_label:
         plt.ylim(0, 1.2e-3)
 
     if y_axis_name == 'top_closure_velocity':

@@ -135,7 +135,7 @@ else:
 
         # Get directory within directory
         dirs_within = os.listdir(os.path.join(c_folder, ar_dir, directory))
-        dirs_within = [os.path.join(c_folder, ar_dir, directory, d) for d in dirs_within if d.startswith('no_Remodelling_ablating_')]
+        dirs_within = sorted([os.path.join(c_folder, ar_dir, directory, d) for d in dirs_within if d.startswith('no_Remodelling_ablating_')])
         if len(dirs_within) == 0:
             print(f"No directories starting with 'no_Remodelling_ablating_' found in {directory}, skipping.")
             continue
@@ -153,8 +153,11 @@ else:
 
         load_state(vModel, os.path.join(c_folder, ar_dir, directory, 'before_ablation.pkl'))
         t_ablation = vModel.t
-        vModel.set.integrator = 'euler'
-        vModel.set.dt_tolerance = 1e-1
+        # Only set integrator/tolerance if the model doesn't already have them from the saved state
+        if not hasattr(vModel.set, 'integrator'):
+            vModel.set.integrator = 'euler'
+        if not hasattr(vModel.set, 'dt_tolerance'):
+            vModel.set.dt_tolerance = 1e-1
 
         # Run the required purse string strength analysis
         current_folder = vModel.set.OutputFolder
