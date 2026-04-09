@@ -13,6 +13,33 @@ name = "pyVertexModel"
 dynamic = [
     "version",
 ]
+description = "A versatile 3D vertex model for modeling tissue and cell mechanics, particularly for tissue repair simulations."
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Pablo Vicente-Munuera", email = "p.munuera@ucl.ac.uk"},
+]
+requires-python = ">=3.9"
+keywords = [
+    "biophysics",
+    "cell mechanics",
+    "computational biology",
+    "tissue mechanics",
+    "tissue repair",
+    "vertex model",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Cython",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Physics",
+]
 dependencies = [
     "cython",
     "numpy",
@@ -28,6 +55,11 @@ dependencies = [
     "matplotlib",
     "seaborn",
 ]
+
+[project.urls]
+"Bug Tracker" = "https://github.com/Pablo1990/pyVertexModel/issues"
+"Homepage" = "https://github.com/Pablo1990/pyVertexModel"
+"Source" = "https://github.com/Pablo1990/pyVertexModel"
 
 [tool.setuptools_scm]
 local_scheme = "no-local-version"
