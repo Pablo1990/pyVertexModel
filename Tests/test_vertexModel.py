@@ -503,30 +503,30 @@ class TestVertexModel(Tests):
         """
         import scipy.io
         from pyVertexModel.parameters.set import Set
-        
+
         # Load an existing image as a numpy array
         mat_data = scipy.io.loadmat('resources/LblImg_imageSequence.mat')
         img_array = mat_data['imgStackLabelled']
-        
+
         # Create a simple 2D labeled image for testing
         # Using a subset to make it faster
         img_2d = img_array[:, :, 0]
-        
+
         # Create settings
-        set_test = Set(set_option='voronoi_from_image')
+        set_test = Set()
         set_test.TotalCells = 50  # Use fewer cells for faster testing
         set_test.CellHeight = 10
-        
+
         # Test with numpy array input
-        vModel_test = VertexModelVoronoiFromTimeImage(set_option='voronoi_from_image', set_test=set_test, 
+        vModel_test = VertexModelVoronoiFromTimeImage(set_test=set_test,
                                                       create_output_folder=False)
         vModel_test.initialize_cells(img_2d)
-        
+
         # Verify that the geometry was created
         assert vModel_test.geo is not None, "Geometry should be initialized"
         assert vModel_test.geo.nCells > 0, "Should have cells"
         assert len(vModel_test.geo.Cells) > 0, "Should have Cell objects"
-        
+
     def test_process_image_with_numpy_array(self):
         """
         Test that process_image can handle numpy array input.
@@ -538,15 +538,15 @@ class TestVertexModel(Tests):
         test_img[10:30, 10:30] = 1
         test_img[40:60, 40:60] = 2
         test_img[70:90, 70:90] = 3
-        
+
         # Test process_image with numpy array
         img2d, img_stack = process_image(test_img)
-        
+
         # Verify the output
         assert img2d is not None, "2D image should be returned"
         assert img_stack is not None, "Image stack should be returned"
         assert img2d.shape == test_img.shape, "2D image should have same shape as input"
-        
+
     def test_initialize_with_numpy_array(self):
         """
         Test that initialize method can accept a numpy array.
@@ -554,24 +554,24 @@ class TestVertexModel(Tests):
         """
         import scipy.io
         from pyVertexModel.parameters.set import Set
-        
+
         # Load an existing image as a numpy array
         mat_data = scipy.io.loadmat('resources/LblImg_imageSequence.mat')
         img_array = mat_data['imgStackLabelled']
-        
+
         # Use a 2D slice for faster testing
         img_2d = img_array[:, :, 0]
-        
+
         # Create settings
-        set_test = Set(set_option='voronoi_from_image')
+        set_test = Set()
         set_test.TotalCells = 50
         set_test.CellHeight = 10
-        
+
         # Test initialize with numpy array input
-        vModel_test = VertexModelVoronoiFromTimeImage(set_option='voronoi_from_image', set_test=set_test,
+        vModel_test = VertexModelVoronoiFromTimeImage(set_test=set_test,
                                                       create_output_folder=False)
         vModel_test.initialize(img_2d)
-        
+
         # Verify that the geometry was created
         assert vModel_test.geo is not None, "Geometry should be initialized"
         assert vModel_test.geo.nCells > 0, "Should have cells"

@@ -338,11 +338,11 @@ def ismember_rows(a, b):
         b = np.sort(b, axis=1)
         void_b = np.ascontiguousarray(b).view(np.dtype((np.bytes_, b.dtype.itemsize * b.shape[1])))
 
-    # Using numpy's in1d method for finding the presence of 'a' rows in 'b'
-    bool_array = np.in1d(void_a, void_b)
+    # Using numpy's isin method for finding the presence of 'a' rows in 'b'
+    bool_array = np.isin(void_a, void_b).flatten()
 
     # Finding the indices where the rows of 'a' are found in 'b'
-    index_array = np.array([np.where(void_b == row)[0][0] if row in void_b else -1 for row in void_a])
+    index_array = np.array([np.where(void_b == row)[0][0] if row in void_b else -1 for row in void_a.flatten()])
 
     return bool_array, index_array
 
