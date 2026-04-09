@@ -39,7 +39,9 @@ run = {branch = true, parallel = true, source = [
     "pyVertexModel",
 ], omit = [
     "src/pyVertexModel/main.py",
-    "src/pyVertexModel/parameters/*",
+    "src/pyVertexModel/main_*.py",
+    "src/pyVertexModel/analysis/*",
+    "src/pyVertexModel/util/space_exploration.py",
 ]}
 paths.source = [
     "src",
