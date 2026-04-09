@@ -2,6 +2,9 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17649952.svg)](https://doi.org/10.5281/zenodo.17649952)
 [![Coverage Status](https://coveralls.io/repos/github/Pablo1990/pyVertexModel/badge.svg?branch=main)](https://coveralls.io/github/Pablo1990/pyVertexModel?branch=main)
+[![PyPI](https://img.shields.io/pypi/v/pyvertexmodel.svg?color=green)](https://pypi.org/project/pyvertexmodel)
+[![Python Version](https://img.shields.io/pypi/pyversions/pyvertexmodel.svg?color=green)](https://python.org)
+[![tests](https://github.com/Pablo1990/pyVertexModel/actions/workflows/tests.yml/badge.svg)](https://github.com/Pablo1990/pyVertexModel/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/Pablo1990/pyVertexModel/graph/badge.svg?token=AKGWS79Z61)](https://codecov.io/gh/Pablo1990/pyVertexModel)
 
 pyVertexModel is versatile 3D vertex model to model tissue and cell mechanics, in particular, regarding tissue repair.
