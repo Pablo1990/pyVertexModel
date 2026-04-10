@@ -9,7 +9,7 @@
 
 pyVertexModel is versatile 3D vertex model to model tissue and cell mechanics, in particular, regarding tissue repair.
 
-Please, to ensure you use a polished version, use the 'paper' version/branch: https://github.com/Pablo1990/pyVertexModel/tree/paper 
+Please, to ensure you use a polished version, use the 'paper' version/branch: https://github.com/Pablo1990/pyVertexModel/tree/paper . Alternatively, you can use our companion repository [napari-pyVertexModel](https://github.com/Pablo1990/napari-pyvertexmodel).
 
 ## Environment
 
