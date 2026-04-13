@@ -25,8 +25,12 @@ def post_flip(Tnew, Ynew, oldTets, Geo, Geo_n, Geo_0, Dofs, Set, old_geo):
     :param old_geo:
     :return:
     """
-    Geo.add_and_rebuild_cells(old_geo, oldTets, Tnew, Ynew, Set, True)
-    has_converged = True
+    try:
+        Geo.add_and_rebuild_cells(old_geo, oldTets, Tnew, Ynew, Set, True)
+        has_converged = True
+    except Exception as e:
+        logger.warning(f"Geometry build failed in post_flip: {e}")
+        has_converged = False
 
     return Geo_0, Geo_n, Geo, Dofs, has_converged
 
@@ -40,7 +44,13 @@ def do_flip32(Y, X12):
     """
     min_length = np.min([np.linalg.norm(Y[0] - Y[1]), np.linalg.norm(Y[2] - Y[1]), np.linalg.norm(Y[0] - Y[2])])
     perpend = np.cross(Y[0] - Y[1], Y[2] - Y[1])
-    n_perpen = perpend / np.linalg.norm(perpend)
+    perpend_norm = np.linalg.norm(perpend)
+    if perpend_norm < 1e-10:
+        raise ValueError(
+            "Degenerate flip32 configuration: input vertices are collinear, "
+            "cannot compute a perpendicular direction for new vertex placement."
+        )
+    n_perpen = perpend / perpend_norm
     center = np.sum(Y, axis=0) / 3
     Nx = X12[0] - center
     Nx = Nx / np.linalg.norm(Nx)
@@ -399,6 +409,19 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, endNode, ghost_n
                     # Check number of degenerate triangles
                     if Geo_new.has_degenerate_triangles():
                         logger.warning("Degenerate triangles found after flip remodelling. Skipping this combination.")
+                        continue
+
+                    # Check that no cell has an unrealistically large volume after the flip,
+                    # which would indicate overlapping cells or other geometric inconsistencies.
+                    # Also reject zero or negative volumes: these mean collapsed or inverted cells
+                    # whose degenerate triangles were all silently skipped, leaving a false zero.
+                    new_volumes = np.array([cell.Vol for cell in Geo_new.Cells if cell.AliveStatus == 1])
+                    old_volumes = np.array([cell.Vol for cell in Geo.Cells if cell.AliveStatus == 1])
+                    if np.any(new_volumes <= 0):
+                        logger.warning("Zero or negative cell volumes found after flip remodelling. Skipping this combination.")
+                        continue
+                    if np.any(new_volumes > old_volumes.mean() * 100):
+                        logger.warning("Unrealistic cell volumes found after flip remodelling. Skipping this combination.")
                         continue
 
                     new_tets_tree = new_tets

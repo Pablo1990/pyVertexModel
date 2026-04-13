@@ -1,3 +1,6 @@
+import unittest
+from unittest.mock import MagicMock
+
 import networkx as nx
 import numpy as np
 
@@ -5,7 +8,8 @@ from Tests.test_geo import check_if_cells_are_the_same
 from Tests.tests import Tests, load_data, assert_array1D
 from pyVertexModel.geometry.degreesOfFreedom import DegreesOfFreedom
 from pyVertexModel.geometry.geo import Geo
-from pyVertexModel.mesh_remodelling.flip import y_flip_nm, y_flip_nm_recursive, post_flip
+from pyVertexModel.geometry.tris import Tris
+from pyVertexModel.mesh_remodelling.flip import do_flip32, post_flip, y_flip_nm, y_flip_nm_recursive
 
 
 class TestFlip(Tests):
@@ -145,3 +149,163 @@ class TestFlip(Tests):
 
         # Compare results
         check_if_cells_are_the_same(geo_expected, geo_test)
+
+
+class TestFlipGeometricValidation(unittest.TestCase):
+    """
+    Unit tests for the geometric validation fixes in flip operations.
+    These tests do not require .mat data files.
+    """
+
+    # ------------------------------------------------------------------
+    # Problem 6: do_flip32() – degenerate cross product (collinear points)
+    # ------------------------------------------------------------------
+
+    def test_do_flip32_raises_for_collinear_points(self):
+        """
+        do_flip32 must raise ValueError when the three input vertices are
+        collinear (cross product is zero), because no valid perpendicular
+        direction can be computed for new vertex placement.
+        """
+        # Three collinear points along the x-axis
+        Y_collinear = np.array([
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [2.0, 0.0, 0.0],
+        ])
+        X12 = np.array([[0.5, 1.0, 0.0]])
+
+        with self.assertRaises(ValueError, msg="do_flip32 must raise ValueError for collinear points"):
+            do_flip32(Y_collinear, X12)
+
+    def test_do_flip32_succeeds_for_valid_triangle(self):
+        """
+        do_flip32 must return two new vertex positions when the input is a
+        valid (non-collinear) triangle.
+        """
+        Y_triangle = np.array([
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.5, 1.0, 0.0],
+        ])
+        X12 = np.array([[0.5, 0.5, 1.0]])
+
+        result = do_flip32(Y_triangle, X12)
+
+        self.assertEqual(result.shape, (2, 3), "do_flip32 must return 2 new vertices, each with 3 coordinates")
+        # The two new vertices must be on opposite sides of the triangle plane
+        center = Y_triangle.mean(axis=0)
+        d1 = np.linalg.norm(result[0] - center)
+        d2 = np.linalg.norm(result[1] - center)
+        self.assertGreater(d1, 0, "First new vertex must not coincide with the triangle centre")
+        self.assertGreater(d2, 0, "Second new vertex must not coincide with the triangle centre")
+
+    # ------------------------------------------------------------------
+    # Problem 4: post_flip() – always returned has_converged=True
+    # ------------------------------------------------------------------
+
+    def test_post_flip_returns_false_when_add_and_rebuild_raises(self):
+        """
+        post_flip must catch exceptions from add_and_rebuild_cells() and
+        return has_converged=False rather than propagating the exception.
+        """
+        geo = MagicMock()
+        geo.add_and_rebuild_cells.side_effect = ValueError("Tetrahedra are not valid")
+        geo_n = MagicMock()
+        geo_0 = MagicMock()
+        dofs = MagicMock()
+        c_set = MagicMock()
+        old_geo = MagicMock()
+
+        _, _, _, _, has_converged = post_flip(
+            Tnew=np.array([[0, 1, 2, 3]]),
+            Ynew=[],
+            oldTets=np.array([[0, 1, 2, 3]]),
+            Geo=geo,
+            Geo_n=geo_n,
+            Geo_0=geo_0,
+            Dofs=dofs,
+            Set=c_set,
+            old_geo=old_geo,
+        )
+
+        self.assertFalse(has_converged,
+                         "post_flip must return has_converged=False when add_and_rebuild_cells raises")
+
+    def test_post_flip_returns_true_on_success(self):
+        """
+        post_flip must return has_converged=True when add_and_rebuild_cells
+        succeeds without raising.
+        """
+        geo = MagicMock()
+        geo.add_and_rebuild_cells.return_value = None  # no exception
+        geo_n = MagicMock()
+        geo_0 = MagicMock()
+        dofs = MagicMock()
+        c_set = MagicMock()
+        old_geo = MagicMock()
+
+        _, _, _, _, has_converged = post_flip(
+            Tnew=np.array([[0, 1, 2, 3]]),
+            Ynew=[],
+            oldTets=np.array([[0, 1, 2, 3]]),
+            Geo=geo,
+            Geo_n=geo_n,
+            Geo_0=geo_0,
+            Dofs=dofs,
+            Set=c_set,
+            old_geo=old_geo,
+        )
+
+        self.assertTrue(has_converged,
+                        "post_flip must return has_converged=True when add_and_rebuild_cells succeeds")
+
+    # ------------------------------------------------------------------
+    # Problem 8: is_degenerated() – tolerance-based edge-length check
+    # ------------------------------------------------------------------
+
+    def test_is_degenerated_detects_near_zero_edge_length(self):
+        """
+        is_degenerated must return True for a triangle whose two edge
+        vertices are distinct indices but are numerically indistinguishable
+        (distance < 1e-10).
+        """
+        tri = Tris()
+        tri.Edge = [0, 1]
+
+        Ys_near_zero = np.array([
+            [0.0, 0.0, 0.0],
+            [1e-11, 0.0, 0.0],   # < 1e-10 from vertex 0
+        ])
+
+        self.assertTrue(tri.is_degenerated(Ys_near_zero),
+                        "is_degenerated must return True for near-zero edge length (< 1e-10)")
+
+    def test_is_degenerated_returns_false_for_valid_edge(self):
+        """
+        is_degenerated must return False for a triangle with a proper
+        non-degenerate edge.
+        """
+        tri = Tris()
+        tri.Edge = [0, 1]
+
+        Ys_valid = np.array([
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+        ])
+
+        self.assertFalse(tri.is_degenerated(Ys_valid),
+                         "is_degenerated must return False for a normal-length edge")
+
+    def test_is_degenerated_detects_identical_indices(self):
+        """
+        is_degenerated must return True when both edge vertex indices are the
+        same (self-loop), regardless of vertex positions.
+        """
+        tri = Tris()
+        tri.Edge = [0, 0]
+
+        Ys = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+
+        self.assertTrue(tri.is_degenerated(Ys),
+                        "is_degenerated must return True when edge indices are identical")
