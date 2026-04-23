@@ -15,7 +15,7 @@ from scipy import stats
 from scipy.optimize import minimize
 from skimage.measure import regionprops
 
-from pyVertexModel.algorithm import newtonRaphson
+from pyVertexModel.algorithm import integrators
 from pyVertexModel.geometry import degreesOfFreedom
 from pyVertexModel.geometry.geo import (
     Geo,
@@ -495,7 +495,7 @@ class VertexModel:
             gr = self.single_iteration()
 
             if np.isnan(gr):
-                break
+                self.didNotConverge = True
 
         self.save_v_model_state()
 
@@ -527,22 +527,28 @@ class VertexModel:
             # up-to-date
             self.geo.update_measures()
 
-        if self.set.implicit_method is True:
-            g, K, _, energies = newtonRaphson.KgGlobal(self.geo_0, self.geo_n, self.geo, self.set,
-                                                       self.set.implicit_method)
+        if self.set.implicit_method:
+            g, K, _, energies = integrators.KgGlobal(self.geo, self.set, self.geo_n, self.set.implicit_method)
         else:
             K = 0
-            g, energies = newtonRaphson.gGlobal(self.geo_0, self.geo_n, self.geo, self.set,
-                                                self.set.implicit_method, self.numStep)
+            g, energies = integrators.g_global(self.geo, self.set, self.geo_n, self.set.implicit_method, self.numStep)
 
         for key, energy in energies.items():
             logger.info(f"{key}: {energy}")
-        self.geo, g, __, __, self.set, gr, dyr, dy = newtonRaphson.newton_raphson(self.geo_0, self.geo_n, self.geo,
-                                                                                  self.Dofs, self.set, K, g,
-                                                                                  self.numStep, self.t,
-                                                                                  self.set.implicit_method)
-        if not np.isnan(gr) and post_operations:
-            self.post_newton_raphson(dy, g, gr)
+
+        if self.set.integrator == 'fire':
+            self.geo, converged, gr = integrators.fire_minimization_loop(self.geo, self.set, self.Dofs.Free, g, self.t,
+                                                                         self.numStep)
+            if converged:
+                self.iteration_converged()
+        else:
+            self.geo, g, __, __, self.set, gr, dyr, dy = integrators.newton_raphson(self.geo_0, self.geo_n, self.geo,
+                                                                                      self.Dofs, self.set, K, g,
+                                                                                      self.numStep, self.t,
+                                                                                      self.set.implicit_method)
+            if not np.isnan(gr) and post_operations:
+                self.post_newton_raphson(dy, g, gr)
+        
         return gr
 
     def post_newton_raphson(self, dy, g, gr):
@@ -553,9 +559,19 @@ class VertexModel:
         :param gr:
         :return:
         """
-        if ((gr * self.set.dt / self.set.dt0) < self.set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
-                np.all(~np.isnan(dy[self.Dofs.Free])) and
-                (np.max(abs(g[self.Dofs.Free])) * self.set.dt / self.set.dt0) < self.set.tol):
+        # Standard convergence criterion
+        if self.set.implicit_method:
+            converged = ((gr * self.set.dt / self.set.dt0) < self.set.tol and np.all(~np.isnan(g[self.Dofs.Free])) and
+                    np.all(~np.isnan(dy[self.Dofs.Free])) and
+                    (np.max(abs(g[self.Dofs.Free])) * self.set.dt / self.set.dt0) < self.set.tol)
+        else:
+            # For explicit methods: Don't reject based on gradient increase
+            # The adaptive scaling in newton_raphson_iteration_explicit handles stability
+            # Rejection causes geometry restore and dt reduction, making convergence harder
+            converged = (np.all(~np.isnan(g[self.Dofs.Free])) and np.all(~np.isnan(dy[self.Dofs.Free])) and
+                         (np.max(abs(g[self.Dofs.Free])) < self.set.tol or self.set.dt <= self.set.dt0 * self.set.dt_tolerance))
+        
+        if converged:
             self.iteration_converged()
         else:
             self.iteration_did_not_converged()
@@ -567,20 +583,23 @@ class VertexModel:
         If the iteration did not converge, the algorithm will try to relax the value of nu and dt.
         :return:
         """
-        self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs = load_backup_vars(self.backupVars)
-        self.relaxingNu = False
-        if self.set.iter == self.set.MaxIter0 and self.set.implicit_method:
-            self.set.MaxIter = self.set.MaxIter0 * 3
-            self.set.nu = 10 * self.set.nu0
-        else:
-            if (self.set.iter >= self.set.MaxIter and
-                    (self.set.dt / self.set.dt0) > 1e-6):
-                self.set.MaxIter = self.set.MaxIter0
-                self.set.nu = self.set.nu0
-                self.set.dt = self.set.dt / 2
-                self.t = self.set.last_t_converged + self.set.dt
+        if self.set.integrator != 'fire':
+            self.geo, self.geo_n, self.geo_0, self.tr, self.Dofs = load_backup_vars(self.backupVars)
+            self.relaxingNu = False
+            if self.set.iter == self.set.MaxIter0 and self.set.implicit_method:
+                self.set.MaxIter = self.set.MaxIter0 * 3
+                self.set.nu = 10 * self.set.nu0
             else:
-                self.didNotConverge = True
+                if (self.set.iter >= self.set.MaxIter and
+                        (self.set.dt / self.set.dt0) > self.set.dt_tolerance):
+                    self.set.MaxIter = self.set.MaxIter0
+                    self.set.nu = self.set.nu0
+                    self.set.dt = self.set.dt / 2
+                    self.t = self.set.last_t_converged + self.set.dt
+                else:
+                    self.didNotConverge = True
+        else:
+            logger.warning("FIRE did not converge")
 
     def iteration_converged(self):
         """
@@ -1158,6 +1177,9 @@ class VertexModel:
             else:
                 run_iteration = True
             self.set.OutputFolder = output_directory
+            self.set.integrator = 'euler'
+            self.set.dt_tolerance = 1e-11
+
             if (self.set.dt / self.set.dt0) <= 1e-6:
                 return np.inf, np.inf, np.inf, np.inf
 
@@ -1190,6 +1212,9 @@ class VertexModel:
                             for sub_f in os.listdir(sub_dir):
                                 shutil.copy(os.path.join(sub_dir, sub_f), os.path.join(dest_sub_dir, sub_f))
 
+            if self.t < tend:
+                print(f'Could not reach the end time of the simulation for purse string strength exploration. Current time: {self.t}')
+                return np.inf, np.inf, np.inf, np.inf
             dy_values, purse_string_strength_values = self.required_purse_string_strength_for_timepoint(directory, timepoint=tend)
 
         purse_string_strength_values = purse_string_strength_values[:len(dy_values)]

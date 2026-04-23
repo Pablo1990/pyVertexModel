@@ -21,6 +21,7 @@ class Set:
         Parameters:
             mat_file (optional): A MATLAB-style struct or object containing saved Set parameters; when provided, values are read and assigned to this instance.
         """
+        self.dt_tolerance = 1e-6
         self.min_3d_neighbours = None
         self.periodic_boundaries = True
         self.frozen_face_centres = False
@@ -44,6 +45,28 @@ class Set:
         self.dt = None
         self.dt0 = None
         self.implicit_method = False
+        self.integrator = 'euler'  # Time integrator: 'euler', 'rk2' (midpoint method), or 'fire' (FIRE algorithm)
+        
+        # FIRE Algorithm parameters (Bitzek et al., 2006)
+        # These parameters control the adaptive optimization when integrator='fire'
+        self.fire_dt_max = None      # Maximum timestep (will be set to 10*dt if None)
+        self.fire_dt_min = None      # Minimum timestep (will be set to 0.02*dt if None)
+        self.fire_N_min = 5          # Steps before acceleration (recommended: 5)
+        self.fire_f_inc = 1.1        # dt increase factor (recommended: 1.1)
+        self.fire_f_dec = 0.5        # dt decrease factor (recommended: 0.5)
+        self.fire_alpha_start = 0.1  # Initial damping coefficient (recommended: 0.1)
+        self.fire_f_alpha = 0.99     # α decrease factor (recommended: 0.99)
+
+        self.fire_dt_max = 0.5 # Large max dt for fast minimization
+        self.fire_dt_min = 1e-8 # Very small min dt
+
+        # Convergence tolerances - PRACTICAL FOR VERTEX MODELS
+        self.fire_force_tol = 1e-6  # Tight for steady-state
+        self.fire_disp_tol = 1e-8  # Tight displacement
+        self.fire_vel_tol = 1e-10  # Tight velocity
+        self.fire_max_iterations = 100  # Allow more iterations for tight convergence
+
+        # Additional parameters
         self.TypeOfPurseString = None
         self.Contractility_TimeVariability = None
         self.Contractility_Variability_LateralCables = None
@@ -198,9 +221,8 @@ class Set:
         if not self.brownian_motion:
             self.brownian_motion_scale = 0
 
-        if self.implicit_method is False:
+        if not self.implicit_method:
             self.tol = self.nu
-            self.tol0 = self.nu/20
 
         if self.Remodelling:
             self.RemodelStiffness = 0.9
@@ -341,7 +363,7 @@ class Set:
         self.check_for_non_used_parameters()
 
     def cyst(self):
-        mat_info = scipy.io.loadmat(os.path.join(PROJECT_DIRECTORY, 'Tests/data/Geo_var_cyst.mat'))
+        mat_info = scipy.io.loadmat(os.path.join(PROJECT_DIRECTORY, 'Tests_data/Geo_var_cyst.mat'))
         self.read_mat_file(mat_info['Set'])
         self.InputGeo = 'Bubbles_Cyst'
         self.CellHeight = 15
@@ -369,13 +391,14 @@ class Set:
         self.check_for_non_used_parameters()
 
     def wing_disc_equilibrium(self):
+        self.integrator = 'euler'
         self.nu_bottom = self.nu
         self.model_name = 'dWL1'
         self.initial_filename_state = 'Input/images/' + self.model_name + '.tif'
         #self.initial_filename_state = 'Input/images/dWP1_150cells_15_scutoids_1.0.pkl'
         self.percentage_scutoids = 0.0
         self.tend = 20
-        self.Nincr = self.tend * 100
+        self.Nincr = self.tend * 10
         self.CellHeight = 1 * 15 #np.array([0.0001, 0.001, 0.01, 0.1, 0.5, 1, 2.0]) * original_wing_disc_height
         #self.resize_z = 0.01
         self.min_3d_neighbours = None # 10
