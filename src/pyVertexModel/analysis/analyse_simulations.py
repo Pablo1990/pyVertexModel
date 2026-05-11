@@ -7,7 +7,7 @@ from pyVertexModel.analysis.analyse_simulation import analyse_simulation, create
 from pyVertexModel.util.utils import plot_figure_with_line, plot_feature_over_time
 
 folder = '/media/pablo/d7c61090-024c-469a-930c-f5ada47fb049/PabloVicenteMunuera/VertexModel/pyVertexModel/Result/to_calculate_ps_recoil/c/' #same_recoil_wound_area_results #to_calculate_ps_recoil
-output_file = os.path.join(folder, 'all_files_features_same_number_of_cells.xlsx') #all_files_features_same_area_ablating
+output_file = os.path.join(folder, 'all_files_features_all_ablated_cells.xlsx') #all_files_features_same_area_ablating
 # Check if excel exists
 if not os.path.exists(output_file):
     print("Excel file does not exist. Creating it...")
@@ -26,7 +26,7 @@ if not os.path.exists(output_file):
         print(file)
 
         # if file is a directory
-        if os.path.isdir(os.path.join(folder, file)) and not file.__contains__('ablating') and not file.__contains__('not_used'):
+        if os.path.isdir(os.path.join(folder, file)) and not file.__contains__('not_used'):
             files_within_folder = os.listdir(os.path.join(folder, file))
             # Analyse the edge recoil
             if os.path.exists(os.path.join(folder, file, 'before_ablation.pkl')):
@@ -52,6 +52,7 @@ if not os.path.exists(output_file):
                         #print("Error cells_area_top_lower_than_average_diff: ", e)
                         important_features['cells_area_top_lower_than_average_diff'] = np.nan
 
+                    og_file = file
                     if folder.endswith('/c/') and file.__contains__('no_Remodelling'):
                         file = file.split('/')[-2]
                     else:
@@ -77,6 +78,14 @@ if not os.path.exists(output_file):
                         important_features['AR'] = 15.0
                         important_features['model'] = 'paper'
 
+                    if og_file.__contains__('no_Remodelling'):
+                        if og_file.__contains__('ablating'):
+                            important_features['ablated_cells'] = int(og_file.split('no_Remodelling_ablating_')[1])
+                        else:
+                            important_features['ablated_cells'] = 10
+                    else:
+                        important_features['ablated_cells'] = 0
+
                     important_features['top_closure_velocity'] = (important_features['max_recoiling_top'] - important_features['last_area_top']) / important_features['last_area_time_top']
 
                     # Transform the dictionary into a dataframe
@@ -95,9 +104,9 @@ else:
 
 # Plot figures
 df_filtered = df[df['last_area_time_top'] > 20.0]
-plot_figure_with_line(df_filtered, None, folder, y_axis_name='top_closure_velocity', y_axis_label='Apical closure velocity', x_axis_name='AR')
+plot_figure_with_line(df_filtered, None, folder, y_axis_name='top_closure_velocity', y_axis_label=r'Apical closure rate (min$^{-1}$)', x_axis_name='AR')
 plot_figure_with_line(df_filtered, None, folder, y_axis_name='max_recoiling_top', y_axis_label='Apical max recoiling', x_axis_name='AR')
 
-# Plot volume
-plot_feature_over_time(df, 'Volume_wound_edge_extrapolated', y_axis_label='Wound edge cell volume (%)', current_path=folder)
-plot_feature_over_time(df, 'Volume_extrapolated', y_axis_label='Cell volume (%)', current_path=folder)
+# # Plot volume
+# plot_feature_over_time(df, 'Volume_wound_edge_extrapolated', y_axis_label='Wound edge cell volume (%)', current_path=folder)
+# plot_feature_over_time(df, 'Volume_extrapolated', y_axis_label='Cell volume (%)', current_path=folder)
