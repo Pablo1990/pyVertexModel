@@ -104,8 +104,87 @@ else:
 
 # Plot figures
 df_filtered = df[df['last_area_time_top'] > 20.0]
-plot_figure_with_line(df_filtered, None, folder, y_axis_name='top_closure_velocity', y_axis_label=r'Apical closure rate (min$^{-1}$)', x_axis_name='AR')
+conditions = (
+    ((df_filtered['AR'] == 0.15) & (df_filtered['ablated_cells'] == 1)) |
+    ((df_filtered['AR'] == 1.5)  & (df_filtered['ablated_cells'] == 5)) |
+    ((df_filtered['AR'] == 7.5)  & (df_filtered['ablated_cells'] == 14)) |
+    ((df_filtered['AR'] == 15.0) & (df_filtered['ablated_cells'] == 23)) |
+    ((df_filtered['AR'] == 30.0) & (df_filtered['ablated_cells'] == 35))
+)
+df_same_wound_area = df_filtered[conditions]
+
+df_ten_cells_ablated = df_filtered[df_filtered['ablated_cells'] == 10]
+
+df_single_cell_ablated = df_filtered[df_filtered['ablated_cells'] == 1]
+
+plot_figure_with_line(df_filtered, None, folder,
+                      y_axis_name='top_closure_velocity', y_axis_label=r'Apical closure rate (min$^{-1}$)',
+                      x_axis_name='AR')
 plot_figure_with_line(df_filtered, None, folder, y_axis_name='max_recoiling_top', y_axis_label='Apical max recoiling', x_axis_name='AR')
+plot_figure_with_line(df_filtered, None, folder, y_axis_name='last_area_top', y_axis_label=r'Apical area at $t_{end}$ (%)', x_axis_name='AR')
+
+plot_figure_with_line(df_filtered, None, folder,
+                      y_axis_name='last_area_top', y_axis_label=r'Apical area at $t_{end}$ (%)',
+                      x_axis_name='max_recoiling_top', x_axis_label='Apical max recoiling (%)',
+                      hue_name='AR', hue_label='Aspect ratio (AR)', plot_fit=True, output_suffix='all_ablated_cells')
+
+# Generate summary table with average values per AR and ablated cells
+summary_cols = ['AR', 'ablated_cells', 'top_closure_velocity', 'max_recoiling_top',
+                'last_area_top', 'last_area_time_top']
+available_cols = ['AR', 'ablated_cells'] + [c for c in summary_cols[2:] if c in df_filtered.columns]
+summary_table = (
+    df_filtered[available_cols]
+    .groupby(['AR', 'ablated_cells'])
+    .agg(['mean', 'std', 'count'])
+    .round(4)
+)
+summary_table.to_excel(os.path.join(folder, 'summary_per_AR_ablated_cells.xlsx'))
+print(summary_table.to_string())
+
+# Compare within each AR by the number of ablated cells
+df_comparison = df_filtered.copy()
+
+for ar_value in sorted(df_comparison['AR'].dropna().unique()):
+    df_ar = df_comparison[df_comparison['AR'] == ar_value]
+
+    # Skip AR groups without enough variation in ablated cells.
+    if df_ar['ablated_cells'].dropna().nunique() < 2:
+        continue
+
+    ar_suffix = str(ar_value).replace('.', 'p')
+    plot_figure_with_line(
+        df_ar,
+        None,
+        folder,
+        y_axis_name='top_closure_velocity',
+        y_axis_label=r'Apical closure rate (min$^{-1}$)',
+        x_axis_name='ablated_cells',
+        x_axis_label='Ablated cells',
+        plot_fit=False,
+        output_suffix=f'AR_{ar_suffix}',
+    )
+    plot_figure_with_line(
+        df_ar,
+        None,
+        folder,
+        y_axis_name='max_recoiling_top',
+        y_axis_label='Apical max recoiling',
+        x_axis_name='ablated_cells',
+        x_axis_label='Ablated cells',
+        plot_fit=False,
+        output_suffix=f'AR_{ar_suffix}',
+    )
+    plot_figure_with_line(
+        df_ar,
+        None,
+        folder,
+        y_axis_name='last_area_top',
+        y_axis_label='Apical area (%)',
+        x_axis_name='ablated_cells',
+        x_axis_label='Ablated cells',
+        plot_fit=False,
+        output_suffix=f'AR_{ar_suffix}',
+    )
 
 # # Plot volume
 # plot_feature_over_time(df, 'Volume_wound_edge_extrapolated', y_axis_label='Wound edge cell volume (%)', current_path=folder)
