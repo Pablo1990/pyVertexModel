@@ -19,7 +19,7 @@ run_simulation() {
     local dir_name=$2
     echo $OUTPUT_DIR
     echo "Running simulation number $num_parameter"
-    python $PYTHON_SCRIPT "$num_parameter" "$OUTPUT_DIR/$dir_name" "30"
+    python $PYTHON_SCRIPT "$num_parameter" "$OUTPUT_DIR/$dir_name" "50"
     echo "Finished simulation number $num_parameter"
 }
 
