@@ -1177,18 +1177,18 @@ class VertexModel:
                 #    return np.inf, np.inf, np.inf, np.inf
 
                 # Copy files from vModel.set.output_folder to c_folder/ar_dir/directory
-                if self.set.OutputFolder and os.path.exists(self.set.OutputFolder):
-                    for f in os.listdir(self.set.OutputFolder):
-                        if os.path.isfile(os.path.join(self.set.OutputFolder, f)):
-                            shutil.copy(os.path.join(self.set.OutputFolder, f), os.path.join(directory, f))
-                        elif os.path.isdir(os.path.join(self.set.OutputFolder, f)):
-                            # Merge subdirectories
-                            sub_dir = os.path.join(self.set.OutputFolder, f)
-                            dest_sub_dir = os.path.join(directory, f)
-                            if not os.path.exists(dest_sub_dir):
-                                os.makedirs(dest_sub_dir)
-                            for sub_f in os.listdir(sub_dir):
-                                shutil.copy(os.path.join(sub_dir, sub_f), os.path.join(dest_sub_dir, sub_f))
+                # if self.set.OutputFolder and os.path.exists(self.set.OutputFolder):
+                #     for f in os.listdir(self.set.OutputFolder):
+                #         if os.path.isfile(os.path.join(self.set.OutputFolder, f)):
+                #             shutil.copy(os.path.join(self.set.OutputFolder, f), os.path.join(directory, f))
+                #         elif os.path.isdir(os.path.join(self.set.OutputFolder, f)):
+                #             # Merge subdirectories
+                #             sub_dir = os.path.join(self.set.OutputFolder, f)
+                #             dest_sub_dir = os.path.join(directory, f)
+                #             if not os.path.exists(dest_sub_dir):
+                #                 os.makedirs(dest_sub_dir)
+                #             for sub_f in os.listdir(sub_dir):
+                #                 shutil.copy(os.path.join(sub_dir, sub_f), os.path.join(dest_sub_dir, sub_f))
 
             dy_values, purse_string_strength_values = self.required_purse_string_strength_for_timepoint(directory, timepoint=tend)
 
