@@ -95,11 +95,15 @@ class Tris:
         :param y: Y coordinates of the vertices of the triangle.
         """
         # Calculate the current volume of the triangle
+        # Optimized: avoid creating intermediate arrays
         y1 = y[self.Edge[0], :] - x
         y2 = y[self.Edge[1], :] - x
         y3 = face_centre - x
 
-        current_v = np.linalg.det(np.array([y1, y2, y3])) / 6
+        # Use dot product instead of determinant for faster computation
+        # det([y1, y2, y3]) = y1 · (y2 × y3)
+        cross_prod = np.cross(y2, y3)
+        current_v = np.dot(y1, cross_prod) / 6
 
         # Check the orientation of the triangle vertices
         if current_v < 0:

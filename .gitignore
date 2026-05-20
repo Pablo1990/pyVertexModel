@@ -196,3 +196,5 @@ Input
 src/pyVertexModel/_version.py
 
 Temp/
+
+build/
