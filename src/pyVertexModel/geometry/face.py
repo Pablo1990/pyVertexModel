@@ -104,10 +104,8 @@ class Face:
             self.build_face_centre(ij, nCells, Cell.X, Cell.Y[face_ids, :], Set.f,
                                    "Bubbles" in Set.InputGeo)
 
-        self.build_edges(Cell.T, face_ids, self.Centre, self.InterfaceType, Cell.X, Cell.Y,
-                         list(range(nCells)))
-
-        self.Area, _ = self.compute_face_area(Cell.Y)
+        self.Area = self.build_edges(Cell.T, face_ids, self.Centre, self.InterfaceType, Cell.X, Cell.Y,
+                                      list(range(nCells)))
         if oldFace is not None and getattr(oldFace, 'ij', None) is not None:
             self.Area0 = oldFace.Area0
         else:
@@ -193,8 +191,10 @@ class Face:
             self.Tris[currentTri].Edge = [surf_ids[currentTri], surf_ids[currentTri + 1]]
             currentTris_1 = T[self.Tris[currentTri].Edge[0], :]
             currentTris_2 = T[self.Tris[currentTri].Edge[1], :]
-            self.Tris[currentTri].SharedByCells = np.intersect1d(currentTris_1[np.isin(currentTris_1, non_dead_cells)],
-                                                                 currentTris_2[np.isin(currentTris_2, non_dead_cells)])
+            # Optimize: use vectorized isin with boolean indexing
+            mask1 = np.isin(currentTris_1, non_dead_cells)
+            mask2 = np.isin(currentTris_2, non_dead_cells)
+            self.Tris[currentTri].SharedByCells = np.intersect1d(currentTris_1[mask1], currentTris_2[mask2])
 
             self.Tris[currentTri].EdgeLength, self.Tris[currentTri].LengthsToCentre, self.Tris[currentTri].AspectRatio \
                 = self.Tris[currentTri].compute_tri_length_measurements(Ys, face_centre)
@@ -204,21 +204,24 @@ class Face:
         self.Tris[len(surf_ids) - 1].Edge = [surf_ids[len(surf_ids) - 1], surf_ids[0]]
         currentTris_1 = T[self.Tris[len(surf_ids) - 1].Edge[0], :]
         currentTris_2 = T[self.Tris[len(surf_ids) - 1].Edge[1], :]
-        self.Tris[len(surf_ids) - 1].SharedByCells = np.intersect1d(
-            currentTris_1[np.isin(currentTris_1, non_dead_cells)],
-            currentTris_2[np.isin(currentTris_2, non_dead_cells)])
+        # Optimize: use vectorized isin with boolean indexing
+        mask1 = np.isin(currentTris_1, non_dead_cells)
+        mask2 = np.isin(currentTris_2, non_dead_cells)
+        self.Tris[len(surf_ids) - 1].SharedByCells = np.intersect1d(currentTris_1[mask1], currentTris_2[mask2])
 
         self.Tris[len(surf_ids) - 1].EdgeLength, self.Tris[len(surf_ids) - 1].LengthsToCentre, self.Tris[
             len(surf_ids) - 1].AspectRatio = self.Tris[len(surf_ids) - 1].compute_tri_length_measurements(Ys,
                                                                                                           face_centre)
         self.Tris[len(surf_ids) - 1].EdgeLength_time = [0, self.Tris[len(surf_ids) - 1].EdgeLength]
 
-        _, triAreas = self.compute_face_area(Ys)
+        total_area, triAreas = self.compute_face_area(Ys)
         for i in range(len(self.Tris)):
             self.Tris[i].Area = triAreas[i]
 
         for tri in self.Tris:
             tri.Location = face_interface_type
+        
+        return total_area
 
     def compute_face_area(self, y):
         """
@@ -227,13 +230,17 @@ class Face:
         :return:
         """
         tris_area = np.zeros(len(self.Tris))
+        y3 = self.Centre  # Move outside loop
 
         for t, tri in enumerate(self.Tris):
-            y3 = self.Centre
-            y_tri = np.vstack([y[tri.Edge, :], y3])
-
+            # Avoid vstack by directly computing cross product
+            y0 = y[tri.Edge[0], :]
+            y1 = y[tri.Edge[1], :]
+            
             # Calculate the area of the triangle
-            cross_product = np.cross(y_tri[1, :] - y_tri[0, :], y_tri[0, :] - y_tri[2, :])
+            v1 = y1 - y0
+            v2 = y0 - y3
+            cross_product = np.cross(v1, v2)
             tri_area = 0.5 * np.linalg.norm(cross_product)
             if np.allclose(cross_product, 0):
                 tri_area = 0  # Handle collinear points
