@@ -216,8 +216,17 @@ class Set:
         If self.OutputFolder is not None, this creates the OutputFolder and an images subdirectory, attaches a FileHandler writing to 'log.out' with DEBUG level and a timestamped formatter, and enables logger propagation. If OutputFolder is None, no logging configuration or filesystem changes are made.
         """
         if self.OutputFolder is not None:
+            short_result_root = r"C:\pvm_results"
+            os.makedirs(short_result_root, exist_ok=True)
+
+            run_name = os.path.basename(os.path.normpath(self.OutputFolder))
+            run_name = run_name[:60]
+
+            self.OutputFolder = os.path.join(short_result_root, run_name)
+
             os.makedirs(self.OutputFolder, exist_ok=True)
-            os.makedirs(self.OutputFolder + '/images', exist_ok=True)
+            os.makedirs(os.path.join(self.OutputFolder, 'images'), exist_ok=True)
+
             handler = logging.FileHandler(os.path.join(self.OutputFolder, 'log.out'))
             handler.setLevel(logging.DEBUG)
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -305,7 +314,7 @@ class Set:
     def bubbles(self):
         self.InputGeo = 'Bubbles'
         self.model_name = 'Bubbles_with_substrate'
-        self.initial_filename_state = 'Input/Bubbles_with_substrate.mat'
+        self.initial_filename_state = 'Input/wing_disc_150.mat'
         self.Substrate = 3
         self.periodic_boundaries = False
         self.resize_z = None
@@ -335,6 +344,8 @@ class Set:
         self.ref_A0 = 0.99
 
         self.Remodelling = False
+        self.ablation = False
+        self.Contractility = False
 
         self.VTK = False
 

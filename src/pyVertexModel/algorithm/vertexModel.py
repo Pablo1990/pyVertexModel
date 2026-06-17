@@ -1,3 +1,4 @@
+from pathlib import Path
 import logging
 import os
 import shutil
@@ -397,8 +398,8 @@ class VertexModel:
             self.adjust_percentage_of_scutoids()
 
             # Save screenshot of the initial state
-            image_file = '/' + os.path.join(*filename.split('/')[:-1])
-            screenshot_(self.geo, self.set, 0, output_filename.split('/')[-1], image_file)
+            image_file = str(Path(filename).parent)
+            screenshot_(self.geo, self.set, 0, Path(output_filename).name, image_file)
 
             # Save initial state
             save_state(self, output_filename)

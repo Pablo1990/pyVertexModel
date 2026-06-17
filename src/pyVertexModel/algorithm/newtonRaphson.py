@@ -213,7 +213,9 @@ def newton_raphson_iteration_explicit(Geo, Set, dof, dy, g, selected_cells=None)
     dy[g_constrained, 0] = -Set.dt / Set.nu_bottom * g[g_constrained]
 
     # Update border ghost nodes with the same displacement as the corresponding real nodes
-    dy = map_vertices_periodic_boundaries(Geo, dy)
+    if Set.periodic_boundaries:
+        dy = map_vertices_periodic_boundaries(Geo, dy)
+
     dyr = np.linalg.norm(dy[dof, 0])
     dy_reshaped = np.reshape(dy, (Geo.numF + Geo.numY + Geo.nCells, 3))
 

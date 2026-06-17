@@ -1,4 +1,4 @@
-![logo.png](logo.png)
+﻿![logo.png](logo.png)
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17649952.svg)](https://doi.org/10.5281/zenodo.17649952)
 [![Coverage Status](https://coveralls.io/repos/github/Pablo1990/pyVertexModel/badge.svg?branch=main)](https://coveralls.io/github/Pablo1990/pyVertexModel?branch=main)

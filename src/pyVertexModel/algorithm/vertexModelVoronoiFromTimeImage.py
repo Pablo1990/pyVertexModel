@@ -1,4 +1,5 @@
 from __future__ import annotations
+from pathlib import Path
 
 import copy
 import logging
@@ -380,15 +381,15 @@ class VertexModelVoronoiFromTimeImage(VertexModel):
         Twg, X = self.obtain_initial_x_and_tetrahedra(img_input)
         # Build cells
         self.geo.build_cells(self.set, X, Twg)
-        
+
         # Save screenshot of the initial state (only if we have a filename)
         if isinstance(img_input, str):
-            image_file = '/'+ os.path.join(*img_input.split('/')[:-1])
-            screenshot_(self.geo, self.set, 0, output_filename.split('/')[-1], image_file)
+            image_file = str(Path(img_input).parent)
+            screenshot_(self.geo, self.set, 0, Path(output_filename).name, image_file)
         else:
             # For numpy array input, try to save screenshot in output folder if available
             if hasattr(self.set, 'OutputFolder') and self.set.OutputFolder:
-                screenshot_(self.geo, self.set, 0, output_filename.split('/')[-1], self.set.OutputFolder)
+                screenshot_(self.geo, self.set, 0, Path(output_filename).name, self.set.OutputFolder)
 
         # Save state with filename using the number of cells
         save_state(self.geo, output_filename)
