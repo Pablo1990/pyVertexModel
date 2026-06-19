@@ -185,7 +185,7 @@ class Face:
 
             Order[iii] = np.dot(np.cross(v1, v2), face_centre - X) / len(surf_ids)
 
-        if np.all(Order < 0):
+        if np.mean(Order)< 0:
             surf_ids = np.flip(surf_ids)
 
         for currentTri in range(len(surf_ids) - 1):

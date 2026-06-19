@@ -227,8 +227,26 @@ class Cell:
                 continue  # Skip this triangle
 
             current_v = np.linalg.det(np.array([y1, y2, y3])) / 6
+
+            #REALlY UGlY. HERE TO MAKE CODE RUN
+            if current_v < 0:
+                # Local triangle is wound backwards relative to the cell centre.
+                # Swap two vertices to reverse the orientation.
+                y2, y3 = y3, y2
+                current_v = np.linalg.det(np.array([y1, y2, y3])) / 6
+
             # If the volume is negative, switch two the other option
             if current_v < 0:
+                print("NEGATIVE VOLUME DEBUG")
+                print("Cell ID:", self.ID)
+                print("Face ij:", getattr(c_face, "ij", None))
+                print("Face contains lumen:", 0 in getattr(c_face, "ij", []))
+                print("globalIds:", getattr(c_face, "globalIds", None))
+                print("Triangle edge:", c_face.Tris[t].Edge)
+                print("Signed volume:", current_v)
+                print("y1:", y1)
+                print("y2:", y2)
+                print("y3:", y3)
                 raise Exception("Negative volume detected. Check the cell geometry." + str(c_face.Tris[t].Edge[0]) + ", " + str(c_face.Tris[t].Edge[1]) + ", " + str(c_face.globalIds) + ", " + str(self.ID))
 
             volumes[t] = current_v

@@ -2,9 +2,12 @@ import os
 import sys
 
 from pyVertexModel import PROJECT_DIRECTORY
-from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import (
-    VertexModelVoronoiFromTimeImage,
+from pyVertexModel.algorithm.vertexModelBubbles import (
+    VertexModelBubbles,
 )
+
+#from pyVertexModel.algorithm.vertexModelBubbles import VertexModelBubbles
+
 from pyVertexModel.analysis.analyse_simulation import analyse_simulation
 from pyVertexModel.util.utils import load_state
 
@@ -12,7 +15,7 @@ start_new = True
 if start_new == True:
     all_images = False
     if all_images == True:
-        vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False, set_option='bubbles') #wing_disc_equilibrium or cyst or bubbles
+        vModel = VertexModelBubbles(create_output_folder=False, set_option='cyst_scratch') #wing_disc_equilibrium or cyst or bubbles
         # Get all the files from 'Input/images/' that end with '.tif'
         img_files = [f for f in os.listdir(PROJECT_DIRECTORY + '/Input/images/') if f.endswith('.tif') and not f.endswith('labelled.tif')]
         num_img = int(sys.argv[1]) # Get the image number from command line argument
@@ -25,12 +28,17 @@ if start_new == True:
         vModel.initialize()
         vModel.iterate_over_time()
     else:
-        vModel = VertexModelVoronoiFromTimeImage(set_option='bubbles')
+        vModel = VertexModelBubbles(set_option='cyst_scratch')
+        print("Class:", type(vModel))
+        print("Initialize method:", vModel.initialize.__qualname__)
+        print("Initial filename:", vModel.set.initial_filename_state)
+        print("InputGeo:", vModel.set.InputGeo)
+
         vModel.initialize()
         vModel.iterate_over_time()
 else:
     debugging = True
-    vModel = VertexModelVoronoiFromTimeImage(create_output_folder=False, set_option='bubbles')
+    vModel = VertexModelBubbles(create_output_folder=False, set_option='cyst_scratch')
     if debugging:
         output_folder = os.path.join(PROJECT_DIRECTORY, 'Result/10-27_104054_dWL6_0.15_scutoids_0_noise_0.00e+00_lVol_1.00e+00_kSubs_1.00e-01_lt_0.00e+00_refA0_9.20e-01_eARBarrier_8.00e-07_RemStiff_0.9_lS1_3.05e-01_lS2_1.60e-01_lS3_3.05e-01_ps_3.00e-05_lc_7.00e-05/')
         # Sorted by date file

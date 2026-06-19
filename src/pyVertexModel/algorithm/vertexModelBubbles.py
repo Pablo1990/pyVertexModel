@@ -8,6 +8,7 @@ from scipy.spatial import Delaunay
 
 from pyVertexModel.algorithm.vertexModel import VertexModel
 from pyVertexModel.util.utils import save_state
+from pyVertexModel.geometry.geo import Geo
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -388,7 +389,13 @@ class VertexModelBubbles(VertexModel):
         :return:
         """
         # Build nodal mesh
-        self.generate_Xs(self.geo.nx, self.geo.ny, self.geo.nz)
+        if self.geo is None:
+            self.geo = Geo()
+
+        if self.set.InputGeo == 'Bubbles_Cyst':
+            self.generate_Xs(None, None, None)
+        else:
+            self.generate_Xs(self.geo.nx, self.geo.ny, self.geo.nz)
 
         # This code is to match matlab's output and python's
         # N = 3  # The dimensions of our points
@@ -414,12 +421,12 @@ class VertexModelBubbles(VertexModel):
             self.geo.XgBottom = self.geo.XgID[Xg[:, 2] < np.mean(self.X[:, 2])]
             self.geo.XgTop = self.geo.XgID[Xg[:, 2] > np.mean(self.X[:, 2])]
 
-        self.geo.Main_cells = range(len(self.geo.nCells))
+        self.geo.Main_cells = range(self.geo.nCells)
         self.geo.build_cells(self.set, self.X, Twg)
 
-        if self.set.InputGeo == 'Bubbles_Cyst':
+        #if self.set.InputGeo == 'Bubbles_Cyst':
             # Extrapolate Face centres and Ys to the ellipsoid
-            self.geo = extrapolate_ys_faces_ellipsoid(self.geo, self.set)
+            #self.geo = extrapolate_ys_faces_ellipsoid(self.geo, self.set)
 
         # Save state with filename using the number of cells
         filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')

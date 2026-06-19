@@ -361,6 +361,58 @@ class Set:
         self.Remodelling = True
         self.RemodelStiffness = 0.1
 
+    def cyst_scratch(self):
+        self.InputGeo = 'Bubbles_Cyst'
+        self.initial_filename_state = 'Result/Cyst/cyst_scratch.tif'
+        self.model_name = 'Cyst_scratch'
+        self.TotalCells = 100
+        self.CellHeight = 15
+        self.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/Cyst')
+        self.lambdaR = 0
+        self.Remodelling = True
+        self.RemodelStiffness = 0.1
+
+        self.Substrate = 0
+        self.periodic_boundaries = False
+        self.resize_z = None
+
+        self.ellipsoid_axis1 = 10.0
+        self.ellipsoid_axis2 = 1.0
+        self.ellipsoid_axis3 = 1.0
+        self.lumen_axis1 = 3.0
+        self.lumen_axis2 = 3.0
+        self.lumen_axis3 = 3.0
+        self.cell_V0 = 0.0003
+        self.cell_A0 = 0.01
+        self.lumen_V0 = 0.1
+
+        self.lambdaS1 = 1
+        self.lambdaS2 = self.lambdaS1 / 100
+        self.lambdaS3 = self.lambdaS1
+        self.lambdaS4_top = 0.1
+        self.lambdaS4_bottom = 0.1
+
+        self.Nincr = self.tend * 100
+
+        self.EnergyBarrierAR = False
+
+        # Volume
+        self.lambdaV = 1
+        self.ref_V0 = 1.1
+
+        # Substrate
+        self.kSubstrate = 0
+
+        # Surface Area
+        self.ref_A0 = 0.99
+
+        self.ablation = False
+        self.Contractility = False
+
+        self.VTK = False
+
+        self.check_for_non_used_parameters()
+
     def wing_disc_apical_constriction(self):
         self.nu_bottom = self.nu
 
