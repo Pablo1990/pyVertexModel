@@ -344,6 +344,10 @@ def extrapolate_ys_faces_ellipsoid(geo, c_set):
                 geo.Cells[nodeInTet].Y[
                     np.all(np.isin(geo.Cells[nodeInTet].T, tetToCheck), axis=1)] = newPoint_extrapolated
 
+    for c_cell in geo.Cells:
+        if c_cell.AliveStatus is not None and c_cell.Y is not None and len(c_cell.Y) > 0:
+            c_cell.X = np.mean(c_cell.Y, axis=0)
+
     # Recalculating face centres here based on the previous changes
     geo.rebuild(geo.copy(), c_set)
     geo.build_global_ids()
@@ -424,9 +428,9 @@ class VertexModelBubbles(VertexModel):
         self.geo.Main_cells = range(self.geo.nCells)
         self.geo.build_cells(self.set, self.X, Twg)
 
-        #if self.set.InputGeo == 'Bubbles_Cyst':
-            # Extrapolate Face centres and Ys to the ellipsoid
-            #self.geo = extrapolate_ys_faces_ellipsoid(self.geo, self.set)
+        if self.set.InputGeo == 'Bubbles_Cyst':
+            #Extrapolate Face centres and Ys to the ellipsoid
+            self.geo = extrapolate_ys_faces_ellipsoid(self.geo, self.set)
 
         # Save state with filename using the number of cells
         filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
