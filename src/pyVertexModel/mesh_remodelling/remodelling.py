@@ -124,7 +124,7 @@ def move_vertices_closer_to_ref_point(Geo, close_to_new_point, cell_nodes_shared
     ref_tet = np.any(np.isin(possible_ref_tets, cell_to_split_from), axis=1)
     ref_point_closer = Geo.Cells[cell_to_split_from].Y[ismember_rows(Geo.Cells[cell_to_split_from].T,
                                                                      possible_ref_tets[ref_tet])[0]]
-
+    #unfinished function
     if np.sum(ref_tet) > 1:
         if 'Bubbles_Cyst' in Set.InputGeo:
             return Geo, ref_point_closer
@@ -591,6 +591,19 @@ class Remodelling:
             nodes_pair = np.array([cell_node, ghost_node])
             ghost_nodes_tried.append(ghost_node)
             logger.info(f"Remodelling: {cell_node} - {ghost_node}")
+            logger.info(f"  nCells={self.Geo.nCells}, len(Cells)={len(self.Geo.Cells)}")
+            logger.info(f"  cell_node in XgID={cell_node in self.Geo.XgID}")
+            logger.info(f"  ghost_node in XgID={ghost_node in self.Geo.XgID}")
+            logger.info(
+                f"  cell_node in XgTop={cell_node in self.Geo.XgTop if hasattr(self.Geo, 'XgTop') else 'no XgTop'}")
+            logger.info(
+                f"  ghost_node in XgTop={ghost_node in self.Geo.XgTop if hasattr(self.Geo, 'XgTop') else 'no XgTop'}")
+            logger.info(
+                f"  cell_node in XgBottom={cell_node in self.Geo.XgBottom if hasattr(self.Geo, 'XgBottom') else 'no XgBottom'}")
+            logger.info(
+                f"  ghost_node in XgBottom={ghost_node in self.Geo.XgBottom if hasattr(self.Geo, 'XgBottom') else 'no XgBottom'}")
+            logger.info(
+                f"  BorderCells={self.Geo.BorderCells if hasattr(self.Geo, 'BorderCells') else 'no BorderCells'}")
 
             # Create a copy of the ghost node with the same location, but not the same ID
             self.Geo.split_ghost_node(ghost_node, cell_node, cell_to_split_from, cell_to_intercalate_with, self.Set)

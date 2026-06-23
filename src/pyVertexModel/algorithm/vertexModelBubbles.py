@@ -316,8 +316,22 @@ def extrapolate_ys_faces_ellipsoid(geo, c_set):
 
     # Extrapolate top layer as the outer ellipsoid, the bottom layer as the lumen, and lateral is rebuilt.
     allTs = np.unique(np.sort(np.concatenate([cell.T for cell in geo.Cells[:c_set.TotalCells]]), axis=1), axis=0)
-    topTs = allTs[np.any(np.isin(allTs, geo.XgTop), axis=1)]
-    bottomsTs = allTs[np.any(np.isin(allTs, geo.XgBottom), axis=1)]
+
+    ghost_counts = np.sum(np.isin(allTs, geo.XgTop), axis=1)
+    unique, counts = np.unique(ghost_counts, return_counts=True)
+    logger.info(f"Ghost counts in allTs: {dict(zip(unique, counts))}")
+
+    topTs_old = allTs[ghost_counts > 0]
+    topTs = allTs[ghost_counts == 3]
+    logger.info(f"Old topTs: {len(topTs_old)}")
+    logger.info(f"Strict outer topTs: {len(topTs)}")
+
+    lumen_id = 0
+    regular_cells = np.arange(c_set.TotalCells)
+    regular_non_lumen = regular_cells[regular_cells != lumen_id]
+    contains_lumen = np.any(allTs == lumen_id, axis=1)
+    contains_regular_non_lumen = np.any(np.isin(allTs, regular_non_lumen), axis=1)
+    bottomsTs = allTs[contains_lumen & contains_regular_non_lumen]
 
     # Changes vertices of other cells
     for tetToCheck in topTs:
@@ -429,7 +443,7 @@ class VertexModelBubbles(VertexModel):
         self.geo.build_cells(self.set, self.X, Twg)
 
         if self.set.InputGeo == 'Bubbles_Cyst':
-            #Extrapolate Face centres and Ys to the ellipsoid
+            # Extrapolate Face centres and Ys to the ellipsoid
             self.geo = extrapolate_ys_faces_ellipsoid(self.geo, self.set)
 
         # Save state with filename using the number of cells

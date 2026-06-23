@@ -361,6 +361,12 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, endNode, ghost_n
     :return:
     """
     Geo_final = Geo
+
+    total_attempts = 0
+    degenerate_attempts = 0
+    exception_attempts = 0
+    valid_attempts = 0
+
     new_tets_tree = None
     valence_segment = np.inf
     old_volume = np.sum([cell.Vol for cell in Geo.Cells if cell.AliveStatus is not None])
@@ -369,6 +375,9 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, endNode, ghost_n
 
     for c_path in dfs(treeOfPossibilities, parentNode, endNode):
         c_path = np.array(c_path)
+
+        total_attempts += 1
+
         new_tets = np.vstack(old_tets)
 
         for posPath in c_path[c_path > 1]:
@@ -398,17 +407,30 @@ def get_best_new_tets_combination(Geo, Set, TRemoved, Tnew, Xs, endNode, ghost_n
 
                     # Check number of degenerate triangles
                     if Geo_new.has_degenerate_triangles():
+                        degenerate_attempts += 1
+
                         logger.warning("Degenerate triangles found after flip remodelling. Skipping this combination.")
                         continue
 
                     new_tets_tree = new_tets
                     Geo_final = Geo_new
+
+                    valid_attempts += 1
+
                     valence_segment = current_valence_segment
                     vol_difference = np.sum([cell.Vol for cell in Geo_final.Cells if cell.AliveStatus is not None]) - old_volume
                     logger.info(f"New combination found with valence segment: {valence_segment} with "
                                 f"volume difference: {vol_difference} ")
                 except Exception as ex:
+
+                   exception_attempts += 1
                    logger.warning(f"Exception on flip remodelling: {ex}")
+
+    
+    logger.info(
+        f"Flip candidate summary: total={total_attempts}, "
+        f"degenerate={degenerate_attempts}, exceptions={exception_attempts}, valid={valid_attempts}"
+    )
     return new_tets_tree, Geo_final
 
 
