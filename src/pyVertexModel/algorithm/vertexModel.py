@@ -747,15 +747,28 @@ class VertexModel:
         cell_features = []
         debris_features = []
 
-        wound_centre, debris_cells = self.geo.compute_wound_centre()
-        list_of_cell_distances = self.geo.compute_cell_distance_to_wound(debris_cells, location_filter=None)
-        list_of_cell_distances_top = self.geo.compute_cell_distance_to_wound(debris_cells, location_filter=0)
-        list_of_cell_distances_bottom = self.geo.compute_cell_distance_to_wound(debris_cells, location_filter=2)
+        debris_cells_with_geometry = [
+            cell for cell in self.geo.Cells
+            if cell.AliveStatus == 0 and cell.Y is not None and len(cell.Y) > 0
+        ]
+        has_wound = len(debris_cells_with_geometry) > 0
+        if has_wound:
+            wound_centre, debris_cells = self.geo.compute_wound_centre()
+            list_of_cell_distances = self.geo.compute_cell_distance_to_wound(debris_cells, location_filter=None)
+            list_of_cell_distances_top = self.geo.compute_cell_distance_to_wound(debris_cells, location_filter=0)
+            list_of_cell_distances_bottom = self.geo.compute_cell_distance_to_wound(debris_cells, location_filter=2)
+        else:
+            logger.info("No valid debris/wound geometry found; skipping wound-distance features.")
+            wound_centre = None
+            debris_cells = []
+            list_of_cell_distances = []
+            list_of_cell_distances_top = []
+            list_of_cell_distances_bottom = []
 
         # Analyse the alive cells
         for cell_id, cell in enumerate(self.geo.Cells):
             if cell.AliveStatus:
-                cell_features.append(cell.compute_features(wound_centre))
+                cell_features.append(cell.compute_features(wound_centre) if has_wound else cell.compute_features())
             elif cell.AliveStatus is not None:
                 debris_features.append(cell.compute_features())
 
@@ -784,17 +797,18 @@ class VertexModel:
         all_cell_features["polygon_distribution_bottom_6"] = polygon_distribution_bottom_with_zeros[2]
         all_cell_features["polygon_distribution_bottom_7"] = polygon_distribution_bottom_with_zeros[3]
         all_cell_features["polygon_distribution_bottom_8"] = polygon_distribution_bottom_with_zeros[4]
-        all_cell_features["cell_distance_to_wound"] = list_of_cell_distances
-        all_cell_features["cell_distance_to_wound_top"] = list_of_cell_distances_top
-        all_cell_features["cell_distance_to_wound_bottom"] = list_of_cell_distances_bottom
+        if has_wound:
+            all_cell_features["cell_distance_to_wound"] = list_of_cell_distances
+            all_cell_features["cell_distance_to_wound_top"] = list_of_cell_distances_top
+            all_cell_features["cell_distance_to_wound_bottom"] = list_of_cell_distances_bottom
         all_cell_features["time"] = self.t
         avg_cell_features = all_cell_features.mean()
         std_cell_features = all_cell_features.std()
 
         # Compute wound features
-        #try:
-        wound_features = self.compute_wound_features()
-        avg_cell_features = pd.concat([avg_cell_features, pd.Series(wound_features)])
+        if has_wound:
+            wound_features = self.compute_wound_features()
+            avg_cell_features = pd.concat([avg_cell_features, pd.Series(wound_features)])
         # except Exception as e:
         #     logger.error(f"Error while computing wound features: {e}")
 

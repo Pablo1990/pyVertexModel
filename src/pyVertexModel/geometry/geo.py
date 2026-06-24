@@ -1,6 +1,7 @@
 import logging
 import os
 from collections import defaultdict
+from pprint import pformat
 
 import numpy as np
 import vtk
@@ -252,7 +253,9 @@ class Geo:
 
             if 'Cells' in mat_file.dtype.names:
                 for c_cell in mat_file['Cells'][0][0][0]:
-                    self.Cells.append(cell.Cell(c_cell))
+                    new_cell = cell.Cell(c_cell)
+                    new_cell.scutoid_excluded_neighbours = self.XgID
+                    self.Cells.append(new_cell)
 
     def copy(self, update_measurements=True):
         """
@@ -293,6 +296,7 @@ class Geo:
             newCell.ID = c
             newCell.X = X[c, :]
             newCell.T = twg[np.any(twg == c, axis=1),]
+            newCell.scutoid_excluded_neighbours = self.XgID
 
             # Initialize status of cells: 1 = 'Alive', 0 = 'Ablated', [] = 'Dead'
             if c in self.Main_cells:
@@ -1712,17 +1716,123 @@ class Geo:
 
         return cell_ids, distances
 
+    def diagnose_scutoid_neighbours(self, cell_id=None):
+        """
+        Inspect raw and boundary-excluded top/bottom neighbours for one cell.
+        If no cell is provided, choose the first real cell with a bottom boundary contact.
+        """
+        excluded_neighbours = self.XgID
+        candidate_cells = [
+            c_cell for c_cell in self.Cells[:self.nCells]
+            if c_cell.AliveStatus is not None and c_cell.ID not in excluded_neighbours
+        ]
+
+        if cell_id is None:
+            cell_to_check = None
+            for c_cell in candidate_cells:
+                bottom_neighbours = c_cell.compute_neighbours(location_filter=2)
+                if np.isin(bottom_neighbours, excluded_neighbours).any():
+                    cell_to_check = c_cell
+                    break
+
+            if cell_to_check is None:
+                cell_to_check = candidate_cells[0] if len(candidate_cells) > 0 else None
+        else:
+            cell_to_check = self.Cells[cell_id]
+
+        if cell_to_check is None:
+            return {}
+
+        bottom_before = cell_to_check.compute_neighbours(location_filter=2)
+        top_before = cell_to_check.compute_neighbours(location_filter=0)
+        bottom_after = np.setdiff1d(bottom_before, excluded_neighbours)
+        top_after = np.setdiff1d(top_before, excluded_neighbours)
+
+        diagnostic = {
+            'cell_id': cell_to_check.ID,
+            'bottom_before': bottom_before.tolist(),
+            'top_before': top_before.tolist(),
+            'bottom_after': bottom_after.tolist(),
+            'top_after': top_after.tolist(),
+            'bottom_before_count': len(bottom_before),
+            'top_before_count': len(top_before),
+            'bottom_after_count': len(bottom_after),
+            'top_after_count': len(top_after),
+            'raw_scutoid': np.setxor1d(bottom_before, top_before).size > 0,
+            'excluded_scutoid': np.setxor1d(bottom_after, top_after).size > 0,
+        }
+
+        # print(f'\nScutoid neighbour diagnostic:\n{pformat(diagnostic)}\n', flush=True)
+        # logger.warning(f'Scutoid neighbour diagnostic: {diagnostic}')
+        # logger.info(f'Scutoid neighbour diagnostic: {diagnostic}')
+        return diagnostic
+
+    def diagnose_scutoid_counts(self, exclude_border_cells=False, cell_id=None):
+        """
+        Compare current scutoid counting with main-cell, tissue-cell and ghost-cell subsets.
+        """
+        excluded_neighbours = self.XgID
+        all_cells = self.Cells
+        main_cells = [
+            c_cell for c_cell in self.Cells[:self.nCells]
+            if c_cell.AliveStatus is not None
+        ]
+        tissue_cells = [
+            c_cell for c_cell in main_cells
+            if c_cell.ID not in excluded_neighbours
+        ]
+        ghost_cells = [
+            c_cell for c_cell in all_cells
+            if c_cell.ID in excluded_neighbours
+        ]
+
+        if exclude_border_cells:
+            all_cells = [c_cell for c_cell in all_cells if c_cell.ID not in self.BorderCells]
+            main_cells = [c_cell for c_cell in main_cells if c_cell.ID not in self.BorderCells]
+            tissue_cells = [c_cell for c_cell in tissue_cells if c_cell.ID not in self.BorderCells]
+            ghost_cells = [c_cell for c_cell in ghost_cells if c_cell.ID not in self.BorderCells]
+
+        all_scutoids = [c_cell for c_cell in all_cells if c_cell.is_scutoid(excluded_neighbours)]
+        main_scutoids = [c_cell for c_cell in main_cells if c_cell.is_scutoid(excluded_neighbours)]
+        tissue_scutoids = [c_cell for c_cell in tissue_cells if c_cell.is_scutoid(excluded_neighbours)]
+        ghost_scutoids = [c_cell for c_cell in ghost_cells if c_cell.is_scutoid(excluded_neighbours)]
+
+        diagnostic = {
+            'nCells': self.nCells,
+            'total_cells': len(self.Cells),
+            'xg_count': len(excluded_neighbours),
+            'border_count': len(self.BorderCells),
+            'current_numerator_count': len(all_scutoids),
+            'current_denominator_count': self.nCells - len(self.BorderCells) if exclude_border_cells else self.nCells,
+            'main_cell_count': len(main_cells),
+            'main_scutoid_count': len(main_scutoids),
+            'tissue_cell_count': len(tissue_cells),
+            'tissue_scutoid_count': len(tissue_scutoids),
+            'ghost_cell_count': len(ghost_cells),
+            'ghost_scutoid_count': len(ghost_scutoids),
+            'ghost_scutoid_ids': [c_cell.ID for c_cell in ghost_scutoids],
+            'sample_cell': self.diagnose_scutoid_neighbours(cell_id),
+        }
+
+        # print(f'\nScutoid count diagnostic:\n{pformat(diagnostic)}\n', flush=True)
+        # logger.warning(f'Scutoid count diagnostic: {diagnostic}')
+        # logger.info(f'Scutoid count diagnostic: {diagnostic}')
+        return diagnostic
+
     def compute_percentage_of_scutoids(self, exclude_border_cells=False):
         """
         Compute the percentage of scutoids
         :return:
         """
 
+        # self.diagnose_scutoid_counts(exclude_border_cells=exclude_border_cells)
+
         if exclude_border_cells:
-            scutoid_cells = [c_cell for c_cell in self.Cells if c_cell.is_scutoid() and c_cell.ID not in self.BorderCells]
+            scutoid_cells = [c_cell for c_cell in self.Cells
+                             if c_cell.is_scutoid(self.XgID) and c_cell.ID not in self.BorderCells]
             percentage_scutoids = len(scutoid_cells) / (self.nCells - len(self.BorderCells)) * 100
         else:
-            scutoid_cells = [c_cell for c_cell in self.Cells if c_cell.is_scutoid()]
+            scutoid_cells = [c_cell for c_cell in self.Cells if c_cell.is_scutoid(self.XgID)]
             percentage_scutoids = len(scutoid_cells) / self.nCells * 100
 
         return percentage_scutoids
@@ -1732,7 +1842,7 @@ class Geo:
         Obtain the non-scutoid cells
         :return:
         """
-        non_scutoid_cells = [c_cell for c_cell in self.Cells if not c_cell.is_scutoid()]
+        non_scutoid_cells = [c_cell for c_cell in self.Cells if not c_cell.is_scutoid(self.XgID)]
         return non_scutoid_cells
 
     def create_substrate_cells(self, c_set, domain='Bottom'):
@@ -1912,11 +2022,14 @@ class Geo:
         new_cell.ID = len(self.Cells)
         new_cell.AliveStatus = alive_status
         new_cell.Vol = 0
+        new_cell.scutoid_excluded_neighbours = self.XgID
         self.Cells.append(new_cell)
 
         if alive_status is None:
             # Add to the list of ghost nodes
             self.XgID = np.append(self.XgID, new_cell.ID)
+            for c_cell in self.Cells:
+                c_cell.scutoid_excluded_neighbours = self.XgID
 
         return new_cell.ID
 
