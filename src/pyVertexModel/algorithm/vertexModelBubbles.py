@@ -303,16 +303,21 @@ def extrapolate_ys_faces_ellipsoid(geo, c_set):
     # Original axis values
     Ys_top = np.concatenate([cell.Y for cell in geo.Cells[1:c_set.TotalCells]])
 
-    a, b, c, paramsOptimized_top = fit_ellipsoid_to_points(Ys_top)
-    a, b, c, paramsOptimized_bottom = fit_ellipsoid_to_points(geo.Cells[0].Y)
+    # a, b, c, paramsOptimized_top = fit_ellipsoid_to_points(Ys_top)
+    # a, b, c, paramsOptimized_bottom = fit_ellipsoid_to_points(geo.Cells[0].Y)
 
-    # Normalised based on those
-    ellipsoid_axis_normalised1 = c_set.ellipsoid_axis1 / paramsOptimized_top[0]
-    ellipsoid_axis_normalised2 = c_set.ellipsoid_axis2 / paramsOptimized_top[1]
-    ellipsoid_axis_normalised3 = c_set.ellipsoid_axis3 / paramsOptimized_top[2]
-    lumen_axis_normalised1 = c_set.lumen_axis1 / paramsOptimized_bottom[0]
-    lumen_axis_normalised2 = c_set.lumen_axis2 / paramsOptimized_bottom[1]
-    lumen_axis_normalised3 = c_set.lumen_axis3 / paramsOptimized_bottom[2]
+    # Old scaling-based extrapolation. This stretched coordinates independently and caused spikes in cysts.
+    # ellipsoid_axis_normalised1 = c_set.ellipsoid_axis1 / paramsOptimized_top[0]
+    # ellipsoid_axis_normalised2 = c_set.ellipsoid_axis2 / paramsOptimized_top[1]
+    # ellipsoid_axis_normalised3 = c_set.ellipsoid_axis3 / paramsOptimized_top[2]
+    # lumen_axis_normalised1 = c_set.lumen_axis1 / paramsOptimized_bottom[0]
+    # lumen_axis_normalised2 = c_set.lumen_axis2 / paramsOptimized_bottom[1]
+    # lumen_axis_normalised3 = c_set.lumen_axis3 / paramsOptimized_bottom[2]
+
+    outer_axes = np.array([c_set.ellipsoid_axis1, c_set.ellipsoid_axis2, c_set.ellipsoid_axis3])
+    lumen_axes = np.array([c_set.lumen_axis1, c_set.lumen_axis2, c_set.lumen_axis3])
+    outer_origin = np.mean(Ys_top, axis=0)
+    lumen_origin = np.mean(geo.Cells[0].Y, axis=0)
 
     # Extrapolate top layer as the outer ellipsoid, the bottom layer as the lumen, and lateral is rebuilt.
     allTs = np.unique(np.sort(np.concatenate([cell.T for cell in geo.Cells[:c_set.TotalCells]]), axis=1), axis=0)
@@ -338,25 +343,19 @@ def extrapolate_ys_faces_ellipsoid(geo, c_set):
         for nodeInTet in tetToCheck:
             if (nodeInTet not in geo.XgTop and geo.Cells[nodeInTet] is not None and
                     geo.Cells[nodeInTet].Y is not None):
-                newPoint = geo.Cells[nodeInTet].Y[
-                    np.all(np.isin(geo.Cells[nodeInTet].T, tetToCheck), axis=1)]
-                newPoint_extrapolated = extrapolate_points_to_ellipsoid(newPoint, ellipsoid_axis_normalised1,
-                                                                        ellipsoid_axis_normalised2,
-                                                                        ellipsoid_axis_normalised3)
-                geo.Cells[nodeInTet].Y[
-                    np.all(np.isin(geo.Cells[nodeInTet].T, tetToCheck), axis=1)] = newPoint_extrapolated
+                tet_mask = np.all(np.isin(geo.Cells[nodeInTet].T, tetToCheck), axis=1)
+                newPoint = geo.Cells[nodeInTet].Y[tet_mask]
+                newPoint_extrapolated = project_points_to_ellipsoid(newPoint, outer_axes, outer_origin)
+                geo.Cells[nodeInTet].Y[tet_mask] = newPoint_extrapolated
 
     for tetToCheck in bottomsTs:
         for nodeInTet in tetToCheck:
             if (nodeInTet not in geo.XgTop and geo.Cells[nodeInTet] is not None and
                     geo.Cells[nodeInTet].Y is not None):
-                newPoint = geo.Cells[nodeInTet].Y[
-                    np.all(np.isin(geo.Cells[nodeInTet].T, tetToCheck), axis=1)]
-                newPoint_extrapolated = extrapolate_points_to_ellipsoid(newPoint, lumen_axis_normalised1,
-                                                                        lumen_axis_normalised2,
-                                                                        lumen_axis_normalised3)
-                geo.Cells[nodeInTet].Y[
-                    np.all(np.isin(geo.Cells[nodeInTet].T, tetToCheck), axis=1)] = newPoint_extrapolated
+                tet_mask = np.all(np.isin(geo.Cells[nodeInTet].T, tetToCheck), axis=1)
+                newPoint = geo.Cells[nodeInTet].Y[tet_mask]
+                newPoint_extrapolated = project_points_to_ellipsoid(newPoint, lumen_axes, lumen_origin)
+                geo.Cells[nodeInTet].Y[tet_mask] = newPoint_extrapolated
 
     for c_cell in geo.Cells:
         if c_cell.AliveStatus is not None and c_cell.Y is not None and len(c_cell.Y) > 0:
@@ -395,6 +394,22 @@ def extrapolate_points_to_ellipsoid(points, ellipsoid_axis_normalised1, ellipsoi
     points[:, 2] = points[:, 2] * ellipsoid_axis_normalised3
 
     return points
+
+
+def project_points_to_ellipsoid(points, axes, origin):
+    if len(points) == 0:
+        return points
+
+    shifted = points - origin
+
+    denom = np.sqrt(
+        (shifted[:, 0] / axes[0]) ** 2 +
+        (shifted[:, 1] / axes[1]) ** 2 +
+        (shifted[:, 2] / axes[2]) ** 2
+    )
+
+    denom[denom == 0] = 1.0
+    return origin + shifted / denom[:, None]
 
 
 class VertexModelBubbles(VertexModel):

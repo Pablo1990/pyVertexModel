@@ -69,6 +69,7 @@ class Cell:
         self.vertices_and_faces_to_remodel = np.array([], dtype='int')
         self.substrate_cell_top = None
         self.substrate_cell_bottom = None
+        self.scutoid_excluded_neighbours = None
 
         ## Individual mechanical parameters
         # Surface area
@@ -731,12 +732,23 @@ class Cell:
         """
         return np.linalg.norm(self.Y - centre_of_tissue)
 
-    def is_scutoid(self):
+    def is_scutoid(self, excluded_neighbours=None):
         """
         Check if the cell is a scutoid
+        :param excluded_neighbours: Boundary node IDs to ignore when comparing top and bottom neighbours.
         :return:
         """
-        return setxor1d(self.compute_neighbours(location_filter=2), self.compute_neighbours(location_filter=0)).size > 0
+        bottom_neighbours = self.compute_neighbours(location_filter=2)
+        top_neighbours = self.compute_neighbours(location_filter=0)
+
+        if excluded_neighbours is None:
+            excluded_neighbours = getattr(self, 'scutoid_excluded_neighbours', None)
+
+        if excluded_neighbours is not None:
+            bottom_neighbours = np.setdiff1d(bottom_neighbours, excluded_neighbours)
+            top_neighbours = np.setdiff1d(top_neighbours, excluded_neighbours)
+
+        return setxor1d(bottom_neighbours, top_neighbours).size > 0
 
 
     def check_inverted(self):
