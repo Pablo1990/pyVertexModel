@@ -316,9 +316,11 @@ def extrapolate_ys_faces_ellipsoid(geo, c_set):
 
     outer_axes = np.array([c_set.ellipsoid_axis1, c_set.ellipsoid_axis2, c_set.ellipsoid_axis3])
     lumen_axes = np.array([c_set.lumen_axis1, c_set.lumen_axis2, c_set.lumen_axis3])
-    outer_origin = np.mean(Ys_top, axis=0)
+    outer_origin = np.array([0.0, 0.0, 0.0])
     lumen_origin = np.mean(geo.Cells[0].Y, axis=0)
-    extrapolation_alpha = 0.10
+    extrapolation_alpha = 0.20
+    almost_top_alpha = 0.06
+    max_outer_step = 0.25 * c_set.s
 
     # Extrapolate top layer as the outer ellipsoid, the bottom layer as the lumen, and lateral is rebuilt.
     allTs = np.unique(np.sort(np.concatenate([cell.T for cell in geo.Cells[:c_set.TotalCells]]), axis=1), axis=0)
@@ -329,8 +331,13 @@ def extrapolate_ys_faces_ellipsoid(geo, c_set):
 
     topTs_old = allTs[ghost_counts > 0]
     topTs = allTs[ghost_counts == 3]
+    almostTopTs = allTs[ghost_counts == 2]
+    lateralTopTs = allTs[ghost_counts == 1]
     logger.info(f"Old topTs: {len(topTs_old)}")
     logger.info(f"Strict outer topTs: {len(topTs)}")
+    logger.info(f"Almost outer topTs: {len(almostTopTs)}")
+    logger.info(f"Lateral outer topTs: {len(lateralTopTs)}")
+    logger.info(f"Max outer extrapolation step: {max_outer_step}")
 
     lumen_id = 0
     regular_cells = np.arange(c_set.TotalCells)
@@ -349,15 +356,35 @@ def extrapolate_ys_faces_ellipsoid(geo, c_set):
      #   f"Proposed strict bottomsTs (exactly 1 ghost): {np.sum(bottom_lumen & contains_regular_non_lumen & (ghost_counts_bottom == 1))}")
     #bottomsTs = allTs[contains_lumen & contains_regular_non_lumen]
 
+    moved_top_points = 0
+    moved_almost_top_points = 0
+    moved_bottom_points = 0
+
     # Changes vertices of other cells
     for tetToCheck in topTs:
         for nodeInTet in tetToCheck:
             if (nodeInTet not in geo.XgTop and geo.Cells[nodeInTet] is not None and
                     geo.Cells[nodeInTet].Y is not None):
                 tet_mask = np.all(np.isin(geo.Cells[nodeInTet].T, tetToCheck), axis=1)
+                moved_top_points += np.sum(tet_mask)
                 newPoint = geo.Cells[nodeInTet].Y[tet_mask]
                 projected = project_points_to_ellipsoid(newPoint, outer_axes, outer_origin)
-                newPoint_extrapolated = (1 - extrapolation_alpha) * newPoint + extrapolation_alpha * projected
+                newPoint_extrapolated = blend_projected_points(
+                    newPoint, projected, extrapolation_alpha, max_outer_step
+                )
+                geo.Cells[nodeInTet].Y[tet_mask] = newPoint_extrapolated
+
+    for tetToCheck in almostTopTs:
+        for nodeInTet in tetToCheck:
+            if (nodeInTet not in geo.XgTop and geo.Cells[nodeInTet] is not None and
+                    geo.Cells[nodeInTet].Y is not None):
+                tet_mask = np.all(np.isin(geo.Cells[nodeInTet].T, tetToCheck), axis=1)
+                moved_almost_top_points += np.sum(tet_mask)
+                newPoint = geo.Cells[nodeInTet].Y[tet_mask]
+                projected = project_points_to_ellipsoid(newPoint, outer_axes, outer_origin)
+                newPoint_extrapolated = blend_projected_points(
+                    newPoint, projected, almost_top_alpha, max_outer_step
+                )
                 geo.Cells[nodeInTet].Y[tet_mask] = newPoint_extrapolated
 
     for tetToCheck in bottomsTs:
@@ -365,10 +392,15 @@ def extrapolate_ys_faces_ellipsoid(geo, c_set):
             if (nodeInTet not in geo.XgTop and geo.Cells[nodeInTet] is not None and
                     geo.Cells[nodeInTet].Y is not None):
                 tet_mask = np.all(np.isin(geo.Cells[nodeInTet].T, tetToCheck), axis=1)
+                moved_bottom_points += np.sum(tet_mask)
                 newPoint = geo.Cells[nodeInTet].Y[tet_mask]
                 projected = project_points_to_ellipsoid(newPoint, lumen_axes, lumen_origin)
                 newPoint_extrapolated = (1 - extrapolation_alpha) * newPoint + extrapolation_alpha * projected
                 geo.Cells[nodeInTet].Y[tet_mask] = newPoint_extrapolated
+
+    logger.info(f"Moved strict outer Y points: {moved_top_points}")
+    logger.info(f"Moved almost outer Y points: {moved_almost_top_points}")
+    logger.info(f"Moved lumen Y points: {moved_bottom_points}")
 
     for c_cell in geo.Cells:
         if c_cell.AliveStatus is not None and c_cell.Y is not None and len(c_cell.Y) > 0:
@@ -423,6 +455,19 @@ def project_points_to_ellipsoid(points, axes, origin):
 
     denom[denom == 0] = 1.0
     return origin + shifted / denom[:, None]
+
+
+def blend_projected_points(points, projected, alpha, max_step=None):
+    if len(points) == 0:
+        return points
+
+    delta = alpha * (projected - points)
+    if max_step is not None:
+        lengths = np.linalg.norm(delta, axis=1)
+        scale = np.minimum(1.0, max_step / np.maximum(lengths, 1e-12))
+        delta = delta * scale[:, None]
+
+    return points + delta
 
 
 class VertexModelBubbles(VertexModel):
