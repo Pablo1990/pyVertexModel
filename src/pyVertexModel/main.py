@@ -1,8 +1,5 @@
 import os
 import sys
-import warnings
-
-warnings.filterwarnings("error", category=RuntimeWarning)
 
 from pyVertexModel import PROJECT_DIRECTORY
 from pyVertexModel.algorithm.vertexModelBubbles import (

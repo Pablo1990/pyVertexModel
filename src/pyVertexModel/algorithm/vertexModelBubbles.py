@@ -318,6 +318,7 @@ def extrapolate_ys_faces_ellipsoid(geo, c_set):
     lumen_axes = np.array([c_set.lumen_axis1, c_set.lumen_axis2, c_set.lumen_axis3])
     outer_origin = np.mean(Ys_top, axis=0)
     lumen_origin = np.mean(geo.Cells[0].Y, axis=0)
+    extrapolation_alpha = 0.10
 
     # Extrapolate top layer as the outer ellipsoid, the bottom layer as the lumen, and lateral is rebuilt.
     allTs = np.unique(np.sort(np.concatenate([cell.T for cell in geo.Cells[:c_set.TotalCells]]), axis=1), axis=0)
@@ -335,8 +336,18 @@ def extrapolate_ys_faces_ellipsoid(geo, c_set):
     regular_cells = np.arange(c_set.TotalCells)
     regular_non_lumen = regular_cells[regular_cells != lumen_id]
     contains_lumen = np.any(allTs == lumen_id, axis=1)
+    contains_xgtop = np.any(np.isin(allTs, geo.XgTop), axis=1)
     contains_regular_non_lumen = np.any(np.isin(allTs, regular_non_lumen), axis=1)
-    bottomsTs = allTs[contains_lumen & contains_regular_non_lumen]
+    bottomsTs = allTs[contains_lumen & contains_regular_non_lumen & ~contains_xgtop]
+
+    ghost_counts_bottom = np.sum(np.isin(allTs, geo.XgID), axis=1)
+    bottom_lumen = np.any(allTs == lumen_id, axis=1)
+
+    #logger.info(f"Tets touching lumen: {np.sum(bottom_lumen)}")
+    #logger.info(f"Ghost counts for lumen tets: {np.unique(ghost_counts_bottom[bottom_lumen], return_counts=True)}")
+    #logger.info(
+     #   f"Proposed strict bottomsTs (exactly 1 ghost): {np.sum(bottom_lumen & contains_regular_non_lumen & (ghost_counts_bottom == 1))}")
+    #bottomsTs = allTs[contains_lumen & contains_regular_non_lumen]
 
     # Changes vertices of other cells
     for tetToCheck in topTs:
@@ -345,7 +356,8 @@ def extrapolate_ys_faces_ellipsoid(geo, c_set):
                     geo.Cells[nodeInTet].Y is not None):
                 tet_mask = np.all(np.isin(geo.Cells[nodeInTet].T, tetToCheck), axis=1)
                 newPoint = geo.Cells[nodeInTet].Y[tet_mask]
-                newPoint_extrapolated = project_points_to_ellipsoid(newPoint, outer_axes, outer_origin)
+                projected = project_points_to_ellipsoid(newPoint, outer_axes, outer_origin)
+                newPoint_extrapolated = (1 - extrapolation_alpha) * newPoint + extrapolation_alpha * projected
                 geo.Cells[nodeInTet].Y[tet_mask] = newPoint_extrapolated
 
     for tetToCheck in bottomsTs:
@@ -354,7 +366,8 @@ def extrapolate_ys_faces_ellipsoid(geo, c_set):
                     geo.Cells[nodeInTet].Y is not None):
                 tet_mask = np.all(np.isin(geo.Cells[nodeInTet].T, tetToCheck), axis=1)
                 newPoint = geo.Cells[nodeInTet].Y[tet_mask]
-                newPoint_extrapolated = project_points_to_ellipsoid(newPoint, lumen_axes, lumen_origin)
+                projected = project_points_to_ellipsoid(newPoint, lumen_axes, lumen_origin)
+                newPoint_extrapolated = (1 - extrapolation_alpha) * newPoint + extrapolation_alpha * projected
                 geo.Cells[nodeInTet].Y[tet_mask] = newPoint_extrapolated
 
     for c_cell in geo.Cells:
