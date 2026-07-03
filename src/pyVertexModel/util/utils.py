@@ -48,7 +48,7 @@ def find_optimal_deform_array_X_Y(geo, deform_array_Z, middle_point, volumes):
     return result.x
 
 
-def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None, scalar_to_display='Volume'):
+def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None, scalar_to_display='ID'):
     """
     Create a screenshot of the current state of the model.
     :param geo:

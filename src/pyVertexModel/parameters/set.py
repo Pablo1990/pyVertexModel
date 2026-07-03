@@ -136,7 +136,7 @@ class Set:
             self.nu_Local_EdgeBased = 0
             self.LocalViscosityOption = 2
             # =========================== remodelling ============================
-            self.Remodelling = True
+            self.Remodelling = False
             self.contributionOldYs = 0
             self.RemodelStiffness = None
             self.Remodel_stiffness_wound = None
@@ -358,8 +358,8 @@ class Set:
         self.CellHeight = 15
         self.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/Cyst')
         self.lambdaR = 0
-        self.Remodelling = True
-        self.RemodelStiffness = 0.1
+        self.Remodelling = False
+        self.RemodelStiffness = 2
 
     def cyst_scratch(self):
         self.InputGeo = 'Bubbles_Cyst'
@@ -369,12 +369,13 @@ class Set:
         self.CellHeight = 15
         self.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/Cyst')
         self.lambdaR = 0
-        self.Remodelling = True
-        self.RemodelStiffness = 0.1
+        self.Remodelling = False
+        self.RemodelStiffness = 2
 
         self.Substrate = 0
         self.periodic_boundaries = False
         self.resize_z = None
+        self.frozen_face_centres = True
 
         self.ellipsoid_axis1 = 10.0
         self.ellipsoid_axis2 = 1.0
@@ -470,7 +471,7 @@ class Set:
         self.lambdaS4_bottom = self.lambdaS2
 
         self.VTK = False
-        self.Remodelling = True
+        self.Remodelling = False
         self.ablation = False
         self.noise_random = 0
 
