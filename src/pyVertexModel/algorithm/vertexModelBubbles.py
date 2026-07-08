@@ -1,14 +1,16 @@
 import logging
 import math
 import statistics
+from collections import Counter
 
 import numpy as np
 from scipy.optimize import minimize
-from scipy.spatial import Delaunay
+from scipy.spatial import ConvexHull, Delaunay
 
 from pyVertexModel.algorithm.vertexModel import VertexModel
 from pyVertexModel.util.utils import save_state
 from pyVertexModel.geometry.geo import Geo
+from pyVertexModel.algorithm.vertexModel import add_faces_and_vertices_to_x, create_tetrahedra
 
 logger = logging.getLogger("pyVertexModel")
 
@@ -122,41 +124,43 @@ def delaunay_compute_entities(tris, X, XgID, XgIDBB, nCells, s):
     return X, XgID
 
 
-def generate_points_in_sphere(total_cells):
-    """
-    Generate points in a sphere
-    :param total_cells: The total number of cells
-    :return:        The X, Y, Z coordinates of the points
-    """
-    r_unit = 1
-
-    # Calculating area, distance, and increments for theta and phi
-    Area = 4 * math.pi * r_unit ** 2 / total_cells
-    Distance = math.sqrt(Area)
-    M_theta = round(math.pi / Distance)
-    d_theta = math.pi / M_theta
-    d_phi = Area / d_theta
-
-    # Initializing lists for X, Y, Z coordinates
-    X, Y, Z = [], [], []
-    N_new = 0
-
-    for m in range(M_theta):
-        Theta = math.pi * (m + 0.5) / M_theta
-        M_phi = round(2 * math.pi * math.sin(Theta) / d_phi)
-
-        for n in range(M_phi):
-            Phi = 2 * math.pi * n / M_phi
-
-            # Updating node count
-            N_new += 1
-
-            # Calculating and appending coordinates
-            X.append(math.sin(Theta) * math.cos(Phi))
-            Y.append(math.sin(Theta) * math.sin(Phi))
-            Z.append(math.cos(Theta))
-
-    return X, Y, Z, N_new
+# Old Bubbles_Cyst seed generator, kept commented for reference. The cyst path uses ellipsoid shell initializer below.
+#
+# def generate_points_in_sphere(total_cells):
+#     """
+#     Generate points in a sphere
+#     :param total_cells: The total number of cells
+#     :return:        The X, Y, Z coordinates of the points
+#     """
+#     r_unit = 1
+#
+#     # Calculating area, distance, and increments for theta and phi
+#     Area = 4 * math.pi * r_unit ** 2 / total_cells
+#     Distance = math.sqrt(Area)
+#     M_theta = round(math.pi / Distance)
+#     d_theta = math.pi / M_theta
+#     d_phi = Area / d_theta
+#
+#     # Initializing lists for X, Y, Z coordinates
+#     X, Y, Z = [], [], []
+#     N_new = 0
+#
+#     for m in range(M_theta):
+#         Theta = math.pi * (m + 0.5) / M_theta
+#         M_phi = round(2 * math.pi * math.sin(Theta) / d_phi)
+#
+#         for n in range(M_phi):
+#             Phi = 2 * math.pi * n / M_phi
+#
+#             # Updating node count
+#             N_new += 1
+#
+#             # Calculating and appending coordinates
+#             X.append(math.sin(Theta) * math.cos(Phi))
+#             Y.append(math.sin(Theta) * math.sin(Phi))
+#             Z.append(math.cos(Theta))
+#
+#     return X, Y, Z, N_new
 
 
 def generate_first_ghost_nodes(X):
@@ -226,15 +230,20 @@ def build_topo(c_set, nx=None, ny=None, nz=None, columnar_cells=False):
             else:
                 X_Ids = np.arange(X.shape[0])
 
-    elif c_set.InputGeo == 'Bubbles_Cyst':
-        X, Y, Z, _ = generate_points_in_sphere(c_set.TotalCells)
-
-        X = np.array([X, Y, Z]).T * 10
-
-        # Lumen as the first cell
-        lumenCell = np.mean(X, axis=0)
-        X = np.vstack([lumenCell, X])
-        c_set.TotalCells = X.shape[0]
+    # Old sphere-based Bubbles_Cyst branch. Cysts now use
+    # VertexModelBubbles.initialize_cyst_from_ellipsoid_seed(), which builds
+    # explicit apical/basal ellipsoid shell geometry instead of passing seed
+    # points through the generic 3D Delaunay path.
+    #
+    # elif c_set.InputGeo == 'Bubbles_Cyst':
+    #     X, Y, Z, _ = generate_points_in_sphere(c_set.TotalCells)
+    #
+    #     X = np.array([X, Y, Z]).T * 10
+    #
+    #     # Lumen as the first cell
+    #     lumenCell = np.mean(X, axis=0)
+    #     X = np.vstack([lumenCell, X])
+    #     c_set.TotalCells = X.shape[0]
 
     return X, X_Ids
 
@@ -470,6 +479,286 @@ def blend_projected_points(points, projected, alpha, max_step=None):
     return points + delta
 
 
+#def relax_points_on_ellipsoid(points, axes, center=np.zeros(3), n_iter=100, step_size=0.15):
+ #   """
+ #   Thomson-style relaxation of points constrained to an ellipsoid surface. Not actively used.
+ #   """
+ #   axes = np.asarray(axes, dtype=float)
+ #   center = np.asarray(center, dtype=float)
+ #   pts = np.asarray(points, dtype=float).copy()
+
+ #   for it in range(n_iter):
+ #       diffs = pts[:, None, :] - pts[None, :, :]
+ #       dists = np.linalg.norm(diffs, axis=-1)
+ #       np.fill_diagonal(dists, np.inf)
+ #       weights = 1.0 / (dists ** 2)
+ #       force = np.sum(diffs * weights[:, :, None], axis=1)
+
+ #       rel = pts - center
+ #       normal = rel / axes ** 2
+ #       normal /= np.linalg.norm(normal, axis=1, keepdims=True)
+
+ #       normal_component = np.sum(force * normal, axis=1, keepdims=True) * normal
+ #       tangential_force = force - normal_component
+ #       tangential_force /= np.linalg.norm(tangential_force, axis=1, keepdims=True).clip(min=1e-9)
+
+ #       current_step = step_size * (1 - it / n_iter)
+ #       pts = pts + current_step * tangential_force
+
+ #       rel = pts - center
+ #       norm_axes = np.linalg.norm(rel / axes, axis=1, keepdims=True)
+ #       pts = center + rel / np.maximum(norm_axes, 1e-12)
+
+ #   return pts
+
+
+def generate_micelle_ellipsoid_points(n_points, axes, centre=np.array([0.0, 0.0, 0.0])):
+    """
+    Generate exactly n_points approximately uniformly distributed on an ellipsoid.
+    """
+    axes = np.asarray(axes, dtype=float)
+    centre = np.asarray(centre, dtype=float)
+    a, b, c = axes
+
+    i = np.arange(n_points)
+    golden_angle = np.pi * (3.0 - np.sqrt(5.0))
+
+    y = 1.0 - 2.0 * (i + 0.5) / n_points
+    r = np.sqrt(1.0 - y ** 2)
+    phi = i * golden_angle
+
+    x_s = r * np.cos(phi)
+    y_s = y
+    z_s = r * np.sin(phi)
+
+    points = np.column_stack([
+        centre[0] + a * x_s,
+        centre[1] + b * y_s,
+        centre[2] + c * z_s,
+    ])
+
+    normals = np.column_stack([
+        (points[:, 0] - centre[0]) / (a * a),
+        (points[:, 1] - centre[1]) / (b * b),
+        (points[:, 2] - centre[2]) / (c * c),
+    ])
+    normals /= np.linalg.norm(normals, axis=1)[:, None]
+
+    return points, normals
+
+
+def generate_ellipsoid_surface_points(
+        n_points,
+        axes,
+        centre=np.array([0.0, 0.0, 0.0]),
+        #relax=False,
+        n_iter=150,
+):
+    """
+    Generate ellipsoid surface points for cyst seeding.
+    """
+    points, normals = generate_micelle_ellipsoid_points(
+        n_points=n_points,
+        axes=axes,
+        centre=centre,
+    )
+
+    # if relax:
+    #     points = relax_points_on_ellipsoid(
+    #         points,
+    #         axes,
+    #         center=centre,
+    #         n_iter=n_iter,
+    #     )
+    #
+    #     axes = np.asarray(axes, dtype=float)
+    #     centre = np.asarray(centre, dtype=float)
+    #     a, b, c = axes
+    #     normals = np.column_stack([
+    #         (points[:, 0] - centre[0]) / (a * a),
+    #         (points[:, 1] - centre[1]) / (b * b),
+    #         (points[:, 2] - centre[2]) / (c * c),
+    #     ])
+    #     normals /= np.linalg.norm(normals, axis=1)[:, None]
+
+    return points
+
+
+def place_cyst_seeds(
+        n_points,
+        center=np.array([0.0, 0.0, 0.0]),
+        inner_axes=np.array([4.0, 3.0, 2.5]),
+        outer_axes=np.array([6.0, 4.5, 3.5]),
+        alpha=0.5,
+        max_step=None,
+        relax=False,
+        n_iter=150,
+):
+    centre = np.asarray(center, dtype=float)
+
+    outer_points = generate_ellipsoid_surface_points(
+        n_points,
+        outer_axes,
+        centre,
+        # relax=relax,
+        n_iter=n_iter,
+    )
+
+    inner_points = project_points_to_ellipsoid(
+        outer_points,
+        inner_axes,
+        centre,
+    )
+
+    epithelial_points = blend_projected_points(
+        outer_points,
+        inner_points,
+        alpha,
+        max_step=max_step,
+    )
+
+    return {
+        "outer_points": outer_points,
+        "inner_points": inner_points,
+        "epithelial_points": epithelial_points,
+    }
+
+
+def create_2d_surface_topology(points, center=np.array([0.0, 0.0, 0.0])):
+    """
+    Create surface topology from a point cloud that shares one radial layout.
+    """
+    points = np.asarray(points, dtype=float)
+    center = np.asarray(center, dtype=float)
+    n_cells = points.shape[0]
+    main_cells = np.arange(1, n_cells + 1)
+
+    hull = ConvexHull(points)
+    triangles_connectivity = hull.simplices.astype(int) + 1
+
+    neighbour_edges = []
+    for tri in triangles_connectivity:
+        neighbour_edges.extend([
+            sorted([tri[0], tri[1]]),
+            sorted([tri[1], tri[2]]),
+            sorted([tri[2], tri[0]]),
+        ])
+    neighbours_network = np.unique(np.asarray(neighbour_edges, dtype=int), axis=0)
+
+    cell_dirs = points - center
+    cell_dirs /= np.linalg.norm(cell_dirs, axis=1, keepdims=True)
+
+    vertex_seed_dirs = points[triangles_connectivity - 1].mean(axis=1) - center
+    vertex_seed_dirs /= np.linalg.norm(vertex_seed_dirs, axis=1, keepdims=True)
+
+    cell_edges = []
+    for cell_id in main_cells:
+        vertex_ids = np.where(np.any(triangles_connectivity == cell_id, axis=1))[0]
+
+        radial = cell_dirs[cell_id - 1]
+        local_dirs = vertex_seed_dirs[vertex_ids]
+
+        tangent_a = np.cross(radial, np.array([0.0, 0.0, 1.0]))
+        if np.linalg.norm(tangent_a) < 1e-8:
+            tangent_a = np.cross(radial, np.array([0.0, 1.0, 0.0]))
+        tangent_a /= np.linalg.norm(tangent_a)
+        tangent_b = np.cross(radial, tangent_a)
+
+        rel = local_dirs - radial
+        angles = np.arctan2(rel @ tangent_b, rel @ tangent_a)
+        ordered_vertex_ids = vertex_ids[np.argsort(angles)]
+
+        cell_edges.append(
+            np.column_stack([
+                ordered_vertex_ids,
+                np.roll(ordered_vertex_ids, -1),
+            ])
+        )
+
+    return {
+        "main_cells": main_cells,
+        "triangles_connectivity": triangles_connectivity,
+        "neighbours_network": neighbours_network,
+        "cell_edges": cell_edges,
+        "vertex_seed_dirs": vertex_seed_dirs,
+    }
+
+
+def build_cyst_mesh(result, center, inner_axes, outer_axes):
+    """
+    Build a cyst mesh using one shared topology derived from radial directions.
+    """
+    center = np.asarray(center, dtype=float)
+    inner_axes = np.asarray(inner_axes, dtype=float)
+    outer_axes = np.asarray(outer_axes, dtype=float)
+
+    topology = create_2d_surface_topology(result["outer_points"], center=np.zeros(3))
+    n_cells = len(topology["main_cells"])
+
+    X = np.zeros((n_cells + 1, 3))
+    X[1:] = result["epithelial_points"]
+
+    apical_vertices = project_points_to_ellipsoid(
+        topology["vertex_seed_dirs"],
+        inner_axes,
+        center,
+    )
+
+    basal_vertices = project_points_to_ellipsoid(
+        topology["vertex_seed_dirs"],
+        outer_axes,
+        center,
+    )
+
+    X, apical_face_ids, Xg_apical, apical_vertex_ids = add_faces_and_vertices_to_x(
+        X,
+        result["inner_points"],
+        apical_vertices,
+    )
+
+    Twg_apical = create_tetrahedra(
+        topology["triangles_connectivity"],
+        topology["neighbours_network"],
+        topology["cell_edges"],
+        topology["main_cells"],
+        apical_face_ids,
+        apical_vertex_ids,
+    )
+
+    X, basal_face_ids, Xg_basal, basal_vertex_ids = add_faces_and_vertices_to_x(
+        X,
+        result["outer_points"],
+        basal_vertices,
+    )
+
+    Twg_basal = create_tetrahedra(
+        topology["triangles_connectivity"],
+        topology["neighbours_network"],
+        topology["cell_edges"],
+        topology["main_cells"],
+        basal_face_ids,
+        basal_vertex_ids,
+    )
+
+    Twg_lumen = np.column_stack([
+        np.zeros(topology["triangles_connectivity"].shape[0], dtype=int),
+        topology["triangles_connectivity"],
+    ])
+    Twg = np.vstack([Twg_lumen, Twg_apical, Twg_basal])
+
+    return {
+        "X": X,
+        "Twg": Twg,
+        "topology": topology,
+        "lumen_cell": 0,
+        "main_cells_with_lumen": np.concatenate([[0], topology["main_cells"]]),
+        "Xg_apical": Xg_apical,
+        "Xg_basal": Xg_basal,
+        "apical_vertices": apical_vertices,
+        "basal_vertices": basal_vertices,
+    }
+
+
 class VertexModelBubbles(VertexModel):
     def __init__(self, set_option=None):
         super().__init__(set_option)
@@ -484,7 +773,10 @@ class VertexModelBubbles(VertexModel):
             self.geo = Geo()
 
         if self.set.InputGeo == 'Bubbles_Cyst':
-            self.generate_Xs(None, None, None)
+            self.initialize_cyst_from_ellipsoid_seed()
+            filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
+            save_state(self.geo, filename)
+            return
         else:
             self.generate_Xs(self.geo.nx, self.geo.ny, self.geo.nz)
 
@@ -553,6 +845,125 @@ class VertexModelBubbles(VertexModel):
             Xg = Xg[Xg[:, 2] > np.mean(self.X[:, 2]), :]
             self.geo.XgID = np.arange(self.X.shape[0], self.X.shape[0] + Xg.shape[0] + 2)
             self.X = np.concatenate((self.X, Xg, [np.mean(self.X[:, 0]), np.mean(self.X[:, 1]), -50]), axis=0)
+
+    def initialize_cyst_from_ellipsoid_seed(self):
+        """
+        Initialize Bubbles_Cyst from the notebook-derived ellipsoid shell mesh.
+        """
+        center = np.array([0.0, 0.0, 0.0])
+        inner_axes = np.array([self.set.lumen_axis1, self.set.lumen_axis2, self.set.lumen_axis3])
+        outer_axes = np.array([self.set.ellipsoid_axis1, self.set.ellipsoid_axis2, self.set.ellipsoid_axis3])
+
+        epithelial_cells = self.set.TotalCells - 1
+        result = place_cyst_seeds(
+            n_points=epithelial_cells,
+            center=center,
+            inner_axes=inner_axes,
+            outer_axes=outer_axes,
+            alpha=0.5,
+        )
+        mesh = build_cyst_mesh(result, center, inner_axes, outer_axes)
+
+        self.X = mesh["X"]
+        self.geo.nCells = len(mesh["main_cells_with_lumen"])
+        self.set.TotalCells = self.geo.nCells
+
+        self.geo.XgBottom = [mesh["lumen_cell"]]
+        self.geo.XgTop = np.concatenate([mesh["Xg_apical"], mesh["Xg_basal"]])
+        self.geo.XgID = np.append(self.geo.XgTop, mesh["lumen_cell"])
+        self.geo.Main_cells = range(self.geo.nCells)
+
+        self.geo.build_cells(self.set, self.X, mesh["Twg"])
+        self._diagnose_cyst_mesh_build(mesh, center, inner_axes, outer_axes)
+
+    def _diagnose_cyst_mesh_build(self, mesh, center, inner_axes, outer_axes):
+        """
+        Log consistency checks for the explicit Bubbles_Cyst mesh after Geo builds it.
+        """
+        twg = mesh["Twg"]
+
+        logger.info("Bubbles_Cyst mesh diagnostics:")
+        logger.info("  X shape: %s", self.X.shape)
+        logger.info("  Twg shape: %s", twg.shape)
+        logger.info("  Twg min/max: %s/%s", np.min(twg), np.max(twg))
+        logger.info("  nCells: %s", self.geo.nCells)
+        logger.info("  XgBottom: %s", self.geo.XgBottom)
+        logger.info("  XgTop count: %s", len(self.geo.XgTop))
+        logger.info("  XgID count: %s", len(self.geo.XgID))
+        logger.info("  Xg_apical count: %s", len(mesh["Xg_apical"]))
+        logger.info("  Xg_basal count: %s", len(mesh["Xg_basal"]))
+
+        overlap = np.intersect1d(self.geo.XgTop, self.geo.XgBottom)
+        if len(overlap) > 0:
+            raise ValueError(f"Bubbles_Cyst XgTop and XgBottom overlap: {overlap}")
+        if np.min(twg) < 0:
+            raise ValueError("Bubbles_Cyst Twg contains negative node IDs.")
+        if np.max(twg) >= len(self.X):
+            raise ValueError("Bubbles_Cyst Twg references node IDs outside X.")
+        if np.any(np.asarray(self.geo.XgID) >= len(self.X)):
+            raise ValueError("Bubbles_Cyst XgID references node IDs outside X.")
+
+        face_types = Counter()
+        bad_faces = []
+        for c_cell in self.geo.Cells:
+            if c_cell.AliveStatus is None:
+                continue
+
+            for c_face in c_cell.Faces:
+                face_types[c_face.InterfaceType] += 1
+                touches_top = any(node in self.geo.XgTop for node in c_face.ij)
+                touches_bottom = any(node in self.geo.XgBottom for node in c_face.ij)
+
+                if touches_top and c_face.InterfaceType != 0:
+                    bad_faces.append((c_cell.ID, c_face.ij, c_face.InterfaceType, "expected Top"))
+                if touches_bottom and c_face.InterfaceType != 2:
+                    bad_faces.append((c_cell.ID, c_face.ij, c_face.InterfaceType, "expected Bottom"))
+
+        logger.info("  face types: %s", dict(face_types))
+        if bad_faces:
+            logger.warning("  bad face classifications: %s", bad_faces[:20])
+
+        apical_face_types = Counter()
+        basal_face_types = Counter()
+        for c_cell in self.geo.Cells:
+            if c_cell.AliveStatus is None:
+                continue
+
+            for c_face in c_cell.Faces:
+                touches_apical = any(node in mesh["Xg_apical"] for node in c_face.ij)
+                touches_basal = any(node in mesh["Xg_basal"] for node in c_face.ij)
+
+                if touches_apical:
+                    apical_face_types[c_face.InterfaceType] += 1
+                if touches_basal:
+                    basal_face_types[c_face.InterfaceType] += 1
+
+        logger.info("  Apical ghost face types: %s", dict(apical_face_types))
+        logger.info("  Basal ghost face types: %s", dict(basal_face_types))
+
+        apical_err = self._ellipsoid_error(mesh["apical_vertices"], inner_axes, center)
+        basal_err = self._ellipsoid_error(mesh["basal_vertices"], outer_axes, center)
+        logger.info(
+            "  apical vertex ellipsoid error min/max: %.3e/%.3e",
+            np.min(apical_err),
+            np.max(apical_err),
+        )
+        logger.info(
+            "  basal vertex ellipsoid error min/max: %.3e/%.3e",
+            np.min(basal_err),
+            np.max(basal_err),
+        )
+
+        tol = 1e-8
+        if np.max(np.abs(apical_err)) > tol:
+            logger.warning("  apical vertices are off the inner ellipsoid by more than %s.", tol)
+        if np.max(np.abs(basal_err)) > tol:
+            logger.warning("  basal vertices are off the outer ellipsoid by more than %s.", tol)
+
+    @staticmethod
+    def _ellipsoid_error(points, axes, center):
+        rel = (np.asarray(points, dtype=float) - np.asarray(center, dtype=float)) / np.asarray(axes, dtype=float)
+        return np.sum(rel * rel, axis=1) - 1.0
 
     def copy(self):
         """
