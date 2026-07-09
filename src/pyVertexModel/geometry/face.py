@@ -102,7 +102,7 @@ class Face:
             self.Centre = oldFace.Centre
         else:
             self.build_face_centre(ij, nCells, Cell.X, Cell.Y[face_ids, :], Set.f,
-                                   "Bubbles" in Set.InputGeo)
+                                   Set.InputGeo == "Bubbles")
 
         self.build_edges(Cell.T, face_ids, self.Centre, self.InterfaceType, Cell.X, Cell.Y,
                          list(range(nCells)))
