@@ -221,6 +221,9 @@ class Geo:
         self.RemovedDebrisCells = []
         self.AssembleNodes = []
         self.y_ablated = []
+        self.XgApical = None
+        self.XgBasal = None
+        self.XgLumen = None
 
         if mat_file is None:
             self.numF = None

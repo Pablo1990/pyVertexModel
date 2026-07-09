@@ -5,7 +5,7 @@ from collections import Counter
 
 import numpy as np
 from scipy.optimize import minimize
-from scipy.spatial import ConvexHull, Delaunay
+from scipy.spatial import ConvexHull, Delaunay, cKDTree
 
 from pyVertexModel.algorithm.vertexModel import VertexModel
 from pyVertexModel.util.utils import save_state
@@ -752,6 +752,10 @@ def build_cyst_mesh(result, center, inner_axes, outer_axes):
         "topology": topology,
         "lumen_cell": 0,
         "main_cells_with_lumen": np.concatenate([[0], topology["main_cells"]]),
+        "apical_face_ids": apical_face_ids,
+        "basal_face_ids": basal_face_ids,
+        "apical_vertex_ids": apical_vertex_ids,
+        "basal_vertex_ids": basal_vertex_ids,
         "Xg_apical": Xg_apical,
         "Xg_basal": Xg_basal,
         "apical_vertices": apical_vertices,
@@ -871,6 +875,9 @@ class VertexModelBubbles(VertexModel):
         self.geo.XgBottom = [mesh["lumen_cell"]]
         self.geo.XgTop = np.concatenate([mesh["Xg_apical"], mesh["Xg_basal"]])
         self.geo.XgID = np.append(self.geo.XgTop, mesh["lumen_cell"])
+        self.geo.XgLumen = np.array([mesh["lumen_cell"]])
+        self.geo.XgApical = mesh["Xg_apical"]
+        self.geo.XgBasal = mesh["Xg_basal"]
         self.geo.Main_cells = range(self.geo.nCells)
 
         self.geo.build_cells(self.set, self.X, mesh["Twg"])
@@ -890,12 +897,58 @@ class VertexModelBubbles(VertexModel):
         logger.info("  XgBottom: %s", self.geo.XgBottom)
         logger.info("  XgTop count: %s", len(self.geo.XgTop))
         logger.info("  XgID count: %s", len(self.geo.XgID))
-        logger.info("  Xg_apical count: %s", len(mesh["Xg_apical"]))
-        logger.info("  Xg_basal count: %s", len(mesh["Xg_basal"]))
+        logger.info("  XgApical count: %s", len(self.geo.XgApical))
+        logger.info("  XgBasal count: %s", len(self.geo.XgBasal))
+        logger.info("  XgLumen: %s", self.geo.XgLumen)
+        print("apical_face_ids min:", mesh["apical_face_ids"].min() if "apical_face_ids" in mesh else "n/a")
+        print("basal_face_ids min:", mesh["basal_face_ids"].min() if "basal_face_ids" in mesh else "n/a")
+        print("apical_vertex_ids min:", mesh["apical_vertex_ids"].min() if "apical_vertex_ids" in mesh else "n/a")
+        print("basal_vertex_ids min:", mesh["basal_vertex_ids"].min() if "basal_vertex_ids" in mesh else "n/a")
+        print("Xg_apical min:", mesh["Xg_apical"].min())
+        print("Xg_basal min:", mesh["Xg_basal"].min())
+        if len(self.geo.Cells) > 5 and "apical_vertices" in mesh:
+            cell = self.geo.Cells[5]  # pick a real cell, not lumen
+            print("Model Y (first 3 rows):", cell.Y[:3])
+            print("Expected apical vertex (approx nearby):", mesh["apical_vertices"][:3])
+
+        if "apical_vertices" in mesh and "basal_vertices" in mesh:
+            apical_tree = cKDTree(mesh["apical_vertices"])
+            basal_tree = cKDTree(mesh["basal_vertices"])
+            for cid in [1, 5, 10]:
+                if cid >= len(self.geo.Cells):
+                    print(f"Cell {cid}: missing")
+                    continue
+
+                cell = self.geo.Cells[cid]
+                if cell.Y is None or len(cell.Y) == 0:
+                    print(f"Cell {cid}: no Y")
+                    continue
+
+                d_apical, _ = apical_tree.query(cell.Y)
+                d_basal, _ = basal_tree.query(cell.Y)
+                nearest = np.minimum(d_apical, d_basal)
+                print(
+                    f"Cell {cid}: Y distances to nearest true vertex - "
+                    f"mean={nearest.mean():.4f}, max={nearest.max():.4f}"
+                )
+
+        if len(self.geo.Cells) > 5:
+            cell = self.geo.Cells[5]
+            print("Cell 5 T (its own tetrahedra):")
+            print(cell.T)
+            for tet in cell.T[:3]:
+                print("Tet nodes:", tet)
+                print("Node positions:\n", self.X[tet])
 
         overlap = np.intersect1d(self.geo.XgTop, self.geo.XgBottom)
         if len(overlap) > 0:
             raise ValueError(f"Bubbles_Cyst XgTop and XgBottom overlap: {overlap}")
+        explicit_overlap = np.intersect1d(self.geo.XgApical, self.geo.XgBasal)
+        if len(explicit_overlap) > 0:
+            raise ValueError(f"Bubbles_Cyst XgApical and XgBasal overlap: {explicit_overlap}")
+        explicit_shell = np.sort(np.concatenate([self.geo.XgApical, self.geo.XgBasal]))
+        if not np.array_equal(explicit_shell, np.sort(self.geo.XgTop)):
+            raise ValueError("Bubbles_Cyst XgTop does not match XgApical + XgBasal.")
         if np.min(twg) < 0:
             raise ValueError("Bubbles_Cyst Twg contains negative node IDs.")
         if np.max(twg) >= len(self.X):
@@ -930,8 +983,8 @@ class VertexModelBubbles(VertexModel):
                 continue
 
             for c_face in c_cell.Faces:
-                touches_apical = any(node in mesh["Xg_apical"] for node in c_face.ij)
-                touches_basal = any(node in mesh["Xg_basal"] for node in c_face.ij)
+                touches_apical = any(node in self.geo.XgApical for node in c_face.ij)
+                touches_basal = any(node in self.geo.XgBasal for node in c_face.ij)
 
                 if touches_apical:
                     apical_face_types[c_face.InterfaceType] += 1

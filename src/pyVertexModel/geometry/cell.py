@@ -34,7 +34,7 @@ def compute_y(geo, T, cellCentre, Set):
     """
     x = [geo.Cells[i].X for i in T]
     newY = np.mean(x, axis=0)
-    if sum([geo.Cells[i].AliveStatus is not None for i in T]) == 1 and "Bubbles" in Set.InputGeo:
+    if sum([geo.Cells[i].AliveStatus is not None for i in T]) == 1 and Set.InputGeo == "Bubbles":
         vc = newY - cellCentre
         dir = vc / np.linalg.norm(vc)
         offset = Set.f * dir
