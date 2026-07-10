@@ -893,6 +893,9 @@ class VertexModelBubbles(VertexModel):
         logger.info("  X shape: %s", self.X.shape)
         logger.info("  Twg shape: %s", twg.shape)
         logger.info("  Twg min/max: %s/%s", np.min(twg), np.max(twg))
+        tets_with_lumen = twg[np.any(twg == 0, axis=1)]
+        print("Tetrahedra containing 0:")
+        print(tets_with_lumen)
         logger.info("  nCells: %s", self.geo.nCells)
         logger.info("  XgBottom: %s", self.geo.XgBottom)
         logger.info("  XgTop count: %s", len(self.geo.XgTop))
