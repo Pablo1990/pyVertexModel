@@ -515,6 +515,7 @@ def blend_projected_points(points, projected, alpha, max_step=None):
 def generate_micelle_ellipsoid_points(n_points, axes, centre=np.array([0.0, 0.0, 0.0])):
     """
     Generate exactly n_points approximately uniformly distributed on an ellipsoid.
+    Adapted from https://github.com/RANGE-kit/RANGE/tree/main.
     """
     axes = np.asarray(axes, dtype=float)
     centre = np.asarray(centre, dtype=float)
@@ -594,6 +595,10 @@ def place_cyst_seeds(
         relax=False,
         n_iter=150,
 ):
+    """
+        Generates cell centres and top/bottom layer seeds using the micelle seed-generation code.
+        Achieves three concentric ellipsoids: basal, cell centre, apical.
+        """
     centre = np.asarray(center, dtype=float)
 
     outer_points = generate_ellipsoid_surface_points(
@@ -626,7 +631,8 @@ def place_cyst_seeds(
 
 def create_2d_surface_topology(points, center=np.array([0.0, 0.0, 0.0])):
     """
-    Create surface topology from a point cloud that shares one radial layout.
+    Create surface topology from a point cloud that shares one radial layout:
+    neighbours, junction vertices, and ordered polygon boundaries for each cell.
     """
     points = np.asarray(points, dtype=float)
     center = np.asarray(center, dtype=float)
@@ -687,6 +693,7 @@ def create_2d_surface_topology(points, center=np.array([0.0, 0.0, 0.0])):
 def build_cyst_mesh(result, center, inner_axes, outer_axes):
     """
     Build a cyst mesh using one shared topology derived from radial directions.
+    Uses internal repo-functions to determine twg apical and basal.
     """
     center = np.asarray(center, dtype=float)
     inner_axes = np.asarray(inner_axes, dtype=float)
@@ -852,7 +859,8 @@ class VertexModelBubbles(VertexModel):
 
     def initialize_cyst_from_ellipsoid_seed(self):
         """
-        Initialize Bubbles_Cyst from the notebook-derived ellipsoid shell mesh.
+        Initialize Bubbles_Cyst from the micelle-generating functions.
+        Then matches the generated objects to the repo-equivalents.
         """
         center = np.array([0.0, 0.0, 0.0])
         inner_axes = np.array([self.set.lumen_axis1, self.set.lumen_axis2, self.set.lumen_axis3])
