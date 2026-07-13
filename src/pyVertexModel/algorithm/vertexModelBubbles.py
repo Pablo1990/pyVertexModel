@@ -919,7 +919,7 @@ class VertexModelBubbles(VertexModel):
         self.geo.Main_cells = range(self.geo.nCells)
 
         self.geo.build_cells(self.set, self.X, mesh["Twg"])
-        self._diagnose_cyst_mesh_build(mesh, center, inner_axes, outer_axes)
+        #self._diagnose_cyst_mesh_build(mesh, center, inner_axes, outer_axes)
 
     def _diagnose_cyst_mesh_build(self, mesh, center, inner_axes, outer_axes):
         """
@@ -938,19 +938,18 @@ class VertexModelBubbles(VertexModel):
         logger.info("  XgBottom: %s", self.geo.XgBottom)
         logger.info("  XgTop count: %s", len(self.geo.XgTop))
         logger.info("  XgID count: %s", len(self.geo.XgID))
-        logger.info("  XgApical count: %s", len(self.geo.XgApical))
-        logger.info("  XgBasal count: %s", len(self.geo.XgBasal))
-        logger.info("  XgLumen: %s", self.geo.XgLumen)
-        print("apical_face_ids min:", mesh["apical_face_ids"].min() if "apical_face_ids" in mesh else "n/a")
-        print("basal_face_ids min:", mesh["basal_face_ids"].min() if "basal_face_ids" in mesh else "n/a")
-        print("apical_vertex_ids min:", mesh["apical_vertex_ids"].min() if "apical_vertex_ids" in mesh else "n/a")
-        print("basal_vertex_ids min:", mesh["basal_vertex_ids"].min() if "basal_vertex_ids" in mesh else "n/a")
-        print("Xg_apical min:", mesh["Xg_apical"].min())
-        print("Xg_basal min:", mesh["Xg_basal"].min())
-        if len(self.geo.Cells) > 5 and "apical_vertices" in mesh:
-            cell = self.geo.Cells[5]  # pick a real cell, not lumen
-            print("Model Y (first 3 rows):", cell.Y[:3])
-            print("Expected apical vertex (approx nearby):", mesh["apical_vertices"][:3])
+        #logger.info("  XgBasal count: %s", len(self.geo.XgBasal))
+        #logger.info("  XgLumen: %s", self.geo.XgLumen)
+        #print("apical_face_ids min:", mesh["apical_face_ids"].min() if "apical_face_ids" in mesh else "n/a")
+        #print("basal_face_ids min:", mesh["basal_face_ids"].min() if "basal_face_ids" in mesh else "n/a")
+        #print("apical_vertex_ids min:", mesh["apical_vertex_ids"].min() if "apical_vertex_ids" in mesh else "n/a")
+        #print("basal_vertex_ids min:", mesh["basal_vertex_ids"].min() if "basal_vertex_ids" in mesh else "n/a")
+        #print("Xg_apical min:", mesh["Xg_apical"].min())
+        #print("Xg_basal min:", mesh["Xg_basal"].min())
+        #if len(self.geo.Cells) > 5 and "apical_vertices" in mesh:
+         #   cell = self.geo.Cells[5]  # pick a real cell, not lumen
+         #   print("Model Y (first 3 rows):", cell.Y[:3])
+         #   print("Expected apical vertex (approx nearby):", mesh["apical_vertices"][:3])
 
         if "apical_vertices" in mesh and "basal_vertices" in mesh:
             apical_tree = cKDTree(mesh["apical_vertices"])

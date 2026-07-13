@@ -378,11 +378,11 @@ class Set:
         self.frozen_face_centres = True
 
         self.ellipsoid_axis1 = 10.0
-        self.ellipsoid_axis2 = 1.0
-        self.ellipsoid_axis3 = 1.0
-        self.lumen_axis1 = 3.0
-        self.lumen_axis2 = 3.0
-        self.lumen_axis3 = 3.0
+        self.ellipsoid_axis2 = 4.0
+        self.ellipsoid_axis3 = 4.0
+        self.lumen_axis1 = 5.0
+        self.lumen_axis2 = 2.0
+        self.lumen_axis3 = 2.0
         self.cell_V0 = 0.0003
         self.cell_A0 = 0.01
         self.lumen_V0 = 0.1
@@ -405,7 +405,7 @@ class Set:
         self.kSubstrate = 0
 
         # Surface Area
-        self.ref_A0 = 0.99
+        self.ref_A0 = 1.1
 
         self.ablation = False
         self.Contractility = False

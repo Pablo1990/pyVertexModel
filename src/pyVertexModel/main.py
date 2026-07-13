@@ -9,7 +9,7 @@ from pyVertexModel.algorithm.vertexModelBubbles import (
 #from pyVertexModel.algorithm.vertexModelBubbles import VertexModelBubbles
 
 from pyVertexModel.analysis.analyse_simulation import analyse_simulation
-from pyVertexModel.util.utils import load_state
+from pyVertexModel.util.utils import load_state, screenshot_
 
 start_new = True
 if start_new == True:
