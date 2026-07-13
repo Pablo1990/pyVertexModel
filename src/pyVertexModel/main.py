@@ -4,7 +4,7 @@ import sys
 from pyVertexModel import PROJECT_DIRECTORY
 from pyVertexModel.algorithm.vertexModelBubbles import VertexModelBubbles
 
-from pyVertexModel.util.utils import load_state, screenshot_
+from pyVertexModel.util.utils import load_state
 
 start_new = True
 if start_new == True:
