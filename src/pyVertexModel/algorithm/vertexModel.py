@@ -289,17 +289,21 @@ class VertexModel:
         Raises:
             FileNotFoundError: If the configured initial filename does not exist and img_input is None.
         """
-        filename = os.path.join(PROJECT_DIRECTORY, self.set.initial_filename_state)
+        if self.set.InputGeo != 'Bubbles_Cyst':
+            filename = os.path.join(PROJECT_DIRECTORY, self.set.initial_filename_state)
 
-        if not os.path.exists(filename) and img_input is None:
-            logging.error(f'File {filename} not found')
-            raise FileNotFoundError(f'File {filename} not found')
+            if not os.path.exists(filename) and img_input is None:
+                logging.error(f'File {filename} not found')
+                raise FileNotFoundError(f'File {filename} not found')
 
-        base, ext = os.path.splitext(filename)
-        if self.set.min_3d_neighbours is None:
-            output_filename = f"{base}_{self.set.TotalCells}cells_{self.set.CellHeight}_scutoids_{self.set.percentage_scutoids}.pkl"
+            base, ext = os.path.splitext(filename)
+            if self.set.min_3d_neighbours is None:
+                output_filename = f"{base}_{self.set.TotalCells}cells_{self.set.CellHeight}_scutoids_{self.set.percentage_scutoids}.pkl"
+            else:
+                output_filename = f"{base}_{self.set.TotalCells}cells_{self.set.CellHeight}_min3d_{self.set.min_3d_neighbours}.pkl"
         else:
-            output_filename = f"{base}_{self.set.TotalCells}cells_{self.set.CellHeight}_min3d_{self.set.min_3d_neighbours}.pkl"
+            filename = PROJECT_DIRECTORY
+            output_filename = ''
 
         if exists(output_filename):
             # Check date of the output_filename and if it is older than 1 day from today, redo the file
@@ -325,8 +329,9 @@ class VertexModel:
                 else:
                     self.initialize_cells(img_input)
 
-            # Resize the geometry to a given cell volume average
-            self.geo.resize_tissue()
+            if not self.set.InputGeo == 'Bubbles_Cyst':
+                # Resize the geometry to a given cell volume average
+                self.geo.resize_tissue()
 
             # Create substrate(s)
             if self.set.Substrate == 3:
@@ -397,12 +402,13 @@ class VertexModel:
             # Adjust percentage of scutoids
             self.adjust_percentage_of_scutoids()
 
-            # Save screenshot of the initial state
-            image_file = str(Path(filename).parent)
-            screenshot_(self.geo, self.set, 0, Path(output_filename).name, image_file)
+            if output_filename != '':
+                # Save screenshot of the initial state
+                image_file = str(Path(filename).parent)
+                screenshot_(self.geo, self.set, 0, Path(output_filename).name, image_file)
 
-            # Save initial state
-            save_state(self, output_filename)
+                # Save initial state
+                save_state(self, output_filename)
 
     def connect_substrate_cell(self, middle_cell, node_neighbours, domain_cells):
         """

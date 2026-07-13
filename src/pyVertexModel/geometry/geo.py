@@ -374,7 +374,8 @@ class Geo:
 
         # Update lmin0 with the minimum value in lmin_values
         self.update_lmin0()
-        if '/Temp/' not in c_set.initial_filename_state:
+
+        if c_set.InputGeo != 'Bubbles_Cyst':
             self.update_lmin0(default_value=find_lmin0_equal_target_gr(self, c_set))
 
         # Update BarrierTri0

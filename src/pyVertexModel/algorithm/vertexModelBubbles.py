@@ -783,48 +783,47 @@ class VertexModelBubbles(VertexModel):
         if self.geo is None:
             self.geo = Geo()
 
-        if self.set.InputGeo == 'Bubbles_Cyst':
-            self.initialize_cyst_from_ellipsoid_seed()
-            filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
-            save_state(self.geo, filename)
-            return
-        else:
-            self.generate_Xs(self.geo.nx, self.geo.ny, self.geo.nz)
+        self.initialize_cyst_from_ellipsoid_seed()
 
-        # This code is to match matlab's output and python's
-        # N = 3  # The dimensions of our points
-        # options = 'Qt Qbb Qc' if N <= 3 else 'Qt Qbb Qc Qx'  # Set the QHull options
-        Twg = Delaunay(self.X).simplices
-
-        # Remove tetrahedras formed only by ghost nodes
-        Twg = Twg[~np.all(np.isin(Twg, self.geo.XgID), axis=1)]
-        # Remove weird IDs
-
-        # Re-number the surviving tets
-        uniqueTets, indices = np.unique(Twg, return_inverse=True)
-        self.geo.XgID = np.arange(self.geo.nCells, len(uniqueTets))
-        self.X = self.X[uniqueTets]
-        Twg = indices.reshape(Twg.shape)
-
-        if self.set.InputGeo == 'Bubbles_Cyst':
-            self.geo.XgBottom = [0]
-            self.geo.XgTop = self.geo.XgID
-            self.geo.XgID = np.append(self.geo.XgID, 0)
-        else:
-            Xg = self.X[self.geo.XgID]
-            self.geo.XgBottom = self.geo.XgID[Xg[:, 2] < np.mean(self.X[:, 2])]
-            self.geo.XgTop = self.geo.XgID[Xg[:, 2] > np.mean(self.X[:, 2])]
-
-        self.geo.Main_cells = range(self.geo.nCells)
-        self.geo.build_cells(self.set, self.X, Twg)
-
-        if self.set.InputGeo == 'Bubbles_Cyst':
-            # Extrapolate Face centres and Ys to the ellipsoid
-            self.geo = extrapolate_ys_faces_ellipsoid(self.geo, self.set)
-
-        # Save state with filename using the number of cells
-        filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
-        save_state(self.geo, filename)
+        # Pablo: I don't see why we would keep this code if it will always run with yours
+        #     return
+        # else:
+        #     self.generate_Xs(self.geo.nx, self.geo.ny, self.geo.nz)
+        #
+        # # This code is to match matlab's output and python's
+        # # N = 3  # The dimensions of our points
+        # # options = 'Qt Qbb Qc' if N <= 3 else 'Qt Qbb Qc Qx'  # Set the QHull options
+        # Twg = Delaunay(self.X).simplices
+        #
+        # # Remove tetrahedras formed only by ghost nodes
+        # Twg = Twg[~np.all(np.isin(Twg, self.geo.XgID), axis=1)]
+        # # Remove weird IDs
+        #
+        # # Re-number the surviving tets
+        # uniqueTets, indices = np.unique(Twg, return_inverse=True)
+        # self.geo.XgID = np.arange(self.geo.nCells, len(uniqueTets))
+        # self.X = self.X[uniqueTets]
+        # Twg = indices.reshape(Twg.shape)
+        #
+        # if self.set.InputGeo == 'Bubbles_Cyst':
+        #     self.geo.XgBottom = [0]
+        #     self.geo.XgTop = self.geo.XgID
+        #     self.geo.XgID = np.append(self.geo.XgID, 0)
+        # else:
+        #     Xg = self.X[self.geo.XgID]
+        #     self.geo.XgBottom = self.geo.XgID[Xg[:, 2] < np.mean(self.X[:, 2])]
+        #     self.geo.XgTop = self.geo.XgID[Xg[:, 2] > np.mean(self.X[:, 2])]
+        #
+        # self.geo.Main_cells = range(self.geo.nCells)
+        # self.geo.build_cells(self.set, self.X, Twg)
+        #
+        # if self.set.InputGeo == 'Bubbles_Cyst':
+        #     # Extrapolate Face centres and Ys to the ellipsoid
+        #     self.geo = extrapolate_ys_faces_ellipsoid(self.geo, self.set)
+        #
+        # # Save state with filename using the number of cells
+        # filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
+        # save_state(self.geo, filename)
 
     def generate_Xs(self, nx=None, ny=None, nz=None):
         """

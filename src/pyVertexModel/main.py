@@ -2,13 +2,8 @@ import os
 import sys
 
 from pyVertexModel import PROJECT_DIRECTORY
-from pyVertexModel.algorithm.vertexModelBubbles import (
-    VertexModelBubbles,
-)
+from pyVertexModel.algorithm.vertexModelBubbles import VertexModelBubbles
 
-#from pyVertexModel.algorithm.vertexModelBubbles import VertexModelBubbles
-
-from pyVertexModel.analysis.analyse_simulation import analyse_simulation
 from pyVertexModel.util.utils import load_state
 
 start_new = True

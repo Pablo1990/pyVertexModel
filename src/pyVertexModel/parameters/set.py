@@ -216,13 +216,13 @@ class Set:
         If self.OutputFolder is not None, this creates the OutputFolder and an images subdirectory, attaches a FileHandler writing to 'log.out' with DEBUG level and a timestamped formatter, and enables logger propagation. If OutputFolder is None, no logging configuration or filesystem changes are made.
         """
         if self.OutputFolder is not None:
-            short_result_root = r"C:\pvm_results"
-            os.makedirs(short_result_root, exist_ok=True)
-
-            run_name = os.path.basename(os.path.normpath(self.OutputFolder))
-            run_name = run_name[:60]
-
-            self.OutputFolder = os.path.join(short_result_root, run_name)
+            # short_result_root = r"C:\pvm_results"
+            # os.makedirs(short_result_root, exist_ok=True)
+            #
+            # run_name = os.path.basename(os.path.normpath(self.OutputFolder))
+            # run_name = run_name[:60]
+            #
+            # self.OutputFolder = os.path.join(short_result_root, run_name)
 
             os.makedirs(self.OutputFolder, exist_ok=True)
             os.makedirs(os.path.join(self.OutputFolder, 'images'), exist_ok=True)
@@ -363,11 +363,9 @@ class Set:
 
     def cyst_scratch(self):
         self.InputGeo = 'Bubbles_Cyst'
-        self.initial_filename_state = 'Result/Cyst/cyst_scratch.tif'
         self.model_name = 'Cyst_scratch'
         self.TotalCells = 100
         self.CellHeight = 15
-        self.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/Cyst')
         self.lambdaR = 0
         self.Remodelling = False
         self.RemodelStiffness = 2
