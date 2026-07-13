@@ -721,13 +721,12 @@ def create_2d_surface_topology(points, center=np.array([0.0, 0.0, 0.0])):
     }
 
 
-def build_cyst_mesh(result, center, inner_axes, outer_axes):
+def build_cyst_mesh(result, center, outer_axes):
     """
     Build a cyst mesh using one shared topology derived from radial directions.
     Uses internal repo-functions to determine twg apical and basal.
     """
     center = np.asarray(center, dtype=float)
-    inner_axes = np.asarray(inner_axes, dtype=float)
     outer_axes = np.asarray(outer_axes, dtype=float)
 
     topology = create_2d_surface_topology(result["epithelial_points"], center=np.zeros(3))
@@ -736,31 +735,10 @@ def build_cyst_mesh(result, center, inner_axes, outer_axes):
     X = np.zeros((n_cells + 1, 3))
     X[1:] = result["epithelial_points"]
 
-    apical_vertices = project_points_to_ellipsoid(
-        topology["vertex_seed_dirs"],
-        inner_axes,
-        center,
-    )
-
     basal_vertices = project_points_to_ellipsoid(
         topology["vertex_seed_dirs"],
         outer_axes,
         center,
-    )
-
-    X, apical_face_ids, Xg_apical, apical_vertex_ids = add_faces_and_vertices_to_x(
-        X,
-        result["inner_points"],
-        apical_vertices,
-    )
-
-    Twg_apical = create_tetrahedra(
-        topology["triangles_connectivity"],
-        topology["neighbours_network"],
-        topology["cell_edges"],
-        topology["main_cells"],
-        apical_face_ids,
-        apical_vertex_ids,
     )
 
     X, basal_face_ids, Xg_basal, basal_vertex_ids = add_faces_and_vertices_to_x(
@@ -790,13 +768,9 @@ def build_cyst_mesh(result, center, inner_axes, outer_axes):
         "topology": topology,
         "lumen_cell": 0,
         "main_cells_with_lumen": np.concatenate([[0], topology["main_cells"]]),
-        "apical_face_ids": apical_face_ids,
         "basal_face_ids": basal_face_ids,
-        "apical_vertex_ids": apical_vertex_ids,
         "basal_vertex_ids": basal_vertex_ids,
-        "Xg_apical": Xg_apical,
         "Xg_basal": Xg_basal,
-        "apical_vertices": apical_vertices,
         "basal_vertices": basal_vertices,
     }
 
@@ -844,13 +818,6 @@ class VertexModelBubbles(VertexModel):
         #     Xg = self.X[self.geo.XgID]
         #     self.geo.XgBottom = self.geo.XgID[Xg[:, 2] < np.mean(self.X[:, 2])]
         #     self.geo.XgTop = self.geo.XgID[Xg[:, 2] > np.mean(self.X[:, 2])]
-        #
-        # self.geo.Main_cells = range(self.geo.nCells)
-        # self.geo.build_cells(self.set, self.X, Twg)
-        #
-        # if self.set.InputGeo == 'Bubbles_Cyst':
-        #     # Extrapolate Face centres and Ys to the ellipsoid
-        #     self.geo = extrapolate_ys_faces_ellipsoid(self.geo, self.set)
         #
         # # Save state with filename using the number of cells
         # filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
@@ -904,7 +871,7 @@ class VertexModelBubbles(VertexModel):
             outer_axes=outer_axes,
             alpha=0.5,
         )
-        mesh = build_cyst_mesh(result, center, inner_axes, outer_axes)
+        mesh = build_cyst_mesh(result, center, outer_axes)
 
         self.X = mesh["X"]
         self.geo.nCells = len(mesh["main_cells_with_lumen"])
@@ -915,10 +882,14 @@ class VertexModelBubbles(VertexModel):
         self.geo.XgID = np.append(self.geo.XgTop, mesh["lumen_cell"])
         self.geo.XgLumen = np.array([mesh["lumen_cell"]])
         self.geo.XgBasal = mesh["Xg_basal"]
-        self.geo.Main_cells = range(self.geo.nCells)
+        self.geo.Main_cells = np.arange(0, self.geo.nCells)
 
         self.geo.build_cells(self.set, self.X, mesh["Twg"])
-        self._diagnose_cyst_mesh_build(mesh, center, inner_axes, outer_axes)
+        if self.set.frozen_face_centres:
+            for cell in self.geo.Cells:
+                if cell.AliveStatus is not None and self.set.frozen_face_centres:
+                    face_centres_to_middle_of_neighbours_vertices(self.geo, cell.ID)
+        #self._diagnose_cyst_mesh_build(mesh, center, inner_axes, outer_axes)
 
     def _diagnose_cyst_mesh_build(self, mesh, center, inner_axes, outer_axes):
         """
@@ -932,29 +903,24 @@ class VertexModelBubbles(VertexModel):
         logger.info("  Twg min/max: %s/%s", np.min(twg), np.max(twg))
         tets_with_lumen = twg[np.any(twg == 0, axis=1)]
         print("Tetrahedra containing 0:")
-        print(tets_with_lumen)
+        print(np.unique(tets_with_lumen))
         logger.info("  nCells: %s", self.geo.nCells)
         logger.info("  XgBottom: %s", self.geo.XgBottom)
         logger.info("  XgTop count: %s", len(self.geo.XgTop))
         logger.info("  XgID count: %s", len(self.geo.XgID))
-        logger.info("  XgApical count: %s", len(self.geo.XgApical))
         logger.info("  XgBasal count: %s", len(self.geo.XgBasal))
         logger.info("  XgLumen: %s", self.geo.XgLumen)
-        print("apical_face_ids min:", mesh["apical_face_ids"].min() if "apical_face_ids" in mesh else "n/a")
         print("basal_face_ids min:", mesh["basal_face_ids"].min() if "basal_face_ids" in mesh else "n/a")
-        print("apical_vertex_ids min:", mesh["apical_vertex_ids"].min() if "apical_vertex_ids" in mesh else "n/a")
         print("basal_vertex_ids min:", mesh["basal_vertex_ids"].min() if "basal_vertex_ids" in mesh else "n/a")
-        print("Xg_apical min:", mesh["Xg_apical"].min())
         print("Xg_basal min:", mesh["Xg_basal"].min())
         if len(self.geo.Cells) > 5 and "apical_vertices" in mesh:
             cell = self.geo.Cells[5]  # pick a real cell, not lumen
             print("Model Y (first 3 rows):", cell.Y[:3])
-            print("Expected apical vertex (approx nearby):", mesh["apical_vertices"][:3])
 
         if "apical_vertices" in mesh and "basal_vertices" in mesh:
             apical_tree = cKDTree(mesh["apical_vertices"])
             basal_tree = cKDTree(mesh["basal_vertices"])
-            for cid in [1, 5, 10]:
+            for cid in [1, 5, 67]:
                 if cid >= len(self.geo.Cells):
                     print(f"Cell {cid}: missing")
                     continue

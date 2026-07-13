@@ -4,7 +4,7 @@ import sys
 from pyVertexModel import PROJECT_DIRECTORY
 from pyVertexModel.algorithm.vertexModelBubbles import VertexModelBubbles
 
-from pyVertexModel.util.utils import load_state
+from pyVertexModel.util.utils import load_state, screenshot_
 
 start_new = True
 if start_new == True:
@@ -30,11 +30,6 @@ if start_new == True:
         print("InputGeo:", vModel.set.InputGeo)
 
         vModel.initialize()
-        screenshot_(vModel.geo, vModel.set, 0, 0, vModel.set.OutputFolder, selected_cells=[0])
-        screenshot_(vModel.geo, vModel.set, 0, 59, vModel.set.OutputFolder, selected_cells=[59])
-        screenshot_(vModel.geo, vModel.set, 0, 7, vModel.set.OutputFolder, selected_cells=[7])
-        screenshot_(vModel.geo, vModel.set, 0, 1, vModel.set.OutputFolder, selected_cells=[1])
-        screenshot_(vModel.geo, vModel.set, 0, 2, vModel.set.OutputFolder, selected_cells=[0, 1, 7, 59])
         vModel.iterate_over_time()
 else:
     debugging = True

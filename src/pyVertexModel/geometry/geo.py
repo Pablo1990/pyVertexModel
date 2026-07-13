@@ -341,7 +341,6 @@ class Geo:
         # Initialize reference values
         self.init_reference_cell_values(c_set)
 
-
         if c_set.Substrate == 1:
             for c, c_cell in enumerate(self.Cells):
                 if c_cell.AliveStatus is not None:
