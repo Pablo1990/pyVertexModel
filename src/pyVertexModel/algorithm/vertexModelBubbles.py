@@ -5,15 +5,38 @@ from collections import Counter
 
 import numpy as np
 from scipy.optimize import minimize
-from scipy.spatial import ConvexHull, Delaunay, cKDTree
+from scipy.spatial import ConvexHull, Delaunay, cKDTree, SphericalVoronoi
 
 from pyVertexModel.algorithm.vertexModel import VertexModel
-from pyVertexModel.util.utils import save_state
+from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import generate_neighbours_network
+from pyVertexModel.util.utils import save_state, face_centres_to_middle_of_neighbours_vertices
 from pyVertexModel.geometry.geo import Geo
 from pyVertexModel.algorithm.vertexModel import add_faces_and_vertices_to_x, create_tetrahedra
 
 logger = logging.getLogger("pyVertexModel")
 
+def spherical_voronoi_triangulation(points, center=np.array([0.0, 0.0, 0.0])):
+    points = np.asarray(points, dtype=float)
+    center = np.asarray(center, dtype=float)
+
+    dirs = points - center
+    norms = np.linalg.norm(dirs, axis=1, keepdims=True)
+    if np.any(norms < 1e-12):
+        raise ValueError("At least one seed coincides with center; cannot build spherical Voronoi.")
+    unit_dirs = dirs / norms
+
+    sv = SphericalVoronoi(unit_dirs, radius=1.0, center=np.zeros(3))
+    tree = cKDTree(unit_dirs)
+
+    triangles = []
+    for v in sv.vertices:
+        idx = tree.query(v, k=3)[1]
+        tri = np.sort(np.asarray(idx, dtype=int))
+        if np.unique(tri).size == 3:
+            triangles.append(tri)
+
+    triangles = np.unique(np.asarray(triangles, dtype=int), axis=0)
+    return triangles + 1  # 1-based IDs
 
 def AreTri(p1, p2, p3):
     return 0.5 * np.linalg.norm(np.cross(p2 - p1, p3 - p1))
@@ -639,8 +662,11 @@ def create_2d_surface_topology(points, center=np.array([0.0, 0.0, 0.0])):
     n_cells = points.shape[0]
     main_cells = np.arange(1, n_cells + 1)
 
-    hull = ConvexHull(points)
-    triangles_connectivity = hull.simplices.astype(int) + 1
+    triangles_connectivity = spherical_voronoi_triangulation(points, center=center)
+
+    # Check if there was any drop of points ID in triangles_connectivity
+    if np.unique(triangles_connectivity).size != n_cells:
+        raise ValueError("Some points were dropped in the triangulation.")
 
     neighbour_edges = []
     for tri in triangles_connectivity:
@@ -674,11 +700,16 @@ def create_2d_surface_topology(points, center=np.array([0.0, 0.0, 0.0])):
         angles = np.arctan2(rel @ tangent_b, rel @ tangent_a)
         ordered_vertex_ids = vertex_ids[np.argsort(angles)]
 
+        ordered_vertices = np.column_stack([
+            ordered_vertex_ids,
+            np.roll(ordered_vertex_ids, -1),
+        ])
+
+        if ordered_vertices.size < 0:
+            raise ValueError("Error: Ordered vertices array is not empty, which may indicate an issue with the triangulation or vertex ordering.")
+
         cell_edges.append(
-            np.column_stack([
-                ordered_vertex_ids,
-                np.roll(ordered_vertex_ids, -1),
-            ])
+            ordered_vertices
         )
 
     return {
@@ -699,7 +730,7 @@ def build_cyst_mesh(result, center, inner_axes, outer_axes):
     inner_axes = np.asarray(inner_axes, dtype=float)
     outer_axes = np.asarray(outer_axes, dtype=float)
 
-    topology = create_2d_surface_topology(result["outer_points"], center=np.zeros(3))
+    topology = create_2d_surface_topology(result["epithelial_points"], center=np.zeros(3))
     n_cells = len(topology["main_cells"])
 
     X = np.zeros((n_cells + 1, 3))
@@ -751,7 +782,7 @@ def build_cyst_mesh(result, center, inner_axes, outer_axes):
         np.zeros(topology["triangles_connectivity"].shape[0], dtype=int),
         topology["triangles_connectivity"],
     ])
-    Twg = np.vstack([Twg_lumen, Twg_apical, Twg_basal])
+    Twg = np.vstack([Twg_lumen, Twg_basal])
 
     return {
         "X": X,
@@ -880,10 +911,9 @@ class VertexModelBubbles(VertexModel):
         self.set.TotalCells = self.geo.nCells
 
         self.geo.XgBottom = [mesh["lumen_cell"]]
-        self.geo.XgTop = np.concatenate([mesh["Xg_apical"], mesh["Xg_basal"]])
+        self.geo.XgTop = mesh["Xg_basal"]
         self.geo.XgID = np.append(self.geo.XgTop, mesh["lumen_cell"])
         self.geo.XgLumen = np.array([mesh["lumen_cell"]])
-        self.geo.XgApical = mesh["Xg_apical"]
         self.geo.XgBasal = mesh["Xg_basal"]
         self.geo.Main_cells = range(self.geo.nCells)
 
