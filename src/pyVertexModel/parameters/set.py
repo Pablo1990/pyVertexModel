@@ -407,8 +407,14 @@ class Set:
         # Surface Area
         self.ref_A0 = 1.1
 
-        self.ablation = False
-        self.Contractility = False
+        self.ablation = True
+        self.TInitAblation = 0.05
+        self.TEndAblation = self.TInitAblation + 6
+
+        self.cellsToAblate = np.array([52])
+        self.debris_contribution = np.finfo(float).eps
+        self.lambdaV_Debris = 1e-8
+        self.Contractility = True
 
         self.VTK = False
 

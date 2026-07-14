@@ -449,23 +449,36 @@ class Geo:
         self.EdgeLengthAvg_0 = []
 
         all_faces = [c_cell.Faces for c_cell in self.Cells]
-        all_face_types = [c_face.InterfaceType for faces in all_faces for c_face in faces]
+        all_face_types = [
+            c_face.InterfaceType
+            for faces in all_faces
+            for c_face in faces
+        ]
 
         for face_type in np.unique(all_face_types):
-            if default_value is not None:
+            if default_value is None:
                 current_tris = []
+
                 for faces in all_faces:
                     for c_face in faces:
                         if c_face.InterfaceType == face_type or not per_face:
                             current_tris.extend(c_face.Tris)
 
-                edge_lengths = []
-                for tri in current_tris:
-                    edge_lengths.append(tri.EdgeLength)
+                edge_lengths = [
+                    tri.EdgeLength
+                    for tri in current_tris
+                    if tri.EdgeLength is not None
+                ]
 
-                self.EdgeLengthAvg_0.append(np.mean(edge_lengths))
+                if len(edge_lengths) == 0:
+                    raise ValueError(
+                        f"No valid edge lengths found for face type {face_type}"
+                    )
+
+                self.EdgeLengthAvg_0.append(float(np.mean(edge_lengths)))
+
             else:
-                self.EdgeLengthAvg_0.append(default_value)
+                self.EdgeLengthAvg_0.append(float(default_value))
 
     def update_barrier_tri0(self, factor=10, count_lateral_faces=True):
         """
