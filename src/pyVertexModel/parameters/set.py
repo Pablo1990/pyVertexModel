@@ -411,7 +411,7 @@ class Set:
         self.TInitAblation = 0.05
         self.TEndAblation = self.TInitAblation + 6
 
-        self.cellsToAblate = np.array([52])
+        self.cellsToAblate = np.array([59])
         self.debris_contribution = np.finfo(float).eps
         self.lambdaV_Debris = 1e-8
         self.Contractility = True

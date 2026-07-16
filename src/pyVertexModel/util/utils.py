@@ -48,7 +48,7 @@ def find_optimal_deform_array_X_Y(geo, deform_array_Z, middle_point, volumes):
     return result.x
 
 
-def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None, scalar_to_display='AliveStatus'):
+def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None, scalar_to_display='ID'):
     """
     Create a screenshot of the current state of the model.
     :param geo:
@@ -66,13 +66,9 @@ def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None, scalar_to_d
 
     total_real_cells = len([cell.ID for cell in geo.Cells if cell.AliveStatus is not None])
 
-    colour_by_alive_status = scalar_to_display == 'AliveStatus'
-
     # Create a colormap_lim
     if scalar_to_display == 'Volume':
         colormap_lim = [0.0001, 0.0006]
-    elif colour_by_alive_status:
-        colormap_lim = [-0.5, 2.5]
     else:
         colormap_lim = None
 
@@ -88,29 +84,18 @@ def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None, scalar_to_d
         plotter = pv.Plotter(off_screen=True)
 
         for _, cell in enumerate(geo.Cells):
-            should_plot_cell = (
-                    (cell.AliveStatus is not None if colour_by_alive_status else cell.AliveStatus == 1) and
-                    (cell.ID in selected_cells or len(selected_cells) == 0)
-            )
-            if should_plot_cell:
+            if cell.AliveStatus == 1 and (cell.ID in selected_cells or len(selected_cells) == 0):
                 # Load the VTK file as a pyvista mesh
                 mesh = cell.create_pyvista_mesh()
-                if colour_by_alive_status:
-                    mesh.cell_data['AliveStatus'] = np.full(mesh.n_cells, cell.AliveStatus)
 
                 # Add the mesh to the plotter
                 # Cmaps that I like: 'tab20b', 'BuPu', 'Blues'
                 # Cmaps that I don't like: 'prism', 'bone'
-                cmap = ["#d73027", "#4daf4a", "#737373"] if colour_by_alive_status else "pink"
-                plotter.add_mesh(mesh, name=f'cell_{cell.ID}', scalars=scalar_to_display, lighting=True, cmap=cmap,
+                plotter.add_mesh(mesh, name=f'cell_{cell.ID}', scalars=scalar_to_display, lighting=True, cmap="pink",
                                  clim=colormap_lim, show_edges=True, edge_color='white', edge_opacity=0.3)
 
         for _, cell in enumerate(geo.Cells):
-            should_plot_cell = (
-                    (cell.AliveStatus is not None if colour_by_alive_status else cell.AliveStatus == 1) and
-                    (cell.ID in selected_cells or len(selected_cells) == 0)
-            )
-            if should_plot_cell:
+            if cell.AliveStatus == 1 and (cell.ID in selected_cells or len(selected_cells) == 0):
                 edge_mesh = cell.create_pyvista_edges()
                 plotter.add_mesh(edge_mesh, name=f'edge_{cell.ID}', color='black', line_width=3,
                                  render_lines_as_tubes=True)
@@ -204,7 +189,7 @@ def screenshot_(geo, set, t, numStep, temp_dir, selected_cells=None, scalar_to_d
     plt.close(fig)
 
 
-def screenshot(v_model, temp_dir, selected_cells=None, scalar_to_display='AliveStatus'):
+def screenshot(v_model, temp_dir, selected_cells=None, scalar_to_display='Volume'):
     """
     Create a screenshot of the current state of the model.
     :param v_model:

@@ -4,6 +4,7 @@ matplotlib
 vtk
 scikit-learn
 pandas
+openpyxl
 cython
 networkx
 scikit-image

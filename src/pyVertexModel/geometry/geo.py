@@ -1465,19 +1465,37 @@ class Geo:
         :return:
         """
         list_of_cells = np.zeros(len(self.Cells))
+        wound_cells = set(wound_cells)
         for num_cell, cell in enumerate(self.Cells):
             if cell.AliveStatus == 1 and cell.ID not in wound_cells:
-                cell_neighbours = cell.compute_neighbours(location_filter)
+                cell_neighbours = np.asarray(cell.compute_neighbours(location_filter), dtype=int)
                 cell_distance = 1
-                while list_of_cells[num_cell] == 0:
-                    for c in cell_neighbours:
-                        if c in wound_cells:
-                            list_of_cells[num_cell] = cell_distance
-                            break
+                visited_cells = {cell.ID}
+                while list_of_cells[num_cell] == 0 and len(cell_neighbours) > 0:
+                    cell_neighbours = np.asarray(
+                        [
+                            c for c in cell_neighbours
+                            if c not in visited_cells and self.Cells[c].AliveStatus is not None
+                        ],
+                        dtype=int,
+                    )
+                    if len(cell_neighbours) == 0:
+                        break
+
+                    if any(c in wound_cells for c in cell_neighbours):
+                        list_of_cells[num_cell] = cell_distance
+                        break
+
+                    visited_cells.update(cell_neighbours)
                     cell_distance += 1
-                    cell_neighbours = np.unique(np.concatenate([self.Cells[c].compute_neighbours(location_filter)
-                                                                for c in cell_neighbours if
-                                                                self.Cells[c].AliveStatus is not None]))
+                    next_neighbours = [
+                        self.Cells[c].compute_neighbours(location_filter)
+                        for c in cell_neighbours
+                    ]
+                    next_neighbours = [neighbours for neighbours in next_neighbours if len(neighbours) > 0]
+                    if len(next_neighbours) == 0:
+                        break
+                    cell_neighbours = np.unique(np.concatenate(next_neighbours)).astype(int)
 
             elif cell.AliveStatus == 0 or cell.ID in wound_cells:
                 list_of_cells[num_cell] = 0

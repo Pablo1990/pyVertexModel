@@ -16,6 +16,21 @@ from pyVertexModel.util.utils import (
 )
 
 
+def _to_excel_or_csv(df, path):
+    """Try to write dataframe to Excel; if that fails, write CSV instead."""
+    try:
+        import openpyxl  # noqa: F401
+        df.to_excel(path)
+    except Exception as e:
+        csv_path = path if path.lower().endswith('.csv') else os.path.splitext(path)[0] + '.csv'
+        try:
+            df.to_csv(csv_path, index=False)
+        except Exception as e2:
+            print(f"Failed to save dataframe to both xlsx and csv. Errors: {e}, {e2}")
+            return
+        print(f"Warning: could not write xlsx '{path}'; saved CSV '{csv_path}'. Error: {e}")
+
+
 def analyse_simulation(folder):
     """
     Analyse the simulation results
@@ -60,8 +75,11 @@ def analyse_simulation(folder):
             return None, None, None, None
 
         # Create a dataframe with all the features
-        features_per_time_all_cells_df = pd.DataFrame(np.concatenate(features_per_time_all_cells),
-                                                      columns=features_per_time_all_cells[0].columns)
+        if getattr(vModel.set, 'InputGeo', None) == 'Bubbles_Cyst':
+            features_per_time_all_cells_df = pd.concat(features_per_time_all_cells, ignore_index=True, sort=False)
+        else:
+            features_per_time_all_cells_df = pd.DataFrame(np.concatenate(features_per_time_all_cells),
+                                                          columns=features_per_time_all_cells[0].columns)
         features_per_time_all_cells_df.sort_values(by='time', inplace=True)
 
         features_per_time_df = pd.DataFrame(features_per_time)
@@ -74,9 +92,13 @@ def analyse_simulation(folder):
             pickle.dump(None, f)
             pickle.dump(features_per_time_all_cells_df, f)
 
-        # Export to xlsx
-        features_per_time_all_cells_df.to_excel(os.path.join(folder, 'features_per_time_all_cells.xlsx'))
-        features_per_time_df.to_excel(os.path.join(folder, 'features_per_time.xlsx'))
+        # Export to xlsx (fallback to CSV if openpyxl not available)
+        _to_excel_or_csv(features_per_time_all_cells_df, os.path.join(folder, 'features_per_time_all_cells.xlsx'))
+        _to_excel_or_csv(features_per_time_df, os.path.join(folder, 'features_per_time.xlsx'))
+
+        before_ablation_file = os.path.join(folder, 'before_ablation.pkl')
+        if os.path.exists(before_ablation_file):
+            load_state(vModel, before_ablation_file)
     else:
         # Load dataframes from pkl
         with open(os.path.join(folder, 'features_per_time.pkl'), 'rb') as f:
@@ -89,6 +111,8 @@ def analyse_simulation(folder):
         vModel = VertexModel(create_output_folder=False)
         load_state(vModel, os.path.join(folder, 'before_ablation.pkl'))
 
+    ellipsoid_ablation_features = calculate_ellipsoid_ablation_features(vModel)
+
     # Create video
     create_video(os.path.join(folder, 'images'), 'vModel_combined_',
                  model_name=vModel.set.model_name)
@@ -100,12 +124,18 @@ def analyse_simulation(folder):
                                                                      wound_edge_cells_top_ids)].copy()
     # Average wound edge cells features by time
     wound_edge_cells_features_avg = wound_edge_cells_features.groupby('time').mean().reset_index()
+    is_bubbles_cyst = getattr(vModel.set, 'InputGeo', None) == 'Bubbles_Cyst'
 
     # Add wound_edge_cells_features_avg columns to post_wound_features
-    for col in wound_edge_cells_features_avg.columns:
-        if col == 'time':
-            continue
-        features_per_time_df[col + '_wound_edge'] = wound_edge_cells_features_avg[col]
+    if is_bubbles_cyst:
+        wound_edge_cells_features_to_merge = wound_edge_cells_features_avg.add_suffix('_wound_edge')
+        wound_edge_cells_features_to_merge.rename(columns={'time_wound_edge': 'time'}, inplace=True)
+        features_per_time_df = features_per_time_df.merge(wound_edge_cells_features_to_merge, on='time', how='left')
+    else:
+        for col in wound_edge_cells_features_avg.columns:
+            if col == 'time':
+                continue
+            features_per_time_df[col + '_wound_edge'] = wound_edge_cells_features_avg[col]
 
     # Obtain post-wound features
     post_wound_features = features_per_time_df[features_per_time_df['time'] >= vModel.set.TInitAblation]
@@ -122,12 +152,21 @@ def analyse_simulation(folder):
 
     # Correlate wound edge cells features with wound area top
     try:
-        wound_edge_cells_features_avg['wound_area_top'] = post_wound_features['wound_area_top'][(post_wound_features.shape[0]-wound_edge_cells_features_avg.shape[0]):].values
-        correlation_matrix = wound_edge_cells_features_avg.corr()
+        if is_bubbles_cyst:
+            wound_edge_cells_features_for_corr = wound_edge_cells_features_avg.merge(
+                post_wound_features[['time', 'wound_area_top']].dropna(),
+                on='time',
+                how='inner',
+            )
+        else:
+            wound_edge_cells_features_avg['wound_area_top'] = post_wound_features['wound_area_top'][(post_wound_features.shape[0]-wound_edge_cells_features_avg.shape[0]):].values
+            wound_edge_cells_features_for_corr = wound_edge_cells_features_avg
+
+        correlation_matrix = wound_edge_cells_features_for_corr.corr()
         correlation_with_feature(correlation_matrix, 'wound_area_top', folder)
 
-        # Export to xlsx
-        wound_edge_cells_features_avg.to_excel(os.path.join(folder, 'features_per_time_only_wound_edge.xlsx'))
+        # Export to xlsx (fallback to CSV if openpyxl not available)
+        _to_excel_or_csv(wound_edge_cells_features_for_corr, os.path.join(folder, 'features_per_time_only_wound_edge.xlsx'))
     except Exception as e:
         print('Error in correlating wound edge cells features with wound area top: ', e)
 
@@ -138,8 +177,16 @@ def analyse_simulation(folder):
 
         post_wound_features = post_wound_features.dropna(axis=0)
 
+        non_normalized_columns = {
+            'time', 'ID', 'Scutoid', 'Neighbours', 'Neighbours_top', 'Neighbours_bottom',
+            'num_cells_wound_edge', 'num_cells_wound_edge_top', 'num_cells_wound_edge_bottom',
+        }
+
         # Compare post-wound features with pre-wound features in percentage
         for feature in post_wound_features.columns:
+            if feature in non_normalized_columns:
+                continue
+
             if 'indentation' in feature:
                 post_wound_features.loc[:, feature] = (post_wound_features[feature] - np.array(
                     pre_wound_features[feature])) * 100
@@ -147,8 +194,6 @@ def analyse_simulation(folder):
 
             if 'wound_height' in feature:
                 post_wound_features.loc[:, feature + '_'] = post_wound_features[feature] * 100
-
-            if feature == 'time':
                 continue
 
             if pre_wound_features[feature].iloc[0] == 0:
@@ -157,8 +202,8 @@ def analyse_simulation(folder):
                 post_wound_features.loc[:, feature] = (post_wound_features[feature] / np.array(
                     pre_wound_features[feature])) * 100
 
-        # Export to xlsx
-        post_wound_features.to_excel(os.path.join(folder, 'post_wound_features.xlsx'))
+        # Export to xlsx (fallback to CSV if openpyxl not available)
+        _to_excel_or_csv(post_wound_features, os.path.join(folder, 'post_wound_features.xlsx'))
 
         important_features, important_features_by_time = calculate_important_features(post_wound_features)
     else:
@@ -170,12 +215,20 @@ def analyse_simulation(folder):
         }
         important_features_by_time = {}
 
-    # Export to xlsx
+    important_features.update(ellipsoid_ablation_features)
+
+    if ellipsoid_ablation_features:
+        for feature, value in ellipsoid_ablation_features.items():
+            features_per_time_df[feature] = value
+        _to_excel_or_csv(pd.DataFrame([ellipsoid_ablation_features]),
+                         os.path.join(folder, 'ellipsoid_ablation_features.xlsx'))
+
+    # Export to xlsx (fallback to CSV if openpyxl not available)
     df = pd.DataFrame([important_features])
-    df.to_excel(os.path.join(folder, 'important_features.xlsx'))
+    _to_excel_or_csv(df, os.path.join(folder, 'important_features.xlsx'))
 
     df = pd.DataFrame(important_features_by_time)
-    df.to_excel(os.path.join(folder, 'important_features_by_time.xlsx'))
+    _to_excel_or_csv(df, os.path.join(folder, 'important_features_by_time.xlsx'))
 
     # Plot wound area top evolution over time and save it to a file
     plot_feature(folder, post_wound_features, name_columns=['wound_area_top', 'wound_area_bottom'])
@@ -189,6 +242,108 @@ def analyse_simulation(folder):
     plot_feature(folder, post_wound_features, name_columns='wound_area_bottom')
 
     return features_per_time_df, post_wound_features, important_features, features_per_time_all_cells_df
+
+
+def calculate_ellipsoid_ablation_features(v_model):
+    """
+    Calculate ellipsoid geometry at the ablation site.
+
+    The ablation site is estimated from the centroid of the cells marked for ablation in
+    the pre-ablation state, then projected radially onto the outer ellipsoid.
+    """
+    axes = np.array([
+        getattr(v_model.set, 'ellipsoid_axis1', np.nan),
+        getattr(v_model.set, 'ellipsoid_axis2', np.nan),
+        getattr(v_model.set, 'ellipsoid_axis3', np.nan),
+    ], dtype=float)
+
+    if np.any(~np.isfinite(axes)) or np.any(axes <= 0):
+        return {}
+
+    if getattr(v_model.geo, 'cellsToAblate', None) is None:
+        v_model.geo.cellsToAblate = getattr(v_model.set, 'cellsToAblate', None)
+
+    try:
+        ablation_centre, ablated_cell_ids = v_model.geo.compute_wound_centre()
+    except Exception as e:
+        logger.info('Could not calculate ellipsoid ablation features: ' + str(e))
+        return {}
+
+    ablation_centre = np.asarray(ablation_centre, dtype=float)
+    if ablation_centre.size != 3 or np.any(~np.isfinite(ablation_centre)):
+        return {}
+
+    ellipsoid_point = _project_point_to_axis_aligned_ellipsoid(ablation_centre, axes)
+    principal_curvatures = _ellipsoid_principal_curvatures(ellipsoid_point, axes)
+    principal_curvatures = np.sort(np.abs(principal_curvatures))
+    long_axis_direction = np.zeros(3)
+    long_axis_direction[np.argmax(axes)] = 1.0
+    meridional_angle = _compute_meridional_angle(ellipsoid_point, long_axis_direction)
+
+    return {
+        'ellipsoid_axis1': axes[0],
+        'ellipsoid_axis2': axes[1],
+        'ellipsoid_axis3': axes[2],
+        'ellipsoid_aspect_ratio': np.max(axes) / np.min(axes),
+        'ablation_centre_x': ablation_centre[0],
+        'ablation_centre_y': ablation_centre[1],
+        'ablation_centre_z': ablation_centre[2],
+        'ellipsoid_ablation_x': ellipsoid_point[0],
+        'ellipsoid_ablation_y': ellipsoid_point[1],
+        'ellipsoid_ablation_z': ellipsoid_point[2],
+        'ellipsoid_ablation_curvature_min': principal_curvatures[0],
+        'ellipsoid_ablation_curvature_max': principal_curvatures[1],
+        'ellipsoid_ablation_mean_curvature': np.mean(principal_curvatures),
+        'ellipsoid_ablation_gaussian_curvature': np.prod(principal_curvatures),
+        'ellipsoid_ablation_meridional_angle': meridional_angle,
+        'ellipsoid_ablation_location': _classify_wound_location(meridional_angle),
+        'ellipsoid_ablation_cell_ids': ','.join([str(cell_id) for cell_id in ablated_cell_ids]),
+    }
+
+
+def _project_point_to_axis_aligned_ellipsoid(point, axes):
+    shifted = np.asarray(point, dtype=float)
+    denom = np.sqrt(np.sum((shifted / axes) ** 2))
+    if denom == 0:
+        projected = np.array([axes[0], 0.0, 0.0])
+    else:
+        projected = shifted / denom
+    return projected
+
+
+def _ellipsoid_principal_curvatures(point, axes):
+    gradient = 2 * point / axes ** 2
+    gradient_norm = np.linalg.norm(gradient)
+    if gradient_norm == 0:
+        return np.array([np.nan, np.nan])
+
+    normal = gradient / gradient_norm
+    projection = np.eye(3) - np.outer(normal, normal)
+    hessian = np.diag(2 / axes ** 2)
+    shape_operator = projection @ hessian @ projection / gradient_norm
+    eigenvalues = np.linalg.eigvalsh(shape_operator)
+    return eigenvalues[np.argsort(np.abs(eigenvalues))[-2:]]
+
+
+def _compute_meridional_angle(point, long_axis_direction):
+    direction = np.asarray(point, dtype=float)
+    norm = np.linalg.norm(direction)
+    if norm == 0:
+        return np.nan
+
+    direction = direction / norm
+    cos_phi = np.dot(direction, long_axis_direction)
+    return np.arcsin(np.clip(cos_phi, -1, 1))
+
+
+def _classify_wound_location(phi):
+    if not np.isfinite(phi):
+        return np.nan
+    if abs(phi) <= np.pi / 6:
+        return 'equator'
+    if abs(phi) >= np.pi / 3:
+        return 'pole'
+    return 'transition'
 
 
 def correlation_with_feature(correlation_matrix, feature_name, folder):
