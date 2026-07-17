@@ -1,7 +1,6 @@
 import os
 import pickle
 
-import cv2
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -112,6 +111,10 @@ def analyse_simulation(folder):
         load_state(vModel, os.path.join(folder, 'before_ablation.pkl'))
 
     ellipsoid_ablation_features = calculate_ellipsoid_ablation_features(vModel)
+    cell_locations_df = calculate_cell_locations(vModel)
+    cell_volumes_df = calculate_cell_volumes(features_per_time_all_cells_df, cell_locations_df)
+    if cell_volumes_df is not None:
+        _to_excel_or_csv(cell_volumes_df, os.path.join(folder, 'cell_volumes_per_time.xlsx'))
 
     # Create video
     create_video(os.path.join(folder, 'images'), 'vModel_combined_',
@@ -244,6 +247,66 @@ def analyse_simulation(folder):
     return features_per_time_df, post_wound_features, important_features, features_per_time_all_cells_df
 
 
+def calculate_cell_volumes(features_per_time_all_cells_df, cell_locations_df=None):
+    """
+    Create a per-timepoint table with one volume column per cell ID.
+    """
+    required_columns = {'time', 'ID', 'Volume'}
+    if features_per_time_all_cells_df is None or not required_columns.issubset(features_per_time_all_cells_df.columns):
+        return None
+
+    cell_volumes_df = features_per_time_all_cells_df[['time', 'ID', 'Volume']].copy()
+    cell_volumes_df = cell_volumes_df.dropna(subset=['time', 'ID', 'Volume'])
+    cell_volumes_df = cell_volumes_df.groupby(['time', 'ID'], as_index=False)['Volume'].mean()
+    cell_volumes_df = cell_volumes_df.pivot(index='time', columns='ID', values='Volume').reset_index()
+    cell_volumes_df.columns = [
+        'time' if column == 'time' else f'cell_{int(column) if float(column).is_integer() else column}_volume'
+        for column in cell_volumes_df.columns
+    ]
+    cell_volumes_df['total_cell_volume'] = cell_volumes_df.drop(columns='time').sum(axis=1)
+
+    if cell_locations_df is not None:
+        for _, cell_location in cell_locations_df.iterrows():
+            cell_id = int(cell_location['ID']) if float(cell_location['ID']).is_integer() else cell_location['ID']
+            cell_volumes_df[f'cell_{cell_id}_meridional_angle'] = cell_location['meridional_angle']
+            cell_volumes_df[f'cell_{cell_id}_location'] = cell_location['location']
+
+    return cell_volumes_df
+
+
+def calculate_cell_locations(v_model):
+    axes = np.array([
+        getattr(v_model.set, 'ellipsoid_axis1', np.nan),
+        getattr(v_model.set, 'ellipsoid_axis2', np.nan),
+        getattr(v_model.set, 'ellipsoid_axis3', np.nan),
+    ], dtype=float)
+
+    if np.any(~np.isfinite(axes)) or np.any(axes <= 0):
+        return None
+
+    long_axis_direction = np.zeros(3)
+    long_axis_direction[np.argmax(axes)] = 1.0
+
+    cell_locations = []
+    for cell in v_model.geo.Cells:
+        if cell.AliveStatus is None:
+            continue
+        cell_centre = np.asarray(cell.X, dtype=float)
+        if cell_centre.size != 3 or np.any(~np.isfinite(cell_centre)):
+            continue
+        meridional_angle = _compute_meridional_angle(cell_centre, long_axis_direction)
+        cell_locations.append({
+            'ID': cell.ID,
+            'meridional_angle': meridional_angle,
+            'location': _classify_wound_location(meridional_angle),
+        })
+
+    if not cell_locations:
+        return None
+
+    return pd.DataFrame(cell_locations)
+
+
 def calculate_ellipsoid_ablation_features(v_model):
     """
     Calculate ellipsoid geometry at the ablation site.
@@ -340,7 +403,7 @@ def _classify_wound_location(phi):
     if not np.isfinite(phi):
         return np.nan
     if abs(phi) <= np.pi / 6:
-        return 'equator'
+        return 'centre'
     if abs(phi) >= np.pi / 3:
         return 'pole'
     return 'transition'
@@ -722,8 +785,20 @@ def create_video(folder, name_containing_images='top_', model_name=None):
     :param folder:
     :return:
     """
+    try:
+        import cv2
+    except ImportError as e:
+        print(f"Warning: could not create video because OpenCV is not installed: {e}")
+        return
+
+    if not os.path.isdir(folder):
+        print(f"Warning: could not create video because image folder does not exist: {folder}")
+        return
+
     # Create the output video name
-    output_video_name = os.path.join(folder, '_'.join([model_name, 'video.mp4']))
+    if model_name is None:
+        model_name = os.path.basename(os.path.dirname(folder)) or 'simulation'
+    output_video_name = os.path.join(folder, '_'.join([str(model_name), 'video.mp4']))
 
     # Check if video exists
     if os.path.exists(output_video_name):
@@ -734,18 +809,29 @@ def create_video(folder, name_containing_images='top_', model_name=None):
     # Filter if the image is not a number
     images = [img for img in images if img.split('_')[-1].split('.')[0].isdigit()]
     images.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
+    if not images:
+        print(f"Warning: could not create video because no '{name_containing_images}*.png' images were found in {folder}")
+        return
 
     # Determine the width and height from the first image
     image_path = os.path.join(folder, images[0])
     frame = cv2.imread(image_path)
+    if frame is None:
+        print(f"Warning: could not create video because first frame could not be read: {image_path}")
+        return
     height, width, layers = frame.shape
 
     # Define the codec and create VideoWriter object
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Use 'mp4v' for MP4
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     video = cv2.VideoWriter(output_video_name, fourcc, 7, (width, height))
+    if not video.isOpened():
+        print(f"Warning: could not create video writer: {output_video_name}")
+        return
 
     for image in images:
-        video.write(cv2.imread(os.path.join(folder, image)))
+        frame = cv2.imread(os.path.join(folder, image))
+        if frame is not None:
+            video.write(frame)
 
     cv2.destroyAllWindows()
     video.release()
