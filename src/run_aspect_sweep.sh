@@ -1,18 +1,23 @@
 #!/bin/bash
 
-PROJECT_DIR=$(dirname "$(dirname "$(realpath "$0")")")
-PYTHON_SCRIPT="$PROJECT_DIR/run_cyst_aspect.py"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+PYTHON_SCRIPT="$SCRIPT_DIR/pyVertexModel/run_cyst_aspect.py"
+OUTPUT_ROOT="${PYVERTEXMODEL_OUTPUT_ROOT:-$PROJECT_DIR/Result/aspect_ratio_sweep}"
 
 export PYTHONPATH="$PROJECT_DIR/src:$PYTHONPATH"
+export PYVERTEXMODEL_OUTPUT_ROOT="$OUTPUT_ROOT"
 export QT_QPA_PLATFORM="offscreen"
 export PYVISTA_OFF_SCREEN="true"
+
+mkdir -p "$OUTPUT_ROOT/logs"
 
 parameter_indices=(0 1 2 3 4)
 max_jobs=3
 
 run_simulation() {
     local idx=$1
-    local log_file="$PROJECT_DIR/aspect_ratio_${idx}.log"
+    local log_file="$OUTPUT_ROOT/logs/aspect_ratio_${idx}.log"
 
     echo "[$(date)] Starting aspect-ratio index $idx"
 

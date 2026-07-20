@@ -268,6 +268,9 @@ def calculate_cell_volumes(features_per_time_all_cells_df, cell_locations_df=Non
     if cell_locations_df is not None:
         for _, cell_location in cell_locations_df.iterrows():
             cell_id = int(cell_location['ID']) if float(cell_location['ID']).is_integer() else cell_location['ID']
+            cell_volumes_df[f'cell_{cell_id}_x'] = cell_location['x']
+            cell_volumes_df[f'cell_{cell_id}_y'] = cell_location['y']
+            cell_volumes_df[f'cell_{cell_id}_z'] = cell_location['z']
             cell_volumes_df[f'cell_{cell_id}_meridional_angle'] = cell_location['meridional_angle']
             cell_volumes_df[f'cell_{cell_id}_location'] = cell_location['location']
 
@@ -297,6 +300,9 @@ def calculate_cell_locations(v_model):
         meridional_angle = _compute_meridional_angle(cell_centre, long_axis_direction)
         cell_locations.append({
             'ID': cell.ID,
+            'x': cell_centre[0],
+            'y': cell_centre[1],
+            'z': cell_centre[2],
             'meridional_angle': meridional_angle,
             'location': _classify_wound_location(meridional_angle),
         })
