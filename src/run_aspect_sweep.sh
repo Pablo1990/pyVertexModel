@@ -5,6 +5,14 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PYTHON_SCRIPT="$SCRIPT_DIR/pyVertexModel/run_cyst_aspect.py"
 OUTPUT_ROOT="${PYVERTEXMODEL_OUTPUT_ROOT:-$PROJECT_DIR/Result/aspect_ratio_sweep}"
 
+if [ -x "$PROJECT_DIR/.venv/Scripts/python.exe" ]; then
+    PYTHON="$PROJECT_DIR/.venv/Scripts/python.exe"
+elif [ -x "$PROJECT_DIR/.venv/bin/python" ]; then
+    PYTHON="$PROJECT_DIR/.venv/bin/python"
+else
+    PYTHON="${PYTHON:-python}"
+fi
+
 export PYTHONPATH="$PROJECT_DIR/src:$PYTHONPATH"
 export PYVERTEXMODEL_OUTPUT_ROOT="$OUTPUT_ROOT"
 export QT_QPA_PLATFORM="offscreen"
@@ -21,7 +29,7 @@ run_simulation() {
 
     echo "[$(date)] Starting aspect-ratio index $idx"
 
-    python "$PYTHON_SCRIPT" "$idx" \
+    "$PYTHON" "$PYTHON_SCRIPT" "$idx" \
         > "$log_file" 2>&1
 
     local exit_code=$?

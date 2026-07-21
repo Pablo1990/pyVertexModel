@@ -802,8 +802,13 @@ def build_cyst_mesh(result, center, inner_axes, outer_axes):
 
 
 class VertexModelBubbles(VertexModel):
-    def __init__(self, set_option=None):
-        super().__init__(set_option)
+    def __init__(self, set_option=None, c_set=None, create_output_folder=True, update_derived_parameters=True):
+        super().__init__(
+            set_option=set_option,
+            c_set=c_set,
+            create_output_folder=create_output_folder,
+            update_derived_parameters=update_derived_parameters,
+        )
 
     def initialize_cells(self, filename):
         """
