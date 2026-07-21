@@ -1,5 +1,6 @@
 import os
 import sys
+import traceback
 
 from pyVertexModel.algorithm.vertexModelBubbles import VertexModelBubbles
 from pyVertexModel.parameters.set import PROJECT_DIRECTORY
@@ -7,18 +8,43 @@ from pyVertexModel.parameters.set import PROJECT_DIRECTORY
 
 aspect_ratios = [1.0, 1.5, 2.5, 5.0, 10.0]
 
-idx = int(sys.argv[1])
 
-if idx < 0 or idx >= len(aspect_ratios):
-    raise ValueError(
-        f"Aspect-ratio index must be between 0 and "
-        f"{len(aspect_ratios) - 1}, got {idx}"
-    )
+def parse_aspect_index(argv):
+    if len(argv) > 2:
+        raise ValueError(f"Expected one aspect-ratio index argument, got: {' '.join(argv[1:])}")
+
+    if len(argv) == 2:
+        idx_text = argv[1]
+    else:
+        idx_text = os.environ.get("SLURM_ARRAY_TASK_ID") or os.environ.get("PYVERTEXMODEL_ASPECT_INDEX") or "0"
+
+    try:
+        idx = int(idx_text)
+    except ValueError as exc:
+        raise ValueError(f"Aspect-ratio index must be an integer, got {idx_text!r}") from exc
+
+    if idx < 0 or idx >= len(aspect_ratios):
+        raise ValueError(
+            f"Aspect-ratio index must be between 0 and "
+            f"{len(aspect_ratios) - 1}, got {idx}"
+        )
+
+    return idx
+
+
+try:
+    idx = parse_aspect_index(sys.argv)
+except Exception:
+    traceback.print_exc()
+    sys.exit(1)
 
 aspect_ratio = aspect_ratios[idx]
 short_axis = 4.0
 safe_ratio = str(aspect_ratio).replace(".", "p")
 
+print("Python executable:", sys.executable)
+print("Aspect-ratio index:", idx)
+print("Aspect ratio:", aspect_ratio)
 
 # 1. Load cyst_scratch defaults first
 v_model = VertexModelBubbles(
