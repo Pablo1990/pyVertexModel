@@ -104,4 +104,8 @@ v_model.set.redirect_output()
 
 # 7. Run
 v_model.initialize()
+v_model.set.export_images = False
+v_model.set.VTK = False
+print("Image export enabled:", v_model.set.export_images)
+print("VTK export enabled:", v_model.set.VTK)
 v_model.iterate_over_time()
