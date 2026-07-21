@@ -54,6 +54,7 @@ v_model = VertexModelBubbles(
 
 
 # 2. Override the geometry after loading the preset
+v_model.set.export_images = False
 v_model.set.ellipsoid_axis1 = aspect_ratio * short_axis
 v_model.set.ellipsoid_axis2 = short_axis
 v_model.set.ellipsoid_axis3 = short_axis
