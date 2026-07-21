@@ -1,6 +1,12 @@
 import os
 import sys
 import traceback
+from pathlib import Path
+
+
+SRC_DIRECTORY = Path(__file__).resolve().parents[1]
+if str(SRC_DIRECTORY) not in sys.path:
+    sys.path.insert(0, str(SRC_DIRECTORY))
 
 from pyVertexModel.algorithm.vertexModelBubbles import VertexModelBubbles
 from pyVertexModel.parameters.set import PROJECT_DIRECTORY
