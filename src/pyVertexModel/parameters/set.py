@@ -369,6 +369,7 @@ class Set:
         self.model_name = 'Cyst_scratch'
         self.TotalCells = 100
         self.CellHeight = 15
+        self.tend = 8
         self.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/Cyst')
         self.lambdaR = 0
         self.Remodelling = False
