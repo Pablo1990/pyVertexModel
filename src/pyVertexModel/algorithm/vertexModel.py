@@ -409,8 +409,9 @@ class VertexModel:
             self.adjust_percentage_of_scutoids()
 
             # Save screenshot of the initial state
-            image_file = str(Path(filename).parent)
-            screenshot_(self.geo, self.set, 0, Path(output_filename).name, image_file)
+            if getattr(self.set, "export_images", True):
+                image_file = str(Path(filename).parent)
+                screenshot_(self.geo, self.set, 0, Path(output_filename).name, image_file)
 
             # Save initial state
             save_state(self, output_filename)
