@@ -9,7 +9,7 @@ from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import (
 )
 
 original_wing_disc_height = 15.0 # in microns
-set_of_resize_z = np.array([0.0001, 0.001, 0.01, 0.1, 0.5, 1.0, 2.0]) * original_wing_disc_height
+set_of_resize_z = np.array([0.001, 0.01, 0.1, 0.5, 1.0]) * original_wing_disc_height
 
 set_of_resize_z_to_do = [set_of_resize_z[int(sys.argv[1])]]# [set_of_resize_z[0], set_of_resize_z[1], set_of_resize_z[2], set_of_resize_z[3], set_of_resize_z[4], set_of_resize_z[6]]
 files_to_be_done = ['dWP12', 'dWP8', 'dWP3', 'dWL3', 'dWL8', 'dWP15', 'dWP14', 'dWL4', 'dWL12', 'dWP1']
