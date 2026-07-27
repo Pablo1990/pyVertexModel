@@ -748,8 +748,22 @@ class Geo:
 
                 # Initialize gIds with the same shape as CellJ.globalIds
                 for numId in np.where(face_ids_i)[0]:
-                    match = np.all(np.isin(CellJ.T, Cell.T[numId, :]), axis=1)
-                    g_ids[numId] = CellJ.globalIds[match]
+                    target_tet = np.sort(Cell.T[numId, :])
+                    match = np.all(np.sort(CellJ.T, axis=1) == target_tet, axis=1)
+                    matched_global_ids = CellJ.globalIds[match]
+
+                    if len(matched_global_ids) == 0:
+                        continue
+
+                    if len(matched_global_ids) > 1:
+                        logger.warning(
+                            "Multiple global ID matches for cell %s tet %s against cell %s; using first match.",
+                            ci,
+                            Cell.T[numId, :],
+                            cj,
+                        )
+
+                    g_ids[numId] = matched_global_ids[0]
 
                 for f in range(len(Cell.Faces)):
                     Face = Cell.Faces[f]
