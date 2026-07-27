@@ -295,13 +295,21 @@ class VertexModel:
             logging.error(f'File {filename} not found')
             raise FileNotFoundError(f'File {filename} not found')
 
-        base, ext = os.path.splitext(filename)
+        generated_filename_state = getattr(
+            self.set,
+            "generated_initial_filename_state",
+            self.set.initial_filename_state,
+        )
+        generated_filename = os.path.join(PROJECT_DIRECTORY, generated_filename_state)
+        base, ext = os.path.splitext(generated_filename)
         if self.set.min_3d_neighbours is None:
             output_filename = f"{base}_{self.set.TotalCells}cells_{self.set.CellHeight}_scutoids_{self.set.percentage_scutoids}.pkl"
         else:
             output_filename = f"{base}_{self.set.TotalCells}cells_{self.set.CellHeight}_min3d_{self.set.min_3d_neighbours}.pkl"
 
-        if exists(output_filename):
+        force_cell_initialization = getattr(self.set, "force_cell_initialization", False)
+
+        if exists(output_filename) and not force_cell_initialization:
             # Check date of the output_filename and if it is older than 1 day from today, redo the file
             # if os.path.getmtime(output_filename) < (time.time() - 24 * 60 * 60):
             #     logger.info(f'Redoing the file {output_filename} as it is older than 1 day')
@@ -311,6 +319,9 @@ class VertexModel:
             load_state(self, output_filename)
             self.set = new_set
         else:
+            if exists(output_filename) and force_cell_initialization:
+                logger.info(f'Ignoring existing state and reinitializing cells: {output_filename}')
+
             if filename.endswith('.pkl'):
                 output_folder = self.set.OutputFolder
                 load_state(self, filename, ['geo', 'geo_0', 'geo_n'])

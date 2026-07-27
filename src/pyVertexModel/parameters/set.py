@@ -36,6 +36,7 @@ class Set:
         self.cLineTension_external = None
         self.Contractility_external = False
         self.initial_filename_state = None
+        self.force_cell_initialization = False
         self.delay_lateral_cables = 5.8
         self.delay_purse_string = self.delay_lateral_cables
         self.ref_A0 = None
@@ -369,7 +370,7 @@ class Set:
         self.model_name = 'Cyst_scratch'
         self.TotalCells = 100
         self.CellHeight = 15
-        self.tend = 8
+        self.tend = 7.5
         self.OutputFolder = os.path.join(PROJECT_DIRECTORY, 'Result/Cyst')
         self.lambdaR = 0
         self.Remodelling = False

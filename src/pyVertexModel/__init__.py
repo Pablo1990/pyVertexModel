@@ -3,7 +3,10 @@ import os
 import warnings
 from pathlib import Path
 
-from ._version import __version__
+try:
+    from ._version import __version__
+except ModuleNotFoundError:
+    __version__ = "0+unknown"
 
 # Get the project root directory (two levels up from this __init__.py file)
 # This file is at: src/pyVertexModel/__init__.py

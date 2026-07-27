@@ -1,5 +1,6 @@
 import logging
 import math
+import os
 import statistics
 from collections import Counter
 
@@ -7,6 +8,7 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.spatial import ConvexHull, Delaunay, cKDTree, SphericalVoronoi
 
+from pyVertexModel import PROJECT_DIRECTORY
 from pyVertexModel.algorithm.vertexModel import VertexModel
 from pyVertexModel.algorithm.vertexModelVoronoiFromTimeImage import generate_neighbours_network
 from pyVertexModel.util.utils import save_state, face_centres_to_middle_of_neighbours_vertices
@@ -815,13 +817,19 @@ class VertexModelBubbles(VertexModel):
         Initialize the geometry and the topology of the model.
         :return:
         """
+        generated_filename_state = getattr(self.set, "generated_initial_filename_state", None)
+        if generated_filename_state is not None:
+            generated_filename = os.path.join(PROJECT_DIRECTORY, generated_filename_state)
+        else:
+            generated_filename = filename
+
         # Build nodal mesh
         if self.geo is None:
             self.geo = Geo()
 
         if self.set.InputGeo == 'Bubbles_Cyst':
             self.initialize_cyst_from_ellipsoid_seed()
-            filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
+            filename = generated_filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
             save_state(self.geo, filename)
             return
         else:
@@ -859,7 +867,7 @@ class VertexModelBubbles(VertexModel):
             self.geo = extrapolate_ys_faces_ellipsoid(self.geo, self.set)
 
         # Save state with filename using the number of cells
-        filename = filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
+        filename = generated_filename.replace('.tif', f'_{self.set.TotalCells}cells.pkl')
         save_state(self.geo, filename)
 
     def generate_Xs(self, nx=None, ny=None, nz=None):

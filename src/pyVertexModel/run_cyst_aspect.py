@@ -61,6 +61,7 @@ v_model = VertexModelBubbles(
 
 # 2. Override the geometry after loading the preset
 v_model.set.export_images = False
+v_model.set.force_cell_initialization = True
 v_model.set.ellipsoid_axis1 = aspect_ratio * short_axis
 v_model.set.ellipsoid_axis2 = short_axis
 v_model.set.ellipsoid_axis3 = short_axis
@@ -72,6 +73,7 @@ v_model.set.lumen_axis3 = 0.5 * v_model.set.ellipsoid_axis3
 
 # 3. Give every run a unique model name and output folder
 v_model.set.model_name = f"Cyst_AR_{safe_ratio}"
+v_model.set.initial_filename_state = f"Result/Cyst/cyst_scratch_AR_{safe_ratio}.tif"
 
 v_model.set.OutputFolder = os.path.join(
     PROJECT_DIRECTORY,
