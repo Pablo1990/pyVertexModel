@@ -2,8 +2,8 @@
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-PYTHON_SCRIPT="$SCRIPT_DIR/pyVertexModel/run_cyst_aspect.py"
-OUTPUT_ROOT="${PYVERTEXMODEL_OUTPUT_ROOT:-$PROJECT_DIR/Result/aspect_ratio_sweep}"
+PYTHON_SCRIPT="$SCRIPT_DIR/pyVertexModel/run_cyst_aspect_cell_height.py"
+OUTPUT_ROOT="${PYVERTEXMODEL_OUTPUT_ROOT:-$PROJECT_DIR/Result/aspect_ratio_cell_height_ablation_sweep}"
 
 if [ -x "$PROJECT_DIR/.venv/Scripts/python.exe" ]; then
     PYTHON="$PROJECT_DIR/.venv/Scripts/python.exe"
@@ -20,14 +20,14 @@ export PYVISTA_OFF_SCREEN="true"
 
 mkdir -p "$OUTPUT_ROOT/logs"
 
-parameter_indices=(0 1 2 3 4)
+parameter_indices=($(seq 0 104))
 max_jobs=3
 
 run_simulation() {
     local idx=$1
-    local log_file="$OUTPUT_ROOT/logs/aspect_ratio_${idx}.log"
+    local log_file="$OUTPUT_ROOT/logs/sweep_job_${idx}.log"
 
-    echo "[$(date)] Starting aspect-ratio index $idx"
+    echo "[$(date)] Starting sweep job $idx"
 
     "$PYTHON" "$PYTHON_SCRIPT" "$idx" \
         > "$log_file" 2>&1
@@ -35,9 +35,9 @@ run_simulation() {
     local exit_code=$?
 
     if [ "$exit_code" -eq 0 ]; then
-        echo "[$(date)] Finished aspect-ratio index $idx"
+        echo "[$(date)] Finished sweep job $idx"
     else
-        echo "[$(date)] Aspect-ratio index $idx failed with code $exit_code"
+        echo "[$(date)] Sweep job $idx failed with code $exit_code"
     fi
 }
 
@@ -50,4 +50,4 @@ for idx in "${parameter_indices[@]}"; do
 done
 
 wait
-echo "[$(date)] All aspect-ratio simulations completed."
+echo "[$(date)] All aspect-ratio/cell-height/ablation simulations completed."
