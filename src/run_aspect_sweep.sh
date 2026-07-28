@@ -20,8 +20,26 @@ export PYVISTA_OFF_SCREEN="true"
 
 mkdir -p "$OUTPUT_ROOT/logs"
 
-parameter_indices=($(seq 0 104))
-max_jobs=3
+case "${1:-${SWEEP_SPLIT:-all}}" in
+    first|1)
+        parameter_indices=($(seq 0 51))
+        ;;
+    second|2)
+        parameter_indices=($(seq 52 104))
+        ;;
+    all)
+        parameter_indices=($(seq 0 104))
+        ;;
+    *)
+        echo "Usage: $0 [first|second|all]"
+        echo "  first:  jobs 0-51  (52 runs)"
+        echo "  second: jobs 52-104 (53 runs)"
+        echo "  all:    jobs 0-104 (105 runs)"
+        exit 2
+        ;;
+esac
+
+max_jobs="${MAX_JOBS:-3}"
 
 run_simulation() {
     local idx=$1

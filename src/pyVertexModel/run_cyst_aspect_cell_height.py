@@ -23,6 +23,7 @@ CELL_HEIGHTS = (
 ASPECT_RATIOS = [1.0, 1.5, 2.5, 5.0, 10.0]
 SHORT_AXIS = 4.0
 SHARED_CYST_SOURCE = "Result/Cyst/cyst_scratch.tif"
+T_END = 7.5
 ABLATION_CASES = [
     ("centre", 12),
     ("transition", 59),
@@ -121,6 +122,8 @@ def configure_model(aspect_ratio, cell_height, ablation_name, cell_to_ablate):
     v_model.set.VTK = False
     v_model.set.force_cell_initialization = True
     v_model.set.CellHeight = float(cell_height)
+    v_model.set.tend = T_END
+    v_model.set.Nincr = int(T_END * 100)
     v_model.set.resize_z = None
 
     v_model.set.ellipsoid_axis1 = aspect_ratio * SHORT_AXIS
@@ -162,6 +165,7 @@ def main():
     print("Ablation-case index:", ablation_idx)
     print("Aspect ratio:", aspect_ratio)
     print("Cell height:", cell_height)
+    print("End time:", T_END)
     print("Ablation case:", ablation_name)
     print("Cell to ablate:", cell_to_ablate)
 
