@@ -30,15 +30,21 @@ def _to_excel_or_csv(df, path):
         print(f"Warning: could not write xlsx '{path}'; saved CSV '{csv_path}'. Error: {e}")
 
 
-def analyse_simulation(folder):
+def analyse_simulation(folder, output_folder=None):
     """
     Analyse the simulation results
     :param folder:
     :return:
     """
 
-    # Check if the pkl file exists
-    if not os.path.exists(os.path.join(folder, 'features_per_time.pkl')):
+    if output_folder is None:
+        output_folder = folder
+
+    os.makedirs(output_folder, exist_ok=True)
+
+    # Check if the analysis cache exists
+    features_per_time_file = os.path.join(output_folder, 'features_per_time.pkl')
+    if not os.path.exists(features_per_time_file):
         #return None, None, None, None
         vModel = VertexModel(create_output_folder=False)
 
@@ -85,22 +91,22 @@ def analyse_simulation(folder):
         features_per_time_df.sort_values(by='time', inplace=True)
 
         # Save dataframes to a single pkl
-        with open(os.path.join(folder, 'features_per_time.pkl'), 'wb') as f:
+        with open(features_per_time_file, 'wb') as f:
             pickle.dump(features_per_time_df, f)
             pickle.dump(None, f)
             pickle.dump(None, f)
             pickle.dump(features_per_time_all_cells_df, f)
 
         # Export to xlsx (fallback to CSV if openpyxl not available)
-        _to_excel_or_csv(features_per_time_all_cells_df, os.path.join(folder, 'features_per_time_all_cells.xlsx'))
-        _to_excel_or_csv(features_per_time_df, os.path.join(folder, 'features_per_time.xlsx'))
+        _to_excel_or_csv(features_per_time_all_cells_df, os.path.join(output_folder, 'features_per_time_all_cells.xlsx'))
+        _to_excel_or_csv(features_per_time_df, os.path.join(output_folder, 'features_per_time.xlsx'))
 
         before_ablation_file = os.path.join(folder, 'before_ablation.pkl')
         if os.path.exists(before_ablation_file):
             load_state(vModel, before_ablation_file)
     else:
         # Load dataframes from pkl
-        with open(os.path.join(folder, 'features_per_time.pkl'), 'rb') as f:
+        with open(features_per_time_file, 'rb') as f:
             features_per_time_df = pickle.load(f)
             important_features = pickle.load(f)
             post_wound_features = pickle.load(f)
@@ -114,7 +120,7 @@ def analyse_simulation(folder):
     cell_locations_df = calculate_cell_locations(vModel)
     cell_volumes_df = calculate_cell_volumes(features_per_time_all_cells_df, cell_locations_df)
     if cell_volumes_df is not None:
-        _to_excel_or_csv(cell_volumes_df, os.path.join(folder, 'cell_volumes_per_time.xlsx'))
+        _to_excel_or_csv(cell_volumes_df, os.path.join(output_folder, 'cell_volumes_per_time.xlsx'))
 
     # Create video
     create_video(os.path.join(folder, 'images'), 'vModel_combined_',
@@ -166,10 +172,10 @@ def analyse_simulation(folder):
             wound_edge_cells_features_for_corr = wound_edge_cells_features_avg
 
         correlation_matrix = wound_edge_cells_features_for_corr.corr()
-        correlation_with_feature(correlation_matrix, 'wound_area_top', folder)
+        correlation_with_feature(correlation_matrix, 'wound_area_top', output_folder)
 
         # Export to xlsx (fallback to CSV if openpyxl not available)
-        _to_excel_or_csv(wound_edge_cells_features_for_corr, os.path.join(folder, 'features_per_time_only_wound_edge.xlsx'))
+        _to_excel_or_csv(wound_edge_cells_features_for_corr, os.path.join(output_folder, 'features_per_time_only_wound_edge.xlsx'))
     except Exception as e:
         print('Error in correlating wound edge cells features with wound area top: ', e)
 
@@ -206,7 +212,7 @@ def analyse_simulation(folder):
                     pre_wound_features[feature])) * 100
 
         # Export to xlsx (fallback to CSV if openpyxl not available)
-        _to_excel_or_csv(post_wound_features, os.path.join(folder, 'post_wound_features.xlsx'))
+        _to_excel_or_csv(post_wound_features, os.path.join(output_folder, 'post_wound_features.xlsx'))
 
         important_features, important_features_by_time = calculate_important_features(post_wound_features)
     else:
@@ -224,25 +230,25 @@ def analyse_simulation(folder):
         for feature, value in ellipsoid_ablation_features.items():
             features_per_time_df[feature] = value
         _to_excel_or_csv(pd.DataFrame([ellipsoid_ablation_features]),
-                         os.path.join(folder, 'ellipsoid_ablation_features.xlsx'))
+                         os.path.join(output_folder, 'ellipsoid_ablation_features.xlsx'))
 
     # Export to xlsx (fallback to CSV if openpyxl not available)
     df = pd.DataFrame([important_features])
-    _to_excel_or_csv(df, os.path.join(folder, 'important_features.xlsx'))
+    _to_excel_or_csv(df, os.path.join(output_folder, 'important_features.xlsx'))
 
     df = pd.DataFrame(important_features_by_time)
-    _to_excel_or_csv(df, os.path.join(folder, 'important_features_by_time.xlsx'))
+    _to_excel_or_csv(df, os.path.join(output_folder, 'important_features_by_time.xlsx'))
 
     # Plot wound area top evolution over time and save it to a file
-    plot_feature(folder, post_wound_features, name_columns=['wound_area_top', 'wound_area_bottom'])
-    plot_feature(folder, post_wound_features, name_columns='num_cells_wound_edge_top')
-    plot_feature(folder, post_wound_features, name_columns='wound_height_')
-    plot_feature(folder, post_wound_features, name_columns=['Volume', 'Volume_wound_edge'])
+    plot_feature(output_folder, post_wound_features, name_columns=['wound_area_top', 'wound_area_bottom'])
+    plot_feature(output_folder, post_wound_features, name_columns='num_cells_wound_edge_top')
+    plot_feature(output_folder, post_wound_features, name_columns='wound_height_')
+    plot_feature(output_folder, post_wound_features, name_columns=['Volume', 'Volume_wound_edge'])
     try:
-        plot_feature(folder, post_wound_features, name_columns=['wound_indentation_top', 'wound_indentation_bottom'])
+        plot_feature(output_folder, post_wound_features, name_columns=['wound_indentation_top', 'wound_indentation_bottom'])
     except Exception as e:
         pass
-    plot_feature(folder, post_wound_features, name_columns='wound_area_bottom')
+    plot_feature(output_folder, post_wound_features, name_columns='wound_area_bottom')
 
     return features_per_time_df, post_wound_features, important_features, features_per_time_all_cells_df
 

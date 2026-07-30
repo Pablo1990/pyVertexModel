@@ -49,6 +49,7 @@ dependencies = [
     "cython",
     "vtk",
     "pandas",
+    "openpyxl",
     "networkx",
     "pyvista",
     "scikit-learn",
