@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import optuna
+import pandas as pd
 
 from pyVertexModel import PROJECT_DIRECTORY
 from pyVertexModel.util.space_exploration import (
@@ -17,6 +18,9 @@ set_of_resize_z = np.array([0.0001, 0.001, 0.01, 0.1, 0.5, 1, 2.0]) * original_w
 type_of_search = '_gr_'  # '_KInitialRecoil_'
 num_trials = 500
 scutoids_percentage = [0, 0.5, 0.99]
+result_folder = os.path.join(PROJECT_DIRECTORY, 'Result', 'optuna_trials')
+os.makedirs(result_folder, exist_ok=True)
+best_results = []
 
 # Get all the files from 'Input/images/' that end with '.tif' and do not contain 'labelled'
 all_files = [f.split('.')[0] for f in os.listdir(PROJECT_DIRECTORY + '/Input/images/') if f.endswith('.tif') and not f.endswith('labelled.tif')]
@@ -36,6 +40,32 @@ for input_file in all_files:
             try:
                 if len(study.trials) < num_trials:
                     study.optimize(objective, n_trials=num_trials, show_progress_bar=True, n_jobs=1)
+
+                trials_df = study.trials_dataframe(
+                    attrs=("number", "value", "params", "user_attrs", "state")
+                )
+                trials_df.to_csv(
+                    os.path.join(result_folder, f"all_trials_{study_name}.csv"),
+                    index=False,
+                )
+
+                if len(study.trials) > 0:
+                    best = study.best_trial
+                    best_results.append({
+                        "study_name": study_name,
+                        "input_file": input_file,
+                        "resize_z": resize_z,
+                        "scutoids": scutoids,
+                        "objective": best.value,
+                        **best.params,
+                    })
+
+                    best_results_df = pd.DataFrame(best_results)
+                    best_results_df.to_csv(
+                        os.path.join(result_folder, "best_parameters.csv"),
+                        index=False,
+                    )
+
                 print("Best parameters:", study.best_params)
                 print("Best value:", study.best_value)
                 print("Best trial:", study.best_trial)

@@ -11,11 +11,13 @@ from __future__ import annotations
 import os
 import sys
 import traceback
+import argparse
 from functools import partial
 from pathlib import Path
 
 import numpy as np
 import optuna
+import pandas as pd
 
 
 SRC_DIRECTORY = Path(__file__).resolve().parents[1]
@@ -167,10 +169,79 @@ def ellipsoid_stability_objective(aspect_ratio, trial):
     return gr + SHAPE_PENALTY_WEIGHT * shape_error + SIZE_PENALTY_WEIGHT * size_error
 
 
-def main():
+def save_study_csvs(aspect_ratio, study, result_folder=None):
+    if result_folder is None:
+        result_folder = os.path.join(PROJECT_DIRECTORY, RESULT_FOLDER)
+
+    os.makedirs(result_folder, exist_ok=True)
+
+    trials_df = study.trials_dataframe(
+        attrs=("number", "value", "params", "user_attrs", "state")
+    )
+    trials_path = os.path.join(
+        result_folder,
+        f"all_trials_AR_{safe_float(aspect_ratio)}.csv",
+    )
+    trials_df.to_csv(trials_path, index=False)
+
+    best = study.best_trial
+    best_results_df = pd.DataFrame([{
+        "aspect_ratio": aspect_ratio,
+        "lambdaS1": best.params["lambdaS1"],
+        "lambdaS3": best.params["lambdaS1"],
+        "lambdaS2": best.params["lambdaS2"],
+        "objective": best.value,
+        "gradient_norm": best.user_attrs["gradient_norm"],
+        "initial_aspect_ratio": best.user_attrs["initial_aspect_ratio"],
+        "relaxed_aspect_ratio": best.user_attrs["relaxed_aspect_ratio"],
+        "relative_volume": best.user_attrs["relative_volume"],
+        "shape_error": best.user_attrs["shape_error"],
+        "size_error": best.user_attrs["size_error"],
+    }])
+    best_path = os.path.join(
+        result_folder,
+        f"best_parameters_AR_{safe_float(aspect_ratio)}.csv",
+    )
+    best_results_df.to_csv(best_path, index=False)
+
+    print(f"Saved trials CSV: {trials_path}")
+    print(f"Saved best-parameters CSV: {best_path}")
+
+    return trials_df, best_results_df
+
+
+def run_single_aspect_ratio(aspect_ratio, n_trials=NUM_TRIALS, result_folder=None):
+    study = optuna.create_study(direction="minimize")
+    study.optimize(
+        partial(ellipsoid_stability_objective, aspect_ratio),
+        n_trials=n_trials,
+        show_progress_bar=True,
+        n_jobs=1,
+    )
+    save_study_csvs(aspect_ratio, study, result_folder=result_folder)
+    print("VALUE:", study.best_value)
+    print("PARAMS:", study.best_params)
+    print("ATTRS:", study.best_trial.user_attrs)
+    return study
+
+
+def main(aspect_ratio=None, n_trials=NUM_TRIALS):
     shared_source = os.path.join(PROJECT_DIRECTORY, SHARED_CYST_SOURCE)
     if not os.path.exists(shared_source):
         raise FileNotFoundError(f"Shared cyst source file not found: {shared_source}")
+
+    result_folder = os.path.join(PROJECT_DIRECTORY, RESULT_FOLDER)
+    os.makedirs(result_folder, exist_ok=True)
+
+    if aspect_ratio is not None:
+        run_single_aspect_ratio(
+            aspect_ratio,
+            n_trials=n_trials,
+            result_folder=result_folder,
+        )
+        return
+
+    best_results = []
 
     for aspect_ratio in ASPECT_RATIOS:
         study_name, storage_name = create_ellipsoid_study_name(aspect_ratio)
@@ -181,8 +252,8 @@ def main():
             load_if_exists=True,
         )
 
-        if len(study.trials) < NUM_TRIALS:
-            remaining_trials = NUM_TRIALS - len(study.trials)
+        if len(study.trials) < n_trials:
+            remaining_trials = n_trials - len(study.trials)
             study.optimize(
                 partial(ellipsoid_stability_objective, aspect_ratio),
                 n_trials=remaining_trials,
@@ -190,20 +261,48 @@ def main():
                 n_jobs=1,
             )
 
+        save_study_csvs(aspect_ratio, study, result_folder=result_folder)
+
+        best = study.best_trial
+        best_results.append({
+            "aspect_ratio": aspect_ratio,
+            "lambdaS1": best.params["lambdaS1"],
+            "lambdaS3": best.params["lambdaS1"],
+            "lambdaS2": best.params["lambdaS2"],
+            "objective": best.value,
+            "gradient_norm": best.user_attrs["gradient_norm"],
+            "initial_aspect_ratio": best.user_attrs["initial_aspect_ratio"],
+            "relaxed_aspect_ratio": best.user_attrs["relaxed_aspect_ratio"],
+            "relative_volume": best.user_attrs["relative_volume"],
+            "shape_error": best.user_attrs["shape_error"],
+            "size_error": best.user_attrs["size_error"],
+        })
+
         print("Geometry:", geometry_name(aspect_ratio))
         print("Best parameters:", study.best_params)
         print("Best value:", study.best_value)
         print("Best trial:", study.best_trial)
         plot_optuna_all(
-            os.path.join(PROJECT_DIRECTORY, RESULT_FOLDER),
+            result_folder,
             study_name,
             study,
         )
 
+    best_results_df = pd.DataFrame(best_results)
+    best_results_df.to_csv(
+        os.path.join(result_folder, "best_parameters_by_AR.csv"),
+        index=False,
+    )
+    print(best_results_df)
+
 
 if __name__ == "__main__":
     try:
-        main()
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--aspect-ratio", type=float)
+        parser.add_argument("--trials", type=int, default=NUM_TRIALS)
+        args = parser.parse_args()
+        main(aspect_ratio=args.aspect_ratio, n_trials=args.trials)
     except Exception:
         traceback.print_exc()
         sys.exit(1)
