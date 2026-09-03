@@ -29,12 +29,13 @@ from pyVertexModel.algorithm.vertexModelBubbles import VertexModelBubbles
 from pyVertexModel.util.space_exploration import plot_optuna_all
 
 
-ASPECT_RATIOS = [1.0, 1.5, 2.5, 5.0, 10.0]
+ASPECT_RATIOS = [1.5, 2.5, 5.0, 10.0]
 SHORT_AXIS = 4.0
 SHARED_CYST_SOURCE = "Result/Cyst/cyst_scratch.tif"
 NUM_TRIALS = 500
 STUDY_PREFIX = "VertexModel_ellipsoid_stability"
 RESULT_FOLDER = "Result/ellipsoid_surface_calibration"
+PLOT_OPTUNA_RESULTS = False
 
 # Keep model settings unchanged; only the scalar Optuna objective changes.
 # The shape term prevents a low-gradient solution that has relaxed toward a
@@ -225,7 +226,7 @@ def run_single_aspect_ratio(aspect_ratio, n_trials=NUM_TRIALS, result_folder=Non
     return study
 
 
-def main(aspect_ratio=None, n_trials=NUM_TRIALS):
+def main(aspect_ratio=None, n_trials=NUM_TRIALS, plot_results=PLOT_OPTUNA_RESULTS):
     shared_source = os.path.join(PROJECT_DIRECTORY, SHARED_CYST_SOURCE)
     if not os.path.exists(shared_source):
         raise FileNotFoundError(f"Shared cyst source file not found: {shared_source}")
@@ -282,11 +283,12 @@ def main(aspect_ratio=None, n_trials=NUM_TRIALS):
         print("Best parameters:", study.best_params)
         print("Best value:", study.best_value)
         print("Best trial:", study.best_trial)
-        plot_optuna_all(
-            result_folder,
-            study_name,
-            study,
-        )
+        if plot_results:
+            plot_optuna_all(
+                result_folder,
+                study_name,
+                study,
+            )
 
     best_results_df = pd.DataFrame(best_results)
     best_results_df.to_csv(
@@ -301,8 +303,17 @@ if __name__ == "__main__":
         parser = argparse.ArgumentParser()
         parser.add_argument("--aspect-ratio", type=float)
         parser.add_argument("--trials", type=int, default=NUM_TRIALS)
+        parser.add_argument(
+            "--plot",
+            action="store_true",
+            help="Write Optuna diagnostic plots. Requires plotly image export support such as kaleido.",
+        )
         args = parser.parse_args()
-        main(aspect_ratio=args.aspect_ratio, n_trials=args.trials)
+        main(
+            aspect_ratio=args.aspect_ratio,
+            n_trials=args.trials,
+            plot_results=args.plot,
+        )
     except Exception:
         traceback.print_exc()
         sys.exit(1)
