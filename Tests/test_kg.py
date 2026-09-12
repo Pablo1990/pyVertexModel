@@ -1,8 +1,10 @@
+from types import SimpleNamespace
+
 import numpy as np
 
 from Tests.tests import Tests, load_data, assert_array1D, assert_matrix
 from pyVertexModel.Kg import kg_functions
-from pyVertexModel.Kg.kgContractility import KgContractility
+from pyVertexModel.Kg.kgContractility import KgContractility, edge_passes_contractility_orientation
 from pyVertexModel.Kg.kgSubstrate import KgSubstrate
 from pyVertexModel.Kg.kgSurfaceCellBasedAdhesion import KgSurfaceCellBasedAdhesion
 from pyVertexModel.Kg.kgTriAREnergyBarrier import KgTriAREnergyBarrier
@@ -81,6 +83,32 @@ def test_kg_contractility_filename(filename, filename_expected):
     kg = KgContractility(geo_test)
     kg.compute_work(geo_test, set_test)
     assert_k_g_energy('EC', 'gC_full', 'KC_full', kg, mat_expected)
+
+
+def test_contractility_orientation_accepts_edges_within_threshold():
+    c_set = SimpleNamespace(
+        Contractility_orientation_axis='axis1',
+        Contractility_orientation_threshold_degrees=45.0,
+    )
+
+    assert edge_passes_contractility_orientation(
+        np.array([0.0, 0.0, 0.0]),
+        np.array([1.0, 0.5, 0.0]),
+        c_set,
+    )
+
+
+def test_contractility_orientation_rejects_edges_outside_threshold():
+    c_set = SimpleNamespace(
+        Contractility_orientation_axis='axis1',
+        Contractility_orientation_threshold_degrees=45.0,
+    )
+
+    assert not edge_passes_contractility_orientation(
+        np.array([0.0, 0.0, 0.0]),
+        np.array([0.0, 1.0, 0.0]),
+        c_set,
+    )
 
 
 def test_kg_tri_ar_filename(filename, filename_expected):

@@ -134,6 +134,63 @@ def compute_energy_contractility(l_i0, l_i, c_contractility):
     return energyContractility
 
 
+def get_contractility_orientation_axis(c_set):
+    """
+    Return the configured contractility orientation axis as a unit vector.
+    """
+    axis = getattr(c_set, 'Contractility_orientation_axis', None)
+    if axis is None:
+        return None
+
+    if isinstance(axis, str):
+        axis_by_name = {
+            'x': np.array([1.0, 0.0, 0.0]),
+            'y': np.array([0.0, 1.0, 0.0]),
+            'z': np.array([0.0, 0.0, 1.0]),
+            'axis1': np.array([1.0, 0.0, 0.0]),
+            'axis2': np.array([0.0, 1.0, 0.0]),
+            'axis3': np.array([0.0, 0.0, 1.0]),
+        }
+        try:
+            axis = axis_by_name[axis.lower()]
+        except KeyError as exc:
+            raise ValueError(f'Unknown Contractility_orientation_axis: {axis}') from exc
+    elif np.isscalar(axis):
+        axis_index = int(axis)
+        axis_vector = np.zeros(3)
+        axis_vector[axis_index] = 1.0
+        axis = axis_vector
+    else:
+        axis = np.asarray(axis, dtype=float)
+
+    axis_norm = np.linalg.norm(axis)
+    if axis_norm == 0:
+        raise ValueError('Contractility_orientation_axis must not be zero.')
+
+    return axis / axis_norm
+
+
+def edge_passes_contractility_orientation(y_1, y_2, c_set):
+    """
+    Check whether an edge is aligned with the configured contractility axis.
+    """
+    orientation_axis = get_contractility_orientation_axis(c_set)
+    if orientation_axis is None:
+        return True
+
+    edge_direction = y_2 - y_1
+    edge_length = np.linalg.norm(edge_direction)
+    if edge_length == 0:
+        return False
+
+    edge_direction = edge_direction / edge_length
+    cosine_angle = np.clip(np.abs(np.dot(edge_direction, orientation_axis)), 0.0, 1.0)
+    angle_degrees = np.degrees(np.arccos(cosine_angle))
+    threshold_degrees = getattr(c_set, 'Contractility_orientation_threshold_degrees', 45.0)
+
+    return angle_degrees <= threshold_degrees
+
+
 def get_contractility_based_on_location(current_face, current_tri, geo, c_set):
     """
     Get the contractility based on the location
@@ -224,6 +281,9 @@ class KgContractility(Kg):
                         # Get the vertices of the edge
                         y_1 = cell.Y[currentTri.Edge[0]]
                         y_2 = cell.Y[currentTri.Edge[1]]
+
+                        if not edge_passes_contractility_orientation(y_1, y_2, c_set):
+                            C = 0
 
                         if geo.remodelling and not np.any(np.isin(cell.globalIds[currentTri.Edge],
                                                                   geo.Cells[c].vertices_and_faces_to_remodel)):

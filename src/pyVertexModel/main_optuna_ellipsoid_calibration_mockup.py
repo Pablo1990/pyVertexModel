@@ -2,8 +2,8 @@
 Mockup Optuna pipeline for pre-ablation ellipsoid calibration.
 
 This keeps the existing Optuna study/optimize settings from main_optuna.py,
-but changes the objective to calibrate lambdaS1 == lambdaS3 and lambdaS2 for
-each cyst ellipsoid aspect ratio before running ablation simulations.
+but changes the objective to calibrate oriented line tension for each cyst
+ellipsoid aspect ratio before running ablation simulations.
 """
 
 from __future__ import annotations
@@ -33,16 +33,25 @@ ASPECT_RATIOS = [1.5, 2.5, 5.0, 10.0]
 SHORT_AXIS = 4.0
 SHARED_CYST_SOURCE = "Result/Cyst/cyst_scratch.tif"
 NUM_TRIALS = 500
-STUDY_PREFIX = "VertexModel_ellipsoid_stability"
-RESULT_FOLDER = "Result/ellipsoid_surface_calibration"
+TEST_VALUES = [
+    0.0,
+    1e-7,
+    1e-6,
+    1e-5,
+    1e-4,
+    1e-3,
+    1e-2,
+]
+STUDY_PREFIX = "VertexModel_ellipsoid_line_tension"
+RESULT_FOLDER = "Result/ellipsoid_line_tension_calibration"
 PLOT_OPTUNA_RESULTS = False
-
-# Keep model settings unchanged; only the scalar Optuna objective changes.
-# The shape term prevents a low-gradient solution that has relaxed toward a
-# sphere from being treated as mechanically calibrated for the target ellipsoid.
-SHAPE_PENALTY_WEIGHT = 100.0
-SIZE_PENALTY_WEIGHT = 100.0
-
+FIXED_LAMBDA_S1 = 1.0
+FIXED_LAMBDA_S2 = FIXED_LAMBDA_S1 / 100
+FIXED_LAMBDA_S3 = FIXED_LAMBDA_S1
+LINE_TENSION_MIN = 1e-7
+LINE_TENSION_MAX = 1e-5
+CONTRACTILITY_ORIENTATION_AXIS = "axis1"
+CONTRACTILITY_ORIENTATION_THRESHOLD_DEGREES = 45.0
 
 def safe_float(value):
     return f"{value:g}".replace(".", "p")
@@ -66,7 +75,7 @@ def constant_volume_axes(aspect_ratio):
     return long_axis, short_axis, short_axis
 
 
-def configure_calibration_model(aspect_ratio, lambda_s13, lambda_s2):
+def configure_calibration_model(aspect_ratio, line_tension):
     v_model = VertexModelBubbles(
         create_output_folder=False,
         set_option="cyst_scratch",
@@ -93,9 +102,21 @@ def configure_calibration_model(aspect_ratio, lambda_s13, lambda_s2):
         f"Result/Cyst/cyst_scratch_AR_{safe_ratio}_calibration.tif"
     )
 
-    v_model.set.lambdaS1 = lambda_s13
-    v_model.set.lambdaS3 = lambda_s13
-    v_model.set.lambdaS2 = lambda_s2
+    v_model.set.lambdaS1 = FIXED_LAMBDA_S1
+    v_model.set.lambdaS2 = FIXED_LAMBDA_S2
+    v_model.set.lambdaS3 = FIXED_LAMBDA_S3
+    v_model.set.Contractility = True
+    v_model.set.cLineTension = line_tension
+    v_model.set.Contractility_orientation_axis = CONTRACTILITY_ORIENTATION_AXIS
+    v_model.set.Contractility_orientation_threshold_degrees = (
+        CONTRACTILITY_ORIENTATION_THRESHOLD_DEGREES
+    )
+
+    v_model.set.kSubstrate = 0
+    v_model.set.EnergyBarrierAR = False
+    v_model.set.lambdaR = 0
+    v_model.set.ref_A0 = 0
+    v_model.set.ref_V0 = 1
 
     v_model.set.update_derived_parameters()
     v_model.set.OutputFolder = None
@@ -134,28 +155,25 @@ def measured_box_volume(v_model):
 
 
 def ellipsoid_stability_objective(aspect_ratio, trial):
-    lambda_s13 = trial.suggest_float("lambdaS1", 1e-7, 1, log=True)
-    lambda_s2 = trial.suggest_float("lambdaS2", 1e-7, 1, log=True)
+    line_tension = trial.suggest_float(
+        "cLineTension",
+        LINE_TENSION_MIN,
+        LINE_TENSION_MAX,
+        log=True,
+    )
 
-    v_model = configure_calibration_model(aspect_ratio, lambda_s13, lambda_s2)
+    v_model = configure_calibration_model(aspect_ratio, line_tension)
     v_model.initialize()
+    v_model.geo.init_reference_values_and_noise(v_model.set)
 
     initial_aspect_ratio = measured_aspect_ratio(v_model)
     initial_box_volume = measured_box_volume(v_model)
 
     gr = v_model.single_iteration(post_operations=False)
 
-    if not np.isfinite(gr):
-        return np.inf
-
     relaxed_aspect_ratio = measured_aspect_ratio(v_model)
     relaxed_box_volume = measured_box_volume(v_model)
     relative_volume = relaxed_box_volume / initial_box_volume
-    shape_error = (
-        (relaxed_aspect_ratio - initial_aspect_ratio)
-        / initial_aspect_ratio
-    ) ** 2
-    size_error = (np.log(max(relative_volume, np.finfo(float).eps))) ** 2
 
     trial.set_user_attr("initial_aspect_ratio", initial_aspect_ratio)
     trial.set_user_attr("initial_box_volume", initial_box_volume)
@@ -164,10 +182,72 @@ def ellipsoid_stability_objective(aspect_ratio, trial):
     trial.set_user_attr("relaxed_box_volume", relaxed_box_volume)
     trial.set_user_attr("relative_volume", relative_volume)
     trial.set_user_attr("gradient_norm", gr)
-    trial.set_user_attr("shape_error", shape_error)
-    trial.set_user_attr("size_error", size_error)
+    trial.set_user_attr("lambdaS1", FIXED_LAMBDA_S1)
+    trial.set_user_attr("lambdaS2", FIXED_LAMBDA_S2)
+    trial.set_user_attr("lambdaS3", FIXED_LAMBDA_S3)
 
-    return gr + SHAPE_PENALTY_WEIGHT * shape_error + SIZE_PENALTY_WEIGHT * size_error
+    return float(gr)
+
+
+def evaluate_line_tension_value(aspect_ratio, value):
+    v_model = configure_calibration_model(aspect_ratio, value)
+    v_model.initialize()
+    v_model.geo.init_reference_values_and_noise(v_model.set)
+
+    initial_aspect_ratio = measured_aspect_ratio(v_model)
+    initial_box_volume = measured_box_volume(v_model)
+
+    gr = v_model.single_iteration(post_operations=False)
+
+    relaxed_aspect_ratio = measured_aspect_ratio(v_model)
+    relaxed_box_volume = measured_box_volume(v_model)
+    relative_volume = relaxed_box_volume / initial_box_volume
+
+    return {
+        "cLineTension": value,
+        "lambdaS1": FIXED_LAMBDA_S1,
+        "lambdaS2": FIXED_LAMBDA_S2,
+        "lambdaS3": FIXED_LAMBDA_S3,
+        "gradient_norm": float(gr),
+        "initial_aspect_ratio": initial_aspect_ratio,
+        "relaxed_aspect_ratio": relaxed_aspect_ratio,
+        "relative_volume": relative_volume,
+    }
+
+
+def run_line_tension_grid(aspect_ratio=1.5, result_folder=None):
+    if result_folder is None:
+        result_folder = os.path.join(PROJECT_DIRECTORY, RESULT_FOLDER)
+
+    os.makedirs(result_folder, exist_ok=True)
+
+    rows = []
+    for value in TEST_VALUES:
+        print(f"Evaluating cLineTension={value:g}")
+        rows.append(evaluate_line_tension_value(aspect_ratio, value))
+
+    grid_df = pd.DataFrame(
+        rows,
+        columns=[
+            "cLineTension",
+            "lambdaS1",
+            "lambdaS2",
+            "lambdaS3",
+            "gradient_norm",
+            "initial_aspect_ratio",
+            "relaxed_aspect_ratio",
+            "relative_volume",
+        ],
+    )
+    grid_path = os.path.join(
+        result_folder,
+        f"line_tension_grid_AR_{safe_float(aspect_ratio)}.csv",
+    )
+    grid_df.to_csv(grid_path, index=False)
+
+    print(f"Saved line-tension grid CSV: {grid_path}")
+    print(grid_df)
+    return grid_df
 
 
 def save_study_csvs(aspect_ratio, study, result_folder=None):
@@ -188,16 +268,15 @@ def save_study_csvs(aspect_ratio, study, result_folder=None):
     best = study.best_trial
     best_results_df = pd.DataFrame([{
         "aspect_ratio": aspect_ratio,
-        "lambdaS1": best.params["lambdaS1"],
-        "lambdaS3": best.params["lambdaS1"],
-        "lambdaS2": best.params["lambdaS2"],
+        "cLineTension": best.params["cLineTension"],
+        "lambdaS1": FIXED_LAMBDA_S1,
+        "lambdaS2": FIXED_LAMBDA_S2,
+        "lambdaS3": FIXED_LAMBDA_S3,
         "objective": best.value,
         "gradient_norm": best.user_attrs["gradient_norm"],
         "initial_aspect_ratio": best.user_attrs["initial_aspect_ratio"],
         "relaxed_aspect_ratio": best.user_attrs["relaxed_aspect_ratio"],
         "relative_volume": best.user_attrs["relative_volume"],
-        "shape_error": best.user_attrs["shape_error"],
-        "size_error": best.user_attrs["size_error"],
     }])
     best_path = os.path.join(
         result_folder,
@@ -267,16 +346,15 @@ def main(aspect_ratio=None, n_trials=NUM_TRIALS, plot_results=PLOT_OPTUNA_RESULT
         best = study.best_trial
         best_results.append({
             "aspect_ratio": aspect_ratio,
-            "lambdaS1": best.params["lambdaS1"],
-            "lambdaS3": best.params["lambdaS1"],
-            "lambdaS2": best.params["lambdaS2"],
+            "cLineTension": best.params["cLineTension"],
+            "lambdaS1": FIXED_LAMBDA_S1,
+            "lambdaS2": FIXED_LAMBDA_S2,
+            "lambdaS3": FIXED_LAMBDA_S3,
             "objective": best.value,
             "gradient_norm": best.user_attrs["gradient_norm"],
             "initial_aspect_ratio": best.user_attrs["initial_aspect_ratio"],
             "relaxed_aspect_ratio": best.user_attrs["relaxed_aspect_ratio"],
             "relative_volume": best.user_attrs["relative_volume"],
-            "shape_error": best.user_attrs["shape_error"],
-            "size_error": best.user_attrs["size_error"],
         })
 
         print("Geometry:", geometry_name(aspect_ratio))
@@ -308,7 +386,22 @@ if __name__ == "__main__":
             action="store_true",
             help="Write Optuna diagnostic plots. Requires plotly image export support such as kaleido.",
         )
+        parser.add_argument(
+            "--low-value-grid",
+            action="store_true",
+            help="Evaluate the fixed line-tension grid without touching the Optuna study.",
+        )
         args = parser.parse_args()
+        if args.low_value_grid:
+            shared_source = os.path.join(PROJECT_DIRECTORY, SHARED_CYST_SOURCE)
+            if not os.path.exists(shared_source):
+                raise FileNotFoundError(
+                    f"Shared cyst source file not found: {shared_source}"
+                )
+            run_line_tension_grid(
+                aspect_ratio=1.5 if args.aspect_ratio is None else args.aspect_ratio
+            )
+            sys.exit(0)
         main(
             aspect_ratio=args.aspect_ratio,
             n_trials=args.trials,

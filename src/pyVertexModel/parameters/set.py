@@ -32,6 +32,8 @@ class Set:
         self.edge_length_threshold = 0.3
         self.kCeiling = None
         self.Contractility_external_axis = None
+        self.Contractility_orientation_axis = None
+        self.Contractility_orientation_threshold_degrees = 45.0
         self.export_images = True
         self.cLineTension_external = None
         self.Contractility_external = False
