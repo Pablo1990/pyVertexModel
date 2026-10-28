@@ -49,11 +49,11 @@ class Tris:
         """
         Compute the features of the triangles.
         """
-        features = {'Area': self.Area,
-                    'AspectRatio': self.AspectRatio,
-                    'EdgeLength': self.EdgeLength,
-                    'ContractilityValue': self.ContractilityValue,
-                    'ContractilityG': self.ContractilityG
+        features = {"Area": self.Area,
+                    "AspectRatio": self.AspectRatio,
+                    "EdgeLength": self.EdgeLength,
+                    "ContractilityValue": self.ContractilityValue,
+                    "ContractilityG": self.ContractilityG
                     }
 
         return features
@@ -84,7 +84,7 @@ class Tris:
         :return:
         """
         copied_tris = Tris()
-        copy_non_mutable_attributes(self, '', copied_tris)
+        copy_non_mutable_attributes(self, "", copied_tris)
         return copied_tris
 
     def ensure_consistent_order(self, face_centre, y, x):
@@ -115,8 +115,9 @@ class Tris:
         y1 = Ys[self.Edge[0], :]
         y2 = Ys[self.Edge[1], :]
 
-        # Calculate the area using the determinant method
-        if self.Edge[0] == self.Edge[1] or np.all(y1 == y2):
+        # Treat a triangle as degenerate when the two edge vertices are the same index
+        # OR when the edge is too short to form a valid triangle (tolerance 1e-10).
+        if self.Edge[0] == self.Edge[1] or np.linalg.norm(y1 - y2) < 1e-10:
             return True
 
         return False

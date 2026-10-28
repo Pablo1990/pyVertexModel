@@ -1,4 +1,5 @@
 import itertools
+import logging
 
 import numpy as np
 import pyvista as pv
@@ -9,6 +10,8 @@ from sklearn.decomposition import PCA
 from pyVertexModel.geometry import face
 from pyVertexModel.Kg.kg import add_noise_to_parameter
 from pyVertexModel.util.utils import copy_non_mutable_attributes, get_interface
+
+logger = logging.getLogger("pyVertexModel")
 
 
 def compute_2d_circularity(area, perimeter):
@@ -61,12 +64,12 @@ class Cell:
         self.opposite_cell = None
         self.axes_lengths = None
         self.Y = None
-        self.globalIds = np.array([], dtype='int')
+        self.globalIds = np.array([], dtype="int")
         self.Faces = []
         self.Area = None
         self.Vol = None
         self.AliveStatus = None
-        self.vertices_and_faces_to_remodel = np.array([], dtype='int')
+        self.vertices_and_faces_to_remodel = np.array([], dtype="int")
         self.substrate_cell_top = None
         self.substrate_cell_bottom = None
 
@@ -135,7 +138,7 @@ class Cell:
         """
         new_cell = Cell()
 
-        copy_non_mutable_attributes(self, 'Faces', new_cell)
+        copy_non_mutable_attributes(self, "Faces", new_cell)
 
         new_cell.Faces = [f.copy() for f in self.Faces]
 
@@ -222,8 +225,8 @@ class Cell:
             y3 = c_face.Centre - self.X
 
             if c_face.Tris[t].is_degenerated(self.Y):
-                print(
-                    f"Warning: Degenerate triangle with identical edge indices ({idx0}) in cell {self.ID}, face {c_face.globalIds}")
+                logger.warning(
+                    f"Degenerate triangle with edge indices ({idx0}, {idx1}) in cell {self.ID}, face {c_face.globalIds}")
                 continue  # Skip this triangle
 
             current_v = np.linalg.det(np.array([y1, y2, y3])) / 6
@@ -327,7 +330,7 @@ class Cell:
             # Add the property array to the cell data
             vpoly.GetCellData().AddArray(property_array)
 
-            if key == 'Volume':
+            if key == "Volume":
                 # Default parameter
                 vpoly.GetCellData().SetScalars(property_array)
 
@@ -361,55 +364,55 @@ class Cell:
         :return: a dictionary with the features of the cell
         """
         # Check if any of these features is missing
-        to_check = ['energy_contractility', 'energy_surface_area', 'energy_volume', 'energy_tri_aspect_ratio',
-                    'energy_substrate']
+        to_check = ["energy_contractility", "energy_surface_area", "energy_volume", "energy_tri_aspect_ratio",
+                    "energy_substrate"]
         for feature in to_check:
             if not hasattr(self, feature):
                 self.__setattr__(feature, 0)
 
         # Compute the features of the cell
-        features = {'ID': self.ID,
-                    'Area': self.compute_area(),
-                    'Area0': self.Area0,
-                    'Area_top': self.compute_area(location_filter=0),
-                    'Area_bottom': self.compute_area(location_filter=2),
-                    'Area_cellcell': self.compute_area(location_filter=1),
-                    'Volume': self.compute_volume(),
-                    'Volume0': self.Vol0,
-                    'Height': self.compute_height(),
-                    'Width': self.compute_width(),
-                    'Length': self.compute_length(),
-                    'Perimeter': self.compute_perimeter(),
-                    '2D_circularity_top': compute_2d_circularity(self.compute_area(location_filter=0),
+        features = {"ID": self.ID,
+                    "Area": self.compute_area(),
+                    "Area0": self.Area0,
+                    "Area_top": self.compute_area(location_filter=0),
+                    "Area_bottom": self.compute_area(location_filter=2),
+                    "Area_cellcell": self.compute_area(location_filter=1),
+                    "Volume": self.compute_volume(),
+                    "Volume0": self.Vol0,
+                    "Height": self.compute_height(),
+                    "Width": self.compute_width(),
+                    "Length": self.compute_length(),
+                    "Perimeter": self.compute_perimeter(),
+                    "2D_circularity_top": compute_2d_circularity(self.compute_area(location_filter=0),
                                                                  self.compute_perimeter(filter_location=0)),
-                    '2d_circularity_bottom': compute_2d_circularity(self.compute_area(location_filter=2),
+                    "2d_circularity_bottom": compute_2d_circularity(self.compute_area(location_filter=2),
                                                                     self.compute_perimeter(filter_location=2)),
-                    '2D_aspect_ratio_top': self.compute_2d_aspect_ratio(filter_location=0),
-                    '2D_aspect_ratio_bottom': self.compute_2d_aspect_ratio(filter_location=2),
-                    '2D_aspect_ratio_cellcell': self.compute_2d_aspect_ratio(filter_location=1),
-                    '3D_aspect_ratio_0_1': self.compute_3d_aspect_ratio(),
-                    '3D_aspect_ratio_0_2': self.compute_3d_aspect_ratio(axis=(0, 2)),
-                    '3D_aspect_ratio_1_2': self.compute_3d_aspect_ratio(axis=(1, 2)),
-                    'Sphericity': self.compute_sphericity(),
-                    'Elongation': self.compute_elongation(),
-                    'Ellipticity': self.compute_ellipticity(),
-                    'Neighbours': len(self.compute_neighbours()),
-                    'Neighbours_top': len(self.compute_neighbours(location_filter=0)),
-                    'Neighbours_bottom': len(self.compute_neighbours(location_filter=2)),
-                    'Tilting': self.compute_tilting(),
-                    'Perimeter_top': self.compute_perimeter(filter_location=0),
-                    'Perimeter_bottom': self.compute_perimeter(filter_location=2),
-                    'Perimeter_cellcell': self.compute_perimeter(filter_location=1),
-                    'Scutoid': int(self.is_scutoid()),
-                    'energy_contractility': self.energy_contractility,
-                    'energy_surface_area': self.energy_surface_area,
-                    'energy_volume': self.energy_volume,
-                    'energy_tri_ar': self.energy_tri_aspect_ratio,
-                    'energy_substrate': self.energy_substrate,
+                    "2D_aspect_ratio_top": self.compute_2d_aspect_ratio(filter_location=0),
+                    "2D_aspect_ratio_bottom": self.compute_2d_aspect_ratio(filter_location=2),
+                    "2D_aspect_ratio_cellcell": self.compute_2d_aspect_ratio(filter_location=1),
+                    "3D_aspect_ratio_0_1": self.compute_3d_aspect_ratio(),
+                    "3D_aspect_ratio_0_2": self.compute_3d_aspect_ratio(axis=(0, 2)),
+                    "3D_aspect_ratio_1_2": self.compute_3d_aspect_ratio(axis=(1, 2)),
+                    "Sphericity": self.compute_sphericity(),
+                    "Elongation": self.compute_elongation(),
+                    "Ellipticity": self.compute_ellipticity(),
+                    "Neighbours": len(self.compute_neighbours()),
+                    "Neighbours_top": len(self.compute_neighbours(location_filter=0)),
+                    "Neighbours_bottom": len(self.compute_neighbours(location_filter=2)),
+                    "Tilting": self.compute_tilting(),
+                    "Perimeter_top": self.compute_perimeter(filter_location=0),
+                    "Perimeter_bottom": self.compute_perimeter(filter_location=2),
+                    "Perimeter_cellcell": self.compute_perimeter(filter_location=1),
+                    "Scutoid": int(self.is_scutoid()),
+                    "energy_contractility": self.energy_contractility,
+                    "energy_surface_area": self.energy_surface_area,
+                    "energy_volume": self.energy_volume,
+                    "energy_tri_ar": self.energy_tri_aspect_ratio,
+                    "energy_substrate": self.energy_substrate,
                     }
 
         if centre_wound is not None:
-            features['Distance_to_wound'] = self.compute_distance_to_wound(centre_wound)
+            features["Distance_to_wound"] = self.compute_distance_to_wound(centre_wound)
 
         return features
 
@@ -698,7 +701,7 @@ class Cell:
         self.Vol0 = None
         self.Area = None
         self.Area0 = None
-        self.globalIds = np.array([], dtype='int')
+        self.globalIds = np.array([], dtype="int")
         self.Faces = []
         self.T = None
         self.X = None
