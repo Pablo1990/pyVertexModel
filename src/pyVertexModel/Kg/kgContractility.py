@@ -61,7 +61,7 @@ def get_intensity_based_contractility(c_set, current_face, intensity_images=True
         indices_of_closest_time_points = np.argsort(distance_to_time_variables)
         closest_time_points_distance = 1 - distance_to_time_variables[indices_of_closest_time_points]
 
-        if get_interface(current_face.InterfaceType) == get_interface('Top'):
+        if get_interface(current_face.InterfaceType) == get_interface("Top"):
             # In case we reach a point where the two closest time points are beyond the scope of the time points
             if closest_time_points_distance[0] + closest_time_points_distance[1] == 1:
                 contractility_value = contractility_variability_purse_string[indices_of_closest_time_points[0]] * \
@@ -70,7 +70,7 @@ def get_intensity_based_contractility(c_set, current_face, intensity_images=True
             else:
                 contractility_value = contractility_variability_purse_string[indices_of_closest_time_points[0]]
 
-        elif get_interface(current_face.InterfaceType) == get_interface('CellCell'):
+        elif get_interface(current_face.InterfaceType) == get_interface("CellCell"):
             if closest_time_points_distance[0] + closest_time_points_distance[1] == 1:
                 contractility_value = contractility_variability_lateral_cables[indices_of_closest_time_points[0]] * \
                                       closest_time_points_distance[0] + contractility_variability_lateral_cables[
@@ -107,14 +107,12 @@ def get_delayed_contractility(current_t, purse_string_strength, current_tri, cut
                                                         indicesOfClosestTimePoints[1], 1] * \
                                                     closestTimePointsDistance[1]
 
-        if CORRESPONDING_EDGELENGTH_6MINUTES_AGO <= 0:
-            CORRESPONDING_EDGELENGTH_6MINUTES_AGO = 0
+        CORRESPONDING_EDGELENGTH_6MINUTES_AGO = max(0, CORRESPONDING_EDGELENGTH_6MINUTES_AGO)
 
         contractilityValue = ((CORRESPONDING_EDGELENGTH_6MINUTES_AGO / current_tri.EdgeLength_time[
             0, 1]) ** 4.5) * purse_string_strength
 
-    if contractilityValue < 1:
-        contractilityValue = 1
+    contractilityValue = max(contractilityValue, 1)
 
     if contractilityValue > cutoff or np.isinf(contractilityValue):
         contractilityValue = cutoff
@@ -157,30 +155,24 @@ def get_contractility_based_on_location(current_face, current_tri, geo, c_set):
         elif c_set.TypeOfPurseString == 2:
             contractilityValue = get_intensity_based_contractility(c_set, current_face, intensity_images=False)
         elif c_set.TypeOfPurseString == 3:
-            if get_interface(current_face.InterfaceType) == get_interface('CellCell'):
+            if get_interface(current_face.InterfaceType) == get_interface("CellCell"):
                 contractilityValue = c_set.lateralCablesStrength
-            elif get_interface(current_face.InterfaceType) == get_interface('Top'):
+            elif get_interface(current_face.InterfaceType) == get_interface("Top"):
                 contractilityValue = c_set.purseStringStrength
     else:
         contractilityValue = c_set.cLineTension
 
     if len(current_tri.SharedByCells) == 1:
         contractilityValue = 0
-    else:
-        if get_interface(current_face.InterfaceType) == get_interface('Top'):  # Top
-            if any([geo.Cells[cell].AliveStatus == 0 for cell in current_tri.SharedByCells]):
-                pass
-            else:
-                contractilityValue = c_set.cLineTension
-        elif get_interface(current_face.InterfaceType) == get_interface('CellCell'):
-            if any([geo.Cells[cell].AliveStatus == 0 for cell in current_tri.SharedByCells]):
-                pass
-            else:
-                contractilityValue = c_set.cLineTension
-        elif get_interface(current_face.InterfaceType) == get_interface('Bottom'):
-            contractilityValue = c_set.cLineTension
+    elif get_interface(current_face.InterfaceType) == get_interface("Top") or get_interface(current_face.InterfaceType) == get_interface("CellCell"):  # Top
+        if any([geo.Cells[cell].AliveStatus == 0 for cell in current_tri.SharedByCells]):
+            pass
         else:
             contractilityValue = c_set.cLineTension
+    elif get_interface(current_face.InterfaceType) == get_interface("Bottom"):
+        contractilityValue = c_set.cLineTension
+    else:
+        contractilityValue = c_set.cLineTension
 
     return contractilityValue, geo
 
@@ -216,7 +208,7 @@ class KgContractility(Kg):
                         # Adding a bit of noise between cells
                         C = C * cell.c_line_tension_perc
 
-                        if 'is_commited_to_intercalate' in currentTri.__dict__ and c_set.Remodelling:
+                        if "is_commited_to_intercalate" in currentTri.__dict__ and c_set.Remodelling:
                             if currentTri.is_commited_to_intercalate:
                                 C = C * 2
                                 pass
@@ -229,15 +221,20 @@ class KgContractility(Kg):
                                                                   geo.Cells[c].vertices_and_faces_to_remodel)):
                             continue
 
-                        g_current = self.compute_g_contractility(l_i0, y_1, y_2, C)
+                        # Compute edge vector and length once for reuse
+                        edge_vec = y_1 - y_2
+                        l_i = np.linalg.norm(edge_vec)
+
+                        g_current = self.compute_g_contractility_with_length(l_i0, edge_vec, l_i, C)
                         ge = self.assemble_g(ge[:], g_current[:], cell.globalIds[currentTri.Edge])
 
                         geo.Cells[c].Faces[face_id].Tris[tri_id].ContractilityG = np.linalg.norm(g_current[:])
                         if calculate_k:
-                            K_current = self.compute_k_contractility(l_i0, y_1, y_2, C)
+                            K_current = self.compute_k_contractility_with_length(l_i0, edge_vec, l_i, C)
                             self.assemble_k(K_current[:, :], cell.globalIds[currentTri.Edge])
 
-                        cell.energy_contractility += compute_energy_contractility(l_i0, np.linalg.norm(y_1 - y_2), C)
+                        # Reuse cached l_i instead of recomputing
+                        cell.energy_contractility += compute_energy_contractility(l_i0, l_i, C)
             self.g += ge
             Energy[c] = cell.energy_contractility
             self.energy_per_cell[c] = cell.energy_contractility
@@ -259,12 +256,23 @@ class KgContractility(Kg):
         :param C:
         :return:
         """
+        edge_vec = y_1 - y_2
+        l_i = np.linalg.norm(edge_vec)
+        return self.compute_k_contractility_with_length(l_i0, edge_vec, l_i, C)
+
+    def compute_k_contractility_with_length(self, l_i0, edge_vec, l_i, C):
+        """
+        Compute the stiffness matrix of the contractility with precomputed edge vector and length
+        :param l_i0: reference edge length
+        :param edge_vec: edge vector (y_1 - y_2)
+        :param l_i: edge length (norm of edge_vec)
+        :param C: contractility coefficient
+        :return: stiffness matrix
+        """
         dim = 3
 
-        l_i = np.linalg.norm(y_1 - y_2)
-
         kContractility = np.zeros((6, 6), dtype=self.precision_type)
-        kContractility[0:3, 0:3] = -(C / l_i0) * (1 / l_i ** 3 * np.outer((y_1 - y_2), (y_1 - y_2))) + (
+        kContractility[0:3, 0:3] = -(C / l_i0) * (1 / l_i ** 3 * np.outer(edge_vec, edge_vec)) + (
                 (C / l_i0) * np.eye(dim)) / l_i
         kContractility[0:3, 3:6] = -kContractility[0:3, 0:3]
         kContractility[3:6, 0:3] = -kContractility[0:3, 0:3]
@@ -281,10 +289,21 @@ class KgContractility(Kg):
         :param C:
         :return:
         """
-        l_i = np.linalg.norm(y_1 - y_2)
+        edge_vec = y_1 - y_2
+        l_i = np.linalg.norm(edge_vec)
+        return self.compute_g_contractility_with_length(l_i0, edge_vec, l_i, C)
 
+    def compute_g_contractility_with_length(self, l_i0, edge_vec, l_i, C):
+        """
+        Compute the force gradient with precomputed edge vector and length
+        :param l_i0: reference edge length
+        :param edge_vec: edge vector (y_1 - y_2)
+        :param l_i: edge length (norm of edge_vec)
+        :param C: contractility coefficient
+        :return: force gradient
+        """
         gContractility = np.zeros(6, dtype=self.precision_type)
-        gContractility[0:3] = (C / l_i0) * (y_1 - y_2) / l_i
+        gContractility[0:3] = (C / l_i0) * edge_vec / l_i
         gContractility[3:6] = -gContractility[0:3]
 
         return gContractility
